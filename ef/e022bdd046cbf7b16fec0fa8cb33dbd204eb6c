@@ -1,0 +1,19 @@
+scripts/normalize-plan-filenames.sh
+  s_81602ba243a2ba::t_2069e0a7e7d36f 157-159,182-185
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "efe022bdd046cbf7b16fec0fa8cb33dbd204eb6c",
+  "prompts": {},
+  "sessions": {
+    "s_81602ba243a2ba": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a736156b26edd63d3",
+        "model": "unknown"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
