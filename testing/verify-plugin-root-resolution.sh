@@ -347,6 +347,20 @@ for rel in "${TARGET_COMMANDS[@]}"; do
   fi
 done
 
+# Every command cascade must include the marketplace-root resolution branch so a
+# "source":"./" marketplace install (which gets no plugins/cache copy) can still
+# resolve the plugin root instead of hitting the fail guard.
+for rel in "${TARGET_COMMANDS[@]}"; do
+  file="$COMMANDS_DIR/$rel"
+  [ -f "$file" ] || continue
+  is_tracked_repo_file "$file" || continue
+  base="$(basename "$rel" .md)"
+  if grep -Fq 'plugins/marketplaces' "$file"; then
+    pass "$base: cascade includes marketplace-root resolution branch"
+  else
+    fail "$base: cascade missing marketplace-root resolution branch"
+  fi
+done
 # Check 12: no SHA1 session key derivation in commands (reverted pattern)
 sha1_session_count=$({ grep -c 'SESSION_BASE.*shasum\|shasum.*SESSION' "${TRACKED_COMMAND_FILES[@]}" 2>/dev/null || true; } | awk -F: '{s+=$NF} END{print s+0}')
 if [ "$sha1_session_count" -eq 0 ]; then
