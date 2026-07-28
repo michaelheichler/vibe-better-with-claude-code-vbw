@@ -90,7 +90,9 @@ write_plan_block() {
 }
 
 run_helper() {
-  (cd "$FIXTURE" && "$HELPER" --phase-dir .vbw-planning/phases/01-test "${@}")
+  # Use "$@" (not "${@}"): under `set -u` with zero args, bash 3.2 treats
+  # "${@}" as an unbound variable and aborts, while "$@" is special-cased safe.
+  (cd "$FIXTURE" && "$HELPER" --phase-dir .vbw-planning/phases/01-test "$@")
 }
 
 json_field() {

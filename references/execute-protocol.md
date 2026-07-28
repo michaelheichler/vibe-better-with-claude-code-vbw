@@ -165,26 +165,22 @@ Team request policy from helper output:
 - `prefer_teams='never'`: request explicit non-team mode.
 - Unknown normalized values preserve the raw value, use `delegation_mode=subagent`, and report `unknown_prefer_teams:<value>`.
 
-Determine whether **real team semantics** are available in the live tool set before spawning anything:
-- Real team semantics are available when either:
-  1. `TeamCreate` + teammate task spawning are available, **or**
-  2. the live teammate spawn tool accepts both `team_name` and per-teammate `name` parameters (for example `Agent(...)` with `team_name:` and `name:`)
-- If the live tool set only supports plain background spawns (for example `Agent` with `run_in_background: true` but no `team_name`), then real team semantics are **NOT** available.
+Determine whether **real team semantics** are available before spawning anything. Real team semantics require CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1 and a live Agent tool that spawns teammates. `team_name` is accepted but ignored, so it is not a capability signal. When teams are unavailable, fall back to plain sequential subagent Agent calls.
+- If the live tool set only supports plain background spawns (for example `Agent` with `run_in_background: true` and no teammate `name`), then real team semantics are **NOT** available.
 - **Plain background `Agent` spawns without team semantics are NOT an agent team. Do NOT use them as a substitute for team mode.**
 
-Process `ROUTING.segments[]` in order. For each segment, extract `route`, `plan_ids`, `effort`, `delegation_mode`, and optional `team_name` from the helper output. Before any direct, turbo, fallback, or serialized subagent segment starts, check the current delegation marker; if a live execute marker has `delegation_mode=team`, complete shutdown (`shutdown_request`, responses, `TeamDelete`, stale cleanup) and clear the marker first. Do not start a non-team segment while `.delegated-workflow.json` still reports a live team marker.
+Process `ROUTING.segments[]` in order. For each segment, extract `route`, `plan_ids`, `effort`, `delegation_mode`, and optional `team_name` from the helper output. Before any direct, turbo, fallback, or serialized subagent segment starts, check the current delegation marker; if a live execute marker has `delegation_mode=team`, complete teardown first: send `shutdown_request` to each teammate and await responses, then run Post-shutdown residual cleanup. The team config directory is removed automatically when the session exits; there is no TeamDelete call. Clear the marker only after teardown completes. Do not start a non-team segment while `.delegated-workflow.json` still reports a live team marker.
 
 Branch each segment into exactly one runtime path and persist that segment's actual mode **before the first spawn or orchestrator product-file write**:
 
 1. **True team mode**
    - Use this path only when the helper segment has `delegation_mode=team` **and** real team semantics are available.
-   - **Pre-TeamCreate cleanup** (remove orphaned VBW team directories from prior sessions before creating a new team):
+   - **Pre-spawn stale-team cleanup** (remove orphaned VBW team directories from prior sessions before spawning the first teammate):
      ```bash
      bash "${VBW_PLUGIN_ROOT}/scripts/clean-stale-teams.sh" 2>/dev/null || true
      ```
-   - Set `TEAM_NAME` from the segment (`team_name`) or default to `"vbw-phase-{NN}"`.
-   - If literal `TeamCreate` is available, call it with `team_name="$TEAM_NAME"`, `description="Phase {NN}: {phase-name}"`.
-   - If literal `TeamCreate` is unavailable but the live teammate spawn tool accepts `team_name`, create the team implicitly by using the shared `TEAM_NAME` on every teammate spawn.
+   - Set `TEAM_NAME` from the segment (`team_name`) or default to `"vbw-phase-{NN}"` for VBW's own bookkeeping. The platform's real team name is session-derived ("session-" + first 8 chars of the session id); `team_name` on `Agent` is accepted but ignored, so it is not a capability signal.
+   - Agent teams are experimental (CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1). The team forms when the first teammate is spawned via the Agent tool; there is no TeamCreate setup step.
    - Persist the actual runtime mode:
      ```bash
      bash "${VBW_PLUGIN_ROOT}/scripts/delegated-workflow.sh" set execute {segment_effort} team "$TEAM_NAME"
@@ -193,7 +189,7 @@ Branch each segment into exactly one runtime path and persist that segment's act
 
 2. **Explicit non-team mode**
    - Use this path when `prefer_teams='never'`, `prefer_teams='auto'` with `max_parallel_width <= 1`, unknown `prefer_teams`, no delegate-eligible plans, segment route `turbo`/internal `direct`, or team-tooling-unavailable fallback.
-   - For serialized delegate segments (`route=delegate`, `delegation_mode=subagent`), persist the actual runtime mode as subagent, skip TeamCreate, spawn one Dev subagent, and wait for completion before the next spawn:
+   - For serialized delegate segments (`route=delegate`, `delegation_mode=subagent`), persist the actual runtime mode as subagent, do not form an agent team (do not spawn teammates), spawn one Dev subagent, and wait for completion before the next spawn:
      ```bash
      bash "${VBW_PLUGIN_ROOT}/scripts/delegated-workflow.sh" set execute {segment_effort} subagent
      ```
@@ -210,7 +206,7 @@ Branch each segment into exactly one runtime path and persist that segment's act
      ```bash
      bash "${VBW_PLUGIN_ROOT}/scripts/delegated-workflow.sh" set execute {segment_effort} subagent
      ```
-   - Skip TeamCreate and continue in explicit non-team mode.
+   - Do not form an agent team (do not spawn teammates); use plain sequential subagent Agent calls, continuing in explicit non-team mode.
    - **Do NOT preserve “parallelism” by launching multiple background `Agent` spawns without `team_name`.**
 
 After each segment completes, verify each plan's SUMMARY.md through Step 3c and write the verified status (`complete`, `partial`, or `failed`) into `.execution-state.json`. Only `complete|partial` unlock dependents. Re-run the helper against the updated execution state until no pending plans remain.
@@ -700,8 +696,8 @@ VERIF_BASE="${VERIF_NAME%.md}"
 
 **Post-build QA (Fast, QA_TIMING=post-build):** Spawn QA after ALL plans complete. Include in task description: "Phase context: {phase-dir}/.context-qa.md (if compiled). Model: ${QA_MODEL}. Your verification tier is {tier}. If `.vbw-planning/codebase/META.md` exists, read TESTING.md, CONCERNS.md, and ARCHITECTURE.md (whichever exist) from `.vbw-planning/codebase/` to bootstrap codebase understanding before verifying. Run {5-10|15-25|30+} checks per the tier definitions in your agent protocol. Persist your VERIFICATION.md by piping qa_verdict JSON through write-verification.sh. Output path: {phase-dir}/${VERIF_NAME}. Plugin root: ${VBW_PLUGIN_ROOT}." QA calls `write-verification.sh` directly — the orchestrator does NOT persist. If QA reports a `write-verification.sh` failure, surface the error to the user — do NOT fall back to manual VERIFICATION.md writes.
 
-**CRITICAL:** Set `subagent_type: "vbw:vbw-qa"` and `model: "${QA_MODEL}"` in the Task tool invocation when spawning QA agents. If `QA_MAX_TURNS` is non-empty, also pass `maxTurns: ${QA_MAX_TURNS}`. If `QA_MAX_TURNS` is empty, do NOT include maxTurns (omitting it = unlimited).
-**CRITICAL:** When true team mode is active, pass `team_name: "vbw-phase-{NN}"` and `name: "qa"` (or `name: "qa-wave{W}"` for per-wave QA) parameters to each QA Task tool invocation.
+**CRITICAL:** Set `subagent_type: "vbw:vbw-qa"` and `model: "${QA_MODEL}"` in the Agent tool invocation when spawning QA agents. If `QA_MAX_TURNS` is non-empty, also pass `maxTurns: ${QA_MAX_TURNS}`. If `QA_MAX_TURNS` is empty, do NOT include maxTurns (omitting it = unlimited).
+**CRITICAL:** When true team mode is active, pass `team_name: "vbw-phase-{NN}"` and `name: "qa"` (or `name: "qa-wave{W}"` for per-wave QA) parameters to each QA Agent tool invocation.
 
 ### Step 4.1: QA Result Gating (NON-NEGOTIABLE)
 
@@ -739,7 +735,7 @@ This loop runs inline during execution — no second `/vbw:vibe` call needed. If
   `round_dir`, `source_verification_path`, `known_issues_path`, and `verification_path` from `qa-remediation-state.sh` metadata are authoritative host-repository paths. Claude Code may run subagents from `.claude/worktrees/agent-*` sidechain CWDs; pass these exact paths to Lead, Dev, and QA prompts and never rewrite them relative to the current CWD. Rewriting those paths relative to sidechain CWDs can write or read remediation artifacts from the wrong location and break resume or verification.
   </qa_remediation_artifact_contract>
   <qa_remediation_spawn_contract>
-  QA remediation uses plain sequential subagent calls. Do not use TeamCreate. Non-team spawn shape: omit `team_name`, `run_in_background`, `isolation`, and worktree cwd fields (`cwd`, `working_dir`, `workingDirectory`, `workdir`). `name` is optional label-only metadata; never use it for routing, lifecycle state, or team semantics. Use remediation metadata paths in prompts; VBW worktree targeting is task prompt/state metadata, not a spawn isolation or cwd handoff.
+  QA remediation uses plain sequential subagent calls. Do not form an agent team (do not spawn teammates); use plain sequential subagent Agent calls. Non-team spawn shape: omit `team_name`, `run_in_background`, `isolation`, and worktree cwd fields (`cwd`, `working_dir`, `workingDirectory`, `workdir`). `name` is optional label-only metadata; never use it for routing, lifecycle state, or team semantics. Use remediation metadata paths in prompts; VBW worktree targeting is task prompt/state metadata, not a spawn isolation or cwd handoff.
   </qa_remediation_spawn_contract>
   <qa_remediation_no_tool_circuit_breaker>
   After any QA remediation Lead, Dev, or QA subagent returns, inspect returned text before artifact validation, deterministic gates, or state advancement. If it says tools, shell/Bash, filesystem, edits, or API-session access are unavailable, treat that as a platform/tool provisioning failure: STOP without advancing `.qa-remediation-stage`, report the failed role and stage/task, and do not retry the same prompt.
@@ -999,18 +995,17 @@ UAT_NAME=$(bash "${VBW_PLUGIN_ROOT}/scripts/resolve-artifact-path.sh" uat "{phas
 
 ### Step 5: Update state and present summary
 
-**HARD GATE — Shutdown before ANY output or state updates:** Run team shutdown only when the persisted/helper-resolved runtime state says `delegation_mode=team` and a real `TEAM_NAME` exists. If the helper selected `subagent`, turbo, internal `direct`, no delegate-eligible plans, or team-tooling-unavailable fallback, skip SendMessage/TeamDelete and clear the marker. For actual team mode, shut down the team BEFORE updating state, presenting results, or asking the user anything. This is blocking and non-negotiable:
+**HARD GATE — Shutdown before ANY output or state updates:** Run team shutdown only when the persisted/helper-resolved runtime state says `delegation_mode=team` and a real `TEAM_NAME` exists. If the helper selected `subagent`, turbo, internal `direct`, no delegate-eligible plans, or team-tooling-unavailable fallback, skip the shutdown sequence and clear the marker. For actual team mode, shut down the team BEFORE updating state, presenting results, or asking the user anything: send `shutdown_request` to each teammate and await responses, then run Post-shutdown residual cleanup. The team config directory is removed automatically when the session exits; there is no TeamDelete call. This is blocking and non-negotiable:
 1. Send `shutdown_request` via SendMessage to EVERY active teammate in `TEAM_NAME` (excluding yourself — the orchestrator controls the sequence, not the lead agent) — do not skip any. The SendMessage JSON body must include at minimum: `{"type": "shutdown_request", "id": "<unique-id>", "reason": "phase_complete", "team_name": "<TEAM_NAME>"}` (this is a simplified form — the full V2 envelope nests these under `payload` with `id` at envelope level, but agents are instructed to match on `"type":"shutdown_request"` regardless of structure). Agents echo the `id` back as `request_id` in their `shutdown_response`. Teammates respond by calling SendMessage with `type: "shutdown_response"`.
 2. Log event: `bash "${VBW_PLUGIN_ROOT}/scripts/log-event.sh" shutdown_sent {phase} team={team_name} targets={count} 2>/dev/null || true`
-3. Wait for each `shutdown_response` with `approved: true` (delivered as a SendMessage tool call from the teammate, NOT as plain text). If a teammate responds in plain text instead of calling SendMessage, re-send the `shutdown_request`. If a teammate rejects, re-request immediately (max 3 attempts per teammate — if still rejected after 3 attempts, log a warning and proceed with TeamDelete).
+3. Wait for each `shutdown_response` with `approved: true` (delivered as a SendMessage tool call from the teammate, NOT as plain text). If a teammate responds in plain text instead of calling SendMessage, re-send the `shutdown_request`. If a teammate rejects, re-request immediately (max 3 attempts per teammate — if still rejected after 3 attempts, log a warning and proceed to Post-shutdown residual cleanup).
 4. Log event: `bash "${VBW_PLUGIN_ROOT}/scripts/log-event.sh" shutdown_received {phase} team={team_name} approved={count} rejected={count} 2>/dev/null || true`
-5. Call TeamDelete for `TEAM_NAME`
-6. **Post-TeamDelete residual cleanup** (belt-and-suspenders — catches race-condition residuals where agents recreate inbox files after TeamDelete):
+5. **Post-shutdown residual cleanup** (belt-and-suspenders — catches race-condition residuals where agents recreate inbox files after shutdown; the team config directory itself is removed automatically when the session exits):
    ```bash
    bash "${VBW_PLUGIN_ROOT}/scripts/clean-stale-teams.sh" 2>/dev/null || true
    ```
-7. Only THEN proceed to state updates and user-facing output below
-Failure to shut down an actual team leaves agents running in the background, consuming API credits (visible as hanging panes in tmux, invisible but still costly without tmux). If no actual team was created: skip shutdown sequence. **Recovery:** If shutdown stalls or agents linger after TeamDelete, do NOT manually `rm -rf ~/.claude/teams` — use `/vbw:doctor --cleanup` which runs `doctor-cleanup.sh` and `clean-stale-teams.sh` with safe atomic cleanup. These scripts detect stale teams, orphan processes, and dangling PIDs. `clean-stale-teams.sh` immediately removes VBW team directories missing `config.json` (orphaned residuals) without waiting for the 2-hour stale threshold.
+6. Only THEN proceed to state updates and user-facing output below
+Failure to shut down an actual team leaves agents running in the background, consuming API credits (visible as hanging panes in tmux, invisible but still costly without tmux). If no actual team was created: skip shutdown sequence. **Recovery:** If shutdown stalls or agents linger after Post-shutdown residual cleanup, do NOT manually `rm -rf ~/.claude/teams` — use `/vbw:doctor --cleanup` which runs `doctor-cleanup.sh` and `clean-stale-teams.sh` with safe atomic cleanup. These scripts detect stale teams, orphan processes, and dangling PIDs. `clean-stale-teams.sh` immediately removes VBW team directories missing `config.json` (orphaned residuals) without waiting for the 2-hour stale threshold.
 
 Regardless of whether a real team was created, clear the execute delegation marker before state updates:
 ```bash
@@ -1019,7 +1014,7 @@ bash "${VBW_PLUGIN_ROOT}/scripts/delegated-workflow.sh" clear 2>/dev/null || tru
 
 > **Runtime enforcement limitation:** Claude Code does not expose agent-team message tool calls (e.g., `SendMessage`) to `PreToolUse`/`PostToolUse` hooks with stable `tool_name` values. Therefore VBW cannot hook-validate malformed shutdown responses at runtime. Enforcement relies on: (1) mechanical SendMessage instructions in all 6 agent prompts, (2) compaction-instructions.sh reminders that survive context compaction, (3) orchestrator retry (re-send if teammate responds in plain text), and (4) `/vbw:doctor --cleanup` as a recovery path for stuck teams.
 
-**Worktree merge and cleanup (post-TeamDelete):** If `worktree_isolation` is not `"off"` in config:
+**Worktree merge and cleanup (post-shutdown):** If `worktree_isolation` is not `"off"` in config:
 For each plan that has a `worktree_path` entry in execution-state.json (completed or failed):
 1. **Copy SUMMARY.md** from worktree to phase dir (ensure it is present in the main working tree before merge changes branch context):
    `cp "{worktree_path}/.vbw-planning/phases/{phase-dir}/{plan_id}-SUMMARY.md" ".vbw-planning/phases/{phase-dir}/{plan_id}-SUMMARY.md" 2>/dev/null || true`
@@ -1035,12 +1030,12 @@ For each plan that has a `worktree_path` entry in execution-state.json (complete
 All worktree operations are fail-open: script errors are suppressed (2>/dev/null || true). Merge failures are surfaced as warnings, not blockers.
 When `worktree_isolation="off"`: skip this block silently.
 
-**Post-shutdown verification:** After TeamDelete for an actual `delegation_mode=team` run, there must be ZERO active teammates. If the Pure-Vibe loop or auto-chain will re-enter Plan mode next, confirm no prior agents linger before spawning new ones. For serialized subagent, turbo, direct, or fallback runs, rely on completed subagent/direct execution plus the cleared delegation marker; do not send team shutdown messages without a real `TEAM_NAME`.
+**Post-shutdown verification:** After the shutdown sequence completes for an actual `delegation_mode=team` run, there must be ZERO active teammates. If the Pure-Vibe loop or auto-chain will re-enter Plan mode next, confirm no prior agents linger before spawning new ones. For serialized subagent, turbo, direct, or fallback runs, rely on completed subagent/direct execution plus the cleared delegation marker; do not send team shutdown messages without a real `TEAM_NAME`.
 
 **Control Plane cleanup:** Lock and token state cleanup already handled by existing Lease Lock and Token Budget cleanup blocks.
 
 **Rolling Summary (REQ-03):** If `rolling_summary=true` in config:
-- After TeamDelete when an actual team was fully shut down, before phase_end event log:
+- After the shutdown sequence when an actual team was fully shut down, before phase_end event log:
   ```bash
   bash "${VBW_PLUGIN_ROOT}/scripts/compile-rolling-summary.sh" \
     .vbw-planning/phases .vbw-planning/ROLLING-CONTEXT.md 2>/dev/null || true

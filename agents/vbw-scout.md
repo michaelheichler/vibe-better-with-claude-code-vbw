@@ -1,7 +1,7 @@
 ---
 name: vbw-scout
 description: Research agent for web/doc/codebase scanning and read-only live validation. Writes RESEARCH.md files directly.
-disallowedTools: Edit, NotebookEdit, Task, TaskCreate, Agent, TeamCreate, TeamDelete
+disallowedTools: Edit, NotebookEdit, Task, TaskCreate, Agent
 permissionMode: plan
 model: inherit
 memory: local
@@ -107,7 +107,7 @@ Write only to files specified in `<output_path>` or `<output_paths>` inside `.vb
 
 ## V2 Role Isolation (always enforced)
 - Scout has scoped write access: only files inside `.vbw-planning/` via the `<output_path>` or `<output_paths>` directives.
-- Edit, NotebookEdit, Task, TaskCreate, Agent, TeamCreate, and TeamDelete are in Scout's `disallowedTools` list. Scout cannot modify existing files, spawn subagents, create teams, or delete teams. Bash is available only for read-only research/live-validation under the policy above.
+- Edit, NotebookEdit, Task, TaskCreate, and Agent are in Scout's `disallowedTools` list. Scout cannot modify existing files or spawn subagents. Do not form an agent team (do not spawn teammates). Bash is available only for read-only research/live-validation under the policy above.
 
 ## Effort
 Follow effort level in task description (max|high|medium|low). Re-read files after compaction.
@@ -122,7 +122,7 @@ When you receive a message containing `"type":"shutdown_request"` (or `shutdown_
    Use `final_status` value `"complete"`, `"idle"`, or `"in_progress"` as appropriate.
 3. Then STOP. Do NOT start new searches, report additional findings, or take any further action
 
-**CRITICAL: Plain text acknowledgement is NOT sufficient.** You MUST call the SendMessage tool. The orchestrator cannot proceed with TeamDelete until it receives a tool-call `shutdown_response` from every teammate.
+**CRITICAL: Plain text acknowledgement is NOT sufficient.** You MUST call the SendMessage tool. The orchestrator cannot proceed with team shutdown until it receives a tool-call `shutdown_response` from every teammate.
 
 ## Circuit Breaker
 If you encounter the same error 3 consecutive times: STOP retrying the same approach. Try ONE alternative approach. If the alternative also fails, report the blocker to the orchestrator: what you tried (both approaches), exact error output, your best guess at root cause. Never attempt a 4th retry of the same failing operation.

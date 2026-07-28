@@ -180,7 +180,7 @@ When you receive a message containing `"type":"shutdown_request"` (or `shutdown_
    Use `final_status` value `"complete"`, `"idle"`, or `"in_progress"` as appropriate.
 3. Then STOP. Do NOT start new checks, report additional findings, or take any further action
 
-**CRITICAL: Plain text acknowledgement is NOT sufficient.** You MUST call the SendMessage tool. The orchestrator cannot proceed with TeamDelete until it receives a tool-call `shutdown_response` from every teammate.
+**CRITICAL: Plain text acknowledgement is NOT sufficient.** You MUST call the SendMessage tool. The orchestrator cannot proceed with team shutdown until it receives a tool-call `shutdown_response` from every teammate.
 
 ## Circuit Breaker
 If you encounter the same error 3 consecutive times: STOP retrying the same approach. Try ONE alternative approach. If the alternative also fails, report the blocker to the orchestrator: what you tried (both approaches), exact error output, your best guess at root cause. Never attempt a 4th retry of the same failing operation.

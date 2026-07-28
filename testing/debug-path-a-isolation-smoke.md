@@ -19,7 +19,7 @@ Use this when you need reviewer-verifiable evidence for debug-investigator isola
 
 1. `/vbw:debug` enters **Competing Hypotheses (3 parallel)**.
 2. Three hypothesis investigators are spawned as `vbw:vbw-debugger` teammates.
-3. All three investigators report, receive shutdown requests, and the orchestrator runs `TeamDelete` plus residual cleanup.
+3. All three investigators report, receive shutdown requests, and the orchestrator runs Post-shutdown residual cleanup (the team config directory is removed automatically when the session exits; there is no TeamDelete call).
 4. No post-synthesis implementation owner is spawned.
 5. Through the investigation and teardown checkpoint, the **source tree** remains unchanged.
 
@@ -27,7 +27,7 @@ Use this when you need reviewer-verifiable evidence for debug-investigator isola
 
 1. `/vbw:debug` enters **Competing Hypotheses (3 parallel)**.
 2. Three hypothesis investigators are spawned as `vbw:vbw-debugger` teammates.
-3. All three investigators report, receive shutdown requests, and the orchestrator runs `TeamDelete` plus residual cleanup.
+3. All three investigators report, receive shutdown requests, and the orchestrator runs Post-shutdown residual cleanup (the team config directory is removed automatically when the session exits; there is no TeamDelete call).
 4. Only **after** teardown does the orchestrator spawn one fresh post-synthesis implementation owner.
 5. That fresh implementation owner is the only actor that changes project source files.
 
@@ -134,7 +134,7 @@ Verify:
 
 - transcript shows `Competing Hypotheses (3 parallel)`
 - transcript shows three `vbw:vbw-debugger` hypothesis spawns
-- transcript shows shutdown requests, `TeamDelete`, and residual cleanup
+- transcript shows shutdown requests and Post-shutdown residual cleanup (no TeamDelete call)
 - transcript does **not** show a post-synthesis implementation-owner spawn
 - source-tree baseline remains unchanged through the teardown checkpoint
 
@@ -151,7 +151,7 @@ printf '%s\n' \
 Verify:
 
 - transcript shows three hypothesis-investigator spawns first
-- transcript shows shutdown requests, `TeamDelete`, and residual cleanup before implementation
+- transcript shows shutdown requests and Post-shutdown residual cleanup (no TeamDelete call) before implementation
 - transcript shows one fresh post-synthesis implementation owner after teardown
 - only that implementation owner changes the source tree
 - `bash smoke/vbw-debug-path-a/needs_change/check.sh` exits `0` after the fix

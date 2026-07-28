@@ -1,15 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# verify-ghost-team-cleanup.sh — Tests for ghost team cleanup mitigations (#203)
-#
-# Verifies that:
-# - clean-stale-teams.sh immediately removes configless VBW team directories
-# - clean-stale-teams.sh preserves non-VBW team directories even if configless
-# - clean-stale-teams.sh preserves VBW teams that have config.json (intact)
-# - doctor-cleanup.sh scan reports orphaned (configless) teams
-# - Post-TeamDelete cleanup instructions exist in all shutdown gates
-
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 CLEAN_SCRIPT="$ROOT/scripts/clean-stale-teams.sh"
 DOCTOR_SCRIPT="$ROOT/scripts/doctor-cleanup.sh"
@@ -34,9 +25,6 @@ cleanup() {
 }
 trap cleanup EXIT
 
-# --- Unit Tests: clean-stale-teams.sh ---
-
-# Test 1: Configless VBW team directory is removed immediately
 test_configless_vbw_team_removed() {
   TMPDIR_BASE=$(mktemp -d "$TEST_PARENT/XXXXXX")
   local claude_dir="$TMPDIR_BASE/claude"
@@ -44,9 +32,7 @@ test_configless_vbw_team_removed() {
   mkdir -p "$claude_dir/teams/vbw-phase-03/inboxes"
   mkdir -p "$claude_dir/tasks"
   mkdir -p "$planning_dir"
-  # Create orphaned inbox file (no config.json)
   echo '{}' > "$claude_dir/teams/vbw-phase-03/inboxes/team-lead.json"
-  # Touch the inbox file to be recent (not stale by time)
   touch "$claude_dir/teams/vbw-phase-03/inboxes/team-lead.json"
 
   CLAUDE_CONFIG_DIR="$claude_dir" VBW_PLANNING_DIR="$planning_dir" \
@@ -60,7 +46,6 @@ test_configless_vbw_team_removed() {
   rm -rf "$TMPDIR_BASE"
 }
 
-# Test 2: Non-VBW configless team directories are preserved
 test_non_vbw_configless_preserved() {
   TMPDIR_BASE=$(mktemp -d "$TEST_PARENT/XXXXXX")
   local claude_dir="$TMPDIR_BASE/claude"
@@ -82,7 +67,6 @@ test_non_vbw_configless_preserved() {
   rm -rf "$TMPDIR_BASE"
 }
 
-# Test 3: VBW team with config.json is preserved (not orphaned)
 test_vbw_team_with_config_preserved() {
   TMPDIR_BASE=$(mktemp -d "$TEST_PARENT/XXXXXX")
   local claude_dir="$TMPDIR_BASE/claude"
@@ -105,7 +89,6 @@ test_vbw_team_with_config_preserved() {
   rm -rf "$TMPDIR_BASE"
 }
 
-# Test 4: Paired tasks directory removed with configless team
 test_paired_tasks_removed() {
   TMPDIR_BASE=$(mktemp -d "$TEST_PARENT/XXXXXX")
   local claude_dir="$TMPDIR_BASE/claude"
@@ -127,7 +110,6 @@ test_paired_tasks_removed() {
   rm -rf "$TMPDIR_BASE"
 }
 
-# Test 5: Multiple configless VBW teams cleaned in single pass
 test_multiple_configless_cleaned() {
   TMPDIR_BASE=$(mktemp -d "$TEST_PARENT/XXXXXX")
   local claude_dir="$TMPDIR_BASE/claude"
@@ -156,7 +138,6 @@ test_multiple_configless_cleaned() {
   rm -rf "$TMPDIR_BASE"
 }
 
-# Test 6: Configless vbw-debug-* team directory is removed immediately
 test_configless_vbw_debug_team_removed() {
   TMPDIR_BASE=$(mktemp -d "$TEST_PARENT/XXXXXX")
   local claude_dir="$TMPDIR_BASE/claude"
@@ -178,7 +159,6 @@ test_configless_vbw_debug_team_removed() {
   rm -rf "$TMPDIR_BASE"
 }
 
-# Test 7: Pass 2 removes stale VBW team WITH config.json after time threshold
 test_pass2_stale_team_with_config_removed() {
   TMPDIR_BASE=$(mktemp -d "$TEST_PARENT/XXXXXX")
   local claude_dir="$TMPDIR_BASE/claude"
@@ -188,7 +168,6 @@ test_pass2_stale_team_with_config_removed() {
   mkdir -p "$planning_dir"
   echo '{"name":"vbw-phase-09"}' > "$claude_dir/teams/vbw-phase-09/config.json"
   echo '{}' > "$claude_dir/teams/vbw-phase-09/inboxes/team-lead.json"
-  # Backdate inbox file to >2 hours ago (stale threshold)
   touch -t 202001010000 "$claude_dir/teams/vbw-phase-09/inboxes/team-lead.json"
 
   CLAUDE_CONFIG_DIR="$claude_dir" VBW_PLANNING_DIR="$planning_dir" \
@@ -202,9 +181,6 @@ test_pass2_stale_team_with_config_removed() {
   rm -rf "$TMPDIR_BASE"
 }
 
-# --- Integration Tests: doctor-cleanup.sh scan ---
-
-# Test 8: Doctor scan reports orphaned (configless) VBW teams
 test_doctor_scan_reports_orphaned() {
   TMPDIR_BASE=$(mktemp -d "$TEST_PARENT/XXXXXX")
   local claude_dir="$TMPDIR_BASE/claude"
@@ -226,7 +202,6 @@ test_doctor_scan_reports_orphaned() {
   rm -rf "$TMPDIR_BASE"
 }
 
-# Test 9: Doctor scan does NOT report non-VBW configless teams
 test_doctor_scan_skips_non_vbw_orphan() {
   TMPDIR_BASE=$(mktemp -d "$TEST_PARENT/XXXXXX")
   local claude_dir="$TMPDIR_BASE/claude"
@@ -248,27 +223,22 @@ test_doctor_scan_skips_non_vbw_orphan() {
   rm -rf "$TMPDIR_BASE"
 }
 
-# --- Content Tests: protocol instructions ---
-
-# Test 10: execute-protocol.md has post-TeamDelete cleanup
 test_exec_protocol_post_teamdelete_cleanup() {
-  if grep -q 'Post-TeamDelete residual cleanup' "$ROOT/references/execute-protocol.md"; then
-    pass "execute-protocol.md has post-TeamDelete residual cleanup"
+  if grep -q 'Post-shutdown residual cleanup' "$ROOT/references/execute-protocol.md"; then
+    pass "execute-protocol.md has post-shutdown residual cleanup"
   else
-    fail "execute-protocol.md missing post-TeamDelete residual cleanup"
+    fail "execute-protocol.md missing post-shutdown residual cleanup"
   fi
 }
 
-# Test 11: execute-protocol.md has pre-TeamCreate cleanup
 test_exec_protocol_pre_teamcreate_cleanup() {
-  if grep -q 'Pre-TeamCreate cleanup' "$ROOT/references/execute-protocol.md"; then
-    pass "execute-protocol.md has pre-TeamCreate cleanup"
+  if grep -q 'Pre-spawn stale-team cleanup' "$ROOT/references/execute-protocol.md"; then
+    pass "execute-protocol.md has pre-spawn stale-team cleanup"
   else
-    fail "execute-protocol.md missing pre-TeamCreate cleanup"
+    fail "execute-protocol.md missing pre-spawn stale-team cleanup"
   fi
 }
 
-# Test 12: vibe.md states no team creation in Plan mode
 test_vibe_no_team_in_plan_mode() {
   if grep -q 'No team creation in Plan mode' "$ROOT/commands/vibe.md"; then
     pass "vibe.md enforces no team creation in Plan mode"
@@ -277,9 +247,7 @@ test_vibe_no_team_in_plan_mode() {
   fi
 }
 
-# Test 13: vibe.md Plan mode section does not contain any TeamCreate/TeamDelete
 test_vibe_no_team_machinery_in_plan() {
-  # Extract the Plan mode section (between "### Mode: Plan" and the next "### Mode:")
   local plan_section
   plan_section=$(sed -n '/^### Mode: Plan$/,/^### Mode:/p' "$ROOT/commands/vibe.md")
   if [ -z "$plan_section" ]; then
@@ -293,7 +261,6 @@ test_vibe_no_team_machinery_in_plan() {
   fi
 }
 
-# Test 14: debug.md has prefer_teams='never' branch forcing Path B
 test_debug_prefer_teams_never() {
   if grep -q "prefer_teams='never'" "$ROOT/commands/debug.md"; then
     pass "debug.md has prefer_teams=never decision tree entry"
@@ -302,34 +269,30 @@ test_debug_prefer_teams_never() {
   fi
 }
 
-# Test 15: map.md honors prefer_teams=never by forcing solo
 test_map_prefer_teams_never() {
   if grep -q "prefer_teams.*never" "$ROOT/commands/map.md" && grep -q 'force solo' "$ROOT/commands/map.md"; then
-    pass "map.md enforces prefer_teams=never → solo mode"
+    pass "map.md enforces prefer_teams=never to solo mode"
   else
-    fail "map.md missing prefer_teams=never → solo enforcement"
+    fail "map.md missing prefer_teams=never to solo enforcement"
   fi
 }
 
-# Test 16: map.md has post-TeamDelete cleanup
 test_map_post_teamdelete_cleanup() {
-  if grep -q 'Post-TeamDelete residual cleanup' "$ROOT/commands/map.md"; then
-    pass "map.md has post-TeamDelete residual cleanup"
+  if grep -q 'Post-shutdown residual cleanup' "$ROOT/commands/map.md"; then
+    pass "map.md has post-shutdown residual cleanup"
   else
-    fail "map.md missing post-TeamDelete residual cleanup"
+    fail "map.md missing post-shutdown residual cleanup"
   fi
 }
 
-# Test 17: debug.md has post-TeamDelete cleanup
 test_debug_post_teamdelete_cleanup() {
-  if grep -q 'Post-TeamDelete residual cleanup' "$ROOT/commands/debug.md"; then
-    pass "debug.md has post-TeamDelete residual cleanup"
+  if grep -q 'Post-shutdown residual cleanup' "$ROOT/commands/debug.md"; then
+    pass "debug.md has post-shutdown residual cleanup"
   else
-    fail "debug.md missing post-TeamDelete residual cleanup"
+    fail "debug.md missing post-shutdown residual cleanup"
   fi
 }
 
-# Test 18: clean-stale-teams.sh has configless pass
 test_clean_script_has_configless_pass() {
   if grep -q 'config.json' "$CLEAN_SCRIPT" && grep -q 'Orphaned team cleanup' "$CLEAN_SCRIPT"; then
     pass "clean-stale-teams.sh has configless orphan detection"
@@ -338,9 +301,7 @@ test_clean_script_has_configless_pass() {
   fi
 }
 
-# Test 19: clean-stale-teams.sh only targets vbw-* prefixed teams in configless pass (pass 1)
 test_clean_script_vbw_prefix_guard() {
-  # Scope to pass 1 only — pass 2 has its own guard tested separately (test 25)
   local pass1_region
   pass1_region=$(sed -n '/^# Pass 1/,/^# Pass 2/p' "$CLEAN_SCRIPT")
   if grep -q 'case "$team_name" in vbw-\*)' <<<"$pass1_region"; then
@@ -350,48 +311,40 @@ test_clean_script_vbw_prefix_guard() {
   fi
 }
 
-# Test 20: debug.md has pre-TeamCreate cleanup before TeamCreate
 test_debug_pre_teamcreate_cleanup() {
   local cleanup_line naming_line
-  cleanup_line=$(grep -n 'Pre-TeamCreate cleanup' "$ROOT/commands/debug.md" | head -1 | cut -d: -f1)
+  cleanup_line=$(grep -n 'Pre-spawn stale-team cleanup' "$ROOT/commands/debug.md" | head -1 | cut -d: -f1)
   naming_line=$(grep -n 'team_name="vbw-debug-' "$ROOT/commands/debug.md" | head -1 | cut -d: -f1)
-  # Use -le: cleanup on same line as naming (single-line format) is also valid
   if [ -n "$cleanup_line" ] && [ -n "$naming_line" ] && [ "$cleanup_line" -le "$naming_line" ]; then
-    pass "debug.md has pre-TeamCreate cleanup before TeamCreate"
+    pass "debug.md has pre-spawn stale-team cleanup before teammate spawn"
   else
-    fail "debug.md pre-TeamCreate cleanup missing or out of order (cleanup=$cleanup_line, naming=$naming_line)"
+    fail "debug.md pre-spawn stale-team cleanup missing or out of order (cleanup=$cleanup_line, naming=$naming_line)"
   fi
 }
 
-# Test 21: map.md Step 3-duo has pre-TeamCreate cleanup before TeamCreate
 test_map_duo_pre_teamcreate_cleanup() {
   local cleanup_line naming_line
-  cleanup_line=$(grep -n 'Pre-TeamCreate cleanup' "$ROOT/commands/map.md" | grep -i 'duo\|step 3-duo' | head -1 | cut -d: -f1)
-  # Fallback: if duo-specific line not found, get first Pre-TeamCreate cleanup line
-  [ -z "$cleanup_line" ] && cleanup_line=$(grep -n 'Pre-TeamCreate cleanup' "$ROOT/commands/map.md" | head -1 | cut -d: -f1)
-  naming_line=$(grep -n 'team_name="vbw-map-duo"' "$ROOT/commands/map.md" | head -1 | cut -d: -f1)
-  # Use -le: cleanup on same line as naming (single-line format) is also valid
+  cleanup_line=$(grep -n 'Pre-spawn stale-team cleanup' "$ROOT/commands/map.md" | grep -i 'duo\|step 3-duo' | head -1 | cut -d: -f1)
+  [ -z "$cleanup_line" ] && cleanup_line=$(grep -n 'Pre-spawn stale-team cleanup' "$ROOT/commands/map.md" | head -1 | cut -d: -f1)
+  naming_line=$(grep -n 'description="Codebase Map (duo)"' "$ROOT/commands/map.md" | head -1 | cut -d: -f1)
   if [ -n "$cleanup_line" ] && [ -n "$naming_line" ] && [ "$cleanup_line" -le "$naming_line" ]; then
-    pass "map.md Step 3-duo has pre-TeamCreate cleanup before vbw-map-duo naming"
+    pass "map.md Step 3-duo has pre-spawn stale-team cleanup before duo team formation"
   else
-    fail "map.md Step 3-duo pre-TeamCreate cleanup missing or out of order (cleanup=$cleanup_line, naming=$naming_line)"
+    fail "map.md Step 3-duo pre-spawn stale-team cleanup missing or out of order (cleanup=$cleanup_line, naming=$naming_line)"
   fi
 }
 
-# Test 22: map.md Step 3-quad has pre-TeamCreate cleanup before TeamCreate
 test_map_quad_pre_teamcreate_cleanup() {
   local cleanup_line naming_line
-  cleanup_line=$(grep -n 'Pre-TeamCreate cleanup' "$ROOT/commands/map.md" | tail -1 | cut -d: -f1)
-  naming_line=$(grep -n 'team_name="vbw-map-quad"' "$ROOT/commands/map.md" | head -1 | cut -d: -f1)
-  # Use -le: cleanup on same line as naming (single-line format) is also valid
+  cleanup_line=$(grep -n 'Pre-spawn stale-team cleanup' "$ROOT/commands/map.md" | tail -1 | cut -d: -f1)
+  naming_line=$(grep -n 'description="Codebase Map (quad)"' "$ROOT/commands/map.md" | head -1 | cut -d: -f1)
   if [ -n "$cleanup_line" ] && [ -n "$naming_line" ] && [ "$cleanup_line" -le "$naming_line" ]; then
-    pass "map.md Step 3-quad has pre-TeamCreate cleanup before vbw-map-quad naming"
+    pass "map.md Step 3-quad has pre-spawn stale-team cleanup before quad team formation"
   else
-    fail "map.md Step 3-quad pre-TeamCreate cleanup missing or out of order (cleanup=$cleanup_line, naming=$naming_line)"
+    fail "map.md Step 3-quad pre-spawn stale-team cleanup missing or out of order (cleanup=$cleanup_line, naming=$naming_line)"
   fi
 }
 
-# Test 23: debug.md uses parameter-style vbw-debug- team naming
 test_debug_uses_vbw_prefix_naming() {
   if grep -q 'team_name="vbw-debug-{timestamp}"' "$ROOT/commands/debug.md"; then
     pass "debug.md uses parameter-style vbw-debug- team naming"
@@ -400,25 +353,22 @@ test_debug_uses_vbw_prefix_naming() {
   fi
 }
 
-# Test 24: map.md specifies parameter-style vbw-map-duo naming
 test_map_duo_naming() {
-  if grep -q 'team_name="vbw-map-duo"' "$ROOT/commands/map.md"; then
-    pass "map.md specifies parameter-style vbw-map-duo naming"
+  if grep -q 'description="Codebase Map (duo)"' "$ROOT/commands/map.md"; then
+    pass "map.md specifies duo team-formation marker"
   else
-    fail "map.md missing parameter-style vbw-map-duo naming"
+    fail "map.md missing duo team-formation marker"
   fi
 }
 
-# Test 25: map.md specifies parameter-style vbw-map-quad naming
 test_map_quad_naming() {
-  if grep -q 'team_name="vbw-map-quad"' "$ROOT/commands/map.md"; then
-    pass "map.md specifies parameter-style vbw-map-quad naming"
+  if grep -q 'description="Codebase Map (quad)"' "$ROOT/commands/map.md"; then
+    pass "map.md specifies quad team-formation marker"
   else
-    fail "map.md missing parameter-style vbw-map-quad naming"
+    fail "map.md missing quad team-formation marker"
   fi
 }
 
-# Test 26: Non-VBW configless team with stale inbox is preserved by pass 2
 test_non_vbw_stale_configless_preserved_pass2() {
   TMPDIR_BASE=$(mktemp -d "$TEST_PARENT/XXXXXX")
   local claude_dir="$TMPDIR_BASE/claude"
@@ -426,7 +376,6 @@ test_non_vbw_stale_configless_preserved_pass2() {
   mkdir -p "$claude_dir/teams/other-plugin-team/inboxes"
   mkdir -p "$claude_dir/tasks"
   mkdir -p "$planning_dir"
-  # No config.json — configless. Backdate inbox to make it stale (>2h).
   echo '{}' > "$claude_dir/teams/other-plugin-team/inboxes/agent.json"
   touch -t 202001010000 "$claude_dir/teams/other-plugin-team/inboxes/agent.json"
 
@@ -441,9 +390,7 @@ test_non_vbw_stale_configless_preserved_pass2() {
   rm -rf "$TMPDIR_BASE"
 }
 
-# Test 27: clean-stale-teams.sh pass 2 has vbw-* prefix guard
 test_clean_script_pass2_vbw_prefix_guard() {
-  # Pass 2 is the second for-loop block; verify it contains a vbw-* case guard
   local pass2_region
   pass2_region=$(sed -n '/^# Pass 2/,/^done$/p' "$CLEAN_SCRIPT")
   if grep -q 'case "$team_name" in vbw-\*)' <<<"$pass2_region"; then
@@ -453,7 +400,6 @@ test_clean_script_pass2_vbw_prefix_guard() {
   fi
 }
 
-# Test 28: Doctor scan reports paired tasks dir for orphaned team
 test_doctor_scan_reports_paired_tasks() {
   TMPDIR_BASE=$(mktemp -d "$TEST_PARENT/XXXXXX")
   local claude_dir="$TMPDIR_BASE/claude"
@@ -476,7 +422,6 @@ test_doctor_scan_reports_paired_tasks() {
   rm -rf "$TMPDIR_BASE"
 }
 
-# Test 29: Doctor scan reports paired tasks dir for stale team
 test_doctor_scan_reports_stale_paired_tasks() {
   TMPDIR_BASE=$(mktemp -d "$TEST_PARENT/XXXXXX")
   local claude_dir="$TMPDIR_BASE/claude"
@@ -501,7 +446,6 @@ test_doctor_scan_reports_stale_paired_tasks() {
   rm -rf "$TMPDIR_BASE"
 }
 
-# --- Run all tests ---
 echo "=== Ghost Team Cleanup Tests (#203) ==="
 echo ""
 

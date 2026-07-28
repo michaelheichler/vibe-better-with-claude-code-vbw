@@ -424,17 +424,17 @@ debug_path_b_block="$(awk '
   in_block { print }
 ' "$DEBUG_COMMAND_FILE")"
 
-debug_inline_qa_spawn_line="$(grep -F 'Spawn vbw-qa as subagent via Task tool for debug-session verification' "$DEBUG_COMMAND_FILE" || true)"
+debug_inline_qa_spawn_line="$(grep -F 'Spawn vbw-qa as subagent via Agent tool for debug-session verification' "$DEBUG_COMMAND_FILE" || true)"
 
-if contains_literal "$debug_path_a_block" 'Create team via TeamCreate' \
+if contains_literal "$debug_path_a_block" 'there is no TeamCreate setup step' \
   && contains_literal "$debug_path_a_investigator_block" 'True-team spawn shape' \
-  && contains_literal "$debug_path_a_investigator_block" 'pass the exact TeamCreate `team_name`' \
+  && contains_literal "$debug_path_a_investigator_block" 'accepted but ignored' \
   && contains_literal "$debug_path_a_investigator_block" 'unique per-teammate `name`' \
   && contains_literal "$debug_path_a_investigator_block" 'debug-hypothesis-1' \
   && contains_literal "$debug_path_a_investigator_block" 'Do not pass `isolation`, `cwd`, `working_dir`, `workingDirectory`, or `workdir`'; then
   pass "debug: Path A hypothesis investigators use true-team spawn metadata"
 else
-  fail "debug: Path A hypothesis investigators must pass TeamCreate team_name and per-teammate names"
+  fail "debug: Path A hypothesis investigators must document implicit team formation and per-teammate names"
 fi
 
 if contains_literal "$debug_path_a_investigator_block" 'Non-team spawn shape' \
@@ -446,9 +446,9 @@ fi
 
 if contains_literal "$debug_path_a_implementation_block" "$NON_TEAM_SPAWN_SHAPE_TEXT" \
   && contains_literal "$debug_path_a_implementation_block" "$LABEL_ONLY_NAME_TEXT"; then
-  pass "debug: Path A post-TeamDelete implementation owner remains non-team"
+  pass "debug: Path A post-shutdown implementation owner remains non-team"
 else
-  fail "debug: Path A post-TeamDelete implementation owner must remain non-team"
+  fail "debug: Path A post-shutdown implementation owner must remain non-team"
 fi
 
 if contains_literal "$debug_path_b_block" "$NON_TEAM_SPAWN_SHAPE_TEXT" \
@@ -1593,11 +1593,9 @@ for file in "${TRACKED_COMMAND_MARKDOWN_FILES[@]}"; do
   check_allowed_tool_match "$base" "$ALLOWED" "$file" "Skill" 'Call[[:space:]]+Skill[(]|(^|[^[:alnum:]_])Skill[(]'
   check_allowed_tool_match "$base" "$ALLOWED" "$file" "WebSearch" '(^|[^[:alnum:]_])WebSearch([^[:alnum:]_]|$)' 'do[[:space:]]+not.*WebSearch'
   check_allowed_tool_match "$base" "$ALLOWED" "$file" "Agent" '(via[[:space:]]+Task[[:space:]]+tool|Task[[:space:]]+tool[[:space:]]+invocation|subagent_type:)'
-  check_allowed_tool_match "$base" "$ALLOWED" "$file" "TeamCreate" '(^|[^[:alnum:]_])TeamCreate([^[:alnum:]_]|$)' 'do[[:space:]]+not.*TeamCreate'
   check_allowed_tool_match "$base" "$ALLOWED" "$file" "TaskCreate" '(^|[^[:alnum:]_])TaskCreate([^[:alnum:]_]|$)' 'do[[:space:]]+not.*TaskCreate'
   check_allowed_tool_match "$base" "$ALLOWED" "$file" "TodoWrite" '(^|[^[:alnum:]_])TodoWrite([^[:alnum:]_]|$)' 'do[[:space:]]+not.*TodoWrite|disallow.*TodoWrite|forbid.*TodoWrite'
   check_allowed_tool_match "$base" "$ALLOWED" "$file" "SendMessage" '(^|[^[:alnum:]_])SendMessage([^[:alnum:]_]|$)' 'do[[:space:]]+not.*SendMessage'
-  check_allowed_tool_match "$base" "$ALLOWED" "$file" "TeamDelete" '(^|[^[:alnum:]_])TeamDelete([^[:alnum:]_]|$)' 'do[[:space:]]+not.*TeamDelete'
 done
 
 # Regression guards for prompt-text tool references that previously slipped

@@ -49,10 +49,14 @@ AGENT_SKILL_CONTRACT_FILES=(
   "$ROOT/agents/vbw-docs.md"
 )
 
-SKILL_FOLLOW_UP_SENTENCE=$(cat <<'EOF'
+# Note: assigned via `read -r -d ''` (not `$(cat <<'EOF')`) because bash 3.2
+# (macOS system bash) mis-parses a heredoc containing backticks nested inside
+# `$(...)` command substitution. `|| true` absorbs read's expected EOF exit
+# status; the `%$'\n'` strip restores exact `$(cat)` no-trailing-newline value.
+IFS= read -r -d '' SKILL_FOLLOW_UP_SENTENCE <<'EOF' || true
 After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting — do not scan entire skill folders or read unrelated references.
 EOF
-)
+SKILL_FOLLOW_UP_SENTENCE=${SKILL_FOLLOW_UP_SENTENCE%$'\n'}
 
 SKILL_FOLLOW_UP_BLOCK_OPEN='<skill_follow_up_files>'
 
@@ -571,7 +575,7 @@ else
   fail "vbw-dev.md: memory must remain project (found: ${DEV_MEMORY:-missing})"
 fi
 
-for required_denied in Task TaskCreate Agent TeamCreate TeamDelete AskUserQuestion; do
+for required_denied in Task TaskCreate Agent AskUserQuestion; do
   if dev_disallowed_has "$required_denied"; then
     pass "vbw-dev.md: disallowedTools bans $required_denied"
   else
@@ -589,7 +593,8 @@ done
 
 if grep -q 'Your frontmatter denylist explicitly bans recursive delegation' <<< "$DEV_CONSTRAINTS_SECTION" \
   && grep -q 'Use the listed implementation tools directly' <<< "$DEV_CONSTRAINTS_SECTION" \
-  && grep -q 'Task`, `TaskCreate`, `Agent`, `TeamCreate`, `TeamDelete`, and `AskUserQuestion`' <<< "$DEV_CONSTRAINTS_SECTION"; then
+  && grep -q 'Task`, `TaskCreate`, `Agent`, and `AskUserQuestion`' <<< "$DEV_CONSTRAINTS_SECTION" \
+  && grep -q 'Do not form an agent team' <<< "$DEV_CONSTRAINTS_SECTION"; then
   pass "vbw-dev.md: prompt explains denylist no-subagent tool boundary"
 else
   fail "vbw-dev.md: missing denylist no-subagent tool-boundary guidance"

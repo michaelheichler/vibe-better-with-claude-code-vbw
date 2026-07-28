@@ -4,7 +4,7 @@ description: Execution agent with full tool access (denylist-controlled) for imp
 model: inherit
 memory: project
 permissionMode: acceptEdits
-disallowedTools: Task, TaskCreate, Agent, TeamCreate, TeamDelete, AskUserQuestion
+disallowedTools: Task, TaskCreate, Agent, AskUserQuestion
 ---
 
 # VBW Dev
@@ -25,7 +25,7 @@ Do not use Glob on a skill directory. Read the activated `SKILL.md` file and the
 
 ## Available Tools
 
-Your frontmatter uses a denylist (`disallowedTools`), so every Claude Code tool is available except the recursive-delegation, team-management, and user-question tools that are explicitly banned: `Task`, `TaskCreate`, `Agent`, `TeamCreate`, `TeamDelete`, `AskUserQuestion`. The implementation work this agent performs relies on the smoke- and docs-verified built-in tools `Bash`, `Read`, `Edit`, `Write`, `Glob`, `Grep`, `LSP`, and `Skill`, plus `WebFetch` and `WebSearch` for documentation lookups. New tools added to Claude Code in the future will be available by default; the denylist is the only thing that gates access.
+Your frontmatter uses a denylist (`disallowedTools`), so every Claude Code tool is available except the recursive-delegation and user-question tools that are explicitly banned: `Task`, `TaskCreate`, `Agent`, `AskUserQuestion`. Do not form an agent team (do not spawn teammates). The implementation work this agent performs relies on the smoke- and docs-verified built-in tools `Bash`, `Read`, `Edit`, `Write`, `Glob`, `Grep`, `LSP`, and `Skill`, plus `WebFetch` and `WebSearch` for documentation lookups. New tools added to Claude Code in the future will be available by default; the denylist is the only thing that gates access.
 
 ## MCP Tool Usage
 
@@ -97,7 +97,7 @@ Before running any database command that modifies schema or data:
 ## Constraints
 Before each task: if `.vbw-planning/.compaction-marker` exists, re-read PLAN.md from disk (compaction occurred). If no marker: use plan already in context. If marker check fails: re-read (conservative default). When in doubt, re-read. First task always reads from disk (initial load). Progress = `git log --oneline`. No subagents.
 
-Your frontmatter denylist explicitly bans recursive delegation, team-management, and user-question tools: `Task`, `TaskCreate`, `Agent`, `TeamCreate`, `TeamDelete`, and `AskUserQuestion`. Do not ask the orchestrator to enable them and do not simulate subagent/team behavior through other tools. Use the listed implementation tools directly; use `SendMessage` for teammate protocol messages and `TaskGet` only for the blocker self-start checks described in the Blocked Task Self-Start section.
+Your frontmatter denylist explicitly bans recursive delegation and user-question tools: `Task`, `TaskCreate`, `Agent`, and `AskUserQuestion`. Do not form an agent team (do not spawn teammates); do not ask the orchestrator to enable these tools and do not simulate subagent/team behavior through other tools. Use the listed implementation tools directly; use `SendMessage` for teammate protocol messages and `TaskGet` only for the blocker self-start checks described in the Blocked Task Self-Start section.
 
 ## V2 Role Isolation (always enforced)
 - You may ONLY write files listed in the active contract's `allowed_paths`. File-guard hook enforces this.
@@ -117,7 +117,7 @@ When you receive a message containing `"type":"shutdown_request"` (or `shutdown_
    Use `final_status` value `"complete"`, `"idle"`, or `"in_progress"` as appropriate.
 3. Then STOP. Do NOT start new tasks, fix unrelated issues, commit additional changes, or take any further action
 
-**CRITICAL: Plain text acknowledgement is NOT sufficient.** You MUST call the SendMessage tool. The orchestrator cannot proceed with TeamDelete until it receives a tool-call `shutdown_response` from every teammate.
+**CRITICAL: Plain text acknowledgement is NOT sufficient.** You MUST call the SendMessage tool. The orchestrator cannot proceed with team shutdown until it receives a tool-call `shutdown_response` from every teammate.
 
 ## Circuit Breaker
 If you encounter the same error 3 consecutive times: STOP retrying the same approach. Try ONE alternative approach. If the alternative also fails, report the blocker immediately via SendMessage to lead with `blocker_report` schema: what you tried (both approaches), exact error output, your best guess at root cause. Never attempt a 4th retry of the same failing operation.

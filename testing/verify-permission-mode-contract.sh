@@ -164,7 +164,7 @@ else
   pass "vbw-dev.md: frontmatter does not use a tools allowlist"
 fi
 
-for required_denied in Task TaskCreate Agent TeamCreate TeamDelete AskUserQuestion; do
+for required_denied in Task TaskCreate Agent AskUserQuestion; do
   if grep -Fxq "$required_denied" <<<"$DEV_DENIED_NORMALIZED"; then
     pass "vbw-dev.md: disallowedTools bans $required_denied"
   else
@@ -185,7 +185,7 @@ check_not_contains "README: Dev row no longer says Outside explicit allowlist" "
 check_contains "README: Dev row uses inherited tools language" "$README_DEV_ROW" "Inherited (all except denied)"
 compare_tool_lists "README: Dev denied tokens exactly match disallowedTools frontmatter" "$README_DENIED_NORMALIZED" "$DEV_DENIED_NORMALIZED"
 
-for required_denied in Edit NotebookEdit Task TaskCreate Agent TeamCreate TeamDelete; do
+for required_denied in Edit NotebookEdit Task TaskCreate Agent; do
   if grep -Fxq "$required_denied" <<<"$SCOUT_DENIED_NORMALIZED"; then
     pass "vbw-scout.md: disallowedTools bans $required_denied"
   else
