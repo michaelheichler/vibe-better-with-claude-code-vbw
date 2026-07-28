@@ -1,0 +1,107 @@
+README.md
+  s_f456375910c445::t_1d3aa824e5fbe1 104,118,314,461,464
+agents/vbw-architect.md
+  s_a9512ddfd04e2c::t_8f25cde8cad958 55
+agents/vbw-debugger.md
+  s_a9512ddfd04e2c::t_b97fecc3dde859 118
+agents/vbw-dev.md
+  s_81602ba243a2ba::t_43ae0505de4a58 7,28,100,120
+agents/vbw-docs.md
+  s_240f81559e02ba::t_83841e05a29b65 107
+agents/vbw-lead.md
+  s_240f81559e02ba::t_f350b743512555 107
+agents/vbw-qa.md
+  s_62a88af23092be::t_f7172c62d9852b 183
+agents/vbw-scout.md
+  s_240f81559e02ba::t_470f6b4e872d2c 4,110,125
+commands/debug.md
+  s_f456375910c445::t_e09557cb7946fc 7,19,215-216,245,250-252,295,459
+commands/map.md
+  s_f456375910c445::t_8ce34ddcd7c3b5 7,20,102,156,205
+commands/vibe.md
+  s_f456375910c445::t_ef03c472e228e7 6,24,468,588,850-851,1008-1009,1112,1145,1176,1210,1367,1440-1441,1794
+references/execute-protocol.md
+  s_91e3a120aa7f24::t_c9a0c82b44b5d4 168-169,172,178,182-183,192,209,699-700,738,998,1001,1003,1007-1008,1017,1033,1038
+references/handoff-schemas.md
+  s_81602ba243a2ba::t_0aa8cbec29c71b 332
+scripts/clean-stale-teams.sh
+  s_81602ba243a2ba::t_88564ffe0af1e2 54-56
+testing/debug-path-a-isolation-smoke.md
+  s_81602ba243a2ba::t_1947adaf5df1a4 22,30,137,154
+testing/verify-commands-contract.sh
+  s_e38451378e3257::t_c6f7ee367d355b 427,429,431,437,449,451
+testing/verify-debug-session-contract.sh
+  s_81602ba243a2ba::t_0df0295a76e6da 375
+testing/verify-execute-delegation-routing.sh
+  s_81602ba243a2ba::t_677a26ec9ae865 93-95
+testing/verify-ghost-team-cleanup.sh
+  s_f456375910c445::t_f29c4cda5f9caf 227-228,230,235-236,238,274,276,281-282,284,289-290,292,316,319,321,327-329,331,333,339-340,342,344,357-358,360,365-366,368
+testing/verify-permission-mode-contract.sh
+  s_f456375910c445::t_19babdfd29f603 167,188
+testing/verify-skill-activation.sh
+  s_f456375910c445::t_b8a690dae8bbc6 52-56,59,578,596-597
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "2e28c925075e073a1be476e52ce774aa67dc18bd",
+  "prompts": {},
+  "sessions": {
+    "s_240f81559e02ba": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a24425e655632a378",
+        "model": "unknown"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    },
+    "s_62a88af23092be": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-abb97765518de6424",
+        "model": "unknown"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    },
+    "s_81602ba243a2ba": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a736156b26edd63d3",
+        "model": "unknown"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    },
+    "s_91e3a120aa7f24": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a264e3ac47a4fe494",
+        "model": "unknown"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    },
+    "s_a9512ddfd04e2c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a00c56679230b55ef",
+        "model": "unknown"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    },
+    "s_e38451378e3257": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-acd79a4da613bcc57",
+        "model": "unknown"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    },
+    "s_f456375910c445": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "44b1e04e-0ed3-4eaa-9a3e-8dca04bcac25",
+        "model": "unknown"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
