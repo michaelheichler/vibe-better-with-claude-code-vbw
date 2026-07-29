@@ -17,33 +17,13 @@
 
 </div>
 
-## VBW Token Efficiency vs Stock Opus 4.6 Agent Teams
+## Token efficiency by design
 
-Every new capability is shell-only — 85 scripts run as bash subprocesses at zero model token cost. The codebase grew 42% since v1.21.30 while per-request overhead grew just 12% (still 7% below v1.20.0). The Worktree Isolation milestone (41 commits, 6 phases) shipped at near-zero model cost — only +16 reference lines loaded lazily. Dead code removal actually shrank the codebase by 1,665 lines vs the CC Alignment snapshot. 845 bats tests validate the stack.
+VBW keeps model-token overhead low by construction: workflow logic lives in 228 shell scripts that run as bash subprocesses at zero model-token cost, and per-role context is compiled and loaded lazily instead of dumped into every agent. The stack is validated by 142 bats files (3,591 test cases) alongside the contract and lint suites.
 
-**Analysis reports:** [v1.30.0](docs/vbw-1-30-0-full-spec-token-analysis.md) | [v1.21.30](docs/vbw-1-21-30-full-spec-token-analysis.md) | [v1.20.0](docs/vbw-1-20-0-full-spec-token-analysis.md) | [v1.10.7](docs/vbw-1-10-7-context-compiler-token-analysis.md) | [v1.10.2](docs/vbw-1-10-2-vs-stock-agent-teams-token-analysis.md) | [v1.0.99](docs/vbw-1-0-99-vs-stock-teams-token-analysis.md)
+The `docs/*token-analysis*.md` reports estimate the resulting overhead with a line-count heuristic (roughly 15 tokens per markdown line). They are design estimates, not measured API benchmarks, and the stock-agent-teams baseline they compare against was measured on an older release. Treat the figures as directional rather than as a guaranteed bill.
 
-| Category | Stock Agent Teams | VBW | Saving |
-| :--- | ---: | ---: | ---: |
-| Base context overhead | 10,800 tokens | 1,500 tokens | **86%** |
-| State computation per command | 1,300 tokens | 200 tokens | **85%** |
-| Agent coordination (x4 agents) | 16,000 tokens | 1,200 tokens | **93%** |
-| Compaction recovery | 5,000 tokens | 700 tokens | **86%** |
-| Context duplication (shared files) | 16,500 tokens | 900 tokens | **95%** |
-| Agent model cost per phase | $2.78 | $1.40 | **50%** |
-| **Total coordination overhead** | **87,100 tokens** | **12,100 tokens** | **86%** |
-
-**What this means for your bill:** Each phase eliminates ~86% of coordination tokens. For API users, per-phase cost drops from $2.78 to $1.40 (Balanced) or $0.70 (Budget). For subscription plans, ~3x more phases per rate limit cycle — **200% more development capacity for the same price**.
-
-| Scenario | Without VBW | With VBW (Balanced) | Impact |
-| :--- | ---: | ---: | ---: |
-| API: single project (10 phases) | ~$28 | ~$14 | **~$14 saved** |
-| API: active dev (20 phases/mo) | ~$56/mo | ~$28/mo | **~$28/mo saved (~$336/yr)** |
-| API: heavy dev (50 phases/mo) | ~$139/mo | ~$70/mo | **~$69/mo saved (~$828/yr)** |
-| API: team (100 phases/mo) | ~$278/mo | ~$139/mo | **~$139/mo saved (~$1,668/yr)** |
-| Pro / Max subscription | baseline capacity | ~3x phases per cycle | **200% more work done** |
-
-*Budget profile ($0.70/phase) doubles API savings. Quality profile ($2.80/phase) matches stock cost but adds V2/V3 enforcement at zero premium. Based on [current API pricing](https://claude.com/pricing).*
+**Analysis reports (estimates):** [v1.30.0](docs/vbw-1-30-0-full-spec-token-analysis.md) | [v1.21.30](docs/vbw-1-21-30-full-spec-token-analysis.md) | [v1.20.0](docs/vbw-1-20-0-full-spec-token-analysis.md) | [v1.10.7](docs/vbw-1-10-7-context-compiler-token-analysis.md) | [v1.10.2](docs/vbw-1-10-2-vs-stock-agent-teams-token-analysis.md) | [v1.0.99](docs/vbw-1-0-99-vs-stock-teams-token-analysis.md)
 
 ## Manifesto
 
@@ -73,7 +53,7 @@ Think of it as project management for the post-dignity era of software developme
 
 ## Table of Contents
 
-- [VBW Token Efficiency vs Stock Opus 4.6 Agent Teams](#vbw-token-efficiency-vs-stock-opus-46-agent-teams)
+- [Token efficiency by design](#token-efficiency-by-design)
 - [Manifesto](#manifesto)
 - [Features](#features)
 - [Installation](#installation)
