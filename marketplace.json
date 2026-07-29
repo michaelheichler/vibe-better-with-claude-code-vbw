@@ -10,7 +10,10 @@
   "plugins": [
     {
       "name": "vbw",
-      "source": "./",
+      "source": {
+        "source": "github",
+        "repo": "michaelheichler/vibe-better-with-claude-code-vbw"
+      },
       "description": "Development lifecycle plugin — 26 commands, 7 agents, continuous verification",
       "version": "1.37.1",
       "license": "MIT",

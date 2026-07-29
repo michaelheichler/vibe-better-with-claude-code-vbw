@@ -454,7 +454,7 @@ if [ ! -f "$CACHE" ] || [ $((NOW - MT)) -gt 86400 ]; then
 
   # Fetch latest version from GitHub (3s timeout)
   REMOTE_VER=$(curl -sf --max-time 3 \
-    "https://raw.githubusercontent.com/yidakee/vibe-better-with-claude-code-vbw/main/.claude-plugin/plugin.json" \
+    "https://raw.githubusercontent.com/michaelheichler/vibe-better-with-claude-code-vbw/main/.claude-plugin/plugin.json" \
     2>/dev/null | jq -r '.version // "0.0.0"' 2>/dev/null)
 
   # Cache the result regardless

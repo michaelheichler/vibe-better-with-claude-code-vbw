@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-REPO_URL="https://raw.githubusercontent.com/yidakee/vibe-better-with-claude-code-vbw/main/VERSION"
+REPO_URL="https://raw.githubusercontent.com/michaelheichler/vibe-better-with-claude-code-vbw/main/VERSION"
 
 FILES=(
   "$ROOT/VERSION"
