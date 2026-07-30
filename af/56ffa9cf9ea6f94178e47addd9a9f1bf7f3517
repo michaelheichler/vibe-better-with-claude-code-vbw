@@ -1,0 +1,31 @@
+agents/vbw-architect.md
+  s_882a1d5961f935::t_494b5ad0a7a871 30,32
+  s_882a1d5961f935::t_158355ab94ceb0 36-40,45-47,49
+  s_882a1d5961f935::t_17a7487694407f 59-63,66
+  h_49622c3802c0ed 5
+  s_882a1d5961f935::t_dde075fd15b428 16
+  s_882a1d5961f935::t_7c2d235d3f1a11 3
+  s_882a1d5961f935::t_c6989ca3bcd7fb 22
+  s_882a1d5961f935::t_18810178aae24b 12
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.18",
+  "base_commit_sha": "af56ffa9cf9ea6f94178e47addd9a9f1bf7f3517",
+  "prompts": {},
+  "humans": {
+    "h_49622c3802c0ed": {
+      "author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  },
+  "sessions": {
+    "s_882a1d5961f935": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f129a6a2-955f-443e-aff2-d3b060dc9786",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
