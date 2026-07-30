@@ -7,7 +7,10 @@ set -u
 # isolation by construction. This guard remains active as a secondary
 # enforcement layer (belt-and-suspenders) for both modes.
 #
-# Blocks Write/Edit to files not declared in active plan's files_modified.
+# Blocks Write/Edit to files not declared in active plan's files_modified,
+# but only while an execution is live (.execution-state.json status=running and
+# fresh, or a live delegated-workflow marker). A planned-but-idle phase never
+# blocks unrelated work.
 # V2 enhancement: also checks forbidden_paths from active contract when v2_hard_contracts=true.
 # Fail-open design: exit 0 on any error, exit 2 only on definitive violations
 
@@ -541,6 +544,41 @@ fi
 # No role set — fail-open
 
 # --- Original file-guard: check files_modified from active plan ---
+# Same liveness signals as the orchestrator delegation guard above: an
+# execution is live when .execution-state.json reports status=running and is
+# under 4 hours old, or the delegated-workflow marker reports live=true.
+execution_is_live() {
+  local exec_state="$PROJECT_ROOT/.vbw-planning/.execution-state.json"
+  local exec_status now mtime age marker_status marker_live
+  if [ -f "$exec_state" ]; then
+    exec_status=$(jq -r '.status // ""' "$exec_state" 2>/dev/null) || exec_status=""
+    if [ "$exec_status" = "running" ]; then
+      now=$(date +%s 2>/dev/null || echo 0)
+      if [ "$(uname)" = "Darwin" ]; then
+        mtime=$(stat -f %m "$exec_state" 2>/dev/null || echo 0)
+      else
+        mtime=$(stat -c %Y "$exec_state" 2>/dev/null || echo 0)
+      fi
+      age=$((now - mtime))
+      if [ "$age" -ge 0 ] && [ "$age" -lt 14400 ]; then
+        return 0
+      fi
+    fi
+  fi
+  if [ -f "$PROJECT_ROOT/.vbw-planning/.delegated-workflow.json" ]; then
+    marker_status=$(VBW_PLANNING_DIR="$PROJECT_ROOT/.vbw-planning" bash "${_FG_SCRIPT_DIR}/delegated-workflow.sh" status-json 2>/dev/null) || marker_status=""
+    if [ -n "$marker_status" ]; then
+      marker_live=$(echo "$marker_status" | jq -r '.live // false' 2>/dev/null) || marker_live="false"
+      [ "$marker_live" = "true" ] && return 0
+    fi
+  fi
+  return 1
+}
+
+# A planned-but-not-executing phase must not block unrelated work: only
+# enforce files_modified while an execution is actually live.
+execution_is_live || exit 0
+
 ACTIVE_PLAN=""
 # A plan is active if its SUMMARY doesn't exist or has a non-terminal status.
 # zsh compat: if no PLAN files exist, glob literal fails -f test and is skipped
