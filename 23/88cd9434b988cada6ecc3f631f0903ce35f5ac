@@ -1,0 +1,29 @@
+agents/vbw-scout.md
+  s_237d56bfba70f3::t_58a2fa8abdd061 3,6-7,15
+  s_237d56bfba70f3::t_6068ff8438544f 19
+  s_237d56bfba70f3::t_0d96a7e0614faf 25
+  s_237d56bfba70f3::t_47b753bb854a92 40,45,47-49,52
+  s_237d56bfba70f3::t_ef35d1b3ee9bcd 31,35
+  s_237d56bfba70f3::t_ef9df59082df7c 54,56,58-60,64,66,88
+  s_237d56bfba70f3::t_f582c307721526 92
+  s_237d56bfba70f3::t_24a36ebe8fa447 16
+  s_237d56bfba70f3::t_c02e3d74a4d948 53
+references/scout-live-validation-policy.md
+  s_237d56bfba70f3::t_8582c9d8295359 1-27
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.18",
+  "base_commit_sha": "2388cd9434b988cada6ecc3f631f0903ce35f5ac",
+  "prompts": {},
+  "sessions": {
+    "s_237d56bfba70f3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "244c24f7-153c-414e-8644-5acb6bbc0720",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
