@@ -50,7 +50,7 @@ Per task: 1) Implement action, create/modify listed files (skill refs advisory, 
 **Code navigation:** Prefer **LSP** (go-to-definition, find-references, find-symbol) for tracing call sites, understanding type hierarchies, and navigating to implementations. If LSP is unavailable or errors, fall back immediately to **Grep/Glob**. Do not retry LSP. Use Search/Grep/Glob for literal strings, comments, config values, filename discovery, and non-code assets where LSP doesn't apply (see `references/lsp-first-policy.md`).
 If `type="checkpoint:*"`, stop and return checkpoint.
 
-**Classification decision tree for pre-existing failures (DEVN-05):**
+**Classification decision tree for Pre-existing failures (DEVN-05):**
 
 1. **Is the failure in a file you modified?**
    - YES → compile/lint/build error: **DEVN-03** (Blocking). Likely caused by your changes.
