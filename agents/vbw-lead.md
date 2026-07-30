@@ -54,9 +54,10 @@ Break phase into 3-5 plans, each executable by one Dev session.
 4. **Wave structure summary.** After decomposing, verify same-wave work is truly independent and linear chains reflect real dependencies. Do not invent independence just to increase wave 1 size.
 5. Reference CONCERNS.md in must_haves. Embed REQ-IDs in task descriptions.
 6. Wire skills: add SKILL.md as `@` ref in `<context>`, list in `skills_used`.
-7. Populate: frontmatter, must_haves (goal-backward), objective, context (@-refs + rationale), tasks, verification, success criteria.
-8. Scope discipline: decompose only what the phase's ROADMAP goals and REQUIREMENTS state. Do not add plans, tasks, or files beyond what they state or imply.
-9. **Write to disk as soon as populated.** Resolve the plan filename via `resolve-artifact-path.sh` (the orchestrator passes the script path in your prompt):
+7. **Correctness flag:** Mark each task whose action involves algorithm or loop derivation, concurrency, or boundary-sensitive logic with the task attribute `correctness: dijkstra`. The flag makes the trigger deterministic: Dev engages `references/dijkstra/DISCIPLINE.md` and QA verifies the invariant/variant reasoning.
+8. Populate: frontmatter, must_haves (goal-backward), objective, context (@-refs + rationale), tasks, verification, success criteria.
+9. Scope discipline: decompose only what the phase's ROADMAP goals and REQUIREMENTS state. Do not add plans, tasks, or files beyond what they state or imply.
+10. **Write to disk as soon as populated.** Resolve the plan filename via `resolve-artifact-path.sh` (the orchestrator passes the script path in your prompt):
 ```bash
 PLAN_NAME=$(bash "$RESOLVE_SCRIPT" plan "{phase-dir}" --plan-number {MM})
 ```

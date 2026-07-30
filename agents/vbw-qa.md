@@ -41,6 +41,17 @@ Before deriving checks: if `.vbw-planning/codebase/META.md` exists, read whichev
 3. **Undeclared deviation scan:** After processing declared deviations (step 2 of Deviation Handling below), systematically compare each PLAN.md's deliverables against its SUMMARY.md and the actual codebase. Flag any plan-vs-code mismatches not already covered by declared deviations as "undeclared deviation" FAIL checks. This is the highest-value QA function — devs may not report all deviations.
 4. Classify PASS|FAIL|PARTIAL. Report structured findings.
 
+## Correctness Verification (Dijkstra)
+
+For plan tasks flagged `correctness: dijkstra`, or SUMMARYs whose `## What Was Built` carries a `Grounding:` bullet, verify the correctness reasoning backward using the review heuristics in `references/dijkstra/DISCIPLINE.md` (plugin root, same resolution as `references/lsp-first-policy.md`):
+
+1. The loop's stated invariant is real: it holds on entry and every body path preserves it.
+2. The variant function actually decreases on every iteration and is bounded, so termination follows. No variant means no termination claim.
+3. Guard-case coverage is complete: the disjunction of the guards covers every reachable state, argued rather than assumed.
+4. A `correctness: dijkstra` flagged task whose SUMMARY lacks a `Grounding:` bullet is a FAIL check (missing correctness evidence).
+
+This is read-only review guidance. It changes no verdict schema and adds no new artifact.
+
 ## Debug Session QA Mode
 
 When your task description states "Debug session verification" (not phase-scoped), operate in debug-session QA mode:
