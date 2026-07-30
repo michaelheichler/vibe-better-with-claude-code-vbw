@@ -1,0 +1,50 @@
+testing/verify-askuserquestion-contract.sh
+  s_b4629a02cf90c9::t_bdd5a6cae0fad3 423-424,464,702-703,736-737
+scripts/bump-version.sh
+  s_971388d29a7ae9::t_202558941f87c9 129
+  s_971388d29a7ae9::t_1c15d9aef1ec2f 159
+  s_971388d29a7ae9::t_31dbdd300053b8 14-96,98
+commands/skills.md
+  s_b4629a02cf90c9::t_4a4a5c897e621b 84
+  s_b4629a02cf90c9::t_d7e90d1d4bb977 93
+  s_b4629a02cf90c9::t_a39586e1600e24 74-75
+testing/verify-live-validation-policy.sh
+  s_b4629a02cf90c9::t_0185a8fb9d4654 67,73
+  s_b4629a02cf90c9::t_073353635dce94 16
+  s_b4629a02cf90c9::t_64d02aa40e7fd7 108
+testing/verify-commands-contract.sh
+  s_b4629a02cf90c9::t_bdd5a6cae0fad3 499,505,583,631-632,655
+agents/vbw-debugger.md
+  s_b4629a02cf90c9::t_df50f81a6c62ad 54
+agents/vbw-qa.md
+  s_b4629a02cf90c9::t_a9bccdaba3f97d 138-139
+testing/verify-debug-session-contract.sh
+  s_b4629a02cf90c9::t_c871fc92ae952f 544
+references/ask-user-question.md
+  s_b4629a02cf90c9::t_c6fafeef71490d 10-11
+  s_b4629a02cf90c9::t_6602aaccee2ad3 59
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.18",
+  "base_commit_sha": "05695eb10ddf9a6ea92596ddf68d38f634c61195",
+  "prompts": {},
+  "sessions": {
+    "s_971388d29a7ae9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c02f1527-3e5d-4d10-bde3-af11d9a4f0e9",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    },
+    "s_b4629a02cf90c9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e8b650c1-3e0d-4eb4-a588-7674417dcbd7",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
