@@ -1,0 +1,19 @@
+README.md
+  s_f456375910c445::t_a574c8d4e91149 14,28-49,79,89,156,408,989-990,1142-1145
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "65f7330bd83e53ccce4b1c8fdee08d749606d6ad",
+  "prompts": {},
+  "sessions": {
+    "s_f456375910c445": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "44b1e04e-0ed3-4eaa-9a3e-8dca04bcac25",
+        "model": "unknown"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
