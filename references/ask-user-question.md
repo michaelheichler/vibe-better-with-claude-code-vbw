@@ -7,8 +7,8 @@ Last reviewed: 2026-04-18
 
 - Keep headers short. Prefer compact labels over sentence-length titles.
 - Use structured choices when the real decision is bounded.
-- Treat 2–4 options as the sweet spot for a single question.
-- Ask 1–4 questions per tool call.
+- Treat 2-4 options as the sweet spot for a single question.
+- Ask 1-4 questions per tool call.
 - When options exist, Claude Code still exposes an `Other` path. Treat it as the built-in escape hatch instead of pretending freeform input does not exist.
 - Mark the preferred option with `isRecommended` when one option is genuinely better.
 - Leave 3–4 blank lines before the tool call so the dialog does not cover the last line of prose.
@@ -56,7 +56,7 @@ Options:
 Prompt: Tell me which todo to act on. Use the todo number or describe the item in your own words.
 
 Why this stays freeform:
-- the list length is not bounded to 2–4 options
+- the list length is not bounded to 2-4 options
 - the correct answer may be a number, a phrase, or a new clarification
 - pretending this is a fixed menu creates fake structure and worse UX
 

@@ -71,8 +71,8 @@ Combine curated + registry, deduplicate, rank (curated first).
     - `Skip for now`
   - Declined → display `○ No skills selected for installation.` and STOP here. Do not ask Step 5b and do not enter Step 6.
 
-- If the combined list has 2–4 candidates: keep it structured because this stays within the AskUserQuestion sweet spot.
-  - Use AskUserQuestion with 1 question per skill (2–4 questions total), in ranked order.
+- If the combined list has 2-4 candidates: keep it structured because this stays within the AskUserQuestion sweet spot.
+  - Use AskUserQuestion with 1 question per skill (2-4 questions total), in ranked order.
   - Keep each header short. Use the skill name as the header.
   - Each question should show `{skill-name} — {brief description}` with two options:
     - `Install`
@@ -81,7 +81,7 @@ Combine curated + registry, deduplicate, rank (curated first).
   - If none were selected, display `○ No skills selected for installation.` and STOP here. Do not ask Step 5b and do not enter Step 6.
 
 - If the combined list has more than 4 candidates: use intentional high-cardinality freeform input.
-  - Present it as a numbered list in the AskUserQuestion text (do NOT use `options` array — this list is larger than the 2–4 structured-choice sweet spot, so numeric/freeform input is intentional here rather than a faux bounded chooser).
+  - Present it as a numbered list in the AskUserQuestion text (do NOT use `options` array: this list is larger than the 2-4 structured-choice sweet spot, so numeric/freeform input is intentional here rather than a faux bounded chooser).
 
 Question text:
 ```
@@ -90,7 +90,7 @@ Available skills for installation:
 2. {skill-name} — {brief description}
 ...N. {skill-name} — {brief description}
 
-This list is larger than the 2–4 structured-choice sweet spot, so use numeric/freeform selection here.
+This list is larger than the 2-4 structured-choice sweet spot, so use numeric/freeform selection here.
 Type numbers to install (comma-separated), or 'skip' to continue:
 ```
 

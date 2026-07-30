@@ -496,13 +496,13 @@ else
   fail "ask-user-question: missing short-header rule"
 fi
 
-if [ -f "$ASK_USER_QUESTION_REF" ] && grep -Eq '2[-–]4 options' "$ASK_USER_QUESTION_REF"; then
+if [ -f "$ASK_USER_QUESTION_REF" ] && grep -Eq '2-4 options' "$ASK_USER_QUESTION_REF"; then
   pass "ask-user-question: documents 2-4 option sweet spot"
 else
   fail "ask-user-question: missing 2-4 option guidance"
 fi
 
-if [ -f "$ASK_USER_QUESTION_REF" ] && grep -Eq '1[-–]4 questions' "$ASK_USER_QUESTION_REF"; then
+if [ -f "$ASK_USER_QUESTION_REF" ] && grep -Eq '1-4 questions' "$ASK_USER_QUESTION_REF"; then
   pass "ask-user-question: documents 1-4 question guidance"
 else
   fail "ask-user-question: missing 1-4 question guidance"
@@ -580,7 +580,7 @@ else
   fail "vibe: confirmation gate lost vibe-local routing constructs"
 fi
 
-if grep -Eq '2[-–]4 options|1[-–]4 questions|freeform|high-cardinality' <<< "$VIBE_CONFIRMATION_BLOCK" \
+if grep -Eq '2-4 options|1-4 questions|freeform|high-cardinality' <<< "$VIBE_CONFIRMATION_BLOCK" \
   || grep -Fq '`Other` path' <<< "$VIBE_CONFIRMATION_BLOCK" \
   || grep -Fq 'Keep headers short' <<< "$VIBE_CONFIRMATION_BLOCK" \
   || grep -Fq 'dialog obscures' <<< "$VIBE_CONFIRMATION_BLOCK" \
@@ -628,8 +628,8 @@ else
       fail "skills: Step 5 missing structured single-candidate branch"
     fi
 
-    if grep -Eq 'If the combined list has 2[-–]4 candidates: keep it structured' <<< "$skills_step_5" \
-      && grep -Eq 'Use AskUserQuestion with 1 question per skill \(2[-–]4 questions total\)' <<< "$skills_step_5"; then
+    if grep -Eq 'If the combined list has 2-4 candidates: keep it structured' <<< "$skills_step_5" \
+      && grep -Eq 'Use AskUserQuestion with 1 question per skill \(2-4 questions total\)' <<< "$skills_step_5"; then
       pass "skills: Step 5 keeps bounded multi-candidate installs structured"
     else
       fail "skills: Step 5 missing structured 2-4 candidate branch"
@@ -652,7 +652,7 @@ else
 
     if grep -Fq 'If the combined list has more than 4 candidates: use intentional high-cardinality freeform input.' <<< "$skills_step_5" \
       && grep -Fq 'do NOT use `options` array' <<< "$skills_step_5" \
-      && grep -Eq 'larger than the 2[-–]4 structured-choice sweet spot' <<< "$skills_step_5"; then
+      && grep -Eq 'larger than the 2-4 structured-choice sweet spot' <<< "$skills_step_5"; then
       pass "skills: Step 5 keeps 5+ candidates on an intentional freeform path"
     else
       fail "skills: Step 5 missing explicit intentional freeform 5+ candidate branch"
