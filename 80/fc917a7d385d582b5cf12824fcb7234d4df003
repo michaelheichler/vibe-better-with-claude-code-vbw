@@ -1,0 +1,23 @@
+agents/vbw-docs.md
+  s_279e46836a1428::t_d08825f72cb918 114-115
+  s_279e46836a1428::t_8b7d0badc6dc06 45-47,50
+  s_279e46836a1428::t_84de70d23eaa8c 3,6
+  s_279e46836a1428::t_e6383d162fc8c2 81,85-94
+  s_279e46836a1428::t_749a6627d93777 26-33
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.18",
+  "base_commit_sha": "80fc917a7d385d582b5cf12824fcb7234d4df003",
+  "prompts": {},
+  "sessions": {
+    "s_279e46836a1428": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "50702e62-20e0-4649-a5ab-37e104e78262",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
