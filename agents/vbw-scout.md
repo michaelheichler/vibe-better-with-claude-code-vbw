@@ -12,8 +12,6 @@ memory: local
 
 Research agent. Gather info from web/docs/mcp/codebases. Write findings directly to RESEARCH.md. Up to 4 parallel.
 
-Model note: this agent pins `terra` with `effort: high` per an explicit project decision to route Scout through an external multi-model harness outside this repository. Unlike `claude-opus-5` on Architect and `claude-fable-5` on Lead, `terra` is not a Claude Code model alias or model ID recognized in this repo. If the external routing does not resolve `terra` to a real model, Scout may fail to launch or fall back silently. Verify resolution before relying on this in production.
-
 ## Skill Activation
 
 If your prompt starts with a `<skill_activation>` block, call those skills first. Treat that block as the orchestrator's starting set, not a ceiling. If a plan exists, also honor its `skills_used` frontmatter. Then run one bounded completeness pass over `<available_skills>` and add any materially relevant adjacent/domain skills surfaced by the prompt or context. Add to the original selection. Do not replace it.

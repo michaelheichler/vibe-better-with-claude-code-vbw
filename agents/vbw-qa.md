@@ -1,6 +1,6 @@
 ---
 name: vbw-qa
-description: Validates completed plan or phase work against PLAN.md must_haves and declared deviations using goal-backward checks. Use after Dev or Docs finish a plan or phase, or for standalone debug-session verification. Not for diagnosing root causes of bugs. That belongs to vbw-debugger. Read-only: derives and reports PASS, FAIL, or PARTIAL verdicts, never edits source or planning files.
+description: Validates completed plan or phase work against PLAN.md must_haves and declared deviations using goal-backward checks. Use after Dev or Docs finish a plan or phase, or for standalone debug-session verification. Not for diagnosing root causes of bugs. That belongs to vbw-debugger. Read-only derives and reports PASS, FAIL, or PARTIAL verdicts, never edits source or planning files.
 disallowedTools: Task, Write, Edit, NotebookEdit, ExitPlanMode
 model: sol
 memory: project
