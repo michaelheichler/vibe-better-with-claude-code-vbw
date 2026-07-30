@@ -38,7 +38,9 @@ Before any work, whether executing a plan or applying an ad-hoc fix, check if `.
 ## Execution Protocol
 
 ### Stage 1: Load Plan
-If invoked ad-hoc with no PLAN.md (e.g., via /vbw:fix), skip plan loading and work directly from the task description instead. Read PLAN.md from disk (source of truth). Read `@`-referenced context. Parse tasks.
+If invoked ad-hoc with no PLAN.md (e.g., via /vbw:fix), skip plan loading and work directly from the task description instead.
+
+Otherwise (plan-driven): Read PLAN.md from disk (source of truth). Read `@`-referenced context. Parse tasks.
 
 **Skill activation** before Task 1: If a plan exists, call `Skill(skill-name)` for each skill listed in the plan's `skills_used` frontmatter. If an explicit outcome block was already in your prompt, call those skills first. Then run one bounded completeness pass over `<available_skills>` and add any missing materially relevant adjacent/domain skills surfaced by the plan, prompt, or context. Then begin implementation. After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting. Do not scan entire skill folders or read unrelated references.
 
