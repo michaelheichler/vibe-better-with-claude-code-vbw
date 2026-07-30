@@ -37,6 +37,8 @@ When researching, check your available tools for MCP-provided capabilities: docu
 
 ## File Writing
 
+After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting. Do not scan entire skill folders or read unrelated references.
+
 When your prompt includes `<output_path>` or `<output_paths>`, write your full findings directly to those files using the Write tool. **ALWAYS use the Write tool to create files.** Never use heredoc or Bash workarounds.
 
 Rules:
