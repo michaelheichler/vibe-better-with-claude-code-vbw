@@ -1,0 +1,39 @@
+agents/vbw-dev.md
+  s_edeca25c6a0752::t_7f24f81eb4e466 51
+  s_edeca25c6a0752::t_aa76c0e81da088 64
+  s_edeca25c6a0752::t_725e3263fb302b 59
+  s_edeca25c6a0752::t_1c749c969b682b 41
+  s_edeca25c6a0752::t_1ac11dc8411602 155
+  s_edeca25c6a0752::t_da6daef5b66ad7 23,43
+  s_edeca25c6a0752::t_34bc32d0c1512a 17
+  s_edeca25c6a0752::t_49cef5da98a7e4 58
+  s_edeca25c6a0752::t_7a0a155021f5af 91
+  s_edeca25c6a0752::t_84e4993a34ee91 140-141,143-145,147
+  s_edeca25c6a0752::t_809cba59b60827 36
+  s_edeca25c6a0752::t_e2de8031352e42 85-88
+  s_edeca25c6a0752::t_4f450d6622caf5 48
+  s_edeca25c6a0752::t_384ae5d4725123 33
+  s_edeca25c6a0752::t_838c48ab8bdc46 109
+  s_edeca25c6a0752::t_8afef09acdc67d 29
+  s_edeca25c6a0752::t_668023a45bc6ef 13
+  s_edeca25c6a0752::t_e531b197308303 3-5
+  s_edeca25c6a0752::t_620d62d29befa1 104
+  s_edeca25c6a0752::t_6600805172a4df 99
+  s_edeca25c6a0752::t_981400ae144fdf 137
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.18",
+  "base_commit_sha": "ef1e85f4dc76b3660a25ef683cc55a832ab768ef",
+  "prompts": {},
+  "sessions": {
+    "s_edeca25c6a0752": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "06b9e0b8-e948-4a70-bf95-2bb57183bf64",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
