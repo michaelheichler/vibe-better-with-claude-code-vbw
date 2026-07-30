@@ -1,0 +1,43 @@
+tests/role-isolation-runtime.bats
+  s_1031eaa6279bdb::t_5fc217d3836c68 206-211,213
+scripts/rename-default-milestone.sh
+  s_1031eaa6279bdb::t_54139a564ccbd8 44-54,57,63,71,74,79,85,88
+tests/test_helper.bash
+  s_1031eaa6279bdb::t_57d080d30df4ed 134-138
+  s_1031eaa6279bdb::t_96570ed4ca7145 149
+  s_1031eaa6279bdb::t_412c7da4e8d98f 63-69
+  s_1031eaa6279bdb::t_925ad28fcc132a 74-78
+scripts/map-verify-response.sh
+  s_1031eaa6279bdb::t_fa02d543fb6d6e 19-30
+testing/verify-github-fix-workflow-contract.sh
+  s_1031eaa6279bdb::t_7729b6e2b7e31b 130-133,159-162,198-201,213-216
+tests/hooks-isolation-lifecycle.bats
+  s_1031eaa6279bdb::t_7dbd979814de57 166-171
+testing/verify-vbw-review-contributor-pr-review-submission.sh
+  s_1031eaa6279bdb::t_ab60a0e4f70b0b 7-10,46-54,56-66,68-99,101
+testing/verify-delegation-guard.sh
+  s_1031eaa6279bdb::t_64811cf96f1ae8 181-186,189
+  s_1031eaa6279bdb::t_54e324f9b83164 491-496,499
+scripts/derive-milestone-slug.sh
+  s_1031eaa6279bdb::t_fbd2b6d4c75e64 37-47,50,57,71,75,79,92,95,99
+testing/verify-codex-agent-assets-contract.sh
+  s_1031eaa6279bdb::t_8987e704e77c46 95-133
+tests/hooks-bash-classifier.bats
+  s_1031eaa6279bdb::t_45ac8c8465647e 43-49
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.18",
+  "base_commit_sha": "a24c53d8ee23219f8e3b61a38cafd6d9b641ae40",
+  "prompts": {},
+  "sessions": {
+    "s_1031eaa6279bdb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "0742778c-c376-45cc-829a-879d5bc24825",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
