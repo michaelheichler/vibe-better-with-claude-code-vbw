@@ -1,0 +1,35 @@
+agents/vbw-debugger.md
+  s_06517156d44979::t_d6dbce8a084b80 3-6,17,23,27,31,35,39-40,42-43,46,54,73,80,93,99,104,107,117,122
+agents/vbw-docs.md
+  s_06517156d44979::t_c132720e18cb06 3,6,26-33,45-47,50,81,85-94,114-115
+agents/vbw-lead.md
+  s_06517156d44979::t_680c7196f9933f 3-4,26-29,58-62,67,74,92,103-110
+agents/vbw-qa.md
+  s_06517156d44979::t_fc9f89762c3178 3-4,117-127,130,132,164,167
+agents/vbw-scout.md
+  s_06517156d44979::t_a037fb52431d00 3,6-7,15-16,19,25,31,35,40,45,47-49,52-54,56,58-60,64,66,88,92
+references/scout-live-validation-policy.md
+  s_06517156d44979::t_d1f2101ed1df87 1-27
+scripts/file-guard.sh
+  s_06517156d44979::t_3a58e8ca128f8d 155-158,420-433,538
+tests/role-isolation-runtime.bats
+  s_06517156d44979::t_8bdc19ef39fc25 125-176
+scripts/lib/active-agent-state.sh
+  s_06517156d44979::t_356d6d1a3723b8 849-850,859
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.18",
+  "base_commit_sha": "af11980550750fca9e36353450b87cee723ac5ba",
+  "prompts": {},
+  "sessions": {
+    "s_06517156d44979": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a4848bd4-b989-446f-93c3-38cec34fdf73",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
