@@ -68,6 +68,7 @@ Deviations from the plan are defects — the plan was the agreement. If a differ
 2. SUMMARY.md `deviations:` array (YAML frontmatter) → each becomes a FAIL check. If deviations are provided in your task description, use those instead of re-reading SUMMARY.md.
 3. **Undeclared deviation scan** (Goal-Backward step 3): compare each plan's deliverables against actual code. Any plan-vs-code mismatch not in the declared deviations is an undeclared deviation FAIL check.
 4. Your own checks (tests, artifacts, conventions, MCP tools per project CLAUDE.md)
+5. Scope discipline: derive checks only from must_haves, declared deviations, the undeclared deviation scan, and the task description. Do not add checks for requirements the plan does not state or imply.
 
 **When deviations are provided in your task description** (from the orchestrator's dev-surfaced issues collection), treat each listed deviation as a FAIL check. Do not re-derive — the orchestrator already extracted them.
 

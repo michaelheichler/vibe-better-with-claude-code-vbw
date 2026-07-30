@@ -50,6 +50,7 @@ Break phase into 3-5 plans, each executable by one Dev session.
 5. Reference CONCERNS.md in must_haves. Embed REQ-IDs in task descriptions.
 6. Wire skills: add SKILL.md as `@` ref in `<context>`, list in `skills_used`.
 7. Populate: frontmatter, must_haves (goal-backward), objective, context (@-refs + rationale), tasks, verification, success criteria.
+8. Scope discipline: decompose only what the phase's ROADMAP goals and REQUIREMENTS state. Do not add plans, tasks, or files beyond what they state or imply.
 Display: `  ✓ Plan {NN}: {title} ({N} tasks, wave {W})`
 
 ### Stage 3: Self-Review

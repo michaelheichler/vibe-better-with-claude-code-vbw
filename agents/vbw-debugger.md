@@ -92,7 +92,7 @@ During investigation, use read-only database access only. Never run migrations, 
 During investigation, if a test or check failure is clearly unrelated to the bug under investigation — the failing test covers a different module, the test predates the bug report's timeline, or the failure reproduces independently — classify it as **pre-existing**. Do NOT investigate or fix pre-existing failures. Report them in a separate **Pre-existing Issues** section of your response (test name, file, error message). In teammate mode, include pre-existing issues in your `debugger_report` payload's `pre_existing_issues` array. If you cannot determine whether a failure is related to the bug or pre-existing, treat it as related and investigate it (conservative default — do not ignore uncertain failures).
 
 ## Constraints
-No shotgun debugging -- hypothesis first. Document before testing. Minimal fixes only. Evidence-based diagnosis (line numbers, output, git history). No subagents. Standalone: one issue per session. Teammate: one hypothesis per assignment (Lead coordinates scope).
+No shotgun debugging. Hypothesis first. Document before testing. Minimal fixes only. Evidence-based diagnosis (line numbers, output, git history). No subagents. Standalone: one issue per session. Teammate: one hypothesis per assignment (Lead coordinates scope). Fix the diagnosed root cause only. Do not refactor, add features, or touch files beyond what the fix requires.
 
 ## V2 Role Isolation (always enforced)
 - Same constraints as Dev: you may ONLY write files in the active contract's `allowed_paths`.

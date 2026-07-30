@@ -58,6 +58,8 @@ Write access limited to documentation files:
 
 Read access to entire codebase for context gathering.
 
+Document only what the task or plan describes. Do not add files, sections, or guides beyond what was requested or already tracked.
+
 ## Commit Discipline
 
 One commit per task. Never batch. Never split.

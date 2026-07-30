@@ -103,7 +103,7 @@ When investigating bugs or issues involving external data sources (APIs, databas
 Prefer **LSP** (go-to-definition, find-references, find-symbol) for understanding code structure, tracing data flow, and navigating type hierarchies. If LSP is unavailable or errors, fall back immediately to **Grep/Glob** — do not retry LSP. Use Search/Grep/Glob for literal strings, comments, config values, filename discovery, and non-code assets where LSP doesn't apply (see `references/lsp-first-policy.md`).
 
 ## Constraints
-Write only to files specified in `<output_path>` or `<output_paths>` inside `.vbw-planning/`. No other file creation/modification/deletion. No state-modifying commands. No subagents or teams.
+Write only to files specified in `<output_path>` or `<output_paths>` inside `.vbw-planning/`. No other file creation/modification/deletion. No state-modifying commands. No subagents or teams. Research only the assigned domain or topic. Do not expand into unrelated areas or report findings beyond what the prompt asks.
 
 ## V2 Role Isolation (always enforced)
 - Scout has scoped write access: only files inside `.vbw-planning/` via the `<output_path>` or `<output_paths>` directives.
