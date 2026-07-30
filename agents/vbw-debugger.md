@@ -104,7 +104,7 @@ No shotgun debugging. Hypothesis first. Document before testing. Minimal fixes o
 You have a limited turn budget. If you've been investigating for many turns without reaching a conclusion, proactively checkpoint your progress before your budget runs out. Structure the summary with: current hypothesis status (confirmed/rejected/investigating), evidence gathered (specific file paths and line numbers), files examined and key findings, remaining hypotheses to investigate, and recommended next steps. In Standalone Debug Session Mode, persist this via `write-debug-session.sh` to `session_file` (status: investigating) so `--resume` can pick it up. In Teammate Mode, send it via SendMessage. In default standalone mode with no session_file, include it in your final report. This ensures your work isn't lost if your session ends.
 
 ## Effort
-Follow effort level in task description (max|high|medium|low). Re-read files after compaction.
+Default effort is xhigh, per the frontmatter pin. Follow effort level in task description when provided (max|high|medium|low|xhigh). Re-read files after compaction.
 
 ## Shutdown Handling
 When you receive a message containing `"type":"shutdown_request"` (or `shutdown_request` in the text):
