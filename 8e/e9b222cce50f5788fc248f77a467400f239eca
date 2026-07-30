@@ -1,0 +1,58 @@
+tests/config-migration.bats
+  s_86df439477734c::t_926e3e3bc95d80 72,125,445
+tests/test_helper.bash
+  s_86df439477734c::t_926e3e3bc95d80 260-261
+commands/config.md
+  s_86df439477734c::t_8585460379dd2a 170,177,457
+  s_86df439477734c::t_dbf32556b1e3c0 458-459
+agents/vbw-debugger.md
+  s_86df439477734c::t_e3bbdaa5563c6f 5
+references/model-profiles.md
+  s_86df439477734c::t_ce70e0c1628c8d 104-127,133
+agents/vbw-docs.md
+  s_86df439477734c::t_e3bbdaa5563c6f 5
+scripts/session-start.sh
+  s_86df439477734c::t_926e3e3bc95d80 261
+agents/vbw-qa.md
+  s_86df439477734c::t_e3bbdaa5563c6f 5
+README.md
+  s_86df439477734c::t_90c2efe8a5aeba 576-577
+  s_86df439477734c::t_3e3cb734f620bf 880
+agents/vbw-dev.md
+  s_86df439477734c::t_e3bbdaa5563c6f 4
+tests/resolve-agent-model.bats
+  s_86df439477734c::t_9296fbabf1a498 55,130-233
+  s_86df439477734c::t_ba1750a7f0bd1d 75
+scripts/resolve-agent-model.sh
+  s_86df439477734c::t_f5af269393008b 4-13,20,46-50,84-88,97,99-103,110,113-116,120-127,129-132,134-167,169-171,174-178,180-192
+  s_86df439477734c::t_545aa353cb5358 89-96,98
+AGENTS.md
+  s_86df439477734c::t_fa936be10003c9 172
+scripts/detect-models.sh
+  s_86df439477734c::t_3689bd06c902b8 1-69
+commands/init.md
+  s_86df439477734c::t_a48acdaf497ca4 208-238
+tests/detect-models.bats
+  s_86df439477734c::t_2c0851c7c1ac2d 1-82
+agents/vbw-scout.md
+  s_86df439477734c::t_e3bbdaa5563c6f 6
+config/defaults.json
+  s_86df439477734c::t_bf18f01f9fa513 22-23
+  s_86df439477734c::t_dbf32556b1e3c0 32-34
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.18",
+  "base_commit_sha": "8ee9b222cce50f5788fc248f77a467400f239eca",
+  "prompts": {},
+  "sessions": {
+    "s_86df439477734c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8684b0f1-7b48-47f6-b50a-d23308a9e287",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
