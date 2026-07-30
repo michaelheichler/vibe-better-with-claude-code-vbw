@@ -1,0 +1,27 @@
+scripts/file-guard.sh
+  s_6574fb526b4528::t_d0b8d9f8b3a6ea 420-433
+  s_6574fb526b4528::t_e7d0128eed025e 538
+  s_6574fb526b4528::t_8cd3fb9bd65f16 155-158
+scripts/lib/active-agent-state.sh
+  s_6574fb526b4528::t_9ad82ee8f98192 843,846,849-850,859,865,873-879
+  s_6574fb526b4528::t_c1242471c1b4de 880
+tests/role-isolation-runtime.bats
+  s_6574fb526b4528::t_eb9439b7c16738 125-166,168-170,172-176
+  s_6574fb526b4528::t_e851222c3f1d16 167,171
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.18",
+  "base_commit_sha": "be3e832c82ad2c5321a5ca368625f4756e9c4bc6",
+  "prompts": {},
+  "sessions": {
+    "s_6574fb526b4528": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "28b0741e-0896-4ad8-8b83-3ec312b243f7",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
