@@ -11,7 +11,7 @@
 <img src="assets/abraham.jpeg" alt="Abraham Lincoln portrait" width="300"/>
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Claude Code](https://img.shields.io/badge/Claude_Code-v1.0.33+-blue.svg)](https://code.claude.com)
+[![Claude Code](https://img.shields.io/badge/Claude_Code-v2.1.32+-blue.svg)](https://code.claude.com)
 [![Opus 4.6+](https://img.shields.io/badge/Model-Opus_4.6+-purple.svg)](https://anthropic.com)
 [![Discord](https://img.shields.io/badge/Discord-Join%20Us-5865F2.svg?logo=discord&logoColor=white)](https://discord.gg/zh6pV53SaP)
 
@@ -24,6 +24,28 @@ VBW keeps model-token overhead low by construction: workflow logic lives in 228 
 The `docs/*token-analysis*.md` reports estimate the resulting overhead with a line-count heuristic (roughly 15 tokens per markdown line). They are design estimates, not measured API benchmarks, and the stock-agent-teams baseline they compare against was measured on an older release. Treat the figures as directional rather than as a guaranteed bill.
 
 **Analysis reports (estimates):** [v1.30.0](docs/vbw-1-30-0-full-spec-token-analysis.md) | [v1.21.30](docs/vbw-1-21-30-full-spec-token-analysis.md) | [v1.20.0](docs/vbw-1-20-0-full-spec-token-analysis.md) | [v1.10.7](docs/vbw-1-10-7-context-compiler-token-analysis.md) | [v1.10.2](docs/vbw-1-10-2-vs-stock-agent-teams-token-analysis.md) | [v1.0.99](docs/vbw-1-0-99-vs-stock-teams-token-analysis.md)
+
+## Accuracy and freshness
+
+Numbers in this README fall into two categories:
+
+- **Computed** -- derived by running a command against this repo, cited inline so you can re-run it yourself.
+- **Estimated** -- a design estimate or approximation, not a measured benchmark. These are labeled "est." or "~" and should not be read as a guaranteed cost or performance figure.
+
+| Claim | Category | Re-verify with |
+| :--- | :--- | :--- |
+| Slash commands (26) | Computed | `find commands -maxdepth 1 -name "*.md" \| wc -l` |
+| Agents (7) | Computed | `find agents -maxdepth 1 -name "vbw-*.md" \| wc -l` |
+| Hook event types (11) / handlers (30) | Computed | `jq -r '.hooks \| keys[]' hooks/hooks.json` and `jq '[.hooks[][] .hooks[]] \| length' hooks/hooks.json` |
+| Shell scripts (228, repo-wide) | Computed | `find . -path ./.git -prune -o -name "*.sh" -print \| wc -l` |
+| BATS files (142) / test cases (3,591) | Computed | `find . -name "*.bats" \| wc -l` and `grep -rh "^@test" --include="*.bats" . \| wc -l` |
+| VERSION (1.37.1) | Computed | `cat VERSION`, cross-checked with `bash scripts/bump-version.sh --verify` |
+| Token-efficiency figures in `docs/*token-analysis*.md` | Estimated | Line-count heuristic against an older stock-agent-teams baseline, not a measured API benchmark -- see the caveat at the top of [Token efficiency by design](#token-efficiency-by-design). |
+| Cost Optimization table (~$3.00 / ~$1.50 / ~$0.70 per phase, "50% cost savings") | Estimated | Derived from `references/model-profiles.md`'s own estimates, not from logged billing data. Treat as directional. |
+
+Component counts above were last verified against `VERSION` 1.37.1. If you're reading this against a newer release, re-run the commands in the table -- most take under a second and need only `find`, `grep`, and `jq`, all already required by this project.
+
+If a claim in this README isn't in the table above and isn't visibly marked as an estimate, treat it as unverified -- open an issue or PR to either cite a command for it or add the estimate caveat.
 
 ## Manifesto
 
@@ -54,6 +76,7 @@ Think of it as project management for the post-dignity era of software developme
 ## Table of Contents
 
 - [Token efficiency by design](#token-efficiency-by-design)
+- [Accuracy and freshness](#accuracy-and-freshness)
 - [Manifesto](#manifesto)
 - [Features](#features)
 - [Installation](#installation)
@@ -63,6 +86,7 @@ Think of it as project management for the post-dignity era of software developme
 - [Commands](#commands)
 - [The Agents](#the-agents)
 - [Configuration](#configuration)
+- [Documentation](#documentation)
 - [Project Structure](#project-structure)
 - [Requirements](#requirements)
 - [Contributing](#contributing)
@@ -129,7 +153,7 @@ Open Claude Code and run these two commands inside the Claude Code session, **on
 
 **Step 1:** Add the marketplace
 ```text
-/plugin marketplace add yidakee/vibe-better-with-claude-code-vbw
+/plugin marketplace add michaelheichler/vibe-better-with-claude-code-vbw
 ```
 
 **Step 2:** Install the plugin
@@ -381,7 +405,7 @@ These are the commands you'll use every day. This is the job now.
 | Command | Description |
 | :--- | :--- |
 | `/vbw:init` | Set up environment and scaffold `.vbw-planning/` directory with templates and config. Configures Agent Teams and statusline. Automatically installs git hooks (pre-push version enforcement). For existing codebases, maps the codebase first, then uses the map data to inform stack detection and skill suggestions before auto-chaining to `/vbw:vibe`. |
-| `/vbw:vibe [intent or flags]` | The one command. Auto-detects project state, parses natural language intent, or accepts explicit flags. 13 modes: bootstrap, scope, discuss, assumptions, **UAT remediation**, **milestone UAT recovery**, plan, execute, add/insert/remove phase, archive. Discussion mode uses the unified discussion engine (auto-calibrates Builder/Architect, generates phase-specific gray areas). If a phase has unresolved UAT issues (`status: issues_found`), plain `/vbw:vibe` automatically loads `{phase}-UAT.md` and continues remediation without requiring `--discuss` or `--plan`—major/critical issues auto-chain **discuss → plan → execute**; minor-only issues use quick-fix remediation. Active/non-terminal UAT (`status: in_progress`, `pending`, or another non-terminal value) keeps the phase in Verify/resume mode instead of allowing archive or preparing a new re-verification round. Milestone recovery scans archived milestones deterministically (including legacy milestones missing `SHIPPED.md`) and surfaces unresolved UAT for recovery. Archive mode includes a 7-point audit plus a script-level UAT guard in the archive flow/hook path — active/non-terminal UAT and unresolved UAT issues block archiving and are not bypassed by `--skip-audit`/`--force`. Flags: `--plan`, `--execute`, `--discuss`, `--assumptions`, `--scope`, `--add`, `--insert`, `--remove`, `--archive`, `--yolo`, `--effort`, `--skip-qa`, `--skip-audit`. Phase numbers optional -- auto-detected when omitted. |
+| `/vbw:vibe [intent or flags]` | The one command. Auto-detects project state, parses natural language intent, or accepts explicit flags. modes: bootstrap, scope, discuss, assumptions, **UAT remediation**, **milestone UAT recovery**, plan, execute, add/insert/remove phase, archive. Discussion mode uses the unified discussion engine (auto-calibrates Builder/Architect, generates phase-specific gray areas). If a phase has unresolved UAT issues (`status: issues_found`), plain `/vbw:vibe` automatically loads `{phase}-UAT.md` and continues remediation without requiring `--discuss` or `--plan`—major/critical issues auto-chain **discuss → plan → execute**; minor-only issues use quick-fix remediation. Active/non-terminal UAT (`status: in_progress`, `pending`, or another non-terminal value) keeps the phase in Verify/resume mode instead of allowing archive or preparing a new re-verification round. Milestone recovery scans archived milestones deterministically (including legacy milestones missing `SHIPPED.md`) and surfaces unresolved UAT for recovery. Archive mode includes a 7-point audit plus a script-level UAT guard in the archive flow/hook path — active/non-terminal UAT and unresolved UAT issues block archiving and are not bypassed by `--skip-audit`/`--force`. Flags: `--plan`, `--execute`, `--discuss`, `--assumptions`, `--scope`, `--add`, `--insert`, `--remove`, `--archive`, `--yolo`, `--effort`, `--skip-qa`, `--skip-audit`. Phase numbers optional -- auto-detected when omitted. |
 
 ### Monitoring -- Trust But Verify
 
@@ -962,6 +986,8 @@ All flags default to `true` in `config/defaults.json` regardless of stage. The r
 
 ## Cost Optimization
 
+> The per-phase dollar figures in this section are design estimates derived from model-profile assumptions, not measured billing data. See [Accuracy and freshness](#accuracy-and-freshness) and treat them as directional.
+
 VBW spawns specialized agents for planning, development, and verification. Model profiles let you control which Claude model each agent uses, trading cost for quality based on your needs.
 
 ### Three Preset Profiles
@@ -1112,6 +1138,10 @@ That last one is the real barrier to entry.
 **Recommended:** Claude Code 2.1.47 or later for full VBW feature compatibility.
 
 ---
+
+## Documentation
+
+The [`docs/wiki/`](docs/wiki/home.md) directory holds a deeper guide set: getting started, the command lifecycle, agent roles, hooks and state, configuration, plugin-root resolution, and troubleshooting. Start at [`docs/wiki/home.md`](docs/wiki/home.md).
 
 ## Contributing
 
