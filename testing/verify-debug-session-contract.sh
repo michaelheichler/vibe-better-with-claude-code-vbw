@@ -541,7 +541,7 @@ fi
 DEBUGGER_PROTOCOL_BLOCK="$(sed -n '/## Investigation Protocol/,/^## /p' "$DEBUGGER_AGENT" 2>/dev/null || true)"
 DEBUGGER_TEAMMATE_BLOCK="$(sed -n '/## Teammate Mode/,/^## /p' "$DEBUGGER_AGENT" 2>/dev/null || true)"
 
-if contains_literal "$DEBUGGER_PROTOCOL_BLOCK" 'Historical accepted process-exception or backlog/UAT-deviation metadata is not an `already_fixed` signal.' \
+if contains_literal "$DEBUGGER_PROTOCOL_BLOCK" 'Historical `accepted-process-exception` or backlog/UAT-deviation metadata is not an `already_fixed` signal.' \
   && contains_literal "$DEBUGGER_PROTOCOL_BLOCK" 'Use `already_fixed` only with fresh current evidence.' \
   && contains_literal "$DEBUGGER_PROTOCOL_BLOCK" 'Report an explicit blocker instead of claiming completion when remediation is impossible.'; then
   pass "vbw-debugger.md Investigation Protocol rejects historical accepted metadata as already_fixed evidence"

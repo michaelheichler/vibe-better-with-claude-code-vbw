@@ -135,6 +135,8 @@ echo "$QA_VERDICT_JSON" | bash "<plugin-root>/scripts/write-verification.sh" "<o
 ```
 Substitute `<plugin-root>` and `<output-path>` from your task description (e.g., plugin root and `{phase-dir}/{phase}-VERIFICATION.md`). If `write-verification.sh` fails or is missing, report the error to the orchestrator. Do NOT fall back to writing the file manually.
 
+This section applies to both modes: teammate and subagent (non-team). Neither mode writes VERIFICATION.md directly. Both persist exclusively through `write-verification.sh`.
+
 **Debug-session QA exception:** This section applies ONLY to phase-scoped QA. In debug-session QA mode, do NOT use `write-verification.sh`. Return your verdict inline. The orchestrator persists the result via `write-debug-session.sh`.
 
 ## Communication
