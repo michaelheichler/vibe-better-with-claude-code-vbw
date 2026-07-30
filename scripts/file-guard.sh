@@ -152,6 +152,10 @@ detect_agent_role() {
       printf 'scout'
       return 0
     fi
+    if command -v vbw_active_agent_current_qa >/dev/null 2>&1 && vbw_active_agent_current_qa "$planning_dir" "$INPUT"; then
+      printf 'qa'
+      return 0
+    fi
   fi
 
   return 1
@@ -413,6 +417,20 @@ if true; then
   fi
 fi
 
+if [ "$ACTIVE_AGENT_ROLE" = "qa" ] && [ -n "$PROJECT_ROOT" ]; then
+  _FG_TARGET_ABS=$(to_abs_path "$FILE_PATH")
+  _FG_PLANNING_ABS=$(to_abs_path "$PROJECT_ROOT/.vbw-planning")
+  case "$_FG_TARGET_ABS" in
+    "$_FG_PLANNING_ABS"|"$_FG_PLANNING_ABS"/*)
+      :
+      ;;
+    *)
+      echo "Blocked: role 'qa' cannot write outside .vbw-planning/" >&2
+      exit 2
+      ;;
+  esac
+fi
+
 # --- Orchestrator delegation guard (delegated workflows) ---
 # When a VBW delegated workflow is active (execute, fix, debug) and the caller is
 # the orchestrator (no VBW_AGENT_ROLE), block product-file writes. The orchestrator
@@ -517,7 +535,7 @@ fi
 
 # --- V2 role isolation: check agent role against path rules ---
 # v2_role_isolation is now always enabled (graduated)
-AGENT_ROLE="${VBW_AGENT_ROLE:-}"
+AGENT_ROLE="$ACTIVE_AGENT_ROLE"  # resolved role, not the raw env var alone
 if [ -n "$AGENT_ROLE" ]; then
   case "$AGENT_ROLE" in
     lead|architect|qa)
