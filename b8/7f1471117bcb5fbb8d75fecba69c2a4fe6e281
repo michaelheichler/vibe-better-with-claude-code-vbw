@@ -1,0 +1,27 @@
+AGENTS.md
+  s_882a1d5961f935::t_1d835d440d2da0 294,300-301,303,309,312
+  s_882a1d5961f935::t_54302803d76962 296,304-305,311
+.gitignore
+  s_882a1d5961f935::t_085b8f987d3535 22-27
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.18",
+  "base_commit_sha": "b87f1471117bcb5fbb8d75fecba69c2a4fe6e281",
+  "prompts": {},
+  "humans": {
+    "h_49622c3802c0ed": {
+      "author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  },
+  "sessions": {
+    "s_882a1d5961f935": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f129a6a2-955f-443e-aff2-d3b060dc9786",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
