@@ -1,0 +1,21 @@
+scripts/file-guard.sh
+  s_0b80abaf8c382a::t_2ea8a787eea499 10-13,547-581
+tests/role-isolation-runtime.bats
+  s_0b80abaf8c382a::t_2ea8a787eea499 238-290
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.18",
+  "base_commit_sha": "32d6e2bf87a657cc56e4b757b3347d6f8a0f4aa9",
+  "prompts": {},
+  "sessions": {
+    "s_0b80abaf8c382a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "93b64835-a6b6-40b1-a32d-6d807b0cac5c",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
