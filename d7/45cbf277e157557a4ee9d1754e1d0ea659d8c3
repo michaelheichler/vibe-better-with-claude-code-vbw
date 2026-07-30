@@ -1,0 +1,25 @@
+scripts/bash-guard.sh
+  s_06517156d44979::t_076f0e1187f100 641-642
+  s_06517156d44979::t_61be64d0e53877 94-98,135,137-146,634-640,643,649,653,657,661,665,669,673,677,681,685,689,693,697,701,705,709,713,717,721,725,729,733-737,741-745
+tests/qa-bash-guard.bats
+  s_06517156d44979::t_44130e2af6b794 1-211
+scripts/lib/active-agent-state.sh
+  s_06517156d44979::t_61be64d0e53877 843,846,857,863,871-877
+  s_06517156d44979::t_0630f26e82d5a5 878
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.18",
+  "base_commit_sha": "d745cbf277e157557a4ee9d1754e1d0ea659d8c3",
+  "prompts": {},
+  "sessions": {
+    "s_06517156d44979": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a4848bd4-b989-446f-93c3-38cec34fdf73",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
