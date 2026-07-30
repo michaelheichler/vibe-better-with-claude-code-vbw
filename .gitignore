@@ -19,6 +19,12 @@ node_modules/
 # Claude Code local settings
 .claude/vbw-debug-target.txt
 
+# Local dev skills/config, not part of the published plugin.
+# Includes GitNexus-regenerated skill docs, whose auto-generated prose
+# keeps reintroducing dashes the punctuation guard rejects.
+.claude/
+.agents/
+
 # OS
 .DS_Store
 Thumbs.db
