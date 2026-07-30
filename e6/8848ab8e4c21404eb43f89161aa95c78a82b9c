@@ -1,0 +1,28 @@
+testing/verify-askuserquestion-contract.sh
+  s_b4629a02cf90c9::t_bdd5a6cae0fad3 423-424,464,702-703,736-737
+references/ask-user-question.md
+  s_b4629a02cf90c9::t_6602aaccee2ad3 59
+  s_b4629a02cf90c9::t_c6fafeef71490d 10-11
+testing/verify-commands-contract.sh
+  s_b4629a02cf90c9::t_bdd5a6cae0fad3 499,505,583,631-632,655
+commands/skills.md
+  s_b4629a02cf90c9::t_4a4a5c897e621b 84
+  s_b4629a02cf90c9::t_d7e90d1d4bb977 93
+  s_b4629a02cf90c9::t_a39586e1600e24 74-75
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.18",
+  "base_commit_sha": "e68848ab8e4c21404eb43f89161aa95c78a82b9c",
+  "prompts": {},
+  "sessions": {
+    "s_b4629a02cf90c9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e8b650c1-3e0d-4eb4-a588-7674417dcbd7",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
