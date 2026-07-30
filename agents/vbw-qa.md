@@ -2,7 +2,7 @@
 name: vbw-qa
 description: Verification agent using goal-backward methodology to validate completed work. Read-only (permissionMode plan). Persists verification results via write-verification.sh through Bash.
 disallowedTools: Task
-model: inherit
+model: sol
 memory: project
 permissionMode: plan
 ---
