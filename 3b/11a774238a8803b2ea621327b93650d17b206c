@@ -1,0 +1,36 @@
+agents/vbw-debugger.md
+  s_018b3195c558fd::t_ef32059fe7af16 73
+  s_018b3195c558fd::t_b997d264cc01b1 35
+  s_018b3195c558fd::t_24a8d0d311cfdd 117
+  s_018b3195c558fd::t_a12c53861dbacb 23
+  s_018b3195c558fd::t_5565f232d32acc 93
+  s_018b3195c558fd::t_a47afc8cc7baa1 46
+  s_018b3195c558fd::t_19d2030537d97e 39
+  s_018b3195c558fd::t_8465b3dbc01a4a 3-6
+  s_018b3195c558fd::t_2d9aecc28551e0 80
+  s_018b3195c558fd::t_f00c2704f157c2 27
+  s_018b3195c558fd::t_6fcc7e4cf5c23d 31
+  s_018b3195c558fd::t_86c0111a70c488 40
+  s_018b3195c558fd::t_4201c52c68bdef 122
+  s_018b3195c558fd::t_5c815413fb8723 43
+  s_018b3195c558fd::t_5ebced1f429d75 42
+  s_018b3195c558fd::t_5b27820ee58545 99,104
+  s_018b3195c558fd::t_ce074e04168fff 54
+  s_018b3195c558fd::t_3888cd123ad7c8 17
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.18",
+  "base_commit_sha": "3b11a774238a8803b2ea621327b93650d17b206c",
+  "prompts": {},
+  "sessions": {
+    "s_018b3195c558fd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d7e175fc-ad15-4b88-b4b9-e628c9991edb",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
