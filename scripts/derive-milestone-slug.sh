@@ -34,16 +34,27 @@ normalize_slug() {
 derive_slug() {
   local slug=""
 
+  # Normalize em/en dashes to a plain hyphen via bash literal substitution
+  # rather than relying on awk bracket expressions to match the multi-byte
+  # UTF-8 dash bytes: those are locale-sensitive and, under a non-UTF-8
+  # LC_CTYPE (for example, an unset locale falling back to "C"), split each
+  # dash into stray bytes instead of matching it, leaving phase
+  # descriptions un-stripped from the derived slug.
+  local roadmap_content
+  roadmap_content=$(cat "$ROADMAP")
+  roadmap_content="${roadmap_content//—/-}"
+  roadmap_content="${roadmap_content//–/-}"
+
   # Try 1: Extract from "## Phase N:" headers
   local phase_names
-  phase_names=$(awk '
+  phase_names=$(printf '%s\n' "$roadmap_content" | awk '
     /^## Phase [0-9]+:/ {
       sub(/^## Phase [0-9]+:[[:space:]]*/, "")
       # Strip trailing markdown/punctuation
       sub(/[[:space:]]*$/, "")
       if (length > 0) print
     }
-  ' "$ROADMAP" | head -3)
+  ' | head -3)
 
   if [[ -n "$phase_names" ]]; then
     slug=$(echo "$phase_names" | tr '\n' ' ' | sed 's/ $//')
@@ -57,15 +68,15 @@ derive_slug() {
   fi
 
   # Try 2: Extract from numbered list "N. **Name**" or "N. Name"
-  phase_names=$(awk '
+  phase_names=$(printf '%s\n' "$roadmap_content" | awk '
     /^[0-9]+\. / {
       sub(/^[0-9]+\.[[:space:]]+/, "")
       gsub(/\*\*/, "")
-      sub(/ [—–-] .*/, "")
+      sub(/ - .*/, "")
       sub(/[[:space:]]*$/, "")
       if (length > 0) print
     }
-  ' "$ROADMAP" | head -3)
+  ' | head -3)
 
   if [[ -n "$phase_names" ]]; then
     slug=$(echo "$phase_names" | tr '\n' ' ' | sed 's/ $//')
@@ -78,14 +89,14 @@ derive_slug() {
   fi
 
   # Try 3: Extract from bulleted list "- Phase N: Name"
-  phase_names=$(awk '
+  phase_names=$(printf '%s\n' "$roadmap_content" | awk '
     /^[-*] +(Phase [0-9]+: )?/ {
       sub(/^[-*] +(Phase [0-9]+: )?/, "")
-      sub(/ [—–-] .*/, "")
+      sub(/ - .*/, "")
       sub(/[[:space:]]*$/, "")
       if (length > 0) print
     }
-  ' "$ROADMAP" | head -3)
+  ' | head -3)
 
   if [[ -n "$phase_names" ]]; then
     slug=$(echo "$phase_names" | tr '\n' ' ' | sed 's/ $//')
@@ -96,7 +107,6 @@ derive_slug() {
     echo "$slug"
     return
   fi
-
   # Try 4: Use phase directory names
   if [[ -d "$PLANNING_DIR/phases" ]]; then
     local dir_names

@@ -163,6 +163,12 @@ load test_helper
 @test "file-guard exits 0 when no plan files exist" {
   setup_temp_dir
   mkdir -p "$TEST_TEMP_DIR/.vbw-planning/phases"
+  # A VBW workspace always has a config.json at its root; without it
+  # find_vbw_root does not recognize $TEST_TEMP_DIR as its own root and
+  # falls through to the script-dir fallback, which can walk up into an
+  # ancestor VBW-dogfooded repo tree (for example when this checkout sits
+  # under .claude/worktrees/) and pick up an unrelated active plan.
+  echo '{}' > "$TEST_TEMP_DIR/.vbw-planning/config.json"
   INPUT='{"tool_input":{"file_path":"'"$TEST_TEMP_DIR"'/src/index.ts"}}'
   run bash -c "cd '$TEST_TEMP_DIR' && echo '$INPUT' | bash '$SCRIPTS_DIR/file-guard.sh'"
   teardown_temp_dir

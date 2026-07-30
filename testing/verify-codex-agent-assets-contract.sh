@@ -92,37 +92,45 @@ expected_skills=(
   vbw-qa-investigator
 )
 
-for skill in "${expected_skills[@]}"; do
-  skill_file="$SKILL_DIR/$skill/SKILL.md"
-  metadata_file="$SKILL_DIR/$skill/agents/openai.yaml"
+# .agents/skills/ is local-only dev config (untracked since b87f1471) and is
+# not copied into fresh `git worktree add` checkouts, which only populate
+# tracked files. Skip these file-presence checks there instead of failing.
+if [ -d "$SKILL_DIR" ]; then
 
-  require_file "$skill_file" "skill $skill SKILL.md"
-  require_file "$metadata_file" "skill $skill openai metadata"
-  [ -f "$skill_file" ] || continue
-  [ -f "$metadata_file" ] || continue
+  for skill in "${expected_skills[@]}"; do
+    skill_file="$SKILL_DIR/$skill/SKILL.md"
+    metadata_file="$SKILL_DIR/$skill/agents/openai.yaml"
+  
+    require_file "$skill_file" "skill $skill SKILL.md"
+    require_file "$metadata_file" "skill $skill openai metadata"
+    [ -f "$skill_file" ] || continue
+    [ -f "$metadata_file" ] || continue
+  
+    require_contains "$skill_file" '^---$' "$skill has YAML frontmatter boundary"
+    require_contains "$skill_file" "^name: $skill$" "$skill has matching skill name"
+    require_contains "$skill_file" '^description: .+' "$skill has description"
+    require_contains "$metadata_file" 'allow_implicit_invocation: false' "$skill requires explicit invocation"
+    if grep -qF 'default_prompt:' "$metadata_file" && grep -qF "\$$skill" "$metadata_file"; then
+      pass "$skill default prompt mentions explicit skill invocation"
+    else
+      fail "$skill default prompt mentions explicit skill invocation"
+    fi
+    reject_contains "$skill_file" '^(tools|agents|handoffs|argument-hint|user-invocable|disable-model-invocation):' "$skill does not embed Copilot agent frontmatter"
+    reject_contains "$skill_file" 'vbw-qa-investigator-gpt-54|gpt-5\.4|GPT-5\.4|cross-model QA' "$skill has no stale cross-model QA references"
+  done
 
-  require_contains "$skill_file" '^---$' "$skill has YAML frontmatter boundary"
-  require_contains "$skill_file" "^name: $skill$" "$skill has matching skill name"
-  require_contains "$skill_file" '^description: .+' "$skill has description"
-  require_contains "$metadata_file" 'allow_implicit_invocation: false' "$skill requires explicit invocation"
-  if grep -qF 'default_prompt:' "$metadata_file" && grep -qF "\$$skill" "$metadata_file"; then
-    pass "$skill default prompt mentions explicit skill invocation"
-  else
-    fail "$skill default prompt mentions explicit skill invocation"
-  fi
-  reject_contains "$skill_file" '^(tools|agents|handoffs|argument-hint|user-invocable|disable-model-invocation):' "$skill does not embed Copilot agent frontmatter"
-  reject_contains "$skill_file" 'vbw-qa-investigator-gpt-54|gpt-5\.4|GPT-5\.4|cross-model QA' "$skill has no stale cross-model QA references"
-done
-
-require_file "$SKILL_DIR/vbw-fix-issue/references/issue-intake.md" "fix issue intake reference"
-require_file "$SKILL_DIR/vbw-fix-issue/references/worktree-and-branch.md" "fix issue worktree reference"
-require_file "$SKILL_DIR/vbw-fix-issue/references/implementation-and-tests.md" "fix issue implementation reference"
-require_file "$SKILL_DIR/vbw-fix-issue/references/qa-loop.md" "fix issue QA loop reference"
-require_file "$SKILL_DIR/vbw-fix-issue/references/pr-ci-gate.md" "fix issue PR/CI gate reference"
-require_file "$SKILL_DIR/vbw-fix-issue/references/recovery.md" "fix issue recovery reference"
-require_file "$SKILL_DIR/vbw-review-contributor-pr/references/blind-baseline-review.md" "contributor PR blind baseline reference"
-require_file "$SKILL_DIR/vbw-review-contributor-pr/references/qa-evidence-comments.md" "contributor PR QA evidence comments reference"
-require_file "$SKILL_DIR/vbw-qa-investigator/references/qa-contract.md" "QA contract reference"
+  require_file "$SKILL_DIR/vbw-fix-issue/references/issue-intake.md" "fix issue intake reference"
+  require_file "$SKILL_DIR/vbw-fix-issue/references/worktree-and-branch.md" "fix issue worktree reference"
+  require_file "$SKILL_DIR/vbw-fix-issue/references/implementation-and-tests.md" "fix issue implementation reference"
+  require_file "$SKILL_DIR/vbw-fix-issue/references/qa-loop.md" "fix issue QA loop reference"
+  require_file "$SKILL_DIR/vbw-fix-issue/references/pr-ci-gate.md" "fix issue PR/CI gate reference"
+  require_file "$SKILL_DIR/vbw-fix-issue/references/recovery.md" "fix issue recovery reference"
+  require_file "$SKILL_DIR/vbw-review-contributor-pr/references/blind-baseline-review.md" "contributor PR blind baseline reference"
+  require_file "$SKILL_DIR/vbw-review-contributor-pr/references/qa-evidence-comments.md" "contributor PR QA evidence comments reference"
+  require_file "$SKILL_DIR/vbw-qa-investigator/references/qa-contract.md" "QA contract reference"
+else
+  echo "SKIP  $SKILL_DIR: not present (local-only dev config, absent in fresh worktrees)"
+fi
 
 require_contains "$CODEX_AGENT_DIR/vbw-contributor-pr-reviewer.toml" 'after the blind baseline exists' "contributor PR reviewer reads comments after blind baseline"
 require_contains "$CODEX_AGENT_DIR/vbw-contributor-pr-reviewer.toml" 'PR comments, the PR body' "contributor PR reviewer excludes comments from blind planner"

@@ -60,10 +60,22 @@ setup_temp_dir() {
     export _ORIG_CLAUDE_CONFIG_DIR_WAS_SET=0
     unset _ORIG_CLAUDE_CONFIG_DIR 2>/dev/null || true
   fi
+  if [ "${CLAUDE_SESSION_ID+x}" = "x" ]; then
+    export _ORIG_CLAUDE_SESSION_ID_WAS_SET=1
+    export _ORIG_CLAUDE_SESSION_ID="${CLAUDE_SESSION_ID}"
+  else
+    export _ORIG_CLAUDE_SESSION_ID_WAS_SET=0
+    unset _ORIG_CLAUDE_SESSION_ID 2>/dev/null || true
+  fi
   export HOME="$TEST_TEMP_DIR"
   # Scripts that source resolve-claude-dir.sh prefer CLAUDE_CONFIG_DIR over HOME,
   # so clear inherited host config unless a test opts back in explicitly.
   unset CLAUDE_CONFIG_DIR 2>/dev/null || true
+  # Tests running inside a live Claude Code session inherit a real
+  # CLAUDE_SESSION_ID, which leaks into hook invocations under `bash -c` and
+  # breaks tests that simulate "no session id" legacy-marker scenarios.
+  # Tests that need a session id set CLAUDE_SESSION_ID explicitly inline.
+  unset CLAUDE_SESSION_ID 2>/dev/null || true
   unset VBW_PLANNING_DIR CONFIG_PATH VBW_TARGET_ROOT VBW_TARGET_GIT_ROOT VBW_WORKSPACE_SUBPATH 2>/dev/null || true
   export GIT_CONFIG_NOSYSTEM=1
   export GIT_CONFIG_GLOBAL="$TEST_TEMP_DIR/.gitconfig"
@@ -119,6 +131,11 @@ teardown_temp_dir() {
   else
     unset CLAUDE_CONFIG_DIR 2>/dev/null || true
   fi
+  if [ "${_ORIG_CLAUDE_SESSION_ID_WAS_SET:-0}" = "1" ]; then
+    export CLAUDE_SESSION_ID="${_ORIG_CLAUDE_SESSION_ID-}"
+  else
+    unset CLAUDE_SESSION_ID 2>/dev/null || true
+  fi
   if [ -n "$_ORIG_GIT_CONFIG_NOSYSTEM" ]; then
     GIT_CONFIG_NOSYSTEM="$_ORIG_GIT_CONFIG_NOSYSTEM"
   else
@@ -129,7 +146,7 @@ teardown_temp_dir() {
   else
     unset GIT_CONFIG_GLOBAL
   fi
-  unset VBW_AGENT_PID_LOCK_DIR _ORIG_HOME _ORIG_CLAUDE_CONFIG_DIR _ORIG_CLAUDE_CONFIG_DIR_WAS_SET _ORIG_GIT_CONFIG_NOSYSTEM _ORIG_GIT_CONFIG_GLOBAL \
+  unset VBW_AGENT_PID_LOCK_DIR _ORIG_HOME _ORIG_CLAUDE_CONFIG_DIR _ORIG_CLAUDE_CONFIG_DIR_WAS_SET _ORIG_CLAUDE_SESSION_ID _ORIG_CLAUDE_SESSION_ID_WAS_SET _ORIG_GIT_CONFIG_NOSYSTEM _ORIG_GIT_CONFIG_GLOBAL \
     _ORIG_VBW_PLANNING_DIR _ORIG_VBW_PLANNING_DIR_WAS_SET _ORIG_CONFIG_PATH _ORIG_CONFIG_PATH_WAS_SET \
     _ORIG_VBW_TARGET_ROOT _ORIG_VBW_TARGET_ROOT_WAS_SET _ORIG_VBW_TARGET_GIT_ROOT _ORIG_VBW_TARGET_GIT_ROOT_WAS_SET \
     _ORIG_VBW_WORKSPACE_SUBPATH _ORIG_VBW_WORKSPACE_SUBPATH_WAS_SET
