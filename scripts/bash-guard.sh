@@ -91,6 +91,11 @@ detect_agent_role() {
     return 0
   fi
 
+  if command -v vbw_active_agent_current_qa >/dev/null 2>&1 && vbw_active_agent_current_qa "$PLANNING_DIR" "$INPUT"; then
+    printf 'qa'
+    return 0
+  fi
+
   return 1
 }
 
@@ -127,10 +132,18 @@ log_block_event() {
   fi
 }
 
-block_scout_command() {
+block_readonly_agent_command() {
   local reason="$1"
-  echo "Blocked: Scout Bash is read-only ($reason)" >&2
-  log_block_event "scout:$reason"
+  local role_label
+
+  case "$ACTIVE_AGENT_ROLE" in
+    scout) role_label="Scout" ;;
+    qa) role_label="QA" ;;
+    *) role_label="Agent" ;;
+  esac
+
+  echo "Blocked: $role_label Bash is read-only ($reason)" >&2
+  log_block_event "${ACTIVE_AGENT_ROLE:-unknown}:$reason"
   exit 2
 }
 
@@ -618,103 +631,118 @@ command_has_sensitive_file_reference() {
   return 1
 }
 
-check_scout_command() {
+command_has_db_cli_mutation_keyword() {
+  local command="$1"
+
+  # Best-effort: DB CLI token plus a write-intent keyword anywhere in the command.
+  echo "$command" | grep -qE '(^|[[:space:];|&])(mysql|psql|sqlite3|mongo|mongosh)([[:space:]]|$)' || return 1
+
+  echo "$command" | grep -iqE '\b(INSERT|UPDATE|DELETE|ALTER|DROP|TRUNCATE|CREATE|REPLACE|GRANT|REVOKE|MERGE|VACUUM|insertOne|insertMany|updateOne|updateMany|deleteOne|deleteMany|dropDatabase|dropCollection|findOneAndUpdate|findOneAndDelete|findOneAndReplace|bulkWrite)\b'
+}
+
+check_readonly_agent_command() {
   local command="$1"
   local matched=""
 
   if [ -n "$PATTERNS" ] && echo "$command" | grep -iqE "$PATTERNS"; then
     matched=$(echo "$command" | grep -ioE "$PATTERNS" | head -1)
-    block_scout_command "destructive command detected: $matched"
+    block_readonly_agent_command "destructive command detected: $matched"
   fi
 
   if command_has_command_substitution "$command"; then
-    block_scout_command "command substitution"
+    block_readonly_agent_command "command substitution"
   fi
 
   if command_has_process_substitution "$command"; then
-    block_scout_command "process substitution"
+    block_readonly_agent_command "process substitution"
   fi
 
   if command_has_unquoted_eval "$command"; then
-    block_scout_command "eval command"
+    block_readonly_agent_command "eval command"
   fi
 
   if command_has_nested_shell_execution "$command"; then
-    block_scout_command "nested shell execution"
+    block_readonly_agent_command "nested shell execution"
   fi
 
   if has_shell_file_write_redirection "$command"; then
-    block_scout_command "shell file write/redirection"
+    block_readonly_agent_command "shell file write/redirection"
   fi
 
   if echo "$command" | grep -iqE '(^|[[:space:];|&])tee([[:space:]]|$)'; then
-    block_scout_command "tee can write files"
+    block_readonly_agent_command "tee can write files"
   fi
 
   if echo "$command" | grep -iqE '(^|[[:space:];|&])((npm|pnpm|yarn|bun)([[:space:]]+(--prefix|--dir|--cwd|-C)(=|[[:space:]]+)[^[:space:];|&]+|[[:space:]]+--[[:alnum:]-]+(=[^[:space:];|&]+)?)*[[:space:]]+(install|i|ci|add|update|upgrade|remove|uninstall)|pip3?[[:space:]]+install|bundle[[:space:]]+install|gem[[:space:]]+install|cargo[[:space:]]+(install|update|add)|go[[:space:]]+get|brew[[:space:]]+(install|upgrade|uninstall)|apt(-get)?[[:space:]]+(install|upgrade|remove)|composer[[:space:]]+(install|update|require|remove))([[:space:]]|$)'; then
-    block_scout_command "package or dependency mutation command"
+    block_readonly_agent_command "package or dependency mutation command"
   fi
 
   if echo "$command" | grep -iqE '(^|[[:space:];|&])(rm|mv|cp|mkdir|rmdir|touch|chmod|chown|ln|install|truncate)([[:space:]]|$)'; then
-    block_scout_command "filesystem mutation command"
+    block_readonly_agent_command "filesystem mutation command"
   fi
 
   if echo "$command" | grep -iqE '(^|[[:space:];|&])sed[[:space:]][^;|&]*(--in-place(=|[[:space:]]|$)|-[^[:space:];|&]*i([^[:alnum:]]|$))|(^|[[:space:];|&])perl[[:space:]][^;|&]*-[^[:space:];|&]*p?i([^[:alnum:]]|$)'; then
-    block_scout_command "in-place edit command"
+    block_readonly_agent_command "in-place edit command"
   fi
 
   if echo "$command" | grep -qE '(^|[[:space:];|&])git([^;|&]*)[[:space:]]+diff([^;|&]*)(--output(=|[[:space:]]|$))'; then
-    block_scout_command "git output file command"
+    block_readonly_agent_command "git output file command"
   fi
 
   if echo "$command" | grep -qE '(^|[[:space:];|&])git[[:space:]]+' && ! scout_git_segments_are_readonly "$command"; then
-    block_scout_command "git state mutation command"
+    block_readonly_agent_command "git state mutation command"
   fi
 
   if echo "$command" | grep -iqE '(^|[[:space:];|&])git([[:space:]]+(-C|-c|--git-dir|--work-tree|--namespace)(=|[[:space:]]+)[^[:space:];|&]+|[[:space:]]+(--no-pager|--bare|--literal-pathspecs|--[[:alnum:]-]+(=[^[:space:];|&]+)?))*[[:space:]]+(add|commit|push|reset|checkout|switch|merge|rebase|cherry-pick|tag|branch|clean|stash|restore|rm|mv|pull|fetch)([[:space:]]|$)'; then
-    block_scout_command "git state mutation command"
+    block_readonly_agent_command "git state mutation command"
   fi
 
   if echo "$command" | grep -iqE '(^|[[:space:];|&])((systemctl|service|launchctl)[[:space:]]+(start|stop|restart|reload)|brew[[:space:]]+services[[:space:]]+(start|stop|restart)|docker([[:space:]]+compose)?[[:space:]]+(up|down|rm|rmi|volume|system|network))([[:space:]]|$)'; then
-    block_scout_command "service/container mutation command"
+    block_readonly_agent_command "service/container mutation command"
   fi
 
   if echo "$command" | grep -qE '(^|[[:space:];|&])curl([^;|&]*)([[:space:]]-X[[:space:]]*([Pp][Oo][Ss][Tt]|[Pp][Uu][Tt]|[Pp][Aa][Tt][Cc][Hh]|[Dd][Ee][Ll][Ee][Tt][Ee])|[[:space:]]-X([Pp][Oo][Ss][Tt]|[Pp][Uu][Tt]|[Pp][Aa][Tt][Cc][Hh]|[Dd][Ee][Ll][Ee][Tt][Ee])|--request(=|[[:space:]]+)([Pp][Oo][Ss][Tt]|[Pp][Uu][Tt]|[Pp][Aa][Tt][Cc][Hh]|[Dd][Ee][Ll][Ee][Tt][Ee])|--data($|[=[:space:]])|--data-(ascii|raw|binary)(=|[[:space:]]|$)|--json(=|[[:space:]]|$)|[[:space:]]-[[:alnum:]]*d($|[[:space:]]|[^[:space:];|&])|--form(=|[[:space:]]|$)|[[:space:]]-[[:alnum:]]*F($|[[:space:]]|[^[:space:];|&])|[[:space:]]-[[:alnum:]]*T($|[[:space:]]|[^[:space:];|&])|--upload-file(=|[[:space:]]|$))'; then
-    block_scout_command "mutating curl request"
+    block_readonly_agent_command "mutating curl request"
   fi
 
   if echo "$command" | grep -qE '(^|[[:space:];|&])curl([^;|&]*)--data-urlencode(=|[[:space:]]|$)' && ! curl_uses_get_query_mode "$command"; then
-    block_scout_command "mutating curl request"
+    block_readonly_agent_command "mutating curl request"
   fi
 
   if echo "$command" | grep -iqE '(^|[[:space:];|&])curl([^;|&]*)([[:space:]]-[[:alnum:]]*o[[:alnum:]]*($|[[:space:]]|[^[:space:];|&])|--output(=|[[:space:]]|$)|--output-dir(=|[[:space:]]|$)|--remote-name([[:space:]]|$))|(^|[[:space:];|&])wget([[:space:]]|$)'; then
-    block_scout_command "local output file command"
+    block_readonly_agent_command "local output file command"
   fi
 
   if echo "$command" | grep -qE '(^|[[:space:];|&])gh[[:space:]]+api([^;|&]*)(--method(=|[[:space:]]+)([Pp][Oo][Ss][Tt]|[Pp][Uu][Tt]|[Pp][Aa][Tt][Cc][Hh]|[Dd][Ee][Ll][Ee][Tt][Ee])|-X[[:space:]]*([Pp][Oo][Ss][Tt]|[Pp][Uu][Tt]|[Pp][Aa][Tt][Cc][Hh]|[Dd][Ee][Ll][Ee][Tt][Ee])|-X([Pp][Oo][Ss][Tt]|[Pp][Uu][Tt]|[Pp][Aa][Tt][Cc][Hh]|[Dd][Ee][Ll][Ee][Tt][Ee]))'; then
-    block_scout_command "mutating gh api request"
+    block_readonly_agent_command "mutating gh api request"
   fi
 
   if echo "$command" | grep -qE '(^|[[:space:];|&])gh[[:space:]]+api([^;|&]*)(--input(=|[[:space:]]|$))'; then
-    block_scout_command "mutating gh api request"
+    block_readonly_agent_command "mutating gh api request"
   fi
 
   if echo "$command" | grep -qE '(^|[[:space:];|&])gh[[:space:]]+api([^;|&]*)(--field(=|[[:space:]]|$)|--raw-field(=|[[:space:]]|$)|-f($|[[:space:]]|[^[:space:];|&])|-F($|[[:space:]]|[^[:space:];|&]))' && ! gh_api_uses_explicit_get "$command"; then
-    block_scout_command "mutating gh api request"
+    block_readonly_agent_command "mutating gh api request"
   fi
 
   if echo "$command" | grep -qE '(^|[[:space:];|&])gh[[:space:]]+' && ! scout_gh_segments_are_readonly "$command"; then
-    block_scout_command "mutating gh command"
+    block_readonly_agent_command "mutating gh command"
   fi
 
   if command_has_sensitive_file_reference "$command"; then
-    block_scout_command "sensitive file read"
+    block_readonly_agent_command "sensitive file read"
+  fi
+
+  if command_has_db_cli_mutation_keyword "$command"; then
+    block_readonly_agent_command "raw database mutation via CLI"
   fi
 }
 
-if [ "$ACTIVE_AGENT_ROLE" = "scout" ]; then
-  check_scout_command "$COMMAND"
-fi
+case "$ACTIVE_AGENT_ROLE" in
+  scout|qa)
+    check_readonly_agent_command "$COMMAND"
+    ;;
+esac
 
 # --- Override checks for the generic destructive-command classifier ---
 
