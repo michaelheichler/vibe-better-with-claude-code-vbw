@@ -1,0 +1,71 @@
+docs/wiki/agent-roles.md
+  s_2ae54fe706162b::t_7f2b49a9019525 1-110
+docs/wiki/command-lifecycle.md
+  s_389b7e5321d934::t_d2f21d6952dd3d 1-134
+docs/wiki/configuration.md
+  s_cd5f7924b333a0::t_2fc510be3f30d4 1-122
+docs/wiki/home.md
+  s_f456375910c445::t_f49bac6745eec5 1-76
+docs/wiki/hooks-and-state.md
+  s_1794f6ad813881::t_a62eca3c63fedc 1-90
+docs/wiki/plugin-root-resolution.md
+  s_389b7e5321d934::t_4348162a5208e7 1-77
+docs/wiki/troubleshooting-and-debugging.md
+  s_ccc9c3c6584160::t_ccb885ce6fc86a 1-129
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "ae3dcf42464a5ba1adbc5268c70850807973b7f0",
+  "prompts": {},
+  "sessions": {
+    "s_1794f6ad813881": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ad0f418e7ca3a9a9c",
+        "model": "unknown"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    },
+    "s_2ae54fe706162b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a41562976398bb80c",
+        "model": "unknown"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    },
+    "s_389b7e5321d934": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a3ad86a4cfc1c59d9",
+        "model": "unknown"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    },
+    "s_ccc9c3c6584160": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ad38b5952f528eede",
+        "model": "unknown"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    },
+    "s_cd5f7924b333a0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ae165883bb10c2507",
+        "model": "unknown"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    },
+    "s_f456375910c445": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "44b1e04e-0ed3-4eaa-9a3e-8dca04bcac25",
+        "model": "unknown"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
