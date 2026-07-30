@@ -846,6 +846,8 @@ vbw_active_agent_current_role_is() {
   local target_role="$3"
   local session_id="" roles_file marker_file candidate role
 
+  [ -n "$target_role" ] || return 1
+
   if session_id=$(vbw_active_agent_session_id "$input"); then
     roles_file=$(_vbw_active_agent_roles_file "$planning_dir" "$session_id")
     marker_file=$(_vbw_active_agent_marker_file "$planning_dir" "$session_id")
@@ -854,7 +856,7 @@ vbw_active_agent_current_role_is() {
     marker_file=$(_vbw_active_agent_marker_file "$planning_dir" "")
   fi
 
-  if [ -f "$roles_file" ] && awk -v role="$target_role" '$1 == role && ($2 ~ /^[0-9]+$/) && $2 > 0 { found=1 } END { exit found ? 0 : 1 }' "$roles_file" 2>/dev/null; then
+  if [ -f "$roles_file" ] && awk -v r="$target_role" '$1 == r && ($2 ~ /^[0-9]+$/) && $2 > 0 { found=1 } END { exit found ? 0 : 1 }' "$roles_file" 2>/dev/null; then
     return 0
   fi
 

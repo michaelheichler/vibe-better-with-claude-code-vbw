@@ -122,6 +122,58 @@ EOF
   [[ "$output" == *"read-only outside .vbw-planning/"* ]]
 }
 
+@test "file-guard: active qa marker blocks non-planning writes before delegation-guard bypass" {
+  cd "$TEST_TEMP_DIR"
+  create_plan_with_files
+  echo "1" > "$TEST_TEMP_DIR/.vbw-planning/.active-agent-count"
+  echo "qa" > "$TEST_TEMP_DIR/.vbw-planning/.active-agent"
+
+  INPUT='{"tool_name":"Write","tool_input":{"file_path":"src/file.js","content":"bad"}}'
+  run bash -c "unset VBW_AGENT_ROLE; echo '$INPUT' | bash '$SCRIPTS_DIR/file-guard.sh'"
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"cannot write outside .vbw-planning/"* ]]
+}
+
+@test "file-guard: active qa marker allows planning artifact writes" {
+  cd "$TEST_TEMP_DIR"
+  create_plan_with_files
+  echo "1" > "$TEST_TEMP_DIR/.vbw-planning/.active-agent-count"
+  echo "qa" > "$TEST_TEMP_DIR/.vbw-planning/.active-agent"
+
+  INPUT='{"tool_name":"Write","tool_input":{"file_path":".vbw-planning/phases/01-test/01-RESEARCH.md","content":"ok"}}'
+  run bash -c "unset VBW_AGENT_ROLE; echo '$INPUT' | bash '$SCRIPTS_DIR/file-guard.sh'"
+  [ "$status" -eq 0 ]
+}
+
+@test "file-guard: active qa marker still allows always-exempt files, unlike scout" {
+  cd "$TEST_TEMP_DIR"
+  create_plan_with_files
+  echo "1" > "$TEST_TEMP_DIR/.vbw-planning/.active-agent-count"
+  echo "qa" > "$TEST_TEMP_DIR/.vbw-planning/.active-agent"
+
+  for target in "CLAUDE.md" "STATE.md" "foo-VERIFICATION.md"; do
+    INPUT=$(jq -n --arg fp "$target" '{"tool_name":"Write","tool_input":{"file_path":$fp,"content":"ok"}}')
+    run bash -c "unset VBW_AGENT_ROLE; echo '$INPUT' | bash '$SCRIPTS_DIR/file-guard.sh'"
+    [ "$status" -eq 0 ]
+  done
+}
+
+@test "file-guard: active QA in session A does not restrict writes in session B" {
+  cd "$TEST_TEMP_DIR"
+  create_plan_with_files
+  printf '%s\n' '{"session_id":"session-A","agent_type":"vbw:vbw-qa","pid":"10102"}' | \
+    VBW_PLANNING_DIR="$TEST_TEMP_DIR/.vbw-planning" bash "$SCRIPTS_DIR/agent-start.sh"
+
+  INPUT=$(jq -n --arg sid 'session-B' '{session_id:$sid,tool_name:"Write",tool_input:{file_path:"src/allowed.js",content:"ok"}}')
+  run bash -c 'unset VBW_AGENT_ROLE; printf "%s\n" "$1" | bash "$2"' _ "$INPUT" "$SCRIPTS_DIR/file-guard.sh"
+  [ "$status" -eq 0 ]
+
+  INPUT=$(jq -n --arg sid 'session-A' '{session_id:$sid,tool_name:"Write",tool_input:{file_path:"src/allowed.js",content:"bad"}}')
+  run bash -c 'unset VBW_AGENT_ROLE; printf "%s\n" "$1" | bash "$2"' _ "$INPUT" "$SCRIPTS_DIR/file-guard.sh"
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"cannot write outside .vbw-planning/"* ]]
+}
+
 @test "file-guard: active count in session A does not bypass delegated write block in session B" {
   cd "$TEST_TEMP_DIR"
   create_plan_with_files
