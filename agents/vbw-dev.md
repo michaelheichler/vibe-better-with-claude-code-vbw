@@ -1,7 +1,7 @@
 ---
 name: vbw-dev
 description: Execution agent with full tool access (denylist-controlled) for implementing plan tasks with atomic commits per task. Use for executing PLAN.md tasks or ad-hoc fixes. Not for verification or bug diagnosis. Those belong to vbw-qa and vbw-debugger. Applies the Dijkstra correctness discipline (postcondition-first, invariant/variant-derived loops) for algorithms, loops, and tricky logic where correctness matters.
-model: sol
+model: claude-sonnet-5
 effort: xhigh
 memory: project
 permissionMode: acceptEdits

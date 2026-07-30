@@ -167,12 +167,14 @@ After a core setting value is chosen, continue to Step 3 and apply it there with
 - options:
   - `Use preset profile` — quality, balanced, or budget
   - `Configure each agent individually` — 6 per-agent model questions
+  - `Model matrix` — Re-detect available models and rebuild the agent x effort matrix
 
 Store selection in variable `PROFILE_METHOD`.
 
 **Branching:**
 - If `PROFILE_METHOD = "Use preset profile"`: AskUserQuestion with 1 question and 3 options (`quality`, `balanced`, `budget`). Store the selected preset in `PROFILE`, then continue to Step 3 and apply it there using the `Model profile switching` logic below.
 - If `PROFILE_METHOD = "Configure each agent individually"`: Proceed to individual agent configuration flow (Round 1 below).
+- If `PROFILE_METHOD = "Model matrix"`: Run `bash "{plugin-root}/scripts/detect-models.sh"`. If output is empty, display `○ No model catalog detectable from ${ANTHROPIC_BASE_URL:-https://api.anthropic.com}/v1/models (static tiers apply)` and STOP. Otherwise show the current `model_matrix` (if any) next to the detected ids, propose an updated matrix per the Step 1.8 rules in `/vbw:init` (never invent ids; preference arrays end in a Claude tier), confirm via AskUserQuestion (`Use matrix` / `Edit` / `Cancel`), and on acceptance write `model_matrix`, `model_catalog`, and `model_catalog_detected_at` to `.vbw-planning/config.json` with the same jq pattern as init Step 1.8. Then continue to Step 4.
 
 **Individual Configuration - Round 1 (4 agents):**
 
@@ -452,7 +454,9 @@ Note: `auto_commit` controls source-task commits during Execute mode. Planning a
 | active_profile | string | profile name or "custom" | default |
 | custom_profiles | object | user-defined profiles | {} |
 | model_profile | string | quality/balanced/budget | quality |
-| model_overrides | object | agent-to-model map | {} |
+| model_overrides | object | agent-to-model map (value: model id or preference array) | {} |
+| model_matrix | object | agent x effort map to model id or preference array, written by /vbw:init from the detected catalog | {} |
+| model_catalog | array | model ids detected from ${ANTHROPIC_BASE_URL}/v1/models at init | [] |
 | agent_max_turns | object | per-agent turns (number), 0/false = unlimited | scout=15, qa=25, architect=30, debugger=80, lead=50, dev=75 |
 | qa_skip_agents | array | array of agent role names | ["docs"] |
 | context_compiler | boolean | true/false | true |

@@ -573,6 +573,8 @@ Quick reference for every key in `config/defaults.json`, in order. Click the sec
 | `custom_profiles` | `{}` | [Model routing and cost](#model-routing-and-cost) |
 | `model_profile` | `"quality"` | [Model routing and cost](#model-routing-and-cost) |
 | `model_overrides` | `{}` | [Model routing and cost](#model-routing-and-cost) |
+| `model_matrix` | `{}` | [Model routing and cost](#model-routing-and-cost) |
+| `model_catalog` | `[]` | [Model routing and cost](#model-routing-and-cost) |
 | `agent_max_turns` | `{...}` | [Agent turn limits](#agent-turn-limits) |
 | `qa_skip_agents` | `["docs"]` | [Agent behavior](#agent-behavior) |
 | `worktree_isolation` | `"off"` | [Concurrency controls](#concurrency-controls) |
@@ -875,7 +877,7 @@ VBW spawns specialized agents for planning, development, and verification. Model
 | `active_profile` | string | `default` | `default` / `prototype` / `production` / `yolo` / `custom` |
 | `custom_profiles` | object | `{}` | User-defined profile presets |
 
-- **`model_profile`** — Which Claude models agents use. See preset details below.
+- **`model_profile`** — Which Claude models agents use. See preset details below. When the endpoint exposes a model catalog (`${ANTHROPIC_BASE_URL}/v1/models`), `/vbw:init` can also write a `model_matrix` (agent x effort → model id or preference array) that takes precedence over the profile; see [Model Profiles Reference](references/model-profiles.md).
 - **`model_overrides`** — Per-agent model overrides that take precedence over the profile. See [Per-Agent Overrides](#per-agent-overrides).
 - **`active_profile`** — Bundles effort, autonomy, and verification tier into a switchable preset. `default` (balanced/standard/standard), `prototype` (fast/confident/quick), `production` (thorough/cautious/deep), `yolo` (turbo/pure-vibe/skip). Set automatically to `custom` when individual settings drift from their profile. Manage with `/vbw:profile`.
 - **`custom_profiles`** — Stores user-created profile presets (name → effort/autonomy/verification_tier). Create, list, switch, and delete via `/vbw:profile`.

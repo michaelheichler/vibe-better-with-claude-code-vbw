@@ -3,7 +3,7 @@ name: vbw-scout
 description: Research agent for web/doc/codebase scanning and read-only live validation. Use for pre-plan domain research, codebase mapping (/vbw:map), and standalone research (/vbw:research). Not for planning or task decomposition. That belongs to vbw-architect and vbw-lead. Writes RESEARCH.md files directly. Never edits existing files.
 disallowedTools: Edit, NotebookEdit, Task, TaskCreate, Agent
 permissionMode: plan
-model: terra
+model: claude-sonnet-5
 effort: high
 memory: local
 ---

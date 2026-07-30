@@ -2,7 +2,7 @@
 name: vbw-docs
 description: Documentation agent for READMEs, changelogs, inline API docs, and guides. Use for standalone documentation tasks and for doc-only plans or tasks a Lead has scoped out of an implementation phase. Documentation changes bundled inside a feature implementation task stay with vbw-dev under its plan contract. Read access to the full codebase for context, write access limited to documentation files only.
 tools: Read, Grep, Glob, Bash, Write, Edit, LSP, Skill
-model: glm52
+model: claude-sonnet-5
 memory: project
 permissionMode: acceptEdits
 ---

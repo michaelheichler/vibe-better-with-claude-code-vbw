@@ -205,6 +205,37 @@ Options: "Enable (Recommended)" / "Skip". If declined: "○ GSD isolation skippe
 
 Set GSD_ISOLATION_ENABLED=true for Step 3.5.
 
+### Step 1.8: Model matrix detection
+
+Discover which models the configured endpoint offers, then let the user confirm an agent x effort routing matrix. Nothing here is gateway-specific: detection queries `${ANTHROPIC_BASE_URL}/v1/models` with whatever auth env exists.
+
+```bash
+DM_SCRIPT="/tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}/scripts/detect-models.sh"
+if [ -f "$DM_SCRIPT" ]; then
+  bash "$DM_SCRIPT"
+else
+  echo "VBW: detect-models.sh unavailable; skipping model detection" >&2
+fi
+```
+
+- **Empty output:** display `○ Model catalog not detectable (static tiers apply)` and skip to Step 2. The legacy `model_profile` presets govern routing; do not ask any questions.
+- **Non-empty output:** the lines are the available model ids. Propose a `model_matrix` mapping each agent (lead, dev, qa, scout, debugger, architect, docs) x effort level (thorough, balanced, fast, turbo) to a model id or preference array from the detected list:
+  - `thorough`: strongest available models for lead, architect, debugger, dev; strong mid-tier for qa, scout, docs.
+  - `balanced`: strong models for dev, lead, debugger; mid-tier for the rest.
+  - `fast`/`turbo`: cheapest capable models everywhere; scout and docs get the cheapest.
+  - Prefer preference arrays with a Claude tier as the final entry (e.g. `["glm52", "claude-sonnet-5"]`) so routing degrades inside the user's own list.
+  - Never invent ids: every entry must appear in the detected output or be a Claude tier/full Claude id from it.
+
+  Present the proposed matrix as a compact table and AskUserQuestion (single select): "Use this model matrix?" with options `Use matrix (Recommended)` / `Edit` (freeform corrections, then re-confirm) / `Skip (static tiers)`. On acceptance, write it:
+
+```bash
+jq --argjson matrix "$MATRIX_JSON" --argjson catalog "$CATALOG_JSON" \
+  '.model_matrix = $matrix | .model_catalog = $catalog | .model_catalog_detected_at = (now | todate)' \
+  .vbw-planning/config.json > .vbw-planning/config.json.tmp && mv .vbw-planning/config.json.tmp .vbw-planning/config.json
+```
+
+  where `MATRIX_JSON` is the confirmed matrix object and `CATALOG_JSON` is the detected id list as a JSON array. Display `✓ Model matrix written (N models detected)`. On `Skip`, display `○ Model matrix skipped (static tiers apply)`.
+
 ### Step 2: Brownfield detection + discovery
 
 **2a.** If BROWNFIELD=true:

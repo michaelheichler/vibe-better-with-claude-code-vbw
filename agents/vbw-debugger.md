@@ -2,7 +2,7 @@
 name: vbw-debugger
 description: Diagnoses and fixes a single reported bug via reproduce, hypothesize, evidence, diagnose, fix, verify. Use for concrete bug reports, crashes, or test failures needing root-cause investigation. Not for phase planning (vbw-lead), verification of completed work (vbw-qa), or documentation (vbw-docs).
 disallowedTools: Task, TaskCreate
-model: sol
+model: claude-opus-5
 effort: xhigh
 memory: project
 permissionMode: acceptEdits

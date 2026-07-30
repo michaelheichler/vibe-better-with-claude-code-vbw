@@ -257,6 +257,8 @@ create_test_config() {
   "custom_profiles": {},
   "model_profile": "quality",
   "model_overrides": {},
+  "model_matrix": {},
+  "model_catalog": [],
   "agent_max_turns": {
     "scout": 15,
     "qa": 25,
