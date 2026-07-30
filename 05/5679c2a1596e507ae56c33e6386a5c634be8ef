@@ -1,0 +1,25 @@
+agents/vbw-lead.md
+  s_84bcabb5c00fba::t_ad180f2b013332 3-4
+  s_84bcabb5c00fba::t_d3270e4232c7fc 67
+  s_84bcabb5c00fba::t_8b57d22cdb32ab 74
+  s_84bcabb5c00fba::t_db51addc543a4d 92
+  s_84bcabb5c00fba::t_9e10e5ab7458f0 103-110
+  s_84bcabb5c00fba::t_53abec9e9ac8cf 26-29
+  s_84bcabb5c00fba::t_f476c8454507a3 58-62
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.18",
+  "base_commit_sha": "055679c2a1596e507ae56c33e6386a5c634be8ef",
+  "prompts": {},
+  "sessions": {
+    "s_84bcabb5c00fba": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a3ef7d62-465e-4ce8-aedf-28a904bd299f",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
