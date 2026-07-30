@@ -1,0 +1,28 @@
+agents/vbw-lead.md
+  s_971388d29a7ae9::t_097ae731a4b0d8 57-58
+  s_971388d29a7ae9::t_56865bcf3c107c 59-60
+agents/vbw-qa.md
+  s_971388d29a7ae9::t_096d3b40af9ee3 44-54
+references/execute-protocol.md
+  s_971388d29a7ae9::t_f8060779a6001f 278-279
+agents/vbw-dev.md
+  s_971388d29a7ae9::t_70e52dac4961cc 68-76
+  s_971388d29a7ae9::t_958babfe54d234 3
+  s_971388d29a7ae9::t_728ad7c5014e76 77
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.18",
+  "base_commit_sha": "5e05fa578ba4f457af1d5e3b0bf5b52da8bf32ed",
+  "prompts": {},
+  "sessions": {
+    "s_971388d29a7ae9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c02f1527-3e5d-4d10-bde3-af11d9a4f0e9",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
