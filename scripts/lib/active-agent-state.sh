@@ -840,10 +840,13 @@ vbw_active_agent_clear_all() {
   rm -rf "$(_vbw_active_agent_lock_dir "$planning_dir")" 2>/dev/null || true
 }
 
-vbw_active_agent_current_scout() {
+vbw_active_agent_current_role_is() {
   local planning_dir="$1"
   local input="${2:-}"
+  local target_role="$3"
   local session_id="" roles_file marker_file candidate role
+
+  [ -n "$target_role" ] || return 1
 
   if session_id=$(vbw_active_agent_session_id "$input"); then
     roles_file=$(_vbw_active_agent_roles_file "$planning_dir" "$session_id")
@@ -853,18 +856,26 @@ vbw_active_agent_current_scout() {
     marker_file=$(_vbw_active_agent_marker_file "$planning_dir" "")
   fi
 
-  if [ -f "$roles_file" ] && awk '$1 == "scout" && ($2 ~ /^[0-9]+$/) && $2 > 0 { found=1 } END { exit found ? 0 : 1 }' "$roles_file" 2>/dev/null; then
+  if [ -f "$roles_file" ] && awk -v r="$target_role" '$1 == r && ($2 ~ /^[0-9]+$/) && $2 > 0 { found=1 } END { exit found ? 0 : 1 }' "$roles_file" 2>/dev/null; then
     return 0
   fi
 
   if [ -f "$marker_file" ]; then
     candidate=$(cat "$marker_file" 2>/dev/null | head -n 1 | tr -d '[:space:]')
-    if [ -n "$candidate" ] && role=$(vbw_active_agent_normalize_role "$candidate") && [ "$role" = "scout" ]; then
+    if [ -n "$candidate" ] && role=$(vbw_active_agent_normalize_role "$candidate") && [ "$role" = "$target_role" ]; then
       return 0
     fi
   fi
 
   return 1
+}
+
+vbw_active_agent_current_scout() {
+  vbw_active_agent_current_role_is "$1" "${2:-}" "scout"
+}
+
+vbw_active_agent_current_qa() {
+  vbw_active_agent_current_role_is "$1" "${2:-}" "qa"
 }
 
 _vbw_active_agent_marker_is_fresh() {
