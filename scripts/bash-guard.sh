@@ -634,10 +634,18 @@ command_has_sensitive_file_reference() {
 command_has_db_cli_mutation_keyword() {
   local command="$1"
 
-  # Best-effort: DB CLI token plus a write-intent keyword anywhere in the command.
-  echo "$command" | grep -qE '(^|[[:space:];|&])(mysql|psql|sqlite3|mongo|mongosh)([[:space:]]|$)' || return 1
+  echo "$command" | grep -qE '(^|[[:space:];|&])([^[:space:];|&]*/)?(mysql|psql|sqlite3|mongo|mongosh)([[:space:]]|$)' || return 1
 
-  echo "$command" | grep -iqE '\b(INSERT|UPDATE|DELETE|ALTER|DROP|TRUNCATE|CREATE|REPLACE|GRANT|REVOKE|MERGE|VACUUM|insertOne|insertMany|updateOne|updateMany|deleteOne|deleteMany|dropDatabase|dropCollection|findOneAndUpdate|findOneAndDelete|findOneAndReplace|bulkWrite)\b'
+  # Fails closed: redirected SQL content cannot be statically inspected for mutation intent.
+  if echo "$command" | grep -qE '(^|[[:space:];|&])([^[:space:];|&]*/)?(mysql|psql|sqlite3|mongo|mongosh)[^;|&]*<[[:space:]]*[^[:space:];|&(]'; then
+    return 0
+  fi
+
+  if echo "$command" | grep -iqE "(['\"]|;)[[:space:]]*(INSERT|UPDATE|DELETE|ALTER|DROP|TRUNCATE|CREATE|REPLACE|GRANT|REVOKE|MERGE|VACUUM|CALL|EXEC|EXECUTE|PERFORM|DO)\\b"; then
+    return 0
+  fi
+
+  echo "$command" | grep -qE '\.(insertOne|insertMany|updateOne|updateMany|deleteOne|deleteMany|dropDatabase|dropCollection|findOneAndUpdate|findOneAndDelete|findOneAndReplace|bulkWrite|replaceOne|createIndex|dropIndex|renameCollection|remove|save)[[:space:]]*\('
 }
 
 check_readonly_agent_command() {

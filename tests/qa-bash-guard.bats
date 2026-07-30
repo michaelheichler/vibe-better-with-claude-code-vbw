@@ -162,6 +162,33 @@ new_test_project() {
   [ "$status" -eq 0 ]
 }
 
+@test "bash-guard: qa blocks path-qualified raw SQL mutation" {
+  TEST_PROJECT=$(new_test_project qa-mysql-path-qualified)
+  run_qa_bash_guard "$TEST_PROJECT" "/usr/bin/mysql -uroot appdb -e \"UPDATE users SET admin=1\""
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"raw database mutation via CLI"* ]]
+}
+
+@test "bash-guard: qa allows a read-only query whose literal text contains a mutation word" {
+  TEST_PROJECT=$(new_test_project qa-db-read-literal)
+  run_qa_bash_guard "$TEST_PROJECT" "mysql -uroot appdb -e \"SELECT * FROM users WHERE status='UPDATE_PENDING'\""
+  [ "$status" -eq 0 ]
+}
+
+@test "bash-guard: qa blocks DB CLI reading SQL from a redirected file" {
+  TEST_PROJECT=$(new_test_project qa-mysql-redirect)
+  run_qa_bash_guard "$TEST_PROJECT" "mysql appdb < mutation.sql"
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"raw database mutation via CLI"* ]]
+}
+
+@test "bash-guard: qa blocks stored-procedure invocation via CALL" {
+  TEST_PROJECT=$(new_test_project qa-mysql-call)
+  run_qa_bash_guard "$TEST_PROJECT" "mysql appdb --execute=\"CALL mutate_users()\""
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"raw database mutation via CLI"* ]]
+}
+
 @test "bash-guard: qa blocks framework destructive-command patterns like scout does" {
   TEST_PROJECT=$(new_test_project qa-framework-destructive)
   run_qa_bash_guard "$TEST_PROJECT" "php artisan migrate:fresh"
