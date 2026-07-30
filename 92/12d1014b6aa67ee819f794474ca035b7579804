@@ -1,0 +1,16 @@
+agents/vbw-docs.md
+  h_49622c3802c0ed 5
+agents/vbw-debugger.md
+  h_49622c3802c0ed 3-6,17,23,27,31,35,39-40,42-43,46,54,73,80,93,99,104,107,117,122
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.18",
+  "base_commit_sha": "9212d1014b6aa67ee819f794474ca035b7579804",
+  "prompts": {},
+  "humans": {
+    "h_49622c3802c0ed": {
+      "author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
