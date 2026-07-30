@@ -1,0 +1,23 @@
+agents/vbw-qa.md
+  s_60cadc25d1ef8c::t_c85cb1adae384f 167
+  s_60cadc25d1ef8c::t_84088407bd5e68 130,132
+  s_60cadc25d1ef8c::t_dc5d29be818731 3-4
+  s_60cadc25d1ef8c::t_cd83b9cc075774 164
+  s_60cadc25d1ef8c::t_ee645e912fc343 117-127
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.18",
+  "base_commit_sha": "84e158533f1082e3e897bcc648dac3b97ec52000",
+  "prompts": {},
+  "sessions": {
+    "s_60cadc25d1ef8c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c47c4fb1-e97a-4650-8fd9-85601a5bf7c1",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
