@@ -1,0 +1,16 @@
+agents/vbw-lead.md
+  h_49622c3802c0ed 5
+agents/vbw-qa.md
+  h_49622c3802c0ed 5
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.18",
+  "base_commit_sha": "249ec16ec110a5efc89960ebb56843ca27fdc98c",
+  "prompts": {},
+  "humans": {
+    "h_49622c3802c0ed": {
+      "author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
