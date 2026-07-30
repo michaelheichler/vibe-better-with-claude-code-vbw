@@ -182,6 +182,13 @@ new_test_project() {
   [[ "$output" == *"raw database mutation via CLI"* ]]
 }
 
+@test "bash-guard: qa blocks DB CLI reading SQL from a quoted redirected filename" {
+  TEST_PROJECT=$(new_test_project qa-mysql-redirect-quoted)
+  run_qa_bash_guard "$TEST_PROJECT" 'mysql appdb < "mutation.sql"'
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"raw database mutation via CLI"* ]]
+}
+
 @test "bash-guard: qa blocks stored-procedure invocation via CALL" {
   TEST_PROJECT=$(new_test_project qa-mysql-call)
   run_qa_bash_guard "$TEST_PROJECT" "mysql appdb --execute=\"CALL mutate_users()\""

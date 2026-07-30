@@ -640,7 +640,7 @@ command_has_db_cli_mutation_keyword() {
   masked=$(command_without_quoted_text "$command")
 
   # Fails closed: redirected SQL content cannot be statically inspected for mutation intent.
-  if echo "$masked" | grep -qE '(^|[[:space:];|&])([^[:space:];|&]*/)?(mysql|psql|sqlite3|mongo|mongosh)[^;|&]*<[[:space:]]*[^[:space:];|&(]'; then
+  if echo "$masked" | grep -qE '(^|[[:space:];|&])([^[:space:];|&]*/)?(mysql|psql|sqlite3|mongo|mongosh)[^;|&]*<'; then
     return 0
   fi
 
