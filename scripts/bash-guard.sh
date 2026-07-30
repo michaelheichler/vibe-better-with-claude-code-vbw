@@ -633,15 +633,18 @@ command_has_sensitive_file_reference() {
 
 command_has_db_cli_mutation_keyword() {
   local command="$1"
+  local masked
 
   echo "$command" | grep -qE '(^|[[:space:];|&])([^[:space:];|&]*/)?(mysql|psql|sqlite3|mongo|mongosh)([[:space:]]|$)' || return 1
 
+  masked=$(command_without_quoted_text "$command")
+
   # Fails closed: redirected SQL content cannot be statically inspected for mutation intent.
-  if echo "$command" | grep -qE '(^|[[:space:];|&])([^[:space:];|&]*/)?(mysql|psql|sqlite3|mongo|mongosh)[^;|&]*<[[:space:]]*[^[:space:];|&(]'; then
+  if echo "$masked" | grep -qE '(^|[[:space:];|&])([^[:space:];|&]*/)?(mysql|psql|sqlite3|mongo|mongosh)[^;|&]*<[[:space:]]*[^[:space:];|&(]'; then
     return 0
   fi
 
-  if echo "$command" | grep -iqE "(['\"]|;)[[:space:]]*(INSERT|UPDATE|DELETE|ALTER|DROP|TRUNCATE|CREATE|REPLACE|GRANT|REVOKE|MERGE|VACUUM|CALL|EXEC|EXECUTE|PERFORM|DO)\\b"; then
+  if echo "$command" | grep -iqE '\b(INSERT|UPDATE|DELETE|ALTER|DROP|TRUNCATE|CREATE|REPLACE|GRANT|REVOKE|MERGE|VACUUM|CALL|EXEC|EXECUTE|PERFORM|DO)\b'; then
     return 0
   fi
 

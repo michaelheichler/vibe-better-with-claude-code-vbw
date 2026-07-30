@@ -189,6 +189,19 @@ new_test_project() {
   [[ "$output" == *"raw database mutation via CLI"* ]]
 }
 
+@test "bash-guard: qa allows a read-only query containing a quoted less-than comparison" {
+  TEST_PROJECT=$(new_test_project qa-db-lt-comparison)
+  run_qa_bash_guard "$TEST_PROJECT" "mysql -uroot appdb -e \"SELECT * FROM t WHERE id < 10\""
+  [ "$status" -eq 0 ]
+}
+
+@test "bash-guard: qa blocks unquoted escaped-space mutation arguments" {
+  TEST_PROJECT=$(new_test_project qa-mysql-unquoted-mutate)
+  run_qa_bash_guard "$TEST_PROJECT" 'mysql -e UPDATE\ users\ SET\ admin=1'
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"raw database mutation via CLI"* ]]
+}
+
 @test "bash-guard: qa blocks framework destructive-command patterns like scout does" {
   TEST_PROJECT=$(new_test_project qa-framework-destructive)
   run_qa_bash_guard "$TEST_PROJECT" "php artisan migrate:fresh"
