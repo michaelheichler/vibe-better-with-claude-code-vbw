@@ -1,0 +1,19 @@
+agents/vbw-dev.md
+  s_edeca25c6a0752::t_1047bca236936d 41-43
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.18",
+  "base_commit_sha": "f70a24931aea6e06510763ee2bdfe86ed9ae5c64",
+  "prompts": {},
+  "sessions": {
+    "s_edeca25c6a0752": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "06b9e0b8-e948-4a70-bf95-2bb57183bf64",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
