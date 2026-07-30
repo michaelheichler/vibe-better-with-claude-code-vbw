@@ -1,0 +1,53 @@
+references/dijkstra/d07-array-variables.md
+  s_971388d29a7ae9::t_5e4f50af3de77b 1-137
+references/dijkstra/s15-notes-on-data-structuring-i.md
+  s_971388d29a7ae9::t_5e4f50af3de77b 1-98
+references/dijkstra/d08-search-permutation-flag-file-merging.md
+  s_971388d29a7ae9::t_5e4f50af3de77b 1-117
+references/dijkstra/d11-rem-equivalence-convex-hull.md
+  s_971388d29a7ae9::t_5e4f50af3de77b 1-115
+references/dijkstra/d10-prime-factor-villages-spanning-tree.md
+  s_971388d29a7ae9::t_5e4f50af3de77b 1-121
+references/dijkstra/s13-notes-on-structured-programming-i.md
+  s_971388d29a7ae9::t_5e4f50af3de77b 1-134
+references/dijkstra/s17-hierarchical-program-structures.md
+  s_971388d29a7ae9::t_5e4f50af3de77b 1-109
+references/dijkstra/s16-notes-on-data-structuring-ii.md
+  s_971388d29a7ae9::t_5e4f50af3de77b 1-120
+references/dijkstra/d03-wp-semantics-of-the-language.md
+  s_971388d29a7ae9::t_5e4f50af3de77b 1-130
+references/dijkstra/d09-hamming-pattern-matching-two-squares.md
+  s_971388d29a7ae9::t_5e4f50af3de77b 1-130
+references/dijkstra/s14-notes-on-structured-programming-ii.md
+  s_971388d29a7ae9::t_5e4f50af3de77b 1-124
+references/dijkstra/d06-nondeterminacy-and-scope.md
+  s_971388d29a7ae9::t_5e4f50af3de77b 1-135
+references/dijkstra/d01-executional-abstraction-and-languages.md
+  s_971388d29a7ae9::t_5e4f50af3de77b 1-93
+references/dijkstra/d04-termination-and-euclid.md
+  s_971388d29a7ae9::t_5e4f50af3de77b 1-129
+references/dijkstra/d12-strong-components-manuals-retrospect.md
+  s_971388d29a7ae9::t_5e4f50af3de77b 1-110
+references/dijkstra/DISCIPLINE.md
+  s_971388d29a7ae9::t_cfc28477bedd87 1-75
+references/dijkstra/d02-states-and-semantic-characterization.md
+  s_971388d29a7ae9::t_5e4f50af3de77b 1-110
+references/dijkstra/d05-formal-treatment-of-small-examples.md
+  s_971388d29a7ae9::t_5e4f50af3de77b 1-147
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.18",
+  "base_commit_sha": "0da561aa98f79b1fe6eb2a1ba6094962f9448884",
+  "prompts": {},
+  "sessions": {
+    "s_971388d29a7ae9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c02f1527-3e5d-4d10-bde3-af11d9a4f0e9",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
