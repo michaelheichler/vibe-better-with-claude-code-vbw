@@ -1,0 +1,21 @@
+tests/qa-bash-guard.bats
+  s_06517156d44979::t_65474cff1e9ea9 185-191
+scripts/bash-guard.sh
+  s_06517156d44979::t_0caebb776ead62 643
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.18",
+  "base_commit_sha": "7c46b81f875e3660a591c36879e2089288425d74",
+  "prompts": {},
+  "sessions": {
+    "s_06517156d44979": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a4848bd4-b989-446f-93c3-38cec34fdf73",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
