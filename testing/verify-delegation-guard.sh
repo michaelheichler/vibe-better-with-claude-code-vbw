@@ -178,9 +178,15 @@ test_non_vbw_repo() {
   tmpdir=$(mktemp -d)
   mkdir -p "$tmpdir/src"
 
+  # This suite's own checkout can sit inside an ancestor VBW-dogfooded repo
+  # tree (for example under .claude/worktrees/), so find_vbw_root's
+  # script-dir fallback would otherwise walk up past $tmpdir and resolve
+  # that ancestor's .vbw-planning/, defeating this non-VBW simulation.
+  # Pre-seeding VBW_CONFIG_ROOT hits find_vbw_root's cache-hit path and
+  # keeps resolution inside the sandbox dir.
   local input
   input=$(jq -n '{"tool_input":{"file_path":"src/app.js"}}')
-  if (cd "$tmpdir" && bash "$FILE_GUARD" <<< "$input") >/dev/null 2>&1; then
+  if (cd "$tmpdir" && VBW_CONFIG_ROOT="$tmpdir" bash "$FILE_GUARD" <<< "$input") >/dev/null 2>&1; then
     pass "Non-VBW repo: no block"
   else
     fail "Non-VBW repo: unexpected block (exit $?)"
@@ -482,9 +488,15 @@ test_gsd_unaffected() {
   # .planning/ (GSD) but no .vbw-planning/
   mkdir -p "$tmpdir/.planning/phases/01-test"
 
+  # This suite's own checkout can sit inside an ancestor VBW-dogfooded repo
+  # tree (for example under .claude/worktrees/), so find_vbw_root's
+  # script-dir fallback would otherwise walk up past $tmpdir and resolve
+  # that ancestor's .vbw-planning/, defeating this GSD-only simulation.
+  # Pre-seeding VBW_CONFIG_ROOT hits find_vbw_root's cache-hit path and
+  # keeps resolution inside the sandbox dir.
   local input
   input=$(jq -n '{"tool_input":{"file_path":"src/app.js"}}')
-  if (cd "$tmpdir" && bash "$FILE_GUARD" <<< "$input") >/dev/null 2>&1; then
+  if (cd "$tmpdir" && VBW_CONFIG_ROOT="$tmpdir" bash "$FILE_GUARD" <<< "$input") >/dev/null 2>&1; then
     pass "GSD-only repo (.planning/ without .vbw-planning/): no block"
   else
     fail "GSD-only repo: unexpected block (exit $?)"

@@ -127,6 +127,10 @@ test_stop_guard_does_not_require_legacy_bot_review() {
 test_stop_guard_does_not_require_legacy_bot_review
 
 test_fix_issue_pr_gate_requests_codex_review_comment() {
+  if [ ! -f "$PR_CI_GATE_REF" ] || [ ! -f "$FIX_SKILL" ]; then
+    echo "SKIP  Codex fix issue PR gate: .agents/skills not present (local-only dev config, absent in fresh worktrees)"
+    return
+  fi
   if grep -qF "gh pr comment <pr-number> --repo swt-labs/vibe-better-with-claude-code-vbw --body '@codex review'" "$PR_CI_GATE_REF" \
     && grep -qF 'Post one Codex review request comment per current head' "$PR_CI_GATE_REF" \
     && grep -qF 'current head commit timestamp' "$PR_CI_GATE_REF" \
@@ -152,6 +156,10 @@ test_stop_guard_requires_fresh_codex_review_comment() {
 test_stop_guard_requires_fresh_codex_review_comment
 
 test_recovery_documents_codex_review_request_command() {
+  if [ ! -f "$RECOVERY_REF" ]; then
+    echo "SKIP  Codex recovery docs: .agents/skills not present (local-only dev config, absent in fresh worktrees)"
+    return
+  fi
   if grep -qF "gh pr comment <pr-number> --repo swt-labs/vibe-better-with-claude-code-vbw --body '@codex review'" "$RECOVERY_REF"; then
     pass "recovery docs include exact Codex remote review request command"
   else
@@ -187,6 +195,10 @@ test_stop_guard_block_reasons_include_worktree() {
 test_stop_guard_block_reasons_include_worktree
 
 test_fix_issue_agent_has_ambient_context_antipattern() {
+  if [ ! -f "$FIX_SKILL" ]; then
+    echo "SKIP  Codex fix-issue skill: .agents/skills not present (local-only dev config, absent in fresh worktrees)"
+    return
+  fi
   if grep -qF 'sole source of truth' "$FIX_SKILL" \
     && grep -qF 'Do not follow ambient terminal context' "$FIX_SKILL" \
     && grep -qF 'unrelated open PRs' "$FIX_SKILL"; then
@@ -198,6 +210,10 @@ test_fix_issue_agent_has_ambient_context_antipattern() {
 test_fix_issue_agent_has_ambient_context_antipattern
 
 test_fix_issue_agent_reuses_user_authored_plans() {
+  if [ ! -f "$ISSUE_INTAKE_REF" ]; then
+    echo "SKIP  Codex fix workflow plan reuse: .agents/skills not present (local-only dev config, absent in fresh worktrees)"
+    return
+  fi
   if grep -qF 'If the user supplied an execution plan, preserve it as the draft contract' "$ISSUE_INTAKE_REF" \
     && grep -qF 'audit and refine that same plan instead of starting over' "$ISSUE_INTAKE_REF" \
     && grep -qF 'When the caller supplies an existing plan' "$PLANNER_AGENT" \

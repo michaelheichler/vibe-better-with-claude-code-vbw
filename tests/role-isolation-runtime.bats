@@ -203,8 +203,14 @@ EOF
   mkdir -p "$NON_VBW"
   cd "$NON_VBW"
 
+  # The checkout this suite runs from can itself sit inside an ancestor
+  # VBW-dogfooded repo tree, so find_vbw_root's script-dir fallback would
+  # otherwise walk up past $NON_VBW and resolve that ancestor's
+  # .vbw-planning/, defeating this "no VBW workspace" simulation.
+  # Pre-seeding VBW_CONFIG_ROOT hits find_vbw_root's cache-hit path and
+  # keeps resolution inside the sandbox dir.
   INPUT='{"tool_name":"Write","tool_input":{"file_path":"src/outside.js","content":"bad"}}'
-  run bash -c "VBW_AGENT_ROLE=scout echo '$INPUT' | VBW_AGENT_ROLE=scout bash '$SCRIPTS_DIR/file-guard.sh'"
+  run bash -c "VBW_AGENT_ROLE=scout VBW_CONFIG_ROOT='$NON_VBW' echo '$INPUT' | VBW_AGENT_ROLE=scout VBW_CONFIG_ROOT='$NON_VBW' bash '$SCRIPTS_DIR/file-guard.sh'"
   [ "$status" -eq 0 ]
 }
 

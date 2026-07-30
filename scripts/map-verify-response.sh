@@ -16,8 +16,18 @@ if [ -z "$input" ]; then
   exit 0
 fi
 
-normalized=$(printf '%s' "$input" |  tr '\n' ' ' |  tr '[:upper:]' '[:lower:]' |
-  sed -E "s/[’‘]/'/g; s/[–—]/-/g; s/[[:space:]]+/ /g; s/^ //; s/ $//")
+_ascii_input="${input//$'\n'/ }"
+# Curly-quote/dash normalization uses bash literal substitution rather than
+# a sed bracket expression, which is locale-sensitive: under a non-UTF-8
+# LC_CTYPE (for example, an unset locale falling back to "C"), sed matches
+# the multi-byte UTF-8 sequence byte-by-byte and corrupts a single U+2019
+# right single quote into multiple stray apostrophes.
+_ascii_input="${_ascii_input//’/\'}"
+_ascii_input="${_ascii_input//‘/\'}"
+_ascii_input="${_ascii_input//–/-}"
+_ascii_input="${_ascii_input//—/-}"
+normalized=$(printf '%s' "$_ascii_input" | tr '[:upper:]' '[:lower:]' |
+  sed -E "s/[[:space:]]+/ /g; s/^ //; s/ $//")
 
 skip_re='(^|[^[:alnum:]_])(skip|skipped|next|n/a|na|later|defer)([^[:alnum:]_]|$)'
 pass_re="(^|[^[:alnum:]_])(pass|passed|looks good|works|correct|confirmed|yes|good|fine|ok|okay|not bad|can't complain|cant complain|cannot complain)([^[:alnum:]_]|$)"
