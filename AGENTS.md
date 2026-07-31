@@ -149,16 +149,18 @@ Two resolution cascades exist: one for hooks (DXP-01) and one for commands. They
 4. `ps axww` + `grep -oE -- "--plugin-dir [^ ]+"` extraction
 5. Graceful no-op (`exit 0`)
 
-**Command cascade**: `CLAUDE_PLUGIN_ROOT` first because an explicit env var should take priority when the user invokes a command. Exits 1 on failure so the user knows the plugin is misconfigured:
+**Command cascade**: implemented once in `scripts/resolve-plugin-root.sh` and invoked via a session-link trampoline by the 19 target commands (`commands/*.md`) and by `references/execute-protocol.md`. `CLAUDE_PLUGIN_ROOT` is checked first because an explicit env var should take priority when the user invokes a command. Exits 1 on failure so the user knows the plugin is misconfigured (the `--nonfatal` mode returns 0 instead, used only by `commands/rtk.md` status):
 1. `CLAUDE_PLUGIN_ROOT` env var
 2. `cache/local` symlink
 3. Versioned cache dir (`find … sort … tail -1`)
 4. Generic cache dir fallback
-5. `/tmp/.vbw-plugin-root-link-*` symlink glob
-6. `ps axww` + `grep -oE -- "--plugin-dir [^ ]+"` extraction
-7. Fail guard (`exit 1`)
+5. Marketplace-root scan under `plugins/marketplaces/*/`
+6. Exact `/tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}` session link
+7. Generic `/tmp/.vbw-plugin-root-link-*` symlink glob
+8. `ps axww` + `grep -oE -- "--plugin-dir [^ ]+"` extraction
+9. Fail guard (`exit 1`)
 
-After resolution, commands create a session symlink at `/tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}` pointing to the resolved root, so subsequent template expansions and hooks can find it.
+The helper canonicalizes the resolved root with `pwd -P`, repairs the exact per-session link via `scripts/ensure-plugin-root-link.sh`, then prints it on stdout. `--require-script <name>` swaps the validated sentinel from the default `hook-wrapper.sh` to another script (used by the five phase-detect preambles and `vibe.md` for `phase-detect.sh`). SessionStart (`scripts/session-start.sh`) bootstraps the deterministic session link from its own `SCRIPT_DIR/..` location before the first command runs, so the trampoline can reach the helper without first resolving the root itself. The trampoline's `CLAUDE_PLUGIN_ROOT` branch is only a defensive fallback for a fresh session whose bootstrap lost that race.
 
 Inside scripts, `CLAUDE_PLUGIN_ROOT` is available and used normally.
 
