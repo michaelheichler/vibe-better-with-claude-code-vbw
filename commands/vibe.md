@@ -232,136 +232,6 @@ else
 fi`
 ```
 
-Verify context (verify routing only — needs_reverification OR needs_verification):
-```
-!`SESSION_KEY="${CLAUDE_SESSION_ID:-default}"
-L="/tmp/.vbw-plugin-root-link-${SESSION_KEY}"
-P="/tmp/.vbw-phase-detect-${SESSION_KEY}.txt"
-PD=""
-_PD_START_TS=$(date +%s 2>/dev/null || echo 0)
-_phase_detect_cache_fresh() {
-  local m=""
-  [ -f "$P" ] || return 1
-  m=$(stat -c %Y "$P" 2>/dev/null || stat -f %m "$P" 2>/dev/null || echo "")
-  [ -n "$m" ] || return 1
-  [ "$m" -ge "$_PD_START_TS" ] 2>/dev/null
-}
-_phase_detect_cache_retryable() {
-  [ -z "$(printf '%s' "$PD" | tr -d '[:space:]')" ] || [ "$PD" = "phase_detect_error=true" ]
-}
-_refresh_phase_detect_link() {
-  local VBW_CACHE_ROOT R V D ANY_LINK REAL_R SESSION_LINK
-  VBW_CACHE_ROOT="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/plugins/cache/vbw-marketplace/vbw"
-  R=""
-  if [ -n "${CLAUDE_PLUGIN_ROOT:-}" ] && [ -f "${CLAUDE_PLUGIN_ROOT}/scripts/hook-wrapper.sh" ]; then R="${CLAUDE_PLUGIN_ROOT}"; fi
-  if [ -z "$R" ] && [ -f "${VBW_CACHE_ROOT}/local/scripts/hook-wrapper.sh" ]; then R="${VBW_CACHE_ROOT}/local"; fi
-  if [ -z "$R" ]; then
-    V=$(find "${VBW_CACHE_ROOT}" -maxdepth 1 -mindepth 1 2>/dev/null | awk -F/ '{print $NF}' | grep -E '^[0-9]+(\.[0-9]+)*$' | sort -t. -k1,1n -k2,2n -k3,3n | tail -1)
-    [ -n "$V" ] && [ -f "${VBW_CACHE_ROOT}/${V}/scripts/hook-wrapper.sh" ] && R="${VBW_CACHE_ROOT}/${V}"
-  fi
-  if [ -z "$R" ]; then
-    V=$(find "${VBW_CACHE_ROOT}" -maxdepth 1 -mindepth 1 2>/dev/null | awk -F/ '{print $NF}' | sort | tail -1)
-    [ -n "$V" ] && [ -f "${VBW_CACHE_ROOT}/${V}/scripts/hook-wrapper.sh" ] && R="${VBW_CACHE_ROOT}/${V}"
-  fi
-  SESSION_LINK="/tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}"
-  if [ -z "$R" ] && [ -f "$SESSION_LINK/scripts/hook-wrapper.sh" ]; then
-    R="$SESSION_LINK"
-  fi
-  if [ -z "$R" ]; then
-    ANY_LINK=$(command find -H /tmp -maxdepth 1 -name '.vbw-plugin-root-link-*' -print 2>/dev/null | LC_ALL=C sort | while IFS= read -r link; do
-      if [ -f "$link/scripts/hook-wrapper.sh" ]; then
-        printf '%s\n' "$link"
-        break
-      fi
-    done || true)
-    [ -n "$ANY_LINK" ] && R="$ANY_LINK"
-  fi
-  if [ -z "$R" ]; then
-    D=$(ps axww -o args= 2>/dev/null | grep -v grep | grep -oE -- "--plugin-dir [^ ]+" | head -1)
-    D="${D#--plugin-dir }"
-    [ -n "$D" ] && [ -f "$D/scripts/hook-wrapper.sh" ] && R="$D"
-  fi
-  [ -n "$R" ] && [ -d "$R" ] && [ -f "$R/scripts/phase-detect.sh" ] || return 1
-  REAL_R=$(cd "$R" 2>/dev/null && pwd -P) || return 1
-  bash "$REAL_R/scripts/ensure-plugin-root-link.sh" "$L" "$REAL_R" >/dev/null 2>&1 || return 1
-  [ -L "$L" ] && [ -f "$L/scripts/phase-detect.sh" ]
-}
-i=0
-while [ $i -lt 100 ]; do
-  if _phase_detect_cache_fresh; then
-    PD=$(cat "$P")
-    break
-  fi
-  sleep 0.1
-  i=$((i+1))
-done
-if _phase_detect_cache_retryable; then
-  _refresh_phase_detect_link || true
-fi
-if _phase_detect_cache_retryable && [ -L "$L" ] && [ -f "$L/scripts/phase-detect.sh" ]; then
-  LOCK="/tmp/.vbw-phase-detect-live-${SESSION_KEY}.lock"
-  i=0
-  while [ $i -lt 100 ]; do
-    if _phase_detect_cache_fresh; then
-      PD=$(cat "$P")
-      if ! _phase_detect_cache_retryable; then
-        break
-      fi
-    fi
-    if mkdir "$LOCK" 2>/dev/null; then
-      PTMP="${P}.reader.$$.$RANDOM"
-      PD=$(bash "$L/scripts/phase-detect.sh" 2>/dev/null) || PD=""
-      if [ -n "$(printf '%s' "$PD" | tr -d '[:space:]')" ] && [ "$PD" != "phase_detect_error=true" ]; then
-        printf '%s\n' "$PD" > "$PTMP" 2>/dev/null && mv "$PTMP" "$P" 2>/dev/null || true
-      fi
-      rmdir "$LOCK" 2>/dev/null || true
-      break
-    fi
-    sleep 0.1
-    i=$((i+1))
-  done
-fi
-[ -z "$(printf '%s' "$PD" | tr -d '[:space:]')" ] && _phase_detect_cache_fresh && PD=$(cat "$P")
-if [ -z "$(printf '%s' "$PD" | tr -d '[:space:]')" ] || [ "$PD" = "phase_detect_error=true" ]; then
-  echo "verify_context=unavailable"
-else
-  STATE=$(printf '%s' "$PD" | grep '^next_phase_state=' | head -1 | cut -d= -f2)
-  AUTO_UAT=$(printf '%s' "$PD" | grep '^config_auto_uat=' | head -1 | cut -d= -f2)
-  HAS_UV=$(printf '%s' "$PD" | grep '^has_unverified_phases=' | head -1 | cut -d= -f2)
-  TARGET=""
-  if [ "$STATE" = "needs_reverification" ] || [ "$STATE" = "needs_verification" ]; then
-    TARGET=$(printf '%s' "$PD" | grep '^next_phase_slug=' | head -1 | cut -d= -f2)
-  elif [ "$AUTO_UAT" = "true" ] && [ "$HAS_UV" = "true" ]; then
-    TARGET=$(printf '%s' "$PD" | grep '^first_unverified_slug=' | head -1 | cut -d= -f2)
-  fi
-  if [ -n "$TARGET" ]; then
-    PDIR=".vbw-planning/phases/$TARGET"
-    echo "verify_target_slug=$TARGET"
-    if [ -d "$PDIR" ] && [ -L "$L" ] && [ -f "$L/scripts/compile-verify-context-for-uat.sh" ]; then
-      bash "$L/scripts/compile-verify-context-for-uat.sh" "$PDIR" 2>/dev/null || echo "verify_context_error=true"
-    else
-      echo "verify_context_error=true"
-    fi
-    echo "---"
-    if [ "$STATE" = "needs_reverification" ]; then
-      echo "uat_resume=pending_archive"
-    elif [ "$STATE" = "needs_verification" ]; then
-      if [ -d "$PDIR" ] && [ -L "$L" ] && [ -f "$L/scripts/extract-uat-resume.sh" ]; then
-        bash "$L/scripts/extract-uat-resume.sh" "$PDIR" 2>/dev/null || echo "uat_resume=error"
-      else
-        echo "uat_resume=unavailable"
-      fi
-    elif [ -d "$PDIR" ] && [ -L "$L" ] && [ -f "$L/scripts/extract-uat-resume.sh" ]; then
-      bash "$L/scripts/extract-uat-resume.sh" "$PDIR" 2>/dev/null || echo "uat_resume=error"
-    else
-      echo "uat_resume=error"
-    fi
-  else
-    echo "verify_context=unavailable"
-  fi
-fi`
-```
-
 !`SESSION_KEY="${CLAUDE_SESSION_ID:-default}"; L="/tmp/.vbw-plugin-root-link-${SESSION_KEY}"; i=0; while [ ! -L "$L" ] && [ $i -lt 20 ]; do sleep 0.1; i=$((i+1)); done; bash "$L/scripts/suggest-compact.sh" execute 2>/dev/null || true`
 
 ## Input Parsing
@@ -1523,10 +1393,95 @@ No SUMMARY.md: STOP "Phase {NN} has no completed plans. Run /vbw:vibe first."
 **Inline execution (NON-NEGOTIABLE):** UAT is an interactive conversation with the human user via AskUserQuestion CHECKPOINT prompts. Do NOT spawn a QA agent, Dev agent, or any subagent for UAT verification. Do NOT use TaskCreate to delegate UAT. The AskUserQuestion tool is only available to the orchestrator — subagents cannot interact with the user, so delegating UAT to a subagent bypasses user input entirely and produces auto-written UAT files without human judgment. Run the verify.md CHECKPOINT loop directly in this conversation, the same way UAT Remediation coordinates its stages inline.
 
 **Steps:**
-1. Read `/tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}/commands/verify.md` protocol. When entering from `needs_reverification` or `auto_uat` routing, the pre-computed verify context (verify_scope, uat_path, uat_resume) is already available from the Context section above — use it unless the `needs_reverification` flow above just refreshed verify context and resume metadata after `prepare-reverification.sh`, in which case use that refreshed output instead. **Error guard:** If the active verify block contains `verify_context_error=true` or `verify_context=unavailable`, display: "⚠ Verify context compilation failed. Run `bash /tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}/scripts/compile-verify-context.sh .vbw-planning/phases/{NN}-{slug}` manually to debug." STOP. Do NOT improvise by scanning PLAN/SUMMARY files manually in this routed path.
-2. Execute the verify.md steps inline in this conversation. Specifically: generate test scenarios (verify.md Step 4), then run the CHECKPOINT loop (verify.md Step 5) presenting one test at a time via AskUserQuestion and waiting for the user's response before proceeding to the next test. Use the pre-computed "Verify context" block from this command's Context section — it contains the PLAN/SUMMARY aggregation and UAT resume metadata for the target phase. Pass the full UAT resume metadata through to the verify protocol, including `uat_resume_scenario`, `uat_resume_expected`, and summary-deviation source fields when present, so verify.md can ask the first resumed checkpoint without re-reading the UAT file. After each persisted answer, verify.md re-runs `extract-uat-resume.sh` and uses the refreshed deterministic fields for the next checkpoint. Do NOT read individual PLAN/SUMMARY files or scan-parse UAT.md for resume state.
+1. Resolve the final target phase from the selected Verify route before compiling context. An explicit `--verify N` target wins. Otherwise, use the phase chosen by state-driven Verify or auto-UAT routing. Set `PHASE_DIR` to that exact active phase directory. If an upstream re-verification or QA-remediation transition in this turn already produced fresh verify context and UAT resume metadata for the same `PHASE_DIR`, reuse it. Otherwise run:
+   ```bash
+   SESSION_KEY="${CLAUDE_SESSION_ID:-default}"
+   L="/tmp/.vbw-plugin-root-link-${SESSION_KEY}"
+   P="/tmp/.vbw-phase-detect-${SESSION_KEY}.txt"
+   PDIR="$PHASE_DIR"
+   PD=""
+   _PD_START_TS=$(date +%s 2>/dev/null || echo 0)
+   _phase_detect_cache_fresh() {
+     local m=""
+     [ -f "$P" ] || return 1
+     m=$(stat -c %Y "$P" 2>/dev/null || stat -f %m "$P" 2>/dev/null || echo "")
+     [ -n "$m" ] || return 1
+     [ "$m" -ge "$_PD_START_TS" ] 2>/dev/null
+   }
+   _phase_detect_cache_retryable() {
+     [ -z "$(printf '%s' "$PD" | tr -d '[:space:]')" ] || [ "$PD" = "phase_detect_error=true" ]
+   }
+   REAL_R=$(cd "$L" 2>/dev/null && pwd -P) || REAL_R=""
+   if [ -n "$REAL_R" ]
+   then
+     bash "$REAL_R/scripts/ensure-plugin-root-link.sh" "$L" "$REAL_R" >/dev/null 2>&1 || true
+   fi
+   i=0
+   while [ $i -lt 100 ]
+   do
+     if _phase_detect_cache_fresh
+     then
+       PD=$(cat "$P")
+       break
+     fi
+     sleep 0.1
+     i=$((i+1))
+   done
+   if _phase_detect_cache_retryable && [ -L "$L" ] && [ -f "$L/scripts/phase-detect.sh" ]
+   then
+     LOCK="/tmp/.vbw-phase-detect-live-${SESSION_KEY}.lock"
+     i=0
+     while [ $i -lt 100 ]
+     do
+       if _phase_detect_cache_fresh
+       then
+         PD=$(cat "$P")
+         if ! _phase_detect_cache_retryable
+         then
+           break
+         fi
+       fi
+       if mkdir "$LOCK" 2>/dev/null
+       then
+         PTMP="${P}.reader.$$.$RANDOM"
+         PD=$(bash "$L/scripts/phase-detect.sh" 2>/dev/null) || PD=""
+         if [ -n "$(printf '%s' "$PD" | tr -d '[:space:]')" ] && [ "$PD" != "phase_detect_error=true" ]
+         then
+           printf '%s\n' "$PD" > "$PTMP" 2>/dev/null && mv "$PTMP" "$P" 2>/dev/null || true
+         fi
+         rmdir "$LOCK" 2>/dev/null || true
+         break
+       fi
+       sleep 0.1
+       i=$((i+1))
+     done
+   fi
+   [ -z "$(printf '%s' "$PD" | tr -d '[:space:]')" ] && _phase_detect_cache_fresh && PD=$(cat "$P")
+   if _phase_detect_cache_retryable
+   then
+     PD="phase_detect_error=true"
+   fi
+   VERIFY_CONTEXT=$(
+     if [ "$PD" = "phase_detect_error=true" ]; then
+       echo "verify_context=unavailable"
+     elif [ -d "$PDIR" ] && [ -f "$L/scripts/compile-verify-context-for-uat.sh" ]; then
+       bash "$L/scripts/compile-verify-context-for-uat.sh" "$PDIR" 2>/dev/null || echo "verify_context_error=true"
+     else
+       echo "verify_context_error=true"
+     fi
+   )
+   UAT_RESUME=$(
+     if [ -d "$PDIR" ] && [ -f "$L/scripts/extract-uat-resume.sh" ]; then
+       bash "$L/scripts/extract-uat-resume.sh" "$PDIR" 2>/dev/null || echo "uat_resume=error"
+     else
+       echo "uat_resume=unavailable"
+     fi
+   )
+   ```
+   This runtime call is route-local. Do not compile verify context while parsing inputs or routing to Plan, Discuss, Scope, Archive, or any other non-Verify mode. Read `/tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}/commands/verify.md` and use `VERIFY_CONTEXT` plus `UAT_RESUME` as the active protocol context. **Error guard:** If `VERIFY_CONTEXT` contains `verify_context_error=true` or `verify_context=unavailable`, display: "⚠ Verify context compilation failed. Run `bash /tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}/scripts/compile-verify-context.sh .vbw-planning/phases/{NN}-{slug}` manually to debug." STOP. Do NOT improvise by scanning PLAN/SUMMARY files manually in this routed path.
+2. Execute the verify.md steps inline in this conversation. Specifically: generate test scenarios (verify.md Step 4), then run the CHECKPOINT loop (verify.md Step 5) presenting one test at a time via AskUserQuestion and waiting for the user's response before proceeding to the next test. Use the active `VERIFY_CONTEXT` aggregation and `UAT_RESUME` metadata for the target phase. Pass the full UAT resume metadata through to the verify protocol, including `uat_resume_scenario`, `uat_resume_expected`, and summary-deviation source fields when present, so verify.md can ask the first resumed checkpoint without re-reading the UAT file. After each persisted answer, verify.md re-runs `extract-uat-resume.sh` and uses the refreshed deterministic fields for the next checkpoint. Do NOT read individual PLAN/SUMMARY files or scan-parse UAT.md for resume state.
 3. Display results per verify.md output format.
-4. **UAT Remediation Auto-Continuation:** This step only applies when verify.md emitted `remediation_continue=true` (which happens when `verify_scope=remediation` AND `status=issues_found` AND running in orchestrated mode from vibe.md). If `remediation_continue` was not set (first-time UAT, complete result, or standalone verify), skip this step entirely — the command ends after step 3.
+4. **UAT Remediation Auto-Continuation:** This step only applies when verify.md emitted `remediation_continue=true` (which happens when `verify_scope=remediation` AND `status=issues_found` AND running in orchestrated mode from vibe.md). If `remediation_continue` was not set (first-time UAT, complete result, or standalone verify), skip this step entirely. The command ends after step 3.
 
    **Prepare the next remediation round through the safe transition helper:** Run `prepare-reverification.sh` exactly once for this transition. This helper finalizes and validates the active UAT before state mutation, applies the UAT remediation round cap, and then performs the next-round transition when allowed. A direct `needs-round` call is not the transition path here because it can mutate `.uat-remediation-stage` before the current UAT is terminal.
 
