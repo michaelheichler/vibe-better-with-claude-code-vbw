@@ -510,6 +510,31 @@ if [ -f "$SETTINGS_FILE" ]; then
   rm -f "$PLANNING_DIR/.tmux-mode-patched" 2>/dev/null || true
 fi
 
+_VBW_CANONICAL_ROOT=$(cd "$SCRIPT_DIR/.." 2>/dev/null && pwd -P) || _VBW_CANONICAL_ROOT=""
+if [ -n "$_VBW_CANONICAL_ROOT" ] && \
+  [ -f "$_VBW_CANONICAL_ROOT/scripts/hook-wrapper.sh" ] && \
+  [ -f "$_VBW_CANONICAL_ROOT/scripts/ensure-plugin-root-link.sh" ]; then
+  _VBW_LINK_SESSION_ID="${_VBW_SESSION_ID:-${CLAUDE_SESSION_ID:-default}}"
+  if [[ "$_VBW_LINK_SESSION_ID" =~ [^a-zA-Z0-9._-] ]]; then
+    _VBW_LINK_SESSION_ID="default"
+  fi
+  _VBW_SESSION_LINK="/tmp/.vbw-plugin-root-link-${_VBW_LINK_SESSION_ID}"
+  if ! bash "$_VBW_CANONICAL_ROOT/scripts/ensure-plugin-root-link.sh" \
+    "$_VBW_SESSION_LINK" "$_VBW_CANONICAL_ROOT" >/dev/null 2>&1; then
+    echo "VBW: SessionStart plugin root link bootstrap failed" >&2
+  fi
+
+  if [ -n "${CLAUDE_ENV_FILE:-}" ]; then
+    printf -v _VBW_ROOT_EXPORT 'export VBW_PLUGIN_ROOT=%q' "$_VBW_CANONICAL_ROOT"
+    if ! grep -Fqx "$_VBW_ROOT_EXPORT" "$CLAUDE_ENV_FILE" 2>/dev/null; then
+      _tmp_env=$(mktemp 2>/dev/null || echo "${CLAUDE_ENV_FILE}.tmp")
+      grep -v '^export VBW_PLUGIN_ROOT=' "$CLAUDE_ENV_FILE" > "$_tmp_env" 2>/dev/null || true
+      mv "$_tmp_env" "$CLAUDE_ENV_FILE" 2>/dev/null || true
+      printf '%s\n' "$_VBW_ROOT_EXPORT" >> "$CLAUDE_ENV_FILE"
+    fi
+  fi
+fi
+
 # --- Local dev bridge: populate cache for template resolution ---
 # When loaded via --plugin-dir (local dev mode), CLAUDE_PLUGIN_ROOT is set but
 # the marketplace cache is empty. Template-level backtick expansions resolve the
