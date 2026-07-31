@@ -1,0 +1,26 @@
+scripts/verify-init-todo.sh
+  s_bd42f725263d8e::t_6a8fcf887ae227 67
+testing/verify-debug-session-contract.sh
+  s_bd42f725263d8e::t_11475644cd7655 452
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.18",
+  "base_commit_sha": "439b79dba7ae0d973e4666aec8a845990d190659",
+  "prompts": {},
+  "humans": {
+    "h_49622c3802c0ed": {
+      "author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  },
+  "sessions": {
+    "s_bd42f725263d8e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e3e9b01e-f233-44ca-922d-6d09aa87b352",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
