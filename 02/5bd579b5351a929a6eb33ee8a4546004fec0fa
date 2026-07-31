@@ -1,0 +1,33 @@
+.vbw-planning/phases/02-structural-resolution-consolidation/02-03-PLAN.md
+  s_bd42f725263d8e::t_5612486ae6c619 99
+  s_bd42f725263d8e::t_85720fbaa275a3 38
+  s_bd42f725263d8e::t_e01037d30b2161 112-113,117-118,121
+  s_bd42f725263d8e::t_6a77a7ec16019b 150
+  s_bd42f725263d8e::t_57137352b99353 33-34
+  s_bd42f725263d8e::t_882078f691eff6 94
+  s_bd42f725263d8e::t_5cbbdb91594673 52
+  s_bd42f725263d8e::t_0e5ac04c5bb0dd 10
+  s_bd42f725263d8e::t_5164e891a4818f 59
+  s_bd42f725263d8e::t_73c2465cf54b74 1-9,11-32,35-37,39-51,53-58,60-93,95-98,100-111,114-116,119-120,122-149,151-156
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.18",
+  "base_commit_sha": "025bd579b5351a929a6eb33ee8a4546004fec0fa",
+  "prompts": {},
+  "humans": {
+    "h_49622c3802c0ed": {
+      "author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  },
+  "sessions": {
+    "s_bd42f725263d8e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e3e9b01e-f233-44ca-922d-6d09aa87b352",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
