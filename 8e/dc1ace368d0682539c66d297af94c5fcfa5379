@@ -1,0 +1,35 @@
+scripts/detect-models.sh
+  s_86df439477734c::t_2ec3c510c0e373 41,46-47,57,64,86-88,90
+  s_86df439477734c::t_c17e49dc3b6c5e 2,4-9,14-15,18-19,24,48-51,55-56,73,85,89,91
+  s_86df439477734c::t_7ff80307992b16 74-84
+commands/init.md
+  s_86df439477734c::t_f88cdd5299991c 221
+  s_86df439477734c::t_11c71e9acdf4ba 210
+commands/config.md
+  s_86df439477734c::t_6c5061dbf3e720 181-182
+  s_86df439477734c::t_9e59809e7a1aae 177,218-221,234-235
+references/model-profiles.md
+  s_86df439477734c::t_92018a37b619a9 108
+AGENTS.md
+  s_86df439477734c::t_92018a37b619a9 172
+scripts/resolve-agent-model.sh
+  s_86df439477734c::t_5540d77bbd0d9e 86,88-95
+tests/detect-models.bats
+  s_86df439477734c::t_6eb4c1957e302e 8-10,12,16,20-36,54,61,70-83,85,89-100,103,105,114-115
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.18",
+  "base_commit_sha": "8edc1ace368d0682539c66d297af94c5fcfa5379",
+  "prompts": {},
+  "sessions": {
+    "s_86df439477734c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8684b0f1-7b48-47f6-b50a-d23308a9e287",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
