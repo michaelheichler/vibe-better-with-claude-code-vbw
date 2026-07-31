@@ -1,7 +1,7 @@
 # AskUserQuestion Contract
 
 Source note: Stable VBW-facing contract distilled from Claude Code interactive prompt behavior plus the repo's current `references/execute-protocol.md` and `references/discussion-engine.md` anchor examples.
-Last reviewed: 2026-04-18
+Last reviewed: 2026-07-30
 
 ## Structured choices
 
@@ -13,6 +13,15 @@ Last reviewed: 2026-04-18
 - Mark the preferred option with `isRecommended` when one option is genuinely better.
 - Leave 3–4 blank lines before the tool call so the dialog does not cover the last line of prose.
 - When a modal choice depends on nearby explanatory context, include the minimal answer-critical context in the `question` itself; the modal may cover or displace preceding prose.
+
+### Tool schema and answer metadata
+
+Beyond the core header, question, and options shape, the current AskUserQuestion schema exposes four fields. Distinguish request controls from returned answer metadata.
+
+- `multiSelect`: a per-question request control that lets the user pick multiple options instead of the default single selection. It changes selection cardinality only, not the visible option count, so keep the 2-4 bounded-choice advice.
+- `preview`: a preview capability available for single-select questions only. Do not set it on a `multiSelect` question.
+- `annotations`: per-question notes or preview information returned alongside the answer. This is response context, not a replacement for the user-visible question text.
+- `metadata.source`: source or provenance metadata carried with the question and answer contract. It is metadata about the exchange, not user-choice content.
 
 ### Batch vs. sequence
 

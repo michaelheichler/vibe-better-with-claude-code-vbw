@@ -431,6 +431,10 @@ require_file_literal "ask-user-question: documents fake bounded menu anti-patter
 require_file_literal "ask-user-question: includes structured example" "### Example — structured single-select" "$ASK_USER_QUESTION_REF"
 require_file_literal "ask-user-question: includes intentional-freeform example" "### Example — intentional freeform" "$ASK_USER_QUESTION_REF"
 require_file_literal "ask-user-question: includes decision-gate example" "### Example — decision gate" "$ASK_USER_QUESTION_REF"
+require_file_literal "ask-user-question: documents multiSelect schema field" '`multiSelect`' "$ASK_USER_QUESTION_REF"
+require_file_literal "ask-user-question: documents preview schema field" '`preview`' "$ASK_USER_QUESTION_REF"
+require_file_literal "ask-user-question: documents annotations schema field" '`annotations`' "$ASK_USER_QUESTION_REF"
+require_file_literal "ask-user-question: documents metadata.source schema field" '`metadata.source`' "$ASK_USER_QUESTION_REF"
 forbid_file_regex "ask-user-question: no volatile upstream issue links" 'github\.com/.*issues|fixes #[0-9]+|see #[0-9]+|issue #[0-9]+|parent.*#[0-9]+' "$ASK_USER_QUESTION_REF"
 
 # --------------------------------------------------------------------------
