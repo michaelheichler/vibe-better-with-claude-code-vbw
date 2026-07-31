@@ -207,7 +207,7 @@ Set GSD_ISOLATION_ENABLED=true for Step 3.5.
 
 ### Step 1.8: Model matrix detection
 
-Discover which models the configured endpoint offers, then let the user confirm an agent x effort routing matrix. Nothing here is gateway-specific: detection queries `${ANTHROPIC_BASE_URL}/v1/models` with whatever auth env exists.
+Discover which models this Claude Code install accepts, then let the user confirm an agent x effort routing matrix. Detection reads the Claude Code binary's own model table (primary, works on subscription setups with no credentials) and merges `${ANTHROPIC_BASE_URL}/v1/models` when endpoint auth env exists (gateways).
 
 ```bash
 DM_SCRIPT="/tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}/scripts/detect-models.sh"
@@ -218,7 +218,7 @@ else
 fi
 ```
 
-- **Empty output (stock Claude Code, no endpoint catalog):** fall back to Claude Code's native model set. No API call is needed: the running session already knows the current Claude models (tier aliases `opus`, `sonnet`, `haiku` and their full ids such as `claude-opus-5`, `claude-sonnet-5`, `claude-haiku-4-5`), and the Task tool `model:` parameter accepts them directly. AskUserQuestion (single select): "No extended model catalog detected. Build the agent x effort matrix from Claude Code's native models?" with options `Keep profile presets (Recommended)` / `Build matrix`. On `Keep`, display `○ Model matrix skipped (profile presets apply)` and skip to Step 2. On `Build matrix`, treat the native Claude model set as the detected list and continue with the proposal flow below (write `model_catalog` as that native list).
+- **Empty output (rare: binary unreadable and no endpoint auth):** fall back to Claude Code's native model set. No API call is needed: the running session already knows the current Claude models (tier aliases `opus`, `sonnet`, `haiku` and their full ids such as `claude-opus-5`, `claude-sonnet-5`, `claude-haiku-4-5`), and the Task tool `model:` parameter accepts them directly. AskUserQuestion (single select): "No extended model catalog detected. Build the agent x effort matrix from Claude Code's native models?" with options `Keep profile presets (Recommended)` / `Build matrix`. On `Keep`, display `○ Model matrix skipped (profile presets apply)` and skip to Step 2. On `Build matrix`, treat the native Claude model set as the detected list and continue with the proposal flow below (write `model_catalog` as that native list).
 - **Non-empty output:** the lines are the available model ids. Propose a `model_matrix` mapping each agent (lead, dev, qa, scout, debugger, architect, docs) x effort level (thorough, balanced, fast, turbo) to a model id or preference array from the detected list:
   - `thorough`: strongest available models for lead, architect, debugger, dev; strong mid-tier for qa, scout, docs.
   - `balanced`: strong models for dev, lead, debugger; mid-tier for the rest.

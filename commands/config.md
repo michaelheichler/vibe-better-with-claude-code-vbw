@@ -174,9 +174,11 @@ Store selection in variable `PROFILE_METHOD`.
 **Branching:**
 - If `PROFILE_METHOD = "Use preset profile"`: AskUserQuestion with 1 question and 3 options (`quality`, `balanced`, `budget`). Store the selected preset in `PROFILE`, then continue to Step 3 and apply it there using the `Model profile switching` logic below.
 - If `PROFILE_METHOD = "Configure each agent individually"`: Proceed to individual agent configuration flow (Round 1 below).
-- If `PROFILE_METHOD = "Model matrix"`: Run `bash "{plugin-root}/scripts/detect-models.sh"`. If output is empty, display `○ No model catalog detectable from ${ANTHROPIC_BASE_URL:-https://api.anthropic.com}/v1/models (static tiers apply)` and STOP. Otherwise show the current `model_matrix` (if any) next to the detected ids, propose an updated matrix per the Step 1.8 rules in `/vbw:init` (never invent ids; preference arrays end in a Claude tier), confirm via AskUserQuestion (`Use matrix` / `Edit` / `Cancel`), and on acceptance write `model_matrix`, `model_catalog`, and `model_catalog_detected_at` to `.vbw-planning/config.json` with the same jq pattern as init Step 1.8. Then continue to Step 4.
+- If `PROFILE_METHOD = "Model matrix"`: Run `bash "{plugin-root}/scripts/detect-models.sh"`. Detection reads the Claude Code binary model table first and merges the endpoint catalog when auth env exists. If output is empty (rare), display `○ No model catalog detectable (static tiers apply)` and STOP. Otherwise show the current `model_matrix` (if any) next to the detected ids, propose an updated matrix per the Step 1.8 rules in `/vbw:init` (never invent ids; preference arrays end in a Claude tier), confirm via AskUserQuestion (`Use matrix` / `Edit` / `Cancel`), and on acceptance write `model_matrix`, `model_catalog`, and `model_catalog_detected_at` to `.vbw-planning/config.json` with the same jq pattern as init Step 1.8. Then continue to Step 4.
 
 **Individual Configuration - Round 1 (4 agents):**
+
+Run `bash "{plugin-root}/scripts/detect-models.sh"` once and store the lines as the detected catalog. For every per-agent question below, options are the 3 most suitable detected ids for that role (current model first); when the catalog is empty, offer `opus` / `sonnet` / `haiku`. Any other detected id can be given via the built-in `Other` path.
 
 Calculate OLD_COST before making changes (cost weights: opus=100, sonnet=20, haiku=2):
 ```bash
@@ -213,10 +215,10 @@ CURRENT_SCOUT=$(bash "{plugin-root}/scripts/resolve-agent-model.sh" scout .vbw-p
 ```
 
 AskUserQuestion with 4 questions:
-- Lead model (current: $CURRENT_LEAD): opus | sonnet | haiku
-- Dev model (current: $CURRENT_DEV): opus | sonnet | haiku
-- QA model (current: $CURRENT_QA): opus | sonnet | haiku
-- Scout model (current: $CURRENT_SCOUT): opus | sonnet | haiku
+- Lead model (current: $CURRENT_LEAD)
+- Dev model (current: $CURRENT_DEV)
+- QA model (current: $CURRENT_QA)
+- Scout model (current: $CURRENT_SCOUT)
 
 Store selections in variables `LEAD_MODEL`, `DEV_MODEL`, `QA_MODEL`, `SCOUT_MODEL`.
 
@@ -229,8 +231,8 @@ CURRENT_ARCHITECT=$(bash "{plugin-root}/scripts/resolve-agent-model.sh" architec
 ```
 
 AskUserQuestion with 2 questions:
-- Debugger model (current: $CURRENT_DEBUGGER): opus | sonnet | haiku
-- Architect model (current: $CURRENT_ARCHITECT): opus | sonnet | haiku
+- Debugger model (current: $CURRENT_DEBUGGER)
+- Architect model (current: $CURRENT_ARCHITECT)
 
 Store selections in variables `DEBUGGER_MODEL`, `ARCHITECT_MODEL`.
 

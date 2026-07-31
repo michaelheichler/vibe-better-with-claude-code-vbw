@@ -83,9 +83,16 @@ fi
 
 # Locate the detected-catalog cache so its fingerprint can scope the
 # resolution cache: a catalog refresh must invalidate cached resolutions.
-# No network happens here; only detect-models.sh fetches.
+# Source identity mirrors detect-models.sh; no probing happens here.
 _MODELS_BASE="${ANTHROPIC_BASE_URL:-https://api.anthropic.com}"
-_MODELS_CACHE="/tmp/vbw-models-$(vbw_hash_path "${_MODELS_BASE%/}")"
+_MODELS_BASE="${_MODELS_BASE%/}"
+_MODELS_AUTH=""
+if [ -n "${ANTHROPIC_API_KEY:-}" ] || [ -n "${ANTHROPIC_AUTH_TOKEN:-}" ]; then
+  _MODELS_AUTH="1"
+fi
+_MODELS_BIN="${CLAUDE_CODE_EXECPATH:-$(command -v claude || true)}"
+[ -f "$_MODELS_BIN" ] || _MODELS_BIN=""
+_MODELS_CACHE="/tmp/vbw-models-$(vbw_hash_path "bin:${_MODELS_BIN:-none}|${_MODELS_AUTH:+$_MODELS_BASE}")"
 if [ -n "${VBW_MODEL_CATALOG_FILE:-}" ]; then
   # Test hook set: it fully overrides the live cache (detect-models.sh serves
   # it unconditionally), so fingerprint it, or "none" when it does not exist.
@@ -95,7 +102,6 @@ if [ -n "${VBW_MODEL_CATALOG_FILE:-}" ]; then
     MODELS_HASH="none"
   fi
 elif [ -f "$_MODELS_CACHE" ]; then
-
   MODELS_HASH=$(file_content_fingerprint "$_MODELS_CACHE")
 else
   MODELS_HASH="none"

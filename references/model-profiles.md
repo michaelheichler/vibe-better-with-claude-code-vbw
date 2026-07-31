@@ -105,7 +105,7 @@ Displays before/after cost impact estimate.
 
 When Claude Code runs against an Anthropic-compatible endpoint that exposes more than the Claude tiers (any gateway/proxy), VBW can route agents to those models natively:
 
-- `scripts/detect-models.sh` queries `${ANTHROPIC_BASE_URL}/v1/models` with the auth env available (`ANTHROPIC_API_KEY` or `ANTHROPIC_AUTH_TOKEN`) and prints the available model ids. Results are cached for 1h per base URL. With no auth env (stock OAuth setups) it prints nothing and static tiers apply.
+- `scripts/detect-models.sh` reads the model table embedded in the Claude Code binary (primary source: works on subscription/OAuth setups with zero credentials, and patched binaries advertise injected gateway models there) and merges `${ANTHROPIC_BASE_URL}/v1/models` when auth env (`ANTHROPIC_API_KEY` or `ANTHROPIC_AUTH_TOKEN`) exists. Results are cached for 1h per source. Empty output (no binary, no auth) means static tiers apply.
 - `/vbw:init` (Step 1.8) runs detection, proposes an agent x effort matrix from the detected ids, and writes the confirmed result to `.vbw-planning/config.json` as `model_matrix`, alongside `model_catalog` and `model_catalog_detected_at`. `/vbw:config` -> Model profile -> Model matrix re-runs the same flow.
 
 **Matrix shape:**
