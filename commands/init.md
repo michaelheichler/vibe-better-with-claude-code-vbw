@@ -218,7 +218,7 @@ else
 fi
 ```
 
-- **Empty output:** display `○ Model catalog not detectable (static tiers apply)` and skip to Step 2. The legacy `model_profile` presets govern routing; do not ask any questions.
+- **Empty output (stock Claude Code, no endpoint catalog):** fall back to Claude Code's native model set. No API call is needed: the running session already knows the current Claude models (tier aliases `opus`, `sonnet`, `haiku` and their full ids such as `claude-opus-5`, `claude-sonnet-5`, `claude-haiku-4-5`), and the Task tool `model:` parameter accepts them directly. AskUserQuestion (single select): "No extended model catalog detected. Build the agent x effort matrix from Claude Code's native models?" with options `Keep profile presets (Recommended)` / `Build matrix`. On `Keep`, display `○ Model matrix skipped (profile presets apply)` and skip to Step 2. On `Build matrix`, treat the native Claude model set as the detected list and continue with the proposal flow below (write `model_catalog` as that native list).
 - **Non-empty output:** the lines are the available model ids. Propose a `model_matrix` mapping each agent (lead, dev, qa, scout, debugger, architect, docs) x effort level (thorough, balanced, fast, turbo) to a model id or preference array from the detected list:
   - `thorough`: strongest available models for lead, architect, debugger, dev; strong mid-tier for qa, scout, docs.
   - `balanced`: strong models for dev, lead, debugger; mid-tier for the rest.
@@ -283,12 +283,6 @@ If any settings.json changes or plugins installed: display `(restart Claude Code
 - SOURCE_FILE_COUNT < 200: run map **inline** — read `{plugin-root}/commands/map.md` and follow directly
 - SOURCE_FILE_COUNT >= 200: run map **inline** (blocking) — display: `◆ Codebase mapping started ({SOURCE_FILE_COUNT} files)`. **Do NOT run in background.** The map MUST complete before proceeding to Step 3.
 
-**2d. find-skills bootstrap:** Check `find_skills_available` from detect-stack JSON.
-- `true`: display "✓ Skills.sh registry — available"
-- `false`: AskUserQuestion: "○ Skills.sh Registry\n\nVBW can search the Skills.sh registry (~2000 community skills) to find\nskills matching your project. This requires the find-skills meta-skill.\nInstall it now?" Options: "Install (Recommended)" / "Skip"
-  - Approved: `npx skills add vercel-labs/skills --skill find-skills -g -y`
-  - Declined: "○ Skipped. Run /vbw:skills later to search the registry."
-
 ### Step 3: Convergence — augment and search
 
 **3a.** Verify mapping completed. Display `✓ Codebase mapped ({document-count} documents)`. If skipped (greenfield): proceed immediately.
@@ -302,7 +296,7 @@ If any settings.json changes or plugins installed: display `(restart Claude Code
 
 If greenfield: write `{"conventions": []}`. Display: `○ Conventions — none yet (add with /vbw:teach)`
 
-**3c. Parallel registry search** (if find-skills available): run `npx skills find "<stack-item>"` for ALL detected_stack items **in parallel** (multiple concurrent Bash calls). Deduplicate against installed skills. If detected_stack empty, search by project type. Display results with `(registry)` tag.
+**3c. Parallel registry search:** run `npx skills find "<stack-item>"` for ALL detected_stack items **in parallel** (multiple concurrent Bash calls). Deduplicate against installed skills. If detected_stack empty, search by project type. Display results with `(registry)` tag. If the skills CLI is unavailable (npx missing or the command fails), skip the search.
 
 **3d. Unified skill prompt:** Combine curated (from 2b) + registry (from 3c) results into single AskUserQuestion multiSelect. Tag `(curated)` or `(registry)`. Use max 4 visible choices total, including `Skip`; if more than 3 skills are candidates, show the top 3 plus `Skip` and point broader discovery to `/vbw:skills`. Install selected: `npx skills add <skill> -g -y`.
 

@@ -46,15 +46,12 @@ From Context JSON: display installed skills (`installed.global[]` + `installed.p
 From `suggestions[]` in Context JSON (recommended but not installed). Display in single-line box with `(curated)` tag.
 - suggestions non-empty: show them
 - empty + stack detected: "✓ All recommended skills already installed."
-- no stack + no suggestions + find-skills available: suggest example searches
-- no stack + find-skills unavailable: "○ No stack detected. Use --search <query>."
+- no stack + no suggestions: "○ No stack detected. Use --search <query>." and suggest example searches
 
 ### Step 4: Dynamic registry search
 
-**4a.** If `find_skills_available` is false: AskUserQuestion to install find-skills (`npx skills add vercel-labs/skills --skill find-skills -g -y`). Declined → skip to Step 5.
-
-**4b.** Search when: --search passed (search for query) | no --search but unmapped stack items (auto-search each) | all mapped → skip.
-Run `npx skills find "<query>"`. Display results with `(registry)` tag. If npx unavailable: "⚠ skills CLI not found."
+Search when: --search passed (search for query) | no --search but unmapped stack items (auto-search each) | all mapped → skip.
+Run `npx skills find "<query>"`. Display results with `(registry)` tag. If the skills CLI is unavailable (npx missing or the command fails): "⚠ skills CLI not found."
 
 ### Step 5: Offer installation
 
@@ -114,7 +111,7 @@ Store the choice as SCOPE. If the user typed `skip` in Step 5: skip this step.
 
 ### Step 6: Install selected
 
-`npx skills add <skill> -y` (project scope) or `npx skills add <skill> -g -y` (global scope) per selection, based on SCOPE from Step 5b. This step runs only when one or more skills were selected in Step 5. Display ✓ or ✗ per skill. "➜ Skills take effect immediately — no restart needed."
+`npx skills add <skill> -y` (project scope) or `npx skills add <skill> -g -y` (global scope) per selection, based on SCOPE from Step 5b. This step runs only when one or more skills were selected in Step 5. Display ✓ or ✗ per skill. "➜ Changes in existing watched skill directories are detected in-session. Creating a top-level skills directory that did not exist at session start requires a restart."
 
 ## Output Format
 
