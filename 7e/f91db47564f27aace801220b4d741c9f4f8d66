@@ -1,0 +1,22 @@
+references/ask-user-question.md
+  s_66704f336cbb51::t_bf0c707a22d5d9 4
+  s_66704f336cbb51::t_1a2f852995e4be 17-25
+testing/verify-askuserquestion-contract.sh
+  s_66704f336cbb51::t_de2ffc3381dda7 434-437
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.18",
+  "base_commit_sha": "7ef91db47564f27aace801220b4d741c9f4f8d66",
+  "prompts": {},
+  "sessions": {
+    "s_66704f336cbb51": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "779d3353-a469-4289-91aa-6e7258234385",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
