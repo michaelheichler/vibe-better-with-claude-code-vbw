@@ -1,0 +1,25 @@
+docs/wiki/plugin-root-resolution.md
+  s_bd42f725263d8e::t_f9642029fa125c 126
+  s_bd42f725263d8e::t_b2aa991031f669 29-30,33-35,37-39,43,45-69,71,73-78,82-84,86,88,92,98-112,114,120,122-124
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.18",
+  "base_commit_sha": "012aa4428fffa52b2fb84bf4c0835fc19f8ddecc",
+  "prompts": {},
+  "humans": {
+    "h_49622c3802c0ed": {
+      "author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  },
+  "sessions": {
+    "s_bd42f725263d8e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e3e9b01e-f233-44ca-922d-6d09aa87b352",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
