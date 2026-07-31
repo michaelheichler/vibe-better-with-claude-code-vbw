@@ -220,7 +220,8 @@ new_test_project() {
   echo qa > "$TEST_PROJECT/.vbw-planning/.active-agent"
 
   TEST_INPUT='{"tool_input":{"command":"cat .env"}}'
-  run bash -c "cd '$TEST_PROJECT' && printf '%s\n' '$TEST_INPUT' | bash '$PROJECT_ROOT/scripts/bash-guard.sh'"
+  run env -u CLAUDE_SESSION_ID -u CLAUDE_CODE_SESSION_ID \
+    bash -c "cd '$TEST_PROJECT' && printf '%s\n' '$TEST_INPUT' | bash '$PROJECT_ROOT/scripts/bash-guard.sh'"
   [ "$status" -eq 2 ]
   [[ "$output" == *"sensitive file read"* ]]
 }
@@ -233,7 +234,8 @@ dev 1
 EOF
 
   TEST_INPUT='{"tool_input":{"command":"rm -rf build/"}}'
-  run bash -c "cd '$TEST_PROJECT' && printf '%s\n' '$TEST_INPUT' | bash '$PROJECT_ROOT/scripts/bash-guard.sh'"
+  run env -u CLAUDE_SESSION_ID -u CLAUDE_CODE_SESSION_ID \
+    bash -c "cd '$TEST_PROJECT' && printf '%s\n' '$TEST_INPUT' | bash '$PROJECT_ROOT/scripts/bash-guard.sh'"
   [ "$status" -eq 2 ]
   [[ "$output" == *"filesystem mutation command"* ]]
 }
