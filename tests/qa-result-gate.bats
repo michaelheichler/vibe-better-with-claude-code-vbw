@@ -4808,6 +4808,42 @@ REGISTRY
   [[ "$output" == *"qa_gate_routing=PROCEED_TO_UAT"* ]]
 }
 
+@test "known-issue coverage decodes doubled apostrophes in YAML object strings" {
+  local issue_error="Expected failure is outside this plan's scope."
+  local issue_json resolution_json yaml_issue_json yaml_resolution_json
+  create_single_known_issue_process_exception_round
+
+  jq --arg error "$issue_error" '.issues[].error = $error' "$PHASE_DIR/known-issues.json" > "$PHASE_DIR/known-issues.tmp"
+  mv "$PHASE_DIR/known-issues.tmp" "$PHASE_DIR/known-issues.json"
+  jq --arg error "$issue_error" '.issues[].error = $error' "$PHASE_DIR/remediation/qa/round-01/R01-KNOWN-ISSUES.json" > "$PHASE_DIR/remediation/qa/round-01/R01-KNOWN-ISSUES.tmp"
+  mv "$PHASE_DIR/remediation/qa/round-01/R01-KNOWN-ISSUES.tmp" "$PHASE_DIR/remediation/qa/round-01/R01-KNOWN-ISSUES.json"
+
+  issue_json=$(jq -cn --arg test 'Tests\Feature\X > it does the thing' --arg file 'tests/Feature/XTest.php' --arg error "$issue_error" '{test: $test, file: $file, error: $error}')
+  resolution_json=$(jq -cn --argjson issue "$issue_json" '$issue + {disposition: "accepted-process-exception", rationale: "Pest namespace failure is pre-existing and non-blocking for this phase"}')
+  yaml_issue_json="${issue_json//\'/\'\'}"
+  yaml_resolution_json="${resolution_json//\'/\'\'}"
+
+  {
+    printf '%s\n' '---' 'round: 01' 'title: Known-issues-only Pest namespace process-exception round' 'known_issues_input:'
+    printf "  - '%s'\n" "$yaml_issue_json"
+    printf '%s\n' 'known_issue_resolutions:'
+    printf "  - '%s'\n" "$yaml_resolution_json"
+    printf '%s\n' '---'
+  } > "$PHASE_DIR/remediation/qa/round-01/R01-PLAN.md"
+  {
+    printf '%s\n' '---' 'plan: R01' 'status: complete' 'commit_hashes: []' 'files_modified:' '  - "01-test-phase/remediation/qa/round-01/R01-SUMMARY.md"' 'deviations: []' 'known_issue_outcomes:'
+    printf "  - '%s'\n" "$yaml_resolution_json"
+    printf '%s\n' '---' '' '## Summary' 'Documented the known issue as an accepted process-exception.'
+  } > "$PHASE_DIR/remediation/qa/round-01/R01-SUMMARY.md"
+
+  run env -i PATH="$PATH" HOME="$TEST_DIR" TMPDIR="$TEST_DIR" bash "$SCRIPT" "$PHASE_DIR"
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"qa_gate_known_issue_count=1"* ]]
+  [[ "$output" == *"qa_gate_known_issues_all_addressed=true"* ]]
+  [[ "$output" == *"qa_gate_routing=PROCEED_TO_UAT"* ]]
+}
+
 @test "known-issues-only remediation round accepts Pest namespace backslashes and proceeds" {
   create_verif "write-verification.sh" "PASS"
   mkdir -p "$PHASE_DIR/remediation/qa/round-01"
