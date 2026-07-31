@@ -1,0 +1,34 @@
+commands/discuss.md
+  s_2714f22713676e::t_8d0045f4bb89c6 20
+commands/qa.md
+  s_2714f22713676e::t_f9db2a04124bf6 20
+commands/resume.md
+  s_2714f22713676e::t_0e5eefffc71111 20
+commands/status.md
+  s_2714f22713676e::t_30b3b1014f25e1 20
+commands/verify.md
+  s_2714f22713676e::t_42d8fdd9c7ce49 21
+commands/vibe.md
+  s_2714f22713676e::t_74d1166e22073e 24
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.18",
+  "base_commit_sha": "4f73c2b34329ed04287862c21de2c62c927346a1",
+  "prompts": {},
+  "humans": {
+    "h_49622c3802c0ed": {
+      "author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  },
+  "sessions": {
+    "s_2714f22713676e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-acb571a019d7c37d7",
+        "model": "unknown"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
