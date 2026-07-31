@@ -126,112 +126,6 @@ Config:
 !`cat .vbw-planning/config.json 2>/dev/null || echo "No config found"`
 ```
 
-Milestone UAT issues (milestone recovery only):
-```
-!`SESSION_KEY="${CLAUDE_SESSION_ID:-default}"
-L="/tmp/.vbw-plugin-root-link-${SESSION_KEY}"
-P="/tmp/.vbw-phase-detect-${SESSION_KEY}.txt"
-PD=""
-_PD_START_TS=$(date +%s 2>/dev/null || echo 0)
-_phase_detect_cache_fresh() {
-  local m=""
-  [ -f "$P" ] || return 1
-  m=$(stat -c %Y "$P" 2>/dev/null || stat -f %m "$P" 2>/dev/null || echo "")
-  [ -n "$m" ] || return 1
-  [ "$m" -ge "$_PD_START_TS" ] 2>/dev/null
-}
-_phase_detect_cache_retryable() {
-  [ -z "$(printf '%s' "$PD" | tr -d '[:space:]')" ] || [ "$PD" = "phase_detect_error=true" ]
-}
-_refresh_phase_detect_link() {
-  local VBW_CACHE_ROOT R V D ANY_LINK REAL_R SESSION_LINK
-  VBW_CACHE_ROOT="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/plugins/cache/vbw-marketplace/vbw"
-  R=""
-  if [ -n "${CLAUDE_PLUGIN_ROOT:-}" ] && [ -f "${CLAUDE_PLUGIN_ROOT}/scripts/hook-wrapper.sh" ]; then R="${CLAUDE_PLUGIN_ROOT}"; fi
-  if [ -z "$R" ] && [ -f "${VBW_CACHE_ROOT}/local/scripts/hook-wrapper.sh" ]; then R="${VBW_CACHE_ROOT}/local"; fi
-  if [ -z "$R" ]; then
-    V=$(find "${VBW_CACHE_ROOT}" -maxdepth 1 -mindepth 1 2>/dev/null | awk -F/ '{print $NF}' | grep -E '^[0-9]+(\.[0-9]+)*$' | sort -t. -k1,1n -k2,2n -k3,3n | tail -1)
-    [ -n "$V" ] && [ -f "${VBW_CACHE_ROOT}/${V}/scripts/hook-wrapper.sh" ] && R="${VBW_CACHE_ROOT}/${V}"
-  fi
-  if [ -z "$R" ]; then
-    V=$(find "${VBW_CACHE_ROOT}" -maxdepth 1 -mindepth 1 2>/dev/null | awk -F/ '{print $NF}' | sort | tail -1)
-    [ -n "$V" ] && [ -f "${VBW_CACHE_ROOT}/${V}/scripts/hook-wrapper.sh" ] && R="${VBW_CACHE_ROOT}/${V}"
-  fi
-  SESSION_LINK="/tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}"
-  if [ -z "$R" ] && [ -f "$SESSION_LINK/scripts/hook-wrapper.sh" ]; then
-    R="$SESSION_LINK"
-  fi
-  if [ -z "$R" ]; then
-    ANY_LINK=$(command find -H /tmp -maxdepth 1 -name '.vbw-plugin-root-link-*' -print 2>/dev/null | LC_ALL=C sort | while IFS= read -r link; do
-      if [ -f "$link/scripts/hook-wrapper.sh" ]; then
-        printf '%s\n' "$link"
-        break
-      fi
-    done || true)
-    [ -n "$ANY_LINK" ] && R="$ANY_LINK"
-  fi
-  if [ -z "$R" ]; then
-    D=$(ps axww -o args= 2>/dev/null | grep -v grep | grep -oE -- "--plugin-dir [^ ]+" | head -1)
-    D="${D#--plugin-dir }"
-    [ -n "$D" ] && [ -f "$D/scripts/hook-wrapper.sh" ] && R="$D"
-  fi
-  [ -n "$R" ] && [ -d "$R" ] && [ -f "$R/scripts/phase-detect.sh" ] || return 1
-  REAL_R=$(cd "$R" 2>/dev/null && pwd -P) || return 1
-  bash "$REAL_R/scripts/ensure-plugin-root-link.sh" "$L" "$REAL_R" >/dev/null 2>&1 || return 1
-  [ -L "$L" ] && [ -f "$L/scripts/phase-detect.sh" ]
-}
-i=0
-while [ $i -lt 100 ]; do
-  if _phase_detect_cache_fresh; then
-    PD=$(cat "$P")
-    break
-  fi
-  sleep 0.1
-  i=$((i+1))
-done
-if _phase_detect_cache_retryable; then
-  _refresh_phase_detect_link || true
-fi
-if _phase_detect_cache_retryable && [ -L "$L" ] && [ -f "$L/scripts/phase-detect.sh" ]; then
-  LOCK="/tmp/.vbw-phase-detect-live-${SESSION_KEY}.lock"
-  i=0
-  while [ $i -lt 100 ]; do
-    if _phase_detect_cache_fresh; then
-      PD=$(cat "$P")
-      if ! _phase_detect_cache_retryable; then
-        break
-      fi
-    fi
-    if mkdir "$LOCK" 2>/dev/null; then
-      PTMP="${P}.reader.$$.$RANDOM"
-      PD=$(bash "$L/scripts/phase-detect.sh" 2>/dev/null) || PD=""
-      if [ -n "$(printf '%s' "$PD" | tr -d '[:space:]')" ] && [ "$PD" != "phase_detect_error=true" ]; then
-        printf '%s\n' "$PD" > "$PTMP" 2>/dev/null && mv "$PTMP" "$P" 2>/dev/null || true
-      fi
-      rmdir "$LOCK" 2>/dev/null || true
-      break
-    fi
-    sleep 0.1
-    i=$((i+1))
-  done
-fi
-[ -z "$(printf '%s' "$PD" | tr -d '[:space:]')" ] && _phase_detect_cache_fresh && PD=$(cat "$P")
-if [ -z "$(printf '%s' "$PD" | tr -d '[:space:]')" ] || [ "$PD" = "phase_detect_error=true" ]; then
-  echo "milestone_extract_unavailable=true"
-  exit 0
-fi
-if printf '%s' "$PD" | grep -q '^---MILESTONE_UAT_EXTRACT_START---$'; then
-  printf '%s\n' "$PD" | awk '/^---MILESTONE_UAT_EXTRACT_START---$/{f=1; next} /^---MILESTONE_UAT_EXTRACT_END---$/{exit} f{print}'
-else
-  MS_UAT=$(printf '%s' "$PD" | grep '^milestone_uat_issues=' | head -1 | cut -d= -f2)
-  if [ "$MS_UAT" = "true" ]; then
-    echo "milestone_extract_unavailable=true"
-  else
-    echo "not_milestone_recovery"
-  fi
-fi`
-```
-
 !`SESSION_KEY="${CLAUDE_SESSION_ID:-default}"; L="/tmp/.vbw-plugin-root-link-${SESSION_KEY}"; i=0; while [ ! -L "$L" ] && [ $i -lt 20 ]; do sleep 0.1; i=$((i+1)); done; bash "$L/scripts/suggest-compact.sh" execute 2>/dev/null || true`
 
 ## Input Parsing
@@ -1151,8 +1045,100 @@ Only when re-verification chaining could not complete in this turn — e.g., con
 This mode handles the case where a milestone was archived before UAT issues were resolved (e.g., due to a missing audit gate in older versions).
 
 **Steps:**
-1. Use pre-computed milestone UAT issues from the "Milestone UAT issues" context block above. Each block starts with `milestone_phase_dir=<path>` followed by `extract-uat-issues.sh` output (header line + issue lines). Do NOT read UAT files from the milestone — all issue data is already extracted.
-   If `milestone_uat_count` > 1, multiple blocks are present (one per affected phase, separated by `---`). If `milestone_uat_count` = 1, a single block is present.
+1. After milestone-recovery routing is selected, extract milestone UAT issues with this route-local block:
+   ```bash
+   MILESTONE_UAT_CONTEXT=$(
+     SESSION_KEY="${CLAUDE_SESSION_ID:-default}"
+     L="/tmp/.vbw-plugin-root-link-${SESSION_KEY}"
+     P="/tmp/.vbw-phase-detect-${SESSION_KEY}.txt"
+     PD=""
+     _PD_START_TS=$(date +%s 2>/dev/null || echo 0)
+     _phase_detect_cache_fresh() {
+       local m=""
+       [ -f "$P" ] || return 1
+       m=$(stat -c %Y "$P" 2>/dev/null || stat -f %m "$P" 2>/dev/null || echo "")
+       [ -n "$m" ] || return 1
+       [ "$m" -ge "$_PD_START_TS" ] 2>/dev/null
+     }
+     _phase_detect_cache_retryable() {
+       [ -z "$(printf '%s' "$PD" | tr -d '[:space:]')" ] || [ "$PD" = "phase_detect_error=true" ]
+     }
+     REAL_R=$(cd "$L" 2>/dev/null && pwd -P) || REAL_R=""
+     if [ -n "$REAL_R" ]
+     then
+       bash "$REAL_R/scripts/ensure-plugin-root-link.sh" "$L" "$REAL_R" >/dev/null 2>&1 || true
+     fi
+     i=0
+     while [ $i -lt 100 ]
+     do
+       if _phase_detect_cache_fresh
+       then
+         PD=$(cat "$P")
+         break
+       fi
+       sleep 0.1
+       i=$((i+1))
+     done
+     if _phase_detect_cache_retryable && [ -L "$L" ] && [ -f "$L/scripts/phase-detect.sh" ]
+     then
+       LOCK="/tmp/.vbw-phase-detect-live-${SESSION_KEY}.lock"
+       i=0
+       while [ $i -lt 100 ]
+       do
+         if _phase_detect_cache_fresh
+         then
+           PD=$(cat "$P")
+           if ! _phase_detect_cache_retryable
+           then
+             break
+           fi
+         fi
+         if mkdir "$LOCK" 2>/dev/null
+         then
+           PTMP="${P}.reader.$$.$RANDOM"
+           PD=$(bash "$L/scripts/phase-detect.sh" 2>/dev/null) || PD=""
+           if [ -n "$(printf '%s' "$PD" | tr -d '[:space:]')" ] && [ "$PD" != "phase_detect_error=true" ]
+           then
+             printf '%s\n' "$PD" > "$PTMP" 2>/dev/null && mv "$PTMP" "$P" 2>/dev/null || true
+           fi
+           rmdir "$LOCK" 2>/dev/null || true
+           break
+         fi
+         sleep 0.1
+         i=$((i+1))
+       done
+     fi
+     [ -z "$(printf '%s' "$PD" | tr -d '[:space:]')" ] && _phase_detect_cache_fresh && PD=$(cat "$P")
+     if _phase_detect_cache_retryable
+     then
+       echo "milestone_extract_unavailable=true"
+     elif printf '%s' "$PD" | grep -q '^---MILESTONE_UAT_EXTRACT_START---$'
+     then
+       printf '%s\n' "$PD" | awk '
+         /^---MILESTONE_UAT_EXTRACT_START---$/ {
+           found=1
+           next
+         }
+         /^---MILESTONE_UAT_EXTRACT_END---$/ {
+           exit
+         }
+         found {
+           print
+         }
+       '
+     else
+       MS_UAT=$(printf '%s' "$PD" | grep '^milestone_uat_issues=' | head -1 | cut -d= -f2)
+       if [ "$MS_UAT" = "true" ]
+       then
+         echo "milestone_extract_unavailable=true"
+       else
+         echo "not_milestone_recovery"
+       fi
+     fi
+   )
+   ```
+   Each extracted block starts with `milestone_phase_dir=<path>` followed by `extract-uat-issues.sh` output (header line plus issue lines). Do NOT read UAT files from the milestone. All issue data is already in `MILESTONE_UAT_CONTEXT`.
+   If `milestone_uat_count` > 1, multiple blocks are present, one per affected phase separated by `---`. If `milestone_uat_count` = 1, a single block is present.
 2. Display the unresolved issues to the user with milestone context (milestone slug, affected phase count, severity mix). Then call AskUserQuestion with three options:
    - **"Create remediation phases"** (set `isRecommended` when `milestone_uat_major_or_higher=true`): Create one remediation phase per affected milestone phase. Auto-populate each phase goal from the UAT issue descriptions. Route to Plan mode for the first created phase.
    - **"Start fresh with new work"**: Acknowledge the stale UAT issues, mark them as acknowledged (`.remediated`) so they don't re-trigger archive blocking, then proceed as if all_done. The user can define new work via `/vbw:vibe` with arguments.
