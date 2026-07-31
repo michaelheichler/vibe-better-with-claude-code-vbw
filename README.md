@@ -1050,17 +1050,6 @@ Your AI-managed project now has more structure than most startups that raised a 
 
 That last one is the real barrier to entry.
 
-### Version Requirements
-
-| Feature | Minimum Claude Code Version | Reason |
-| ------- | ---------------------------- | ------ |
-| Baseline VBW | 2.1.32+ | Core plugin system, hooks, agent teams |
-| Agent Teams Model Routing | 2.1.47+ | Fixed silently broken model routing for team teammates |
-| Plan Mode Native Support | 2.1.47+ | Compaction workarounds removed, native plan mode context |
-| Stricter Bash Permissions | 2.1.47+ | Enhanced permission classifier for piped commands |
-
-**Recommended:** Claude Code 2.1.47 or later for full VBW feature compatibility.
-
 ---
 
 ## Documentation
@@ -1073,10 +1062,14 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on local development, proj
 
 ## Contributors
 
-[![Contributors](https://contrib.rocks/image?repo=yidakee/vibe-better-with-claude-code-vbw)](https://github.com/yidakee/vibe-better-with-claude-code-vbw/graphs/contributors)
+Thanks to everyone who filed an issue, sent a PR, or just used VBW long enough to find its rough edges. That feedback is most of why this plugin works as well as it does.
+
+[![Contributors](https://contrib.rocks/image?repo=michaelheichler/vibe-better-with-claude-code-vbw)](https://github.com/michaelheichler/vibe-better-with-claude-code-vbw/graphs/contributors)
+
+**A note from the current maintainer:** the original repo went quiet for months, no commits, no releases, right after it had given me better results than anything else I had tried for AI-assisted development. I did not want to watch a project that good stall out and disappear, so I forked it and kept building. [Michael Heichler](https://github.com/michaelheichler) maintains this fork.
 
 ## License
 
 MIT. See [LICENSE](LICENSE) for details.
 
-Built by [Tiago Serôdio](https://github.com/yidakee).
+Originally built by [Tiago Serôdio](https://github.com/yidakee). Currently maintained by [Michael Heichler](https://github.com/michaelheichler).
