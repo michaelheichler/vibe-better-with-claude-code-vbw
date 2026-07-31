@@ -1,0 +1,22 @@
+docs/wiki/home.md
+  s_66704f336cbb51::t_60edfc2332345d 47,50
+  s_66704f336cbb51::t_1e4f26e0d98c6b 7
+docs/migration-gsd-to-vbw.md
+  s_66704f336cbb51::t_eaad8e4f76d5fb 261
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.18",
+  "base_commit_sha": "e45c996c8e3a6182fb25e86061f3981f3584a33e",
+  "prompts": {},
+  "sessions": {
+    "s_66704f336cbb51": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "779d3353-a469-4289-91aa-6e7258234385",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
