@@ -152,17 +152,22 @@ teardown_temp_dir() {
     _ORIG_VBW_WORKSPACE_SUBPATH _ORIG_VBW_WORKSPACE_SUBPATH_WAS_SET
 }
 
-# Generate a PID that is guaranteed dead. Spawns a process intended to stay
-# alive until killed, kills it, waits for it to exit, and returns its PID.
-# Avoids hardcoded PIDs that may collide with live processes under parallel
-# BATS execution.
+# Generate a dead PID using SIGKILL and bounded polling to prevent parallel-suite wait hangs.
 get_dead_pid() {
-  local p
+  local p i
   sleep 999 &
   p=$!
   [[ -n "$p" ]] || return 1
-  kill "$p" 2>/dev/null || kill -9 "$p" 2>/dev/null || true
-  wait "$p" 2>/dev/null || true
+  kill -9 "$p" 2>/dev/null || true
+  # Invariant: p has received SIGKILL. Variant: 50-i.
+  for ((i = 0; i < 50; i++)); do
+    if ! kill -0 "$p" 2>/dev/null; then
+      echo "$p"
+      return 0
+    fi
+    kill -9 "$p" 2>/dev/null || true
+    sleep 0.02
+  done
   if kill -0 "$p" 2>/dev/null; then
     return 1
   fi
