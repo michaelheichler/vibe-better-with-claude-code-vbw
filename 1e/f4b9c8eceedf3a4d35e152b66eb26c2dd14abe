@@ -1,0 +1,21 @@
+references/model-profiles.md
+  s_86df439477734c::t_72fff9c0c22445 104-126,131
+AGENTS.md
+  s_86df439477734c::t_34ff10deba5429 172
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.18",
+  "base_commit_sha": "1ef4b9c8eceedf3a4d35e152b66eb26c2dd14abe",
+  "prompts": {},
+  "sessions": {
+    "s_86df439477734c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8684b0f1-7b48-47f6-b50a-d23308a9e287",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
