@@ -42,7 +42,7 @@ resolve_project_root() {
   if [ -f "$SCRIPT_DIR/lib/vbw-config-root.sh" ]; then
     # shellcheck source=lib/vbw-config-root.sh
     if source "$SCRIPT_DIR/lib/vbw-config-root.sh" 2>/dev/null; then
-      if find_vbw_root "$SCRIPT_DIR" >/dev/null 2>&1 && [ -n "${VBW_CONFIG_ROOT:-}" ] && [ -n "${VBW_PLANNING_DIR:-}" ] && [ -d "$VBW_PLANNING_DIR" ]; then
+      if find_vbw_root >/dev/null 2>&1 && [ -n "${VBW_CONFIG_ROOT:-}" ] && [ -n "${VBW_PLANNING_DIR:-}" ] && [ -d "$VBW_PLANNING_DIR" ]; then
         printf '%s\n' "$VBW_CONFIG_ROOT"
         return 0
       fi
