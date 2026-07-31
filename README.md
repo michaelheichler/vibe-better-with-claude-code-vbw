@@ -461,7 +461,7 @@ Here's when each one shows up to work:
   └───────────────────────────────────────────────────────────────────────────────┘
 ```
 
-Tool access and permission mode per agent are in the table above. Platform-enforced columns (`tools` / `disallowedTools`) cannot be overridden by an instruction. Only `permissionMode` behavior is instruction-enforced.
+Tool access and permission mode per agent are in the table above. Platform-enforced columns (`tools` / `disallowedTools`) cannot be overridden by an instruction. Only `permissionMode` behavior is instruction-enforced. Dev (shown above) runs its own Denylist (no Task/Agent/Team/AskUserQuestion), so it can't spawn subagents or teams even though it otherwise inherits every built-in and MCP tool.
 
 ---
 
