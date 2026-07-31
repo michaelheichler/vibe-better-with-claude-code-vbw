@@ -240,6 +240,26 @@ EOF
   [[ "$output" == *"filesystem mutation command"* ]]
 }
 
+@test "bash-guard: payload role wins over shared session qa state for concurrent subagents" {
+  TEST_PROJECT=$(new_test_project concurrent-docs-qa)
+  SESSION_ID="shared-orchestrator-session"
+  mkdir -p "$TEST_PROJECT/.vbw-planning/.active-agents/$SESSION_ID"
+  printf 'qa 1\n' > "$TEST_PROJECT/.vbw-planning/.active-agents/$SESSION_ID/active-agent-roles"
+
+  TEST_INPUT=$(jq -n \
+    --arg session_id "$SESSION_ID" \
+    --arg agent_id "docs-agent-1" \
+    --arg agent_type "vbw:vbw-docs" \
+    --arg command "git commit -am 'wip'" \
+    '{session_id:$session_id,agent_id:$agent_id,agent_type:$agent_type,tool_input:{command:$command}}')
+  run env -u VBW_AGENT_ROLE -u VBW_ACTIVE_AGENT -u VBW_PLANNING_DIR \
+    -u CLAUDE_SESSION_ID -u CLAUDE_CODE_SESSION_ID \
+    bash -c 'cd "$1" && printf "%s\n" "$2" | bash "$3"' _ \
+    "$TEST_PROJECT" "$TEST_INPUT" "$PROJECT_ROOT/scripts/bash-guard.sh"
+
+  [ "$status" -eq 0 ]
+}
+
 @test "bash-guard: non-restricted roles are unaffected by the qa/scout read-only blocklist" {
   TEST_PROJECT=$(new_test_project role-dev-unrestricted)
   for role in dev debugger docs architect lead; do

@@ -75,6 +75,14 @@ normalize_agent_role() {
   return 1
 }
 
+detect_payload_agent_role() {
+  local payload_agent_id payload_agent_type
+  payload_agent_id=$(printf '%s' "$INPUT" | jq -r '.agent_id // empty' 2>/dev/null) || payload_agent_id=""
+  payload_agent_type=$(printf '%s' "$INPUT" | jq -r '.agent_type // empty' 2>/dev/null) || payload_agent_type=""
+  [ -n "$payload_agent_id" ] && [ -n "$payload_agent_type" ] || return 1
+  normalize_agent_role "$payload_agent_type"
+}
+
 detect_agent_role() {
   local candidate role
 
@@ -85,6 +93,11 @@ detect_agent_role() {
       return 0
     fi
   done
+
+  if role=$(detect_payload_agent_role); then
+    printf '%s' "$role"
+    return 0
+  fi
 
   if command -v vbw_active_agent_current_scout >/dev/null 2>&1 && vbw_active_agent_current_scout "$PLANNING_DIR" "$INPUT"; then
     printf 'scout'
