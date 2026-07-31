@@ -174,11 +174,28 @@ Store selection in variable `PROFILE_METHOD`.
 **Branching:**
 - If `PROFILE_METHOD = "Use preset profile"`: AskUserQuestion with 1 question and 3 options (`quality`, `balanced`, `budget`). Store the selected preset in `PROFILE`, then continue to Step 3 and apply it there using the `Model profile switching` logic below.
 - If `PROFILE_METHOD = "Configure each agent individually"`: Proceed to individual agent configuration flow (Round 1 below).
-- If `PROFILE_METHOD = "Model matrix"`: Run `bash "{plugin-root}/scripts/detect-models.sh"`. Detection reads the Claude Code binary model table first and merges the endpoint catalog when auth env exists. If output is empty (rare), display `○ No model catalog detectable (static tiers apply)` and STOP. Otherwise show the current `model_matrix` (if any) next to the detected ids, propose an updated matrix per the Step 1.8 rules in `/vbw:init` (never invent ids; preference arrays end in a Claude tier), confirm via AskUserQuestion (`Use matrix` / `Edit` / `Cancel`), and on acceptance write `model_matrix`, `model_catalog`, and `model_catalog_detected_at` to `.vbw-planning/config.json` with the same jq pattern as init Step 1.8. Then continue to Step 4.
+- If `PROFILE_METHOD = "Model matrix"`: run the model matrix flow below, then continue to Step 4.
+
+**Model matrix flow:**
+
+Run `bash "{plugin-root}/scripts/detect-models.sh" --labeled`. Detection reads the Claude Code binary model table first and merges the endpoint catalog when auth env exists. Each output line is `id<TAB>description`.
+
+- **Empty output (rare):** display `○ No model catalog detectable (static tiers apply)` and return to the Step 2.7 question. Do not stop the command.
+- **Non-empty output:** show the current `model_matrix` (if any) side by side with the detected catalog, printing each detected id together with its description. Then read `{plugin-root}/references/model-profiles.md` and follow its "Choosing models per role" section to propose an updated matrix over agents (lead, dev, qa, scout, debugger, architect, docs) x effort levels (thorough, balanced, fast, turbo). Use the description column to judge family and strength. Never invent ids: every entry must appear verbatim in the id column. Every preference array must end in a Claude tier id. Present the proposal as a compact table plus a legend of id and description.
+
+Confirm via AskUserQuestion (single select): "Use this model matrix?" with options `Use matrix` / `Edit` / `Cancel`.
+
+**Edit loop:** if the user selects `Edit`, or supplies freeform text through the built-in `Other` path, apply the requested changes to the proposed matrix (rejecting any id not in the detected list), re-render the revised table and legend, and immediately call AskUserQuestion again with the same three options. Repeat for every further `Edit` or freeform reply. Never end this flow in plain prose. Every revision round MUST end with a new AskUserQuestion call. The only exits are `Use matrix` and `Cancel`.
+
+On `Use matrix`, write `model_matrix`, `model_catalog`, and `model_catalog_detected_at` to `.vbw-planning/config.json` with the same jq pattern as init Step 1.8, where `model_catalog` is an id-only array built from the id column alone (`cut -f1`). Display `✓ Model matrix written (N models detected)` and continue to Step 4.
+
+On `Cancel`, display `○ Model matrix unchanged` and return to the Step 2.7 question.
 
 **Individual Configuration - Round 1 (4 agents):**
 
-Run `bash "{plugin-root}/scripts/detect-models.sh"` once and store the lines as the detected catalog. For every per-agent question below, options are the 3 most suitable detected ids for that role (current model first); when the catalog is empty, offer `opus` / `sonnet` / `haiku`. Any other detected id can be given via the built-in `Other` path.
+Run `bash "{plugin-root}/scripts/detect-models.sh" --labeled` once and store the `id<TAB>description` lines as the detected catalog. Read `{plugin-root}/references/model-profiles.md` and follow its "Choosing models per role" section when ranking candidates.
+
+For every per-agent question in Round 1 and Round 2 below, build the options from that catalog: offer the 3 most suitable detected ids for that role, list the agent's current model first and mark it `(current)`, and put the id's description text in the option description. Never offer an id that is not in the detected id column. Only when the catalog is empty, fall back to the tier names `opus` / `sonnet` / `haiku`. Any other detected id can be given via the built-in `Other` path.
 
 Calculate OLD_COST before making changes (cost weights: opus=100, sonnet=20, haiku=2):
 ```bash

@@ -212,21 +212,35 @@ Discover which models this Claude Code install accepts, then let the user confir
 ```bash
 DM_SCRIPT="/tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}/scripts/detect-models.sh"
 if [ -f "$DM_SCRIPT" ]; then
-  bash "$DM_SCRIPT"
+  bash "$DM_SCRIPT" --labeled
 else
-  echo "VBW: detect-models.sh unavailable; skipping model detection" >&2
+  echo "VBW: detect-models.sh unavailable, skipping model detection" >&2
 fi
 ```
 
-- **Empty output (rare: binary unreadable and no endpoint auth):** fall back to Claude Code's native model set. No API call is needed: the running session already knows the current Claude models (tier aliases `opus`, `sonnet`, `haiku` and their full ids such as `claude-opus-5`, `claude-sonnet-5`, `claude-haiku-4-5`), and the Task tool `model:` parameter accepts them directly. AskUserQuestion (single select): "No extended model catalog detected. Build the agent x effort matrix from Claude Code's native models?" with options `Keep profile presets (Recommended)` / `Build matrix`. On `Keep`, display `○ Model matrix skipped (profile presets apply)` and skip to Step 2. On `Build matrix`, treat the native Claude model set as the detected list and continue with the proposal flow below (write `model_catalog` as that native list).
-- **Non-empty output:** the lines are the available model ids. Propose a `model_matrix` mapping each agent (lead, dev, qa, scout, debugger, architect, docs) x effort level (thorough, balanced, fast, turbo) to a model id or preference array from the detected list:
-  - `thorough`: strongest available models for lead, architect, debugger, dev; strong mid-tier for qa, scout, docs.
-  - `balanced`: strong models for dev, lead, debugger; mid-tier for the rest.
-  - `fast`/`turbo`: cheapest capable models everywhere; scout and docs get the cheapest.
-  - Prefer preference arrays with a Claude tier as the final entry (e.g. `["glm52", "claude-sonnet-5"]`) so routing degrades inside the user's own list.
-  - Never invent ids: every entry must appear in the detected output or be a Claude tier/full Claude id from it.
+Each output line is `id<TAB>description`. The id column is authoritative for config writes. The description column identifies the model family and strength (native Claude ids are labeled `Claude (built-in)`).
 
-  Present the proposed matrix as a compact table and AskUserQuestion (single select): "Use this model matrix?" with options `Use matrix (Recommended)` / `Edit` (freeform corrections, then re-confirm) / `Skip (static tiers)`. On acceptance, write it:
+- **Empty output (rare: binary unreadable and no endpoint auth):** fall back to Claude Code's native model set. No API call is needed: the running session already knows the current Claude models (tier aliases `opus`, `sonnet`, `haiku` and their full ids such as `claude-opus-5`, `claude-sonnet-5`, `claude-haiku-4-5`), and the Task tool `model:` parameter accepts them directly. AskUserQuestion (single select): "No extended model catalog detected. Build the agent x effort matrix from Claude Code's native models?" with options `Keep profile presets (Recommended)` / `Build matrix`. On `Keep`, display `○ Model matrix skipped (profile presets apply)` and skip to Step 2. On `Build matrix`, treat the native Claude model set as the detected list, label every entry `Claude (built-in)`, and continue through the full proposal flow below including the edit loop.
+- **Non-empty output:** build the proposal.
+
+**1.8a. Propose.** Read `{plugin-root}/references/model-profiles.md` and follow its "Choosing models per role" section. Build a `model_matrix` mapping each agent (lead, dev, qa, scout, debugger, architect, docs) x effort level (thorough, balanced, fast, turbo) to a model id or preference array drawn from the detected list.
+
+- Use the description column to judge family and strength. Assign the strongest detected model to lead, architect, and debugger at `thorough`, the strongest coding model to dev, a strong model from a different family than dev to qa when one is detected, the largest-context model to scout, and the cheapest capable model to docs and to every `fast` and `turbo` cell.
+- Never invent ids. Every entry must appear verbatim in the id column of the detected output.
+- Prefer preference arrays and end every array with a Claude tier id (for example `["glm52", "claude-sonnet-5"]`) so routing degrades inside the user's own catalog.
+- Present the proposal as a compact table with one row per agent and one column per effort level, followed by a short legend listing each proposed id with its description so the user can judge the picks.
+
+**1.8b. Confirm.** Call AskUserQuestion (single select): "Use this model matrix?" with options `Use matrix (Recommended)` / `Edit` / `Skip (static tiers)`.
+
+**1.8c. Edit loop.** If the user selects `Edit`, or supplies freeform text through the built-in `Other` path, do all of the following in order:
+
+1. Apply the requested changes to the proposed matrix. Reject and report any id that is not in the detected list instead of inventing one.
+2. Re-render the revised matrix table and legend.
+3. Immediately call AskUserQuestion again with the same three options `Use matrix (Recommended)` / `Edit` / `Skip (static tiers)`.
+
+Repeat this cycle for every further `Edit` or freeform reply. Never end this step in plain prose. Every revision round MUST end with a new AskUserQuestion call. The only exits from this step are `Use matrix` and `Skip (static tiers)`.
+
+**1.8d. Accept.** On `Use matrix`, write the confirmed matrix:
 
 ```bash
 jq --argjson matrix "$MATRIX_JSON" --argjson catalog "$CATALOG_JSON" \
@@ -234,7 +248,9 @@ jq --argjson matrix "$MATRIX_JSON" --argjson catalog "$CATALOG_JSON" \
   .vbw-planning/config.json > .vbw-planning/config.json.tmp && mv .vbw-planning/config.json.tmp .vbw-planning/config.json
 ```
 
-  where `MATRIX_JSON` is the confirmed matrix object and `CATALOG_JSON` is the detected id list as a JSON array. Display `✓ Model matrix written (N models detected)`. On `Skip`, display `○ Model matrix skipped (static tiers apply)`.
+`MATRIX_JSON` is the confirmed matrix object. `CATALOG_JSON` is an id-only JSON array built from the id column alone (`cut -f1` on the detected lines). Never write descriptions into `model_catalog`. Display `✓ Model matrix written (N models detected)`.
+
+**1.8e. Skip.** On `Skip (static tiers)`, display `○ Model matrix skipped (static tiers apply)` and continue to Step 2.
 
 ### Step 2: Brownfield detection + discovery
 
