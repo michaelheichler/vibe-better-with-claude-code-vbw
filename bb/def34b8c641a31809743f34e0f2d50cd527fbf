@@ -1,0 +1,25 @@
+.claude-plugin/marketplace.json
+  s_86df439477734c::t_763aaf81f7a4b3 18
+.claude-plugin/plugin.json
+  s_86df439477734c::t_a300e6505502fc 3
+VERSION
+  s_86df439477734c::t_42bd3fe69b4eaa 1
+marketplace.json
+  s_86df439477734c::t_1cc7903f6ec977 18
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.18",
+  "base_commit_sha": "bbdef34b8c641a31809743f34e0f2d50cd527fbf",
+  "prompts": {},
+  "sessions": {
+    "s_86df439477734c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8684b0f1-7b48-47f6-b50a-d23308a9e287",
+        "model": "unknown"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
