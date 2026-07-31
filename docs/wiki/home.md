@@ -4,7 +4,7 @@ VBW is a Claude Code plugin that bolts a plan-execute-verify development lifecyc
 
 ## What VBW is
 
-Vibe Better With Claude Code (VBW) is a Claude Code plugin: 26 slash commands, 7 specialized agents, and 30 hooks across 11 event types, all implemented as 228 shell scripts plus markdown, with zero external dependencies beyond `jq` and `git`. Current version is 1.37.1 (see `VERSION`). There is no package.json, no npm, and no build step, the whole plugin is bash scripts and markdown consumed by Claude Code and by the agents it spawns.
+Vibe Better With Claude Code (VBW) is a Claude Code plugin: 26 slash commands, 7 specialized agents, and 30 hooks across 11 event types, all implemented as 228 shell scripts plus markdown, with zero non-shell external dependencies beyond `jq` and `git` (and a supported Bash 4.4+ runtime). Current version is 1.37.1 (see `VERSION`). There is no package.json, no npm, and no build step, the whole plugin is bash scripts and markdown consumed by Claude Code and by the agents it spawns.
 
 ## The plan-execute-verify lifecycle in one paragraph
 
@@ -44,9 +44,10 @@ For a more permanent local dev setup (symlinked plugin cache, cleared command ca
 
 ### Prerequisites
 
+- Bash 4.4+ is required. Bash 5+ is recommended. macOS's bundled /bin/bash 3.2 is unsupported. Ensure `bash --version` resolves to Bash 4.4 or newer before running VBW or `testing/run-all.sh`.
 - Claude Code v1.0.33+ with Opus 4.6+
 - Agent Teams enabled
-- `jq` and `git` on the machine (VBW's only two runtime dependencies)
+- `jq` and `git` on the machine (VBW's only two non-shell runtime dependencies)
 
 ## The two-command loop
 
