@@ -1,0 +1,26 @@
+README.md
+  s_df5355651b6005::t_b8a1a58da1a00e 1079
+  s_df5355651b6005::t_58dcd08976a847 22
+  s_df5355651b6005::t_67ccd27f4e863d 329
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.18",
+  "base_commit_sha": "ebfff96fb9ae1c597bd6bdef116f13925e4fda84",
+  "prompts": {},
+  "humans": {
+    "h_49622c3802c0ed": {
+      "author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  },
+  "sessions": {
+    "s_df5355651b6005": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "31ac1d05-c9c8-46e4-92a0-7217ad0f6201",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
