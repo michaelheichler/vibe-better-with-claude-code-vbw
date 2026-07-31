@@ -1,0 +1,32 @@
+tests/template-nesting.bats
+  s_bd42f725263d8e::t_1622680b4af4cf 153-159
+  s_bd42f725263d8e::t_bb907043d05d32 511,513-515,517-518,522,529-532,535-541,545-548
+  s_bd42f725263d8e::t_d23c68d4cf6c6f 357,391
+tests/auto-uat.bats
+  s_bd42f725263d8e::t_5c521fb16db736 958-960
+  s_bd42f725263d8e::t_9cf65bb8aec3d8 933-936
+testing/verify-plugin-root-resolution.sh
+  s_bd42f725263d8e::t_ac549b0293d46a 6-8,14,19,23-29,31,38-42,44-47,49,52,55-56,58,62-68,70,72,74-77,79,82-83,85-91,93,97-100,102-103,106-108,110,113-125,127,129,132-135,137-138,140,144-146,148,151-154,156-175,177-198,201-217,219,222,225-236,238,240,242-246,248,250-253,255-257,263
+  s_bd42f725263d8e::t_9def8b90d7d350 15,20
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.18",
+  "base_commit_sha": "518927fc0eaf092f64912f5d25a88190f02baabf",
+  "prompts": {},
+  "humans": {
+    "h_49622c3802c0ed": {
+      "author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  },
+  "sessions": {
+    "s_bd42f725263d8e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e3e9b01e-f233-44ca-922d-6d09aa87b352",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
