@@ -1,0 +1,25 @@
+.vbw-planning/phases/02-structural-resolution-consolidation/remediation/qa/round-03/R03-PLAN.md
+  s_bd42f725263d8e::t_36ab590bbc9a3b 16
+  s_bd42f725263d8e::t_e7c89c81fb6eb2 1-15,17-111
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.18",
+  "base_commit_sha": "faeb98c5a00efa0448e4c6ea4a15a2a3193dd99b",
+  "prompts": {},
+  "humans": {
+    "h_49622c3802c0ed": {
+      "author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  },
+  "sessions": {
+    "s_bd42f725263d8e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e3e9b01e-f233-44ca-922d-6d09aa87b352",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
