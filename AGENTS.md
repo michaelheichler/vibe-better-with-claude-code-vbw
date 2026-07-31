@@ -125,6 +125,7 @@ cat "$CLAUDE_PROJECT_DIR"/<session-id>/subagents/agent-*.jsonl
 - **Root-cause fixes only (non-negotiable)**: Every fix must address the underlying root cause. Masking/symptom-only fixes are not allowed. If a temporary mitigation is added, it must be accompanied by a root-cause fix in the same work item (or the task is incomplete).
 - **No Python in terminal**: Never run `python3` or `python` via the terminal. Use the available Python execution tool instead. **Exception**: the `.github/scripts/wait-github.py` helper is invoked as `python3 .github/scripts/wait-github.py ...` from fix-issue workflow steps. It is a long-running polling helper that must survive outside a short-lived in-process execution and must preserve its own exit code, so it is explicitly allowed to run in the terminal.
 - **LSP-first code navigation**: Any agent with LSP in its `tools` list must prefer LSP for semantic code navigation (definitions, references, symbols, call hierarchy) and reserve Search/Grep/Glob for literal strings, filenames, non-code assets, or LSP failure cases. See `references/lsp-first-policy.md` for the canonical policy.
+- **README claim drift**: `README.md` restates computed counts (script count, BATS files/tests) in prose outside its own "Accuracy and freshness" table. Re-run that table's cited `find`/`grep`/`jq` commands and check the prose copies too before trusting either.
 
 ## Architecture
 
@@ -293,9 +294,9 @@ When asked to fix a bug or implement an issue-driven change, use the tracked iss
 <!-- gitnexus:start -->
 # GitNexus: Code Intelligence
 
-This project is indexed by GitNexus as **vibe-better-with-claude-code-vbw** (1763 symbols, 1760 relationships, 0 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **vibe-better-with-claude-code-vbw** (2074 symbols, 2071 relationships, 0 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
-> Index stale? Run `node .gitnexus/run.cjs analyze` from the project root. It auto-selects an available runner. No `.gitnexus/run.cjs` yet? `npx gitnexus analyze` (npm 11 crash → `npm i -g gitnexus`, see #1939).
+> Index stale? Run `node .gitnexus/run.cjs analyze` from the project root. It auto-selects an available runner. No `.gitnexus/run.cjs` yet? `npx gitnexus analyze` (npm 11 crash -> `npm i -g gitnexus`, see #1939).
 
 ## Always Do
 

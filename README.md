@@ -1,79 +1,80 @@
 <div align="center">
 
-# Vibe Better With Claude Code (Opus 4.6+) - VBW
+# Vibe Better With Claude Code (VBW)
 
-*You're not an engineer anymore.*
+*You talk, the AI codes. That part is already true.*
 
-*You're a prompt jockey with commit access.*
+*The question is whether anyone checks its work before it ships.*
 
-*At least do it properly.*
+*This plugin is the "someone checks" part.*
 
-<img src="assets/abraham.jpeg" alt="Abraham Lincoln portrait" width="300"/>
+<img src="assets/einsteinemc2.png" alt="Einstein vibe-coding E=mc^2 side by side in Codex and Claude Code, with the caption: Vibe coded the universe's most famous equation in one retry." width="500"/>
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Claude Code](https://img.shields.io/badge/Claude_Code-v2.1.32+-blue.svg)](https://code.claude.com)
-[![Opus 4.6+](https://img.shields.io/badge/Model-Opus_4.6+-purple.svg)](https://anthropic.com)
+[![Models](https://img.shields.io/badge/Models-Sonnet_5_%7C_Opus_5_%7C_Fable-purple.svg)](https://anthropic.com)
 [![Discord](https://img.shields.io/badge/Discord-Join%20Us-5865F2.svg?logo=discord&logoColor=white)](https://discord.gg/zh6pV53SaP)
 
 </div>
 
 ## Token efficiency by design
 
-VBW keeps model-token overhead low by construction: workflow logic lives in 228 shell scripts that run as bash subprocesses at zero model-token cost, and per-role context is compiled and loaded lazily instead of dumped into every agent. The stack is validated by 142 bats files (3,591 test cases) alongside the contract and lint suites.
+Most of VBW is not a prompt. It is 232 shell scripts that run as plain bash subprocesses at zero model-token cost, plus per-role context that gets compiled and loaded lazily instead of dumped whole into every agent. Every phase, task, and hook is a script decision first and a model decision only when a script cannot make the call. The stack is validated by 147 bats files (3,700 test cases) alongside the contract and lint suites.
 
-The `docs/*token-analysis*.md` reports estimate the resulting overhead with a line-count heuristic (roughly 15 tokens per markdown line). They are design estimates, not measured API benchmarks, and the stock-agent-teams baseline they compare against was measured on an older release. Treat the figures as directional rather than as a guaranteed bill.
+The `docs/*token-analysis*.md` reports estimate the resulting overhead with a line-count heuristic (roughly 15 tokens per markdown line). They are design estimates, not measured API benchmarks, and the stock-agent-teams baseline they compare against was measured on an older release. Treat the figures as directional, not as a guaranteed bill.
 
-**Analysis reports (estimates):** [v1.30.0](docs/vbw-1-30-0-full-spec-token-analysis.md) | [v1.21.30](docs/vbw-1-21-30-full-spec-token-analysis.md) | [v1.20.0](docs/vbw-1-20-0-full-spec-token-analysis.md) | [v1.10.7](docs/vbw-1-10-7-context-compiler-token-analysis.md) | [v1.10.2](docs/vbw-1-10-2-vs-stock-agent-teams-token-analysis.md) | [v1.0.99](docs/vbw-1-0-99-vs-stock-teams-token-analysis.md)
+**Analysis reports (estimates):** the most recent is [v1.30.0](docs/vbw-1-30-0-full-spec-token-analysis.md). Earlier point-in-time reports live in [docs/](docs/) if you want to see how the estimate has moved release to release.
 
 ## Accuracy and freshness
 
-Numbers in this README fall into two categories:
+We would rather tell you how to catch us lying than just ask you to trust the numbers below. Everything in this README falls into two buckets:
 
-- **Computed** -- derived by running a command against this repo, cited inline so you can re-run it yourself.
-- **Estimated** -- a design estimate or approximation, not a measured benchmark. These are labeled "est." or "~" and should not be read as a guaranteed cost or performance figure.
+- **Computed** (we ran a command against this repo and pasted the output. The command is right there so you can re-run it yourself).
+- **Estimated** (a design estimate, not a measured benchmark, labeled "est." or "~". Do not read it as a guaranteed cost or performance figure).
 
 | Claim | Category | Re-verify with |
 | :--- | :--- | :--- |
 | Slash commands (26) | Computed | `find commands -maxdepth 1 -name "*.md" \| wc -l` |
 | Agents (7) | Computed | `find agents -maxdepth 1 -name "vbw-*.md" \| wc -l` |
 | Hook event types (11) / handlers (30) | Computed | `jq -r '.hooks \| keys[]' hooks/hooks.json` and `jq '[.hooks[][] .hooks[]] \| length' hooks/hooks.json` |
-| Shell scripts (228, repo-wide) | Computed | `find . -path ./.git -prune -o -name "*.sh" -print \| wc -l` |
-| BATS files (142) / test cases (3,591) | Computed | `find . -name "*.bats" \| wc -l` and `grep -rh "^@test" --include="*.bats" . \| wc -l` |
-| VERSION (1.37.1) | Computed | `cat VERSION`, cross-checked with `bash scripts/bump-version.sh --verify` |
-| Token-efficiency figures in `docs/*token-analysis*.md` | Estimated | Line-count heuristic against an older stock-agent-teams baseline, not a measured API benchmark -- see the caveat at the top of [Token efficiency by design](#token-efficiency-by-design). |
-| Cost Optimization table (~$3.00 / ~$1.50 / ~$0.70 per phase, "50% cost savings") | Estimated | Derived from `references/model-profiles.md`'s own estimates, not from logged billing data. Treat as directional. |
+| Shell scripts (232, repo-wide) | Computed | `find . -path ./.git -prune -o -name "*.sh" -print \| wc -l` |
+| BATS files (147) / test cases (3,700) | Computed | `find . -name "*.bats" \| wc -l` and `grep -rh "^@test" --include="*.bats" . \| wc -l` |
+| VERSION (1.38.6) | Computed | `cat VERSION`, cross-checked with `bash scripts/bump-version.sh --verify` |
+| Token-efficiency figures in `docs/*token-analysis*.md` | Estimated | Line-count heuristic against an older stock-agent-teams baseline, not a measured API benchmark. See the caveat at the top of [Token efficiency by design](#token-efficiency-by-design). |
+| Cost Optimization relative percentages | Computed | Derived from list prices in `config/model-pricing.json` (collected 2026-07-31) at an assumed 1:3 input:output ratio, not from logged billing data. Treat as directional. |
+| Benchmark tables in `references/model-profiles.md` | Sourced | Collected 2026-07-31 from Vals AI, tbench.ai, arcprize.org, LMArena, steel.dev, and llm-stats.com. Each row names its source. Re-verify after roughly six months. |
 
-Component counts above were last verified against `VERSION` 1.37.1. If you're reading this against a newer release, re-run the commands in the table -- most take under a second and need only `find`, `grep`, and `jq`, all already required by this project.
+Component counts above were last verified against `VERSION` 1.38.6. Reading this against a newer release? Re-run the commands in the table. Most take under a second and need only `find`, `grep`, and `jq`, all already required by this project.
 
-If a claim in this README isn't in the table above and isn't visibly marked as an estimate, treat it as unverified -- open an issue or PR to either cite a command for it or add the estimate caveat.
+Any claim in this README that is not in the table above and is not visibly marked as an estimate should be treated as unverified. Open an issue or PR to either cite a command for it or add the estimate caveat.
 
 ## Manifesto
 
-VBW is open source because the best tools are built by the people who use them.
+VBW is open source because the people who use a tool every day are usually the ones who make it better.
 
 This project exists to make AI coding better for everyone, and "everyone" means exactly that.
 
-**For absolute beginners:** VBW may look intimidating, especially if you've never used Claude Code, but it is, in fact, incredibly easy to use. And your results will be significantly better than using an IDE with a chatbot.
+**If you are brand new to this:** Claude Code can look like a lot at first. VBW is not here to make it look smaller, it is here to make sure the parts you do not see (planning, checking, remembering what happened yesterday) are handled instead of skipped. You will get further, faster, than pasting into a chatbot and hoping.
 
-**For seasoned developers:** Everything is configurable — effort profiles, autonomy levels, model routing, verification depth, work presets — all exposed as a control surface, not hidden behind prompts. The beginners get guardrails; you get the switches behind the guardrails.
+**If you already ship software for a living:** everything is a setting, not a secret. Effort profiles, autonomy levels, model routing, verification depth, work presets. Beginners get sane defaults. You get the same switches, exposed, not buried in a prompt somewhere.
 
-**For contributors:** VBW is a living project. The plugin system, the agents, the verification pipeline - all of it is open to improvement. If you've found a better way to plan, build, or verify code with Claude, bring it. File an issue, open a PR, or just show up and share what you've learned. Every contribution makes the next person's experience better.
+**If you want to help build this:** VBW is a living project. The plugin system, the agents, the verification pipeline, all of it can be improved, and probably will be by someone reading this line. Found a better way to plan, build, or verify code with Claude? Open a PR. Every contribution makes the next person's first run smoother.
 
-**[Join the Discord](https://discord.gg/zh6pV53SaP)** -- whether you want to help build VBW or just want VBW to help you build.
+**[Join the Discord](https://discord.gg/zh6pV53SaP)**, whether you want to help build VBW or just want VBW to help you build.
 
 ## What Is This
 
-> **Platform:** macOS and Linux only. Windows is not supported natively — all hooks, scripts, and context blocks require bash. If you're on Windows, run Claude Code inside [WSL](https://learn.microsoft.com/en-us/windows/wsl/install).
+> **Platform:** macOS and Linux only. Windows is not supported natively. All hooks, scripts, and context blocks require bash. On Windows, run Claude Code inside [WSL](https://learn.microsoft.com/en-us/windows/wsl/install).
 >
 > Bash 4.4+ is required. Bash 5+ is recommended. macOS's bundled /bin/bash 3.2 is unsupported. Ensure `bash --version` resolves to Bash 4.4 or newer before running VBW or `testing/run-all.sh`.
 
-Inspired by **[Ralph](https://github.com/frankbria/ralph-claude-code)** and **[Get Shit Done](https://github.com/glittercowboy/get-shit-done)**, however, an entirely new architecture.
+Inspired by **[Ralph](https://github.com/frankbria/ralph-claude-code)** and **[Get Shit Done](https://github.com/glittercowboy/get-shit-done)**, but built as an entirely new architecture on top of that idea.
 
-VBW is a Claude Code plugin that bolts an actual development lifecycle onto your vibe coding sessions.
+Here is the ELI5 version: you describe what you want, and instead of one chat window improvising the whole thing from memory, VBW gives Claude an actual job to do it properly. It breaks your idea into phases. One agent researches, one plans, one writes the code, one checks the code against what you actually asked for, and the results get written down so nobody has to remember anything by heart.
 
-You describe what you want. VBW breaks it into phases. Agents plan, write, and verify the code. Commits are atomic. Verification is goal-backward. State persists across sessions. It's the entire software development lifecycle, except you replaced the engineering team with a plugin and a prayer.
+In slightly less friendly words: you describe what you want. VBW breaks it into phases. Agents plan, write, and verify the code. Commits are atomic, one task, one commit. Verification works backward from your goal instead of forward from a checklist someone made up. State persists across sessions, so closing your laptop does not erase the plan.
 
-Think of it as project management for the post-dignity era of software development.
+Think of it as project management for a team where the entire engineering department is one fast, occasionally overconfident AI, and you are the one making sure it does not skip the boring parts.
 
 ## Table of Contents
 
@@ -99,9 +100,9 @@ Think of it as project management for the post-dignity era of software developme
 
 ## Features
 
-### Built for Opus 4.6+, not bolted onto it
+### Built for how Claude Code works now, not bolted onto it
 
-Most Claude Code plugins were built for the subagent era, one main session spawning helper agents that report back and die. Much like the codebases they produce. VBW is designed from the ground up for the platform features that changed the game:
+Most Claude Code plugins were built for the subagent era: one main session spawning helper agents that report back and die. Much like the codebases they produce. VBW is designed from the ground up for the platform features that changed the game, and it is built to get the most out of Sonnet 5, Opus 5, and Fable:
 
 - **Agent Teams for real parallelism.** `/vbw:vibe` uses dependency-aware routing: true Dev teams are created when plans have real parallel delegate work, while linear dependency chains use serialized Dev subagents to avoid fake coordination overhead. `/vbw:map` runs 4 Scout teammates in parallel to analyze your codebase. When teams are used, this isn't "spawn a subagent and wait" -- it's coordinated teamwork with a shared task list and direct inter-agent communication. Agent health monitoring tracks lifecycle events, detects orphaned teammates, and recovers stuck agents via circuit breakers.
 
@@ -388,11 +389,11 @@ Closed your terminal? Switched branches? Came back after a weekend of pretending
 
 > **⚠️ Do not use `/clear`.**
 >
-> Opus 4.6 auto-compacts your context window when it fills up. It intelligently summarizes older conversation turns while preserving critical state — active plan tasks, file paths, commit history, deviation decisions, error context — so the session continues seamlessly with full project awareness. VBW enhances this further with `PreCompact` hooks and post-compaction verification that inject agent-specific preservation priorities and verify nothing critical was lost.
+> Claude Code auto-compacts your context window when it fills up. It summarizes older conversation turns while preserving critical state (active plan tasks, file paths, commit history, deviation decisions, error context) so the session continues with full project awareness. VBW adds `PreCompact` hooks and post-compaction verification on top, which inject agent-specific preservation priorities and check that nothing critical was lost.
 >
-> `/clear` bypasses all of this. It destroys your entire context — every file read, every decision made, every task in progress — and drops you into a blank session with no memory of what just happened. Auto-compaction is surgical; `/clear` is a sledgehammer.
+> `/clear` bypasses all of this. It destroys your entire context (every file read, every decision made, every task in progress) and drops you into a blank session with no memory of what just happened. Auto-compaction is surgical. `/clear` is a sledgehammer.
 >
-> **If you accidentally `/clear`**, run `/vbw:resume` immediately. It restores project context from ground truth files in `.vbw-planning/` — state, roadmap, plans, summaries — and tells you exactly where to pick up.
+> **If you accidentally `/clear`**, run `/vbw:resume` immediately. It restores project context from ground truth files in `.vbw-planning/` (state, roadmap, plans, summaries) and tells you exactly where to pick up.
 >
 > **For advanced users:** The [full command reference](#commands) below has granular controls — `/vbw:vibe` with flags for explicit mode selection (`--plan`, `--execute`, `--discuss`, `--assumptions`), `/vbw:discuss` for standalone phase discussions, `/vbw:debug` for systematic bug investigation, and more. But you never *need* the flags. `/vbw:vibe` with no arguments handles the entire lifecycle on its own.
 
@@ -577,6 +578,9 @@ Quick reference for every key in `config/defaults.json`, in order. Click the sec
 | `model_overrides` | `{}` | [Model routing and cost](#model-routing-and-cost) |
 | `model_matrix` | `{}` | [Model routing and cost](#model-routing-and-cost) |
 | `model_catalog` | `[]` | [Model routing and cost](#model-routing-and-cost) |
+| `model_catalog_extra` | `[]` | [Model routing and cost](#model-routing-and-cost) |
+| `reasoning_matrix` | `{}` | [Reasoning effort](#reasoning-effort) |
+| `reasoning_overrides` | `{}` | [Reasoning effort](#reasoning-effort) |
 | `agent_max_turns` | `{...}` | [Agent turn limits](#agent-turn-limits) |
 | `qa_skip_agents` | `["docs"]` | [Agent behavior](#agent-behavior) |
 | `worktree_isolation` | `"off"` | [Concurrency controls](#concurrency-controls) |
@@ -996,19 +1000,27 @@ VBW spawns specialized agents for planning, development, and verification. Model
 
 ### Three Preset Profiles
 
-| Profile | Use Case | Lead | Dev | QA | Scout | Est. Cost/Phase |
-| :--- | :--- | :--- | :--- | :--- | :--- | ---: |
-| **Quality** | Production work, architecture decisions (default) | opus | opus | sonnet | sonnet | ~$3.00 |
-| **Balanced** | Standard development | sonnet | sonnet | sonnet | sonnet | ~$1.50 |
-| **Budget** | Prototyping, tight budgets | sonnet | sonnet | haiku | haiku | ~$0.70 |
+| Profile | Use Case | Lead | Dev | QA | Scout | Docs | Relative cost |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | ---: |
+| **Quality** | Production work, architecture decisions (default) | opus | opus | sonnet | sonnet | sonnet | 100% |
+| **Balanced** | Standard development | sonnet | sonnet | sonnet | sonnet | sonnet | ~54% |
+| **Budget** | Prototyping, tight budgets | sonnet | sonnet | sonnet | sonnet | haiku | ~50% |
 
-*Debugger and Architect follow the same model as Lead. Estimates based on typical 3-plan phase.*
+*Debugger and Architect follow the same model as Lead. Relative cost is computed from `config/model-pricing.json` at a 1:3 input:output ratio.*
 
-**Quality is the default.** It gives you maximum reasoning depth for architecture decisions and production-critical work. Switch to Balanced (`/vbw:config model_profile balanced`) for 50% cost savings on standard development.
+**Quality is the default.** It gives you maximum reasoning depth for architecture decisions and production-critical work. Switch to Balanced (`/vbw:config model_profile balanced`) for roughly half the cost on standard development.
 
-**Quality** uses Opus for Lead, Dev, Debugger, and Architect -- maximum reasoning depth for critical work. QA and Scout stay on Sonnet (verification and research don't need Opus overhead).
+**Quality** uses Opus for Lead, Dev, Debugger, and Architect, giving maximum reasoning depth for critical work. QA, Scout, and Docs stay on Sonnet.
 
-**Budget** keeps Dev and core agents on Sonnet (quality baseline) but drops QA to Haiku. Good for exploratory work where you're iterating fast and verification can be lighter.
+**Budget** places Haiku on Docs only. Earlier releases routed QA and Scout to Haiku as well, which the measured benchmarks do not support: Scout needs the 1M context Haiku lacks (200K), and QA needs reasoning depth where Haiku scores 1.3 to 4.0 percent on ARC-AGI-2 against 88 to 92 for the frontier tier. See `references/model-profiles.md` for the sourced tables.
+
+### Reasoning effort
+
+Model choice and reasoning effort are separate dials. A strong model at `medium` effort often beats a weaker model at its default, so try stepping effort down before downgrading the model.
+
+Per-profile defaults live in `config/reasoning-profiles.json` and range from `xhigh` for Lead, Dev, Architect, and Debugger on Quality down to `low` for Docs on Budget. Override per agent with `reasoning_overrides`, or per agent and effort level with `reasoning_matrix`.
+
+Effort support is per-model and sending an unsupported value is a hard API error, so `scripts/resolve-agent-reasoning.sh` reconciles the configured value against `config/model-pricing.json` and emits nothing when the model rejects the parameter. Claude Haiku 4.5 is the notable case: it accepts no effort value at all.
 
 #### Switching profiles
 
@@ -1123,7 +1135,7 @@ Your AI-managed project now has more structure than most startups that raised a 
 ## Requirements
 
 - **Bash 4.4+**: Bash 4.4+ is required. Bash 5+ is recommended. macOS's bundled /bin/bash 3.2 is unsupported. Ensure `bash --version` resolves to Bash 4.4 or newer before running VBW or `testing/run-all.sh`.
-- **Claude Code** with **Opus 4.6+** model
+- **Claude Code** with **Sonnet 5** or **Opus 5** (Fable is also supported for agents that need a bigger context window)
 - **jq** -- the only non-shell external dependency. Install via `brew install jq` (macOS) or `apt install jq` (Linux). VBW checks for jq during `/vbw:init` and session start, and warns clearly if it's missing.
 - **Agent Teams** enabled (`/vbw:init` will offer to set this up for you)
 - A project directory (new or existing)
