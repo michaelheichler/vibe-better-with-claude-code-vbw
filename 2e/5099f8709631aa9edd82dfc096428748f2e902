@@ -1,0 +1,27 @@
+commands/vibe.md
+  s_bd42f725263d8e::t_a44d623d20e9e3 1457,1474-1478,1482
+  s_bd42f725263d8e::t_7afe01ca0127cf 1408,1456,1458-1473
+  s_bd42f725263d8e::t_03f1bb0680f058 1396-1407,1409-1455,1484
+  s_bd42f725263d8e::t_c8c268d2c01f08 1479-1481
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.18",
+  "base_commit_sha": "2e5099f8709631aa9edd82dfc096428748f2e902",
+  "prompts": {},
+  "humans": {
+    "h_49622c3802c0ed": {
+      "author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  },
+  "sessions": {
+    "s_bd42f725263d8e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e3e9b01e-f233-44ca-922d-6d09aa87b352",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
