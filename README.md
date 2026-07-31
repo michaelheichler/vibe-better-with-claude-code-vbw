@@ -8,6 +8,8 @@
 
 *This plugin is the "someone checks" part.*
 
+*"A good tool going quiet for months looked like a bug. So I fixed it."* (Michael Heichler, fork maintainer)
+
 <img src="assets/einsteinemc2.png" alt="Einstein vibe-coding E=mc^2 side by side in Codex and Claude Code, with the caption: Vibe coded the universe's most famous equation in one retry." width="500"/>
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
@@ -16,6 +18,8 @@
 [![Discord](https://img.shields.io/badge/Discord-Join%20Us-5865F2.svg?logo=discord&logoColor=white)](https://discord.gg/zh6pV53SaP)
 
 </div>
+
+> **This is an actively developed fork, not the original repo.** The upstream project ([Tiago Serôdio](https://github.com/yidakee)'s work, later hosted under `swt-labs`) went quiet on 2026-06-18 after no commits for weeks, right after giving better results than anything else I had tried. I forked it rather than watch it stall, and this fork is now 102 commits ahead with zero commits missing from upstream: native model-catalog detection straight from the Claude Code binary, compatibility fixes for Claude Code releases as new as 2.1.220, hardened destructive-command guards, and a self-update path (`/vbw:update`) that pulls from this fork, not the original. See [Contributors](#contributors) for the full story. (Michael Heichler)
 
 ## Token efficiency by design
 
@@ -128,6 +132,12 @@ Agent Teams are [experimental with known limitations](https://code.claude.com/do
 - **Worktree isolation.** Each Dev plan can get its own git worktree (physical filesystem isolation, not just file-list enforcement), whether execution is true-team parallel or serialized by dependencies. Six scripts handle the full lifecycle: create, merge, cleanup, status, targeting, and agent mapping. Off by default. Set `worktree_isolation` to `"on"` in config to enable. VBW uses its own `.vbw-worktrees` git worktrees through task prompt/state metadata and blocks teammate spawns that try to force Claude-side `isolation:"worktree"`, unmanaged `.claude/worktrees/agent-*` sidechain CWDs, or `.vbw-worktrees/...` spawn CWD aliases. See [Execution Model](#execution-model) for how this interacts with dependency routing and lease locks.
 
 Agent Teams ship with seven known limitations. VBW addresses all of them. The eighth... that you're using AI to write software doesn't need a fix. It needs an intervention.
+
+### Adaptive multi-model support
+
+VBW does not hardcode a model list and hope Anthropic never ships anything new. `scripts/detect-models.sh` reads the available model catalog straight out of the Claude Code binary itself, the same table the CLI uses internally, so detection is credential-free and works fully offline. It falls back to `${ANTHROPIC_BASE_URL}/v1/models` only as a last resort, when the binary yields nothing and an API key is present. The catalog is cached for an hour, keyed on the binary's path, mtime, and size, so a freshly updated Claude Code binary is picked up on the next run, not after a manual cache-bust.
+
+On top of that catalog, `scripts/resolve-agent-model.sh` resolves a model per agent per effort level: `model_overrides` beats `model_matrix` beats the `model_profile` preset (`quality`/`balanced`/`budget`). Overrides and matrix entries can be a single model id or a preference list, where the first entry present in your detected catalog wins. A parallel `reasoning_matrix`/`reasoning_overrides` axis controls per-agent reasoning effort independently of model choice, reconciled against each model's actual accepted effort values so an unsupported value never becomes a hard API error. Today that resolves to Sonnet 5, Opus 5, Fable, and Haiku 4.5 across VBW's 7 agents. When Anthropic ships the next generation, detection sees it immediately. Wiring a new model into a profile's default tier is a one-line change to `config/model-pricing.json`, not a rewrite of VBW's model-selection logic.
 
 ### Skills.sh integration
 
@@ -1066,10 +1076,10 @@ Thanks to everyone who filed an issue, sent a PR, or just used VBW long enough t
 
 [![Contributors](https://contrib.rocks/image?repo=michaelheichler/vibe-better-with-claude-code-vbw)](https://github.com/michaelheichler/vibe-better-with-claude-code-vbw/graphs/contributors)
 
-**A note from the current maintainer:** the original repo went quiet for months, no commits, no releases, right after it had given me better results than anything else I had tried for AI-assisted development. I did not want to watch a project that good stall out and disappear, so I forked it and kept building. [Michael Heichler](https://github.com/michaelheichler) maintains this fork.
+**Why this fork exists:** the original repo (created by [Tiago Serôdio](https://github.com/yidakee), later hosted under `swt-labs`) had given me better results than anything else I had tried for AI-assisted development, then went quiet: no commits after 2026-06-18. I did not want to watch a project that good stall out, so I forked it rather than wait. [Michael Heichler](https://github.com/michaelheichler) develops this fork, currently 102 commits ahead of upstream with zero commits missing from it.
 
 ## License
 
 MIT. See [LICENSE](LICENSE) for details.
 
-Originally built by [Tiago Serôdio](https://github.com/yidakee). Currently maintained by [Michael Heichler](https://github.com/michaelheichler).
+Originally created by [Tiago Serôdio](https://github.com/yidakee). This fork is developed independently by [Michael Heichler](https://github.com/michaelheichler).
