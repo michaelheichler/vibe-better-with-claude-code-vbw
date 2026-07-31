@@ -1,0 +1,36 @@
+commands/todo.md
+  s_66704f336cbb51::t_76e790a4d2342f 58
+references/execute-protocol.md
+  s_66704f336cbb51::t_a36227af2051f3 1082
+  s_66704f336cbb51::t_22b54dd7d37354 1095
+commands/config.md
+  s_66704f336cbb51::t_9435992f383eaf 346
+commands/vibe.md
+  s_66704f336cbb51::t_0b27078b2c7a72 890,923,945,967,1250,1305,1475,1637,1685,1713,1778
+  s_66704f336cbb51::t_c1b7bf5a3c2a8d 1399
+commands/debug.md
+  s_66704f336cbb51::t_1675e5dbef2c4e 373,661
+commands/init.md
+  s_66704f336cbb51::t_415eaef2b8e6bc 514
+  s_66704f336cbb51::t_87b7b0a1d3306b 179
+commands/verify.md
+  s_66704f336cbb51::t_5a866048bdad54 881
+commands/discuss.md
+  s_66704f336cbb51::t_0fdceb29e1fc0d 125
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.18",
+  "base_commit_sha": "82d24e4c6b54a7299e7327b51a144d00099862fa",
+  "prompts": {},
+  "sessions": {
+    "s_66704f336cbb51": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "779d3353-a469-4289-91aa-6e7258234385",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
