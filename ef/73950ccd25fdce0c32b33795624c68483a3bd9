@@ -1,0 +1,54 @@
+README.md
+  s_df5355651b6005::t_9d34034904b494 103,105
+  s_df5355651b6005::t_cd7e07c3f14e64 22,24,26
+  s_df5355651b6005::t_47c98ad8167b24 53,57,59,61,63,67,71,73,75,77
+  s_3a99fcccfa9f7d::t_64e8929e224376 581
+  s_8302cd9aa1bb95::t_1eaeeb4b7ccafa 1003-1007,1009,1011,1013,1015-1023
+  s_df5355651b6005::t_4214bd0d2b7f46 30,32-33,40-43,47,49
+  s_8302cd9aa1bb95::t_4ee4cb4ca599a3 582-583
+  s_df5355651b6005::t_e89a539e92ce78 3,5,7,9,11,15
+  s_df5355651b6005::t_932363456427c2 1138
+  s_8302cd9aa1bb95::t_2a9eeaabb51fe0 44-45
+  s_df5355651b6005::t_03ed812e0ad1e4 392,394,396
+AGENTS.md
+  s_df5355651b6005::t_06c6be51531f00 297
+  s_df5355651b6005::t_82fc8a240c8925 299
+  s_df5355651b6005::t_c54afcff5620e7 128
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.18",
+  "base_commit_sha": "ef73950ccd25fdce0c32b33795624c68483a3bd9",
+  "prompts": {},
+  "humans": {
+    "h_49622c3802c0ed": {
+      "author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  },
+  "sessions": {
+    "s_3a99fcccfa9f7d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ba602c2b-5fb0-4b67-ac43-5a095a331c23",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    },
+    "s_8302cd9aa1bb95": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c7b02b42-9b48-4bae-b1f4-d91eb250f642",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    },
+    "s_df5355651b6005": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "31ac1d05-c9c8-46e4-92a0-7217ad0f6201",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
