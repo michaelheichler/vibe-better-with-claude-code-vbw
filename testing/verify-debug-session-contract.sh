@@ -449,7 +449,7 @@ fi
 debug_complete_matches=$(grep -nF 'bash "{plugin-root}/scripts/debug-session-state.sh" set-status .vbw-planning complete' "$DEBUG_CMD" 2>/dev/null || true)
 debug_pg_matches=$(grep -nF 'PG_SCRIPT="/tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}/scripts/planning-git.sh"' "$DEBUG_CMD" 2>/dev/null || true)
 debug_commit_matches=$(grep -nF 'bash "$PG_SCRIPT" commit-boundary "complete debug session" .vbw-planning/config.json' "$DEBUG_CMD" 2>/dev/null || true)
-debug_warning_matches=$(grep -nF 'VBW: planning-git.sh unavailable; skipping planning git boundary commit' "$DEBUG_CMD" 2>/dev/null || true)
+debug_warning_matches=$(grep -nF '⚠ VBW: planning-git.sh unavailable. Skipping planning git boundary commit.' "$DEBUG_CMD" 2>/dev/null || true)
 
 debug_complete_first=$(printf '%s\n' "$debug_complete_matches" | sed -n '1s/:.*//p')
 debug_complete_second=$(printf '%s\n' "$debug_complete_matches" | sed -n '2s/:.*//p')
