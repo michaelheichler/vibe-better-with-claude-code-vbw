@@ -1,0 +1,27 @@
+.vbw-planning/phases/02-structural-resolution-consolidation/02-01-PLAN.md
+  s_bd42f725263d8e::t_c00561aa1a323a 10
+  s_bd42f725263d8e::t_b9e338934798ff 1-9,11-14,18-39,41-118
+  s_bd42f725263d8e::t_7dbbfdb646641f 40
+  s_bd42f725263d8e::t_777e092f11fdac 15-17
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.18",
+  "base_commit_sha": "bd68e660f5763a27351354a6303836914d8a4c6c",
+  "prompts": {},
+  "humans": {
+    "h_49622c3802c0ed": {
+      "author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  },
+  "sessions": {
+    "s_bd42f725263d8e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e3e9b01e-f233-44ca-922d-6d09aa87b352",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
