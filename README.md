@@ -19,7 +19,7 @@
 
 </div>
 
-> **This is an actively developed fork, not the original repo.** The upstream project ([Tiago Serôdio](https://github.com/yidakee)'s work, later hosted under `swt-labs`) went quiet on 2026-06-18 after no commits for weeks, right after giving better results than anything else I had tried. I forked it rather than watch it stall, and this fork is now 102 commits ahead with zero commits missing from upstream: native model-catalog detection straight from the Claude Code binary, compatibility fixes for Claude Code releases as new as 2.1.220, hardened destructive-command guards, and a self-update path (`/vbw:update`) that pulls from this fork, not the original. See [Contributors](#contributors) for the full story. (Michael Heichler)
+> **This is an actively developed fork, not the original repo.** [Tiago Serôdio](https://github.com/yidakee) built VBW, and it gave me better results than anything else I had tried, then the original (later hosted under `swt-labs`) went quiet on 2026-06-18. No commits, no releases. Even Einstein didn't leave E=mc^2 half-derived, so instead of watching a good idea stall, I forked it and kept it moving: native model-catalog detection straight from the Claude Code binary, ongoing compatibility fixes as Claude Code itself changes, hardened destructive-command guards, and a self-update path (`/vbw:update`) that actually pulls from a repo someone is still pushing to. Check the commit history if you want proof instead of a promise. Full story in [Contributors](#contributors), and genuine thanks to Tiago for building something worth forking. (Michael Heichler)
 
 ## Token efficiency by design
 
@@ -326,7 +326,7 @@ Closed your terminal? Switched branches? Came back after a weekend of pretending
 >
 > `/clear` bypasses all of this. It destroys your entire context (every file read, every decision made, every task in progress) and drops you into a blank session with no memory of what just happened. Auto-compaction is surgical. `/clear` is a sledgehammer.
 >
-> **If you accidentally `/clear`**, run `/vbw:resume` immediately. It restores project context from ground truth files in `.vbw-planning/` (state, roadmap, plans, summaries) and tells you exactly where to pick up.
+> **If you accidentally `/clear`**, Claude Code 2.1.191+ ships a native `/rewind` command that can undo the `/clear` itself and restore the raw conversation. Try that first. Either way, also run `/vbw:resume`. It restores project context from ground truth files in `.vbw-planning/` (state, roadmap, plans, summaries), so you get the same picture even if `/rewind` isn't available or the conversation history is gone.
 >
 > **For advanced users:** The [full command reference](#commands) below has granular controls: `/vbw:vibe` with flags for explicit mode selection (`--plan`, `--execute`, `--discuss`, `--assumptions`), `/vbw:discuss` for standalone phase discussions, `/vbw:debug` for systematic bug investigation, and more. But you never *need* the flags. `/vbw:vibe` with no arguments handles the entire lifecycle on its own.
 
@@ -1076,7 +1076,7 @@ Thanks to everyone who filed an issue, sent a PR, or just used VBW long enough t
 
 [![Contributors](https://contrib.rocks/image?repo=michaelheichler/vibe-better-with-claude-code-vbw)](https://github.com/michaelheichler/vibe-better-with-claude-code-vbw/graphs/contributors)
 
-**Why this fork exists:** the original repo (created by [Tiago Serôdio](https://github.com/yidakee), later hosted under `swt-labs`) had given me better results than anything else I had tried for AI-assisted development, then went quiet: no commits after 2026-06-18. I did not want to watch a project that good stall out, so I forked it rather than wait. [Michael Heichler](https://github.com/michaelheichler) develops this fork, currently 102 commits ahead of upstream with zero commits missing from it.
+**Why this fork exists:** [Tiago Serôdio](https://github.com/yidakee) created VBW (later hosted under `swt-labs`), and it had given me better results than anything else I had tried for AI-assisted development. Then it went quiet: no commits after 2026-06-18. Good tools do not deserve to die from neglect, so I forked it and kept building instead of filing a hopeful issue and waiting. [Michael Heichler](https://github.com/michaelheichler) develops this fork now. The commit log is the receipt, not this paragraph, so it does not need updating every time someone reads it.
 
 ## License
 
