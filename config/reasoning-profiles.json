@@ -1,0 +1,29 @@
+{
+  "quality": {
+    "lead": "xhigh",
+    "dev": "xhigh",
+    "qa": "high",
+    "scout": "high",
+    "debugger": "xhigh",
+    "architect": "xhigh",
+    "docs": "medium"
+  },
+  "balanced": {
+    "lead": "high",
+    "dev": "high",
+    "qa": "medium",
+    "scout": "medium",
+    "debugger": "high",
+    "architect": "high",
+    "docs": "low"
+  },
+  "budget": {
+    "lead": "medium",
+    "dev": "medium",
+    "qa": "low",
+    "scout": "low",
+    "debugger": "medium",
+    "architect": "medium",
+    "docs": "low"
+  }
+}

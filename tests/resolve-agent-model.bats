@@ -166,6 +166,17 @@ teardown() {
   [ "$output" = "sol" ]
 }
 
+@test "model_catalog_extra makes an undetected sneak id eligible" {
+  printf 'sol\n' > "$TEST_TEMP_DIR/catalog.txt"
+  export VBW_MODEL_CATALOG_FILE="$TEST_TEMP_DIR/catalog.txt"
+  jq '.model_overrides.dev = ["nope", "claude-opus-4-8"] | .model_catalog_extra = ["claude-opus-4-8"]' \
+    "$TEST_TEMP_DIR/.vbw-planning/config.json" > "$TEST_TEMP_DIR/.vbw-planning/config.json.tmp"
+  mv "$TEST_TEMP_DIR/.vbw-planning/config.json.tmp" "$TEST_TEMP_DIR/.vbw-planning/config.json"
+  run bash "$SCRIPTS_DIR/resolve-agent-model.sh" dev "$TEST_TEMP_DIR/.vbw-planning/config.json" "$CONFIG_DIR/model-profiles.json"
+  [ "$status" -eq 0 ]
+  [ "$output" = "claude-opus-4-8" ]
+}
+
 @test "preference array with empty catalog trusts first entry" {
   : > "$TEST_TEMP_DIR/catalog.txt"
   export VBW_MODEL_CATALOG_FILE="$TEST_TEMP_DIR/catalog.txt"

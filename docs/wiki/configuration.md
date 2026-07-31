@@ -8,7 +8,7 @@ Seed values for `.vbw-planning/config.json`, created by `/vbw:init` and backfill
 
 Notable groups:
 - **Core workflow**: `effort` (thorough/balanced/fast/turbo), `autonomy` (cautious/standard/confident/pure-vibe), `planning_tracking` (manual/ignore/commit), `auto_push` (never/after_phase/always), `verification_tier` (quick/standard/deep).
-- **Model routing**: `model_profile` (quality/balanced/budget, default `quality`), `model_overrides` (per-agent map, default `{}`), `active_profile` / `custom_profiles` for saved setting bundles.
+- **Model routing**: `model_profile` (quality/balanced/budget, default `quality`), `model_overrides` (per-agent map, default `{}`), `model_matrix` (agent x effort map), `reasoning_matrix` and `reasoning_overrides` (reasoning-effort axis), `active_profile` / `custom_profiles` for saved setting bundles.
 - **Agent turn budgets**: `agent_max_turns`, an object keyed by 6 agent roles (`scout`, `qa`, `architect`, `debugger`, `lead`, `dev`), with defaults `scout=15, qa=25, architect=30, debugger=80, lead=50, dev=75`. The `docs` agent has no entry here. It is excluded from QA verification by default via `qa_skip_agents: ["docs"]`. Values scale by effort level (thorough 1.5x, balanced 1x, fast 0.8x, turbo 0.6x), and a value of `false` or `0` means unlimited turns (see `scripts/resolve-agent-max-turns.sh`).
 - **Rollout-managed flags**: `metrics`, `token_budgets`, `two_phase_completion`, `rolling_summary`, `validation_gates`, `smart_routing`, `snapshot_resume`, `event_recovery`, `monorepo_routing`, `lease_locks`. See [Rollout Stages](#rollout-stages-configrollout-stagesjson) below.
 - **Statusline**: four `statusline_*` booleans, all default `false`, documented in `commands/config.md`.
@@ -24,20 +24,40 @@ Three presets, each mapping the 7 agent roles (`lead`, `dev`, `qa`, `scout`, `de
 | ----- | ------- | -------- | ------ |
 | lead | opus | sonnet | sonnet |
 | dev | opus | sonnet | sonnet |
-| qa | sonnet | sonnet | haiku |
-| scout | sonnet | sonnet | haiku |
+| qa | sonnet | sonnet | sonnet |
+| scout | sonnet | sonnet | sonnet |
 | debugger | opus | sonnet | sonnet |
 | architect | opus | sonnet | sonnet |
-| docs | sonnet | sonnet | sonnet |
+| docs | sonnet | sonnet | haiku |
 
-`quality` is the `defaults.json` default. Per `references/model-profiles.md`, `model` names resolve to `opus` = Claude Opus 4.6, `sonnet` = Claude Sonnet 4.5, `haiku` = Claude Haiku 3.5. That doc also gives illustrative relative-cost estimates per phase (Quality about $3.00, Balanced about $1.50 or 50%, Budget about $0.70 or 25%), based on an assumed 3-plan phase with 2 Dev teammates. These are estimates from the doc, not measured figures.
+`quality` is the `defaults.json` default. Tier aliases resolve to the latest model of each tier, mapped in the `aliases` block of `config/model-pricing.json` (`opus` = Claude Opus 5, `sonnet` = Claude Sonnet 5, `haiku` = Claude Haiku 4.5, `fable` = Claude Fable 5). Relative cost is computed from that file rather than from a hardcoded weight table, so matrix and gateway models are scored too.
+
+Budget places `haiku` on Docs only. Earlier releases routed QA and Scout there, which the benchmark tables in `references/model-profiles.md` do not support: Scout needs a large context (Haiku 4.5 caps at 200K against 1M) and QA needs reasoning depth (Haiku 4.5 scores 1.3 to 4.0 percent on ARC-AGI-2).
+
+## Reasoning Profiles (config/reasoning-profiles.json)
+
+A second axis, same shape as the model presets, mapping each agent to a reasoning effort:
+
+| Agent | Quality | Balanced | Budget |
+| ----- | ------- | -------- | ------ |
+| lead | xhigh | high | medium |
+| dev | xhigh | high | medium |
+| qa | high | medium | low |
+| scout | high | medium | low |
+| debugger | xhigh | high | medium |
+| architect | xhigh | high | medium |
+| docs | medium | low | low |
+
+Effort support is per-model and sending an unsupported value is a hard API error, not a no-op. `scripts/resolve-agent-reasoning.sh` reconciles the resolved value against the target model's `reasoning_efforts` list in `config/model-pricing.json`: it emits an empty string when the model rejects the parameter (Claude Haiku 4.5), substitutes the model's documented default when the value sits outside its ladder, and passes the configured value through unchanged for models absent from the pricing file.
 
 Resolution and overrides:
-- `scripts/resolve-agent-model.sh <agent> <config.json> <model-profiles.json>` resolves the effective model for one agent, applying `model_overrides` on top of the active `model_profile`.
+- `scripts/resolve-agent-model.sh <agent> <config.json> <model-profiles.json>` resolves the effective model for one agent, applying `model_overrides` on top of `model_matrix` and the active `model_profile`.
+- `scripts/resolve-agent-reasoning.sh <agent> <config.json> <reasoning-profiles.json> [model] [pricing]` resolves the effort, applying `reasoning_overrides` on top of `reasoning_matrix` and the profile preset.
+- `scripts/resolve-agent-settings.sh` runs both and emits `RESOLVED_MODEL`, `RESOLVED_MAX_TURNS`, `RESOLVED_EFFORT`, and `RESOLVED_REASONING` in one call.
 - Switch the whole profile: `/vbw:config model_profile <quality|balanced|budget>`.
 - Override a single agent: `/vbw:config model_override <agent> <model>`, where `<agent>` is one of `lead|dev|qa|scout|debugger|architect` and `<model>` is one of `opus|sonnet|haiku` (`config.md` does not expose an override path for `docs`).
-- `/vbw:config` with no arguments shows a before/after cost estimate using integer cost weights `opus=100, sonnet=20, haiku=2` when switching profiles or setting per-agent overrides.
-- Resolved models are passed as an explicit `model:` parameter on every Task tool call. The session's `/model` setting does not propagate to subagents.
+- `/vbw:config` with no arguments shows a before/after cost estimate derived from `config/model-pricing.json` when switching profiles or setting per-agent overrides.
+- Resolved models are passed as an explicit `model:` parameter on every Task tool call, and the resolved effort as `effort:` when non-empty. The session's `/model` setting does not propagate to subagents.
 
 ## Stack Mappings (config/stack-mappings.json)
 

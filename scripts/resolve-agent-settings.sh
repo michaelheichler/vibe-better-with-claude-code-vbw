@@ -10,10 +10,13 @@
 #     RESOLVED_MODEL='opus'
 #     RESOLVED_MAX_TURNS='75'
 #     RESOLVED_EFFORT='balanced'
+#     RESOLVED_REASONING='xhigh'
 #
 # Notes:
 # - If [effort] is omitted or invalid, falls back to config.effort, then balanced.
 # - RESOLVED_MAX_TURNS may be empty when turn budgets are disabled/unlimited.
+# - RESOLVED_REASONING may be empty when the resolved model rejects the
+#   effort parameter. The caller then omits it from the Task call.
 
 set -euo pipefail
 
@@ -106,7 +109,17 @@ if ! MAX_TURNS=$(bash "$SCRIPT_DIR/resolve-agent-max-turns.sh" "$AGENT" "$CONFIG
   exit 1
 fi
 
+REASONING_PROFILES_PATH="$(dirname "$PROFILES_PATH")/reasoning-profiles.json"
+REASONING=""
+if [ -f "$REASONING_PROFILES_PATH" ]; then
+  if ! REASONING=$(bash "$SCRIPT_DIR/resolve-agent-reasoning.sh" "$AGENT" "$CONFIG_PATH" "$REASONING_PROFILES_PATH" "$MODEL" 2>&1); then
+    printf '%s\n' "$REASONING"
+    exit 1
+  fi
+fi
+
 emit_assignment RESOLVED_AGENT "$AGENT"
 emit_assignment RESOLVED_MODEL "$MODEL"
 emit_assignment RESOLVED_MAX_TURNS "$MAX_TURNS"
 emit_assignment RESOLVED_EFFORT "$EFFECTIVE_EFFORT"
+emit_assignment RESOLVED_REASONING "$REASONING"

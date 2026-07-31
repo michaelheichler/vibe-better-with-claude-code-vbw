@@ -181,13 +181,15 @@ Store selection in variable `PROFILE_METHOD`.
 Run `bash "{plugin-root}/scripts/detect-models.sh" --labeled`. Detection reads the Claude Code binary model table first and merges the endpoint catalog when auth env exists. Each output line is `id<TAB>description`.
 
 - **Empty output (rare):** display `○ No model catalog detectable (static tiers apply)` and return to the Step 2.7 question. Do not stop the command.
-- **Non-empty output:** show the current `model_matrix` (if any) side by side with the detected catalog, printing each detected id together with its description. Then read `{plugin-root}/references/model-profiles.md` and follow its "Choosing models per role" section to propose an updated matrix over agents (lead, dev, qa, scout, debugger, architect, docs) x effort levels (thorough, balanced, fast, turbo). Use the description column to judge family and strength. Never invent ids: every entry must appear verbatim in the id column. Every preference array must end in a Claude tier id. Present the proposal as a compact table plus a legend of id and description.
+- **Non-empty output:** show the current `model_matrix` (if any) side by side with the detected catalog, printing each detected id together with its description. Then read `{plugin-root}/references/model-profiles.md` and follow its "Task performance" tables and "Choosing models per role" section to propose an updated matrix over agents (lead, dev, qa, scout, debugger, architect, docs) x effort levels (thorough, balanced, fast, turbo). Rank each role by its measured task performance, not by a generic capability ladder. Use the description column to judge family and strength. Never invent ids: every entry must appear verbatim in the id column. Every preference array must end in a Claude tier id. Present the proposal as a compact table plus a legend of id and description.
+
+Alongside the model matrix, propose a `reasoning_matrix` over the same agents and effort levels, using the "Reasoning effort" section of `model-profiles.md` for the per-family accepted values and the per-profile defaults. Render it as an extra column beside each model cell. Two hard rules: never propose a value outside the target model's accepted set, and leave the cell empty for any model that rejects the parameter (`claude-haiku-4-5` and every model whose `reasoning_efforts` is `[]` in `{plugin-root}/config/model-pricing.json`).
 
 Confirm via AskUserQuestion (single select): "Use this model matrix?" with options `Use matrix` / `Edit` / `Cancel`.
 
 **Edit loop:** if the user selects `Edit`, or supplies freeform text through the built-in `Other` path, apply the requested changes to the proposed matrix (rejecting any id not in the detected list), re-render the revised table and legend, and immediately call AskUserQuestion again with the same three options. Repeat for every further `Edit` or freeform reply. Never end this flow in plain prose. Every revision round MUST end with a new AskUserQuestion call. The only exits are `Use matrix` and `Cancel`.
 
-On `Use matrix`, write `model_matrix`, `model_catalog`, and `model_catalog_detected_at` to `.vbw-planning/config.json` with the same jq pattern as init Step 1.8, where `model_catalog` is an id-only array built from the id column alone (`cut -f1`). Display `✓ Model matrix written (N models detected)` and continue to Step 4.
+On `Use matrix`, write `model_matrix`, `reasoning_matrix`, `model_catalog`, and `model_catalog_detected_at` to `.vbw-planning/config.json` with the same jq pattern as init Step 1.8, where `model_catalog` is an id-only array built from the id column alone (`cut -f1`). Display `✓ Model matrix written (N models detected)` and continue to Step 4.
 
 On `Cancel`, display `○ Model matrix unchanged` and return to the Step 2.7 question.
 
@@ -377,14 +379,34 @@ fi
 # Get current profile
 OLD_PROFILE=$(jq -r '.model_profile // "quality"' .vbw-planning/config.json)
 
-# Calculate cost estimate
-# Cost weights: opus=100, sonnet=20, haiku=2
+# Calculate cost estimate.
+# Weights come from config/model-pricing.json so matrix and gateway models are
+# scored too. The legacy opus=100/sonnet=20/haiku=2 table only knew three ids.
+# Weight = input + 3 * output per MTok, scaled by 10, matching a roughly
+# 1:3 input:output ratio per agent turn. Unknown ids fall back to sonnet.
+PRICING_PATH="{plugin-root}/config/model-pricing.json"
+
+model_weight() {
+  local model=$1
+  jq -r --arg m "$model" '
+    (.aliases[$m] // $m) as $id
+    | (.models[$id] // .models["claude-sonnet-5"]) as $e
+    | (if ($e.input | type) == "array" then $e.input[0].usd else $e.input end) as $in
+    | (if ($e.output | type) == "array" then $e.output[0].usd else $e.output end) as $out
+    | (($in + 3 * $out) * 10) | round
+  ' "$PRICING_PATH" 2>/dev/null || echo 320
+}
+
 calc_cost() {
   local profile=$1
-  local opus=$(jq "[.$profile | to_entries[] | select(.value == \"opus\")] | length" "$PROFILES_PATH")
-  local sonnet=$(jq "[.$profile | to_entries[] | select(.value == \"sonnet\")] | length" "$PROFILES_PATH")
-  local haiku=$(jq "[.$profile | to_entries[] | select(.value == \"haiku\")] | length" "$PROFILES_PATH")
-  echo $(( opus * 100 + sonnet * 20 + haiku * 2 ))
+  local total=0
+  local agent model
+  for agent in lead dev qa scout debugger architect docs
+  do
+    model=$(jq -r ".$profile.$agent // \"sonnet\"" "$PROFILES_PATH")
+    total=$(( total + $(model_weight "$model") ))
+  done
+  echo "$total"
 }
 
 OLD_COST=$(calc_cost "$OLD_PROFILE")
@@ -476,6 +498,9 @@ Note: `auto_commit` controls source-task commits during Execute mode. Planning a
 | model_overrides | object | agent-to-model map (value: model id or preference array) | {} |
 | model_matrix | object | agent x effort map to model id or preference array, written by /vbw:init from the detected catalog | {} |
 | model_catalog | array | model ids detected from ${ANTHROPIC_BASE_URL}/v1/models at init | [] |
+| model_catalog_extra | array | trusted model ids treated as available for preference-array resolution even when absent from the detected catalog | [] |
+| reasoning_matrix | object | agent x effort map to a reasoning effort (low/medium/high/xhigh/max), reconciled against the resolved model's accepted set | {} |
+| reasoning_overrides | object | agent-to-reasoning-effort map, highest precedence | {} |
 | agent_max_turns | object | per-agent turns (number), 0/false = unlimited | scout=15, qa=25, architect=30, debugger=80, lead=50, dev=75 |
 | qa_skip_agents | array | array of agent role names | ["docs"] |
 | context_compiler | boolean | true/false | true |

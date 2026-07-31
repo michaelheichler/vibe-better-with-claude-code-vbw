@@ -128,10 +128,13 @@ if [ -f "$CACHE_FILE" ]; then
 fi
 
 CATALOG=""
+CATALOG_EXTRA=""
 CATALOG_LOADED=false
 load_catalog() {
   if [ "$CATALOG_LOADED" = false ]; then
     CATALOG=$(bash "$SCRIPT_DIR/detect-models.sh" 2>/dev/null) || CATALOG=""
+    # model_catalog_extra: trusted ids treated as available even if undetected.
+    CATALOG_EXTRA=$(jq -r '(.model_catalog_extra // [])[]' "$CONFIG_PATH" 2>/dev/null || true)
     CATALOG_LOADED=true
   fi
 }
@@ -160,9 +163,10 @@ pick_model() {
   fi
   load_catalog
   if [ -n "$CATALOG" ]; then
+    local haystack="${CATALOG}"$'\n'"${CATALOG_EXTRA}"
     while IFS= read -r c; do
       [ -z "$c" ] && continue
-      if grep -Fxq -- "$c" <<< "$CATALOG"; then
+      if grep -Fxq -- "$c" <<< "$haystack"; then
         chosen="$c"
         break
       fi

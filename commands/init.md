@@ -223,12 +223,16 @@ Each output line is `id<TAB>description`. The id column is authoritative for con
 - **Empty output (rare: binary unreadable and no endpoint auth):** fall back to Claude Code's native model set. No API call is needed: the running session already knows the current Claude models (tier aliases `opus`, `sonnet`, `haiku` and their full ids such as `claude-opus-5`, `claude-sonnet-5`, `claude-haiku-4-5`), and the Task tool `model:` parameter accepts them directly. AskUserQuestion (single select): "No extended model catalog detected. Build the agent x effort matrix from Claude Code's native models?" with options `Keep profile presets (Recommended)` / `Build matrix`. On `Keep`, display `○ Model matrix skipped (profile presets apply)` and skip to Step 2. On `Build matrix`, treat the native Claude model set as the detected list, label every entry `Claude (built-in)`, and continue through the full proposal flow below including the edit loop.
 - **Non-empty output:** build the proposal.
 
-**1.8a. Propose.** Read `{plugin-root}/references/model-profiles.md` and follow its "Choosing models per role" section. Build a `model_matrix` mapping each agent (lead, dev, qa, scout, debugger, architect, docs) x effort level (thorough, balanced, fast, turbo) to a model id or preference array drawn from the detected list.
+**1.8a. Propose.** Read `{plugin-root}/references/model-profiles.md`. Use its "Task performance" tables to rank the detected ids per role, and its "Choosing models per role" section for the selection rules. Build a `model_matrix` mapping each agent (lead, dev, qa, scout, debugger, architect, docs) x effort level (thorough, balanced, fast, turbo) to a model id or preference array drawn from the detected list.
 
-- Use the description column to judge family and strength. Assign the strongest detected model to lead, architect, and debugger at `thorough`, the strongest coding model to dev, a strong model from a different family than dev to qa when one is detected, the largest-context model to scout, and the cheapest capable model to docs and to every `fast` and `turbo` cell.
+- Rank each role by measured performance at that role's actual task, not by a generic capability ladder. Assign the highest planning score to lead, architect, and debugger at `thorough`, the highest agentic-coding score to dev, a strong model from a different family than dev to qa when one is detected, the largest-context model to scout, and the cheapest capable model to docs and to every `fast` and `turbo` cell.
+- Never route a haiku-class model to lead, architect, or debugger at any effort. See the planning table in `model-profiles.md` for why.
+- Use the description column to judge family and strength for ids the task tables do not cover.
 - Never invent ids. Every entry must appear verbatim in the id column of the detected output.
 - Prefer preference arrays and end every array with a Claude tier id (for example `["glm52", "claude-sonnet-5"]`) so routing degrades inside the user's own catalog.
 - Present the proposal as a compact table with one row per agent and one column per effort level, followed by a short legend listing each proposed id with its description so the user can judge the picks.
+
+Then build a matching `reasoning_matrix` over the same agents and effort levels, using the "Reasoning effort" section of `model-profiles.md`. Render it beside each model cell. Two hard rules: never propose a value outside the target model's accepted set, and leave the cell empty for any model that rejects the parameter (`claude-haiku-4-5`, and every model whose `reasoning_efforts` is `[]` in `{plugin-root}/config/model-pricing.json`). Prefer stepping effort down over swapping to a weaker model, since effort scales spend on the same engine.
 
 **1.8b. Confirm.** Call AskUserQuestion (single select): "Use this model matrix?" with options `Use matrix (Recommended)` / `Edit` / `Skip (static tiers)`.
 
@@ -243,12 +247,12 @@ Repeat this cycle for every further `Edit` or freeform reply. Never end this ste
 **1.8d. Accept.** On `Use matrix`, write the confirmed matrix:
 
 ```bash
-jq --argjson matrix "$MATRIX_JSON" --argjson catalog "$CATALOG_JSON" \
-  '.model_matrix = $matrix | .model_catalog = $catalog | .model_catalog_detected_at = (now | todate)' \
+jq --argjson matrix "$MATRIX_JSON" --argjson reasoning "$REASONING_JSON" --argjson catalog "$CATALOG_JSON" \
+  '.model_matrix = $matrix | .reasoning_matrix = $reasoning | .model_catalog = $catalog | .model_catalog_detected_at = (now | todate)' \
   .vbw-planning/config.json > .vbw-planning/config.json.tmp && mv .vbw-planning/config.json.tmp .vbw-planning/config.json
 ```
 
-`MATRIX_JSON` is the confirmed matrix object. `CATALOG_JSON` is an id-only JSON array built from the id column alone (`cut -f1` on the detected lines). Never write descriptions into `model_catalog`. Display `✓ Model matrix written (N models detected)`.
+`MATRIX_JSON` is the confirmed matrix object. `REASONING_JSON` is the confirmed reasoning matrix, or `{}` when every proposed cell was empty. `CATALOG_JSON` is an id-only JSON array built from the id column alone (`cut -f1` on the detected lines). Never write descriptions into `model_catalog`. Display `✓ Model matrix written (N models detected)`.
 
 **1.8e. Skip.** On `Skip (static tiers)`, display `○ Model matrix skipped (static tiers apply)` and continue to Step 2.
 

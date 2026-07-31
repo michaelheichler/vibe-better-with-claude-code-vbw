@@ -281,6 +281,9 @@ create_test_config() {
   "model_overrides": {},
   "model_matrix": {},
   "model_catalog": [],
+  "model_catalog_extra": [],
+  "reasoning_matrix": {},
+  "reasoning_overrides": {},
   "agent_max_turns": {
     "scout": 15,
     "qa": 25,

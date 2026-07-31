@@ -20,10 +20,10 @@
   "budget": {
     "lead": "sonnet",
     "dev": "sonnet",
-    "qa": "haiku",
-    "scout": "haiku",
+    "qa": "sonnet",
+    "scout": "sonnet",
     "debugger": "sonnet",
     "architect": "sonnet",
-    "docs": "sonnet"
+    "docs": "haiku"
   }
 }
