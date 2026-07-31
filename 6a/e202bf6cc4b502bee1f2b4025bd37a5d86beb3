@@ -1,0 +1,26 @@
+scripts/bash-guard.sh
+  s_f9e82c2ac800d6::t_34c35cd7c31632 78-85,97-101
+tests/qa-bash-guard.bats
+  s_f9e82c2ac800d6::t_2e578d23a468d5 243-262
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.18",
+  "base_commit_sha": "6ae202bf6cc4b502bee1f2b4025bd37a5d86beb3",
+  "prompts": {},
+  "humans": {
+    "h_49622c3802c0ed": {
+      "author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  },
+  "sessions": {
+    "s_f9e82c2ac800d6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a2e52cc5fe4995f00",
+        "model": "unknown"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
