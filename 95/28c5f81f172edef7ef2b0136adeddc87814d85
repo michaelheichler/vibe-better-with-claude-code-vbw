@@ -1,0 +1,48 @@
+commands/config.md
+  s_2714f22713676e::t_9f1d4546ddf01a 16
+commands/debug.md
+  s_2714f22713676e::t_cfd2c332bf7b99 19
+commands/doctor.md
+  s_2714f22713676e::t_1059d05dec60f7 19
+commands/fix.md
+  s_2714f22713676e::t_64a410cdb56858 19
+commands/help.md
+  s_2714f22713676e::t_20989019d02acc 16
+commands/init.md
+  s_2714f22713676e::t_3d79853c090930 31
+commands/map.md
+  s_2714f22713676e::t_3f4cb073d44a62 20
+commands/report.md
+  s_2714f22713676e::t_f6b91fe8a89c53 19
+commands/research.md
+  s_2714f22713676e::t_4931a258388692 20
+commands/rtk.md
+  s_2714f22713676e::t_34089aeac6127f 16
+commands/skills.md
+  s_2714f22713676e::t_bc71b09ad1a54d 20
+commands/update.md
+  s_2714f22713676e::t_82f201ee2fd98e 16
+commands/whats-new.md
+  s_2714f22713676e::t_36519103c271b1 16
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.18",
+  "base_commit_sha": "9528c5f81f172edef7ef2b0136adeddc87814d85",
+  "prompts": {},
+  "humans": {
+    "h_49622c3802c0ed": {
+      "author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  },
+  "sessions": {
+    "s_2714f22713676e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-acb571a019d7c37d7",
+        "model": "unknown"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
