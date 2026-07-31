@@ -1,0 +1,34 @@
+commands/init.md
+  s_66704f336cbb51::t_ed189d3d2e4a66 299
+  s_86df439477734c::t_288b748939d56d 221
+tests/resolve-claude-dir.bats
+  s_66704f336cbb51::t_b3fdb367d1bf61 138,145,149
+commands/skills.md
+  s_66704f336cbb51::t_46f45c815cc17f 114
+  s_66704f336cbb51::t_5ce78c6ce73183 49
+  s_66704f336cbb51::t_36aca03a3a4f9f 53-54
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.18",
+  "base_commit_sha": "9dfb2cf2fe4e144e19df01909e42d73d0e4e15f4",
+  "prompts": {},
+  "sessions": {
+    "s_66704f336cbb51": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "779d3353-a469-4289-91aa-6e7258234385",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    },
+    "s_86df439477734c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8684b0f1-7b48-47f6-b50a-d23308a9e287",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
