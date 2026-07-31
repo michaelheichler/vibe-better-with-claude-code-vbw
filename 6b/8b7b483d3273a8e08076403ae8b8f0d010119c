@@ -1,0 +1,95 @@
+config/model-pricing.json
+  s_8302cd9aa1bb95::t_87986a85c489d6 16-23
+  s_8302cd9aa1bb95::t_a6ab2f42e87558 1-15,24-265
+tests/resolve-agent-model.bats
+  s_3a99fcccfa9f7d::t_f6c11851f3ad10 169-179
+commands/config.md
+  s_8302cd9aa1bb95::t_69a626bc4aabcc 184-186
+  s_8302cd9aa1bb95::t_7fc7d371533800 382-399,402-409
+  s_8302cd9aa1bb95::t_4b0478315dc9c8 192
+  s_8302cd9aa1bb95::t_b3c1bd212db2ce 502-503
+  s_3a99fcccfa9f7d::t_16cb7bd20ed5ba 501
+commands/qa.md
+  s_8302cd9aa1bb95::t_433a22a65668f1 153,330
+  s_8302cd9aa1bb95::t_6f01346ed6bfae 150,265
+config/model-profiles.json
+  s_8302cd9aa1bb95::t_659444cc872089 23-24,27
+scripts/session-start.sh
+  s_8302cd9aa1bb95::t_d5d2473c2183aa 261
+tests/config-migration.bats
+  s_8302cd9aa1bb95::t_5b020975b6a24c 72,125
+  s_8302cd9aa1bb95::t_520ae930f91a70 69,122,442-443
+  s_8302cd9aa1bb95::t_3766c9dd2dc3a7 445
+references/execute-protocol.md
+  s_8302cd9aa1bb95::t_433a22a65668f1 318,666,747
+  s_8302cd9aa1bb95::t_6f01346ed6bfae 745
+commands/debug.md
+  s_8302cd9aa1bb95::t_433a22a65668f1 246,254,297,462
+  s_8302cd9aa1bb95::t_6f01346ed6bfae 213,266,459
+commands/vibe.md
+  s_8302cd9aa1bb95::t_6f01346ed6bfae 383,567,865,931,1204,1256,1523
+  s_8302cd9aa1bb95::t_433a22a65668f1 385,593,888,954,1206,1281,1526
+commands/fix.md
+  s_8302cd9aa1bb95::t_433a22a65668f1 84
+  s_8302cd9aa1bb95::t_6f01346ed6bfae 70
+scripts/resolve-agent-model.sh
+  s_3a99fcccfa9f7d::t_f6c11851f3ad10 131,136-137,166,169
+tests/test_helper.bash
+  s_3a99fcccfa9f7d::t_264afb3ad86c22 284
+  s_8302cd9aa1bb95::t_3996c24e654e1f 285-286
+config/defaults.json
+  s_8302cd9aa1bb95::t_6c37e8449b7d68 25-26
+  s_3a99fcccfa9f7d::t_f6c11851f3ad10 24
+references/model-profiles.md
+  s_8302cd9aa1bb95::t_b9a5f65acd4613 228,230,276
+  h_49622c3802c0ed 83
+  s_8302cd9aa1bb95::t_abff3b6ec23e2f 3,5,7,9,11,13,15,17-30,32,34-74,76-82,84-160,164-172,174,176,178,180-191,193,195,197-205,207-227,229,231,239-242,246-275,277-279,281,283,285,287
+scripts/resolve-agent-settings.sh
+  s_8302cd9aa1bb95::t_bffef801b78322 112-120,125
+  s_8302cd9aa1bb95::t_1d43ea026e2ec8 13,18-19
+commands/research.md
+  s_8302cd9aa1bb95::t_433a22a65668f1 83
+  s_8302cd9aa1bb95::t_6f01346ed6bfae 76
+docs/wiki/configuration.md
+  s_8302cd9aa1bb95::t_be62383a2237df 27-28,31,33-51,54-56,59-60
+  s_8302cd9aa1bb95::t_c727716c638b85 11
+commands/init.md
+  s_8302cd9aa1bb95::t_44baa265b01e10 226,228-230,235
+  s_8302cd9aa1bb95::t_4c235d28f5d387 250-251,255
+  s_8302cd9aa1bb95::t_634df280e3ee89 236
+config/reasoning-profiles.json
+  s_8302cd9aa1bb95::t_0e1ad32ae7374f 1-29
+tests/resolve-agent-reasoning.bats
+  s_8302cd9aa1bb95::t_d44964c23db02d 1-174
+scripts/resolve-agent-reasoning.sh
+  s_8302cd9aa1bb95::t_b94e49760f947e 1-122
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.18",
+  "base_commit_sha": "6b8b7b483d3273a8e08076403ae8b8f0d010119c",
+  "prompts": {},
+  "humans": {
+    "h_49622c3802c0ed": {
+      "author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  },
+  "sessions": {
+    "s_3a99fcccfa9f7d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ba602c2b-5fb0-4b67-ac43-5a095a331c23",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    },
+    "s_8302cd9aa1bb95": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c7b02b42-9b48-4bae-b1f4-d91eb250f642",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
