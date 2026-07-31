@@ -101,11 +101,34 @@ Displays before/after cost impact estimate.
 **Config file location:**
 `.vbw-planning/config.json` -- fields: `model_profile` (string), `model_overrides` (object)
 
+## Choosing models per role
+
+Native Claude capability order, strongest to weakest: fable-5, opus-5, sonnet-5, haiku-4-5. Fable is a Mythos-class model, above Opus in both capability and price.
+
+| Model | Capability rank | Price per MTok (input/output) |
+|-------|------------------|--------------------------------|
+| claude-fable-5 | 1 (strongest) | $10 / $50 |
+| claude-opus-5 | 2 | $5 / $25 |
+| claude-sonnet-5 | 3 | $3 / $15 |
+| claude-haiku-4-5 | 4 (weakest) | $1 / $5 |
+
+Role guidance for building the agent x effort matrix:
+
+- **Lead, Architect, Debugger at thorough effort**: strongest available model. These roles carry the most planning and root-cause risk.
+- **Dev**: a strong coding model, strongest or second strongest.
+- **QA**: a strong model from a different family than Dev when the detected catalog contains one (for example a GPT-class id), because cross-family review catches what self-similar review misses. Fall back to a strong Claude model otherwise.
+- **Scout**: a large-context model. Research reads a lot of source material.
+- **Docs, and every fast or turbo cell**: the cheapest capable model.
+
+Families and strengths of non-Claude ids are derived from the labeled descriptions emitted by `detect-models.sh --labeled` at detection time (for example `GPT-5.6 Sol` from OpenAI/ChatGPT), never hardcoded in the repo. Never invent ids. Preference arrays should end in a Claude tier id as a stable final fallback.
+
+`/vbw:init` Step 1.8 and `/vbw:config` Model matrix both apply this guidance when proposing a matrix.
+
 ## Detected Catalog and Model Matrix
 
 When Claude Code runs against an Anthropic-compatible endpoint that exposes more than the Claude tiers (any gateway/proxy), VBW can route agents to those models natively:
 
-- `scripts/detect-models.sh` reads the model table embedded in the Claude Code binary (primary source: works on subscription/OAuth setups with zero credentials, and patched binaries advertise injected gateway models there) and merges `${ANTHROPIC_BASE_URL}/v1/models` when auth env (`ANTHROPIC_API_KEY` or `ANTHROPIC_AUTH_TOKEN`) exists. Results are cached for 1h per source. Empty output (no binary, no auth) means static tiers apply.
+- `scripts/detect-models.sh` treats the model table embedded in the Claude Code binary as the sole primary source: it works offline, needs zero credentials on subscription or OAuth setups, and a patched binary advertises injected models in the same embedded structures. The endpoint `${ANTHROPIC_BASE_URL}/v1/models` is queried only as a last resort, when the binary yields nothing and auth env (`ANTHROPIC_API_KEY` or `ANTHROPIC_AUTH_TOKEN`) exists. Results are cached for 1h, keyed on the binary's path, mtime, and size, so a re-patched binary invalidates the cache immediately. A `--labeled` flag emits `id` TAB `description` lines, used by `/vbw:init` Step 1.8 and `/vbw:config` for matrix proposals. Empty output (no binary, no auth) means static tiers apply.
 - `/vbw:init` (Step 1.8) runs detection, proposes an agent x effort matrix from the detected ids, and writes the confirmed result to `.vbw-planning/config.json` as `model_matrix`, alongside `model_catalog` and `model_catalog_detected_at`. `/vbw:config` -> Model profile -> Model matrix re-runs the same flow.
 
 **Matrix shape:**
