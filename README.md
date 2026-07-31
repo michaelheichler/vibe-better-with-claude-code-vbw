@@ -83,7 +83,6 @@ Think of it as project management for a team where the entire engineering depart
 - [Manifesto](#manifesto)
 - [Features](#features)
 - [Installation](#installation)
-- [How It Works](#how-it-works)
 - [Execution Model](#execution-model)
 - [Quick Tutorial](#quick-tutorial)
 - [Commands](#commands)
@@ -193,82 +192,6 @@ No permission prompts. No interruptions. Agents run uninterrupted until the work
 This is how most vibe coders run it. The agents work longer, the flow stays unbroken, and you get to pretend you're supervising while scrolling Twitter.
 
 > **Disclaimer:** The `--dangerously-skip-permissions` flag is called that for a reason. It is not called `--everything-will-be-fine` or `--trust-the-AI-it-knows-what-it-is-doing`. By using it, you are giving an AI unsupervised write access to your filesystem. VBW does its best to keep agents on a leash, but you are trusting, either way, software written by an AI, managed by an AI, and verified by a different AI. If this arrangement doesn't concern you, you are exactly the target audience for this plugin.
-
----
-
-## How It Works
-
-VBW operates on a simple loop that will feel familiar to anyone who's ever shipped software. Or read about it on Reddit.
-
-```text
-                        ┌─────────────────────────────┐
-                        │  YOU HAVE AN IDEA           │
-                        │  (dangerous, but continue)  │
-                        └──────────────┬──────────────┘
-                                       │
-                        ┌──────────────┴──────────────┐
-                        │ Greenfield?   │  Brownfield? │
-                        └──────┬───────┴──────┬───────┘
-                               │              │
-                  ┌────────────┘              └────────────┐
-                  │                                        │
-                  ▼                                        ▼
-     ┌───────────────────────┐               ┌───────────────────────┐
-     │  /vbw:init            │               │  /vbw:init            │
-     │  Environment setup    │               │  Environment setup    │
-     │  Scaffold             │               │  Scaffold             │
-     │  Skills               │               │                       │
-     │                       │               │  ⚠ Codebase detected  │
-     │  Auto-chains:         │               │  Auto-chains:         │
-     │    → /vbw:vibe        │               │    → /vbw:map         │
-     └──────────┬────────────┘               │    → Skills (informed │
-                │                            │      by map data)     │
-                │                            │    → /vbw:vibe        │
-                │                            └──────────┬────────────┘
-                │                                       │
-                └───────────────────┬───────────────────┘
-                                    │
-                                    ▼
-                 ┌──────────────────────────────────────┐
-                 │  /vbw:vibe                           │
-                 │  The one command, auto-detects:     │
-                 │                                      │
-                 │  No project?  → Bootstrap setup      │
-                 │  No phases?   → Scope & plan work    │
-                 │  UAT issues?  → Remediate findings   │
-                 │  Unplanned?   → Plan next phase      │
-                 │  Planned?     → Execute next phase   │
-                 │  All done?    → Suggest archive      │
-                 └──────────────────┬───────────────────┘
-                                    │
-                                    │  Or use flags:
-                                    │  /vbw:vibe --discuss
-                                    │  /vbw:vibe --plan --execute
-                                    │
-                                    ▼
-                     ┌──────────────────────────────┐
-                     │  /vbw:vibe (auto-detects)    │
-                     │  Three-tier verification     │
-                     │  Goal-backward methodology   │
-                     │  Outputs: VERIFICATION.md    │
-                     └──────────────┬───────────────┘
-                                    │
-                           ┌────────┴────────┐
-                           │  More phases?   │
-                           └────────┬────────┘
-                          yes │          │ no
-                              │          │
-                     ┌────────┘          └────────┐
-                     │                            │
-                     ▼                            ▼
-          ┌──────────────────┐        ┌──────────────────┐
-          │ Loop back to     │        │ /vbw:vibe        │
-          │ /vbw:vibe        │        │ --archive        │
-          │ for next phase   │        │ Audits, archives │
-          └──────────────────┘        │ Tags the release │
-                                      │ Work archived    │
-                                      └──────────────────┘
-```
 
 ---
 
@@ -526,23 +449,9 @@ Here's when each one shows up to work:
   │    UserPromptSubmit  Pre-flight prompt validation                             │
   │    Notification ──── Logs teammate communication                              │
   └───────────────────────────────────────────────────────────────────────────────┘
-
-  ┌───────────────────────────────────────────────────────────────────────────────┐
-  │  PERMISSION MODEL                                                             │
-  │                                                                               │
-  │  Scout ─────────── Plan mode. Writes .vbw-planning/ research, read-only Bash. │
-  │  QA ───────────── Read + Bash. Persists only via write-verification.sh.        │
-  │  Architect ─────── Edit/Bash blocked by platform. Write limited to plans      │
-  │                    by instruction. Writes roadmaps, not code. Mostly.         │
-  │  Lead ─────────── Read, Write, Bash, WebFetch. The middle manager.            │
-  │  Docs ─────────── Read, Write, Edit, Bash. Doc files only by instruction.     │
-  │  Dev ──────────── Denylist (no Task/Agent/Team/AskUserQuestion), inherited tools.   │
-  │  Debugger ─────── Full access. The one you still worry about.                 │
-  │                                                                               │
-  │  Platform-enforced: tools / disallowedTools (cannot be overridden)            │
-  │  Instruction-enforced: behavioral constraints in agent prompts                │
-  └───────────────────────────────────────────────────────────────────────────────┘
 ```
+
+Tool access and permission mode per agent are in the table above. Platform-enforced columns (`tools` / `disallowedTools`) cannot be overridden by an instruction. Only `permissionMode` behavior is instruction-enforced.
 
 ---
 
@@ -996,7 +905,7 @@ All flags default to `true` in `config/defaults.json` regardless of stage. The r
 
 > The per-phase dollar figures in this section are design estimates derived from model-profile assumptions, not measured billing data. See [Accuracy and freshness](#accuracy-and-freshness) and treat them as directional.
 
-VBW spawns specialized agents for planning, development, and verification. Model profiles let you control which Claude model each agent uses, trading cost for quality based on your needs.
+The `model_profile` and `model_overrides` settings from [Model routing and cost](#model-routing-and-cost) above trade cost for quality. Here is what the three presets actually cost and buy you.
 
 ### Three Preset Profiles
 
@@ -1008,9 +917,7 @@ VBW spawns specialized agents for planning, development, and verification. Model
 
 *Debugger and Architect follow the same model as Lead. Relative cost is computed from `config/model-pricing.json` at a 1:3 input:output ratio.*
 
-**Quality is the default.** It gives you maximum reasoning depth for architecture decisions and production-critical work. Switch to Balanced (`/vbw:config model_profile balanced`) for roughly half the cost on standard development.
-
-**Quality** uses Opus for Lead, Dev, Debugger, and Architect, giving maximum reasoning depth for critical work. QA, Scout, and Docs stay on Sonnet.
+**Quality** is the default. It puts Opus on Lead, Dev, Debugger, and Architect for maximum reasoning depth on architecture decisions and production-critical work, and keeps QA, Scout, and Docs on Sonnet. Switch to Balanced (`/vbw:config model_profile balanced`) for roughly half the cost on standard development.
 
 **Budget** places Haiku on Docs only. Earlier releases routed QA and Scout to Haiku as well, which the measured benchmarks do not support: Scout needs the 1M context Haiku lacks (200K), and QA needs reasoning depth where Haiku scores 1.3 to 4.0 percent on ARC-AGI-2 against 88 to 92 for the frontier tier. See `references/model-profiles.md` for the sourced tables.
 
