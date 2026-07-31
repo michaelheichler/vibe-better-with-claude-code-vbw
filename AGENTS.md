@@ -1,6 +1,6 @@
 # VBW Instructions
 
-A Claude Code plugin adding structured development workflows (plan → execute → verify) via 7 specialized agent teams. Zero external dependencies beyond `jq` and `git`. All logic is bash scripts + markdown.
+A Claude Code plugin adding structured development workflows (plan → execute → verify) via 7 specialized agent teams. Zero non-shell external dependencies beyond `jq` and `git`. All logic is bash scripts + markdown. Bash 4.4+ is required. Bash 5+ is recommended. macOS's bundled /bin/bash 3.2 is unsupported. Ensure `bash --version` resolves to Bash 4.4 or newer before running VBW or `testing/run-all.sh`.
 
 ## Communication Style
 
@@ -131,7 +131,7 @@ cat "$CLAUDE_PROJECT_DIR"/<session-id>/subagents/agent-*.jsonl
 - **Commands** (`commands/*.md`): Slash commands with YAML frontmatter. Command `name` values are explicitly prefixed (e.g. `name: vbw:init`) so slash commands appear as `/vbw:*`. The frontmatter `description` must be single-line (multi-line breaks plugin discovery).
 - **Agents** (`agents/vbw-{role}.md`): 7 agents (Scout, Architect, Lead, Dev, QA, Debugger, Docs) with platform-enforced tool permissions via YAML `tools`/`disallowedTools`. Scout and QA are read-only (`permissionMode: plan`).
 - **Hooks** (`hooks/hooks.json`): 30 handlers across 11 event types (SessionStart, Stop, PreToolUse, PostToolUse, SubagentStart, SubagentStop, Notification, PreCompact, TaskCompleted, TeammateIdle, UserPromptSubmit). All route through `scripts/hook-wrapper.sh` which resolves from plugin cache via `ls | sort -V | tail -1` with a `CLAUDE_PLUGIN_ROOT` fallback for `--plugin-dir` installs, logs failures, and always exits 0 (no hook can break a session).
-- **Scripts** (`scripts/*.sh`): bash scripts for hook handlers, context compilation, state management, bootstrap, metrics, diagnostics, and codebase mapping. Target bash (not POSIX sh). Use `set -euo pipefail` for critical scripts, `set -u` minimum otherwise.
+- **Scripts** (`scripts/*.sh`): bash scripts for hook handlers, context compilation, state management, bootstrap, metrics, diagnostics, and codebase mapping. Target bash (not POSIX sh). Use `set -euo pipefail` for critical scripts, `set -u` minimum otherwise. Bash 4.4+ is required. Bash 5+ is recommended. macOS's bundled /bin/bash 3.2 is unsupported. Ensure `bash --version` resolves to Bash 4.4 or newer before running VBW or `testing/run-all.sh`.
 - **References** (`references/*.md`): protocol docs loaded on-demand by commands (for example `execute-protocol.md` and `verification-protocol.md`).
 - **Templates** (`templates/*.md`): artifact templates (CONTEXT, PLAN, PROJECT, REQUIREMENTS, ROADMAP, SUMMARY, UAT, VERIFICATION, etc.).
 - **Config** (`config/`): `defaults.json` (settings), `model-profiles.json` (3 presets: quality/balanced/budget), `stack-mappings.json` (tech detection → skill suggestions), `token-budgets.json` (context budgets), `rollout-stages.json` (feature rollout), `destructive-commands.txt` (guarded commands list), `schemas/` (message schemas).

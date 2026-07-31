@@ -64,6 +64,8 @@ This project exists to make AI coding better for everyone, and "everyone" means 
 ## What Is This
 
 > **Platform:** macOS and Linux only. Windows is not supported natively — all hooks, scripts, and context blocks require bash. If you're on Windows, run Claude Code inside [WSL](https://learn.microsoft.com/en-us/windows/wsl/install).
+>
+> Bash 4.4+ is required. Bash 5+ is recommended. macOS's bundled /bin/bash 3.2 is unsupported. Ensure `bash --version` resolves to Bash 4.4 or newer before running VBW or `testing/run-all.sh`.
 
 Inspired by **[Ralph](https://github.com/frankbria/ralph-claude-code)** and **[Get Shit Done](https://github.com/glittercowboy/get-shit-done)**, however, an entirely new architecture.
 
@@ -1120,8 +1122,9 @@ Your AI-managed project now has more structure than most startups that raised a 
 
 ## Requirements
 
+- **Bash 4.4+**: Bash 4.4+ is required. Bash 5+ is recommended. macOS's bundled /bin/bash 3.2 is unsupported. Ensure `bash --version` resolves to Bash 4.4 or newer before running VBW or `testing/run-all.sh`.
 - **Claude Code** with **Opus 4.6+** model
-- **jq** -- the only external dependency. Install via `brew install jq` (macOS) or `apt install jq` (Linux). VBW checks for jq during `/vbw:init` and session start, and warns clearly if it's missing.
+- **jq** -- the only non-shell external dependency. Install via `brew install jq` (macOS) or `apt install jq` (Linux). VBW checks for jq during `/vbw:init` and session start, and warns clearly if it's missing.
 - **Agent Teams** enabled (`/vbw:init` will offer to set this up for you)
 - A project directory (new or existing)
 - The willingness to let an AI manage your development lifecycle
