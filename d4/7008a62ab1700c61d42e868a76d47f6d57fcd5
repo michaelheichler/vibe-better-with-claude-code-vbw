@@ -1,0 +1,24 @@
+scripts/qa-result-gate.sh
+  s_66704f336cbb51::t_75edf2ccb00aaf 68,70,1455,1457
+  s_66704f336cbb51::t_19306076905013 69,1456
+  s_66704f336cbb51::t_78b0f33f6e3a7a 67,1454
+tests/qa-result-gate.bats
+  s_66704f336cbb51::t_01927aa938e0e8 4812-4837
+  s_66704f336cbb51::t_ffd3820d1cc0c2 4811,4838-4846
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.18",
+  "base_commit_sha": "d47008a62ab1700c61d42e868a76d47f6d57fcd5",
+  "prompts": {},
+  "sessions": {
+    "s_66704f336cbb51": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "779d3353-a469-4289-91aa-6e7258234385",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
