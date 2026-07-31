@@ -48,7 +48,7 @@ After resolution the helper canonicalizes the path with `cd "$resolved_root" && 
 
 ### Trampoline in the target commands
 
-Each of the 19 target commands expands a small fenced block at the top that resolves the root and nothing else:
+Each of the 19 target commands carries a standalone one-line backtick directive at the top, rendered inside a plain display fence after a `Plugin root:` label, that resolves the root and nothing else. The equivalent logic is expanded below across multiple lines for readability. The shipped command files keep the entire trampoline on one directive line:
 
 ```bash
 SESSION_KEY="${CLAUDE_SESSION_ID:-default}"; SESSION_LINK="/tmp/.vbw-plugin-root-link-${SESSION_KEY}"
@@ -79,7 +79,7 @@ The five phase-detect preambles (`discuss.md`, `qa.md`, `resume.md`, `status.md`
 
 ### The marketplace-root branch
 
-When a marketplace declares the plugin with `"source": "./"`, Claude Code installs it at `plugins/marketplaces/<name>/` (the repo root is the plugin) and creates no `plugins/cache/<name>/vbw/<version>/` copy. On a fresh session every other cascade branch misses in that install shape: `CLAUDE_PLUGIN_ROOT` is not exported to command bash expansions, there is no cache copy, the `/tmp` session link does not exist yet, and there is no `--plugin-dir` argument to recover from `ps`.
+When a marketplace declares the plugin with `"source": "./"`, Claude Code installs it at `plugins/marketplaces/<name>/` (the repo root is the plugin) and creates no `plugins/cache/<name>/vbw/<version>/` copy. On a fresh session, `CLAUDE_PLUGIN_ROOT` is not exported to command bash expansions, there is no cache copy, and there is no `--plugin-dir` argument to recover from `ps`, but the exact `/tmp` session link normally exists because SessionStart creates it before the first command runs. The marketplace-root branch at step 5 is the in-cascade safety net when that bootstrap failed, raced, or the link was cleaned from `/tmp`.
 
 Commit `9467b312` ("fix(resolver): resolve plugin root on marketplace-root (source:./) installs") added step 5, which scans `plugins/marketplaces/*/` and one level deeper `plugins/marketplaces/*/*` for a directory containing both `scripts/hook-wrapper.sh` (or the `--require-script` target) and `commands/vibe.md` as a sentinel. The branch lives in the shared helper now, so all 19 target commands and Execute mode inherit it.
 
