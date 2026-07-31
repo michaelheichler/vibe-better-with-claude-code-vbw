@@ -197,6 +197,36 @@ JSON
   [ "$status" -eq 0 ]
 }
 
+@test "file-guard: runtime Dev identity works when SubagentStart marker is absent" {
+  cd "$TEST_TEMP_DIR"
+  create_plan_with_files
+  create_contract
+  mkdir -p src
+  cat > "$TEST_TEMP_DIR/.vbw-planning/.execution-state.json" <<'JSON'
+{"phase":1,"phase_name":"test","status":"running","effort":"balanced","correlation_id":"corr-123","plans":[]}
+JSON
+
+  INPUT=$(jq -n --arg cwd "$TEST_TEMP_DIR" '{session_id:"session-A",transcript_path:($cwd + "/session.jsonl"),cwd:$cwd,hook_event_name:"PreToolUse",agent_id:"agent-123",agent_type:"vbw:vbw-dev",tool_name:"Write",tool_use_id:"toolu-123",tool_input:{file_path:"src/allowed.js",content:"allowed"}}')
+  [ ! -d "$TEST_TEMP_DIR/.vbw-planning/.active-agents" ]
+  run bash -c 'unset VBW_AGENT_ROLE VBW_ACTIVE_AGENT CLAUDE_SESSION_ID; printf "%s\n" "$1" | bash "$2"' _ "$INPUT" "$SCRIPTS_DIR/file-guard.sh"
+  [ "$status" -eq 0 ]
+}
+
+@test "file-guard: agent type without subagent id remains orchestrator" {
+  cd "$TEST_TEMP_DIR"
+  create_plan_with_files
+  create_contract
+  mkdir -p src
+  cat > "$TEST_TEMP_DIR/.vbw-planning/.execution-state.json" <<'JSON'
+{"phase":1,"phase_name":"test","status":"running","effort":"balanced","correlation_id":"corr-123","plans":[]}
+JSON
+
+  INPUT=$(jq -n --arg cwd "$TEST_TEMP_DIR" '{session_id:"session-A",transcript_path:($cwd + "/session.jsonl"),cwd:$cwd,hook_event_name:"PreToolUse",agent_type:"vbw:vbw-dev",tool_name:"Write",tool_use_id:"toolu-123",tool_input:{file_path:"src/allowed.js",content:"blocked"}}')
+  run bash -c 'unset VBW_AGENT_ROLE VBW_ACTIVE_AGENT CLAUDE_SESSION_ID; printf "%s\n" "$1" | bash "$2"' _ "$INPUT" "$SCRIPTS_DIR/file-guard.sh"
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"orchestrator cannot write product files"* ]]
+}
+
 @test "file-guard: degraded mixed-role markers do not leave stale Scout write block" {
   cd "$TEST_TEMP_DIR"
   create_plan_with_files

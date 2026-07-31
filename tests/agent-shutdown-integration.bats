@@ -350,6 +350,31 @@ simulate_session_stop() {
   grep -Fqx '10101 scout' ".vbw-planning/.active-agent-role-pids"
 }
 
+@test "session-stop preserves current active-agent state while VBW background task runs" {
+  cd "$TEST_TEMP_DIR"
+  local live_pid
+  assign_live_pid live_pid || fail "assign_live_pid failed"
+
+  printf '%s\n' "{\"session_id\":\"session-A\",\"agent_type\":\"vbw:vbw-dev\",\"pid\":\"$live_pid\"}" | \
+    VBW_PLANNING_DIR="$TEST_TEMP_DIR/.vbw-planning" bash "$SCRIPTS_DIR/agent-start.sh"
+  mkdir ".vbw-planning/.active-agent-count.lock"
+
+  local stop_input final_stop_input
+  stop_input=$(jq -n --arg cwd "$TEST_TEMP_DIR" '{session_id:"session-A",transcript_path:($cwd + "/session.jsonl"),cwd:$cwd,hook_event_name:"Stop",stop_hook_active:false,background_tasks:[{type:"subagent",agent_type:"vbw:vbw-dev"}],cost_usd:0,duration_ms:0}')
+  final_stop_input=$(jq -n --arg cwd "$TEST_TEMP_DIR" '{session_id:"session-A",transcript_path:($cwd + "/session.jsonl"),cwd:$cwd,hook_event_name:"Stop",stop_hook_active:false,background_tasks:[],cost_usd:0,duration_ms:0}')
+  run bash -c 'cd "$1" && printf "%s\n" "$2" | bash "$3"' _ "$TEST_TEMP_DIR" "$stop_input" "$SCRIPTS_DIR/session-stop.sh"
+  [ "$status" -eq 0 ]
+  [ -d ".vbw-planning/.active-agents/session-A" ]
+  [ "$(cat ".vbw-planning/.active-agents/session-A/active-agent-count")" = "1" ]
+  [ -d ".vbw-planning/.active-agent-count.lock" ]
+
+  run bash -c 'cd "$1" && printf "%s\n" "$2" | bash "$3"' _ "$TEST_TEMP_DIR" "$final_stop_input" "$SCRIPTS_DIR/session-stop.sh"
+  [ "$status" -eq 0 ]
+  [ ! -d ".vbw-planning/.active-agents/session-A" ]
+  [ ! -f ".vbw-planning/.active-agent-count" ]
+  [ ! -d ".vbw-planning/.active-agent-count.lock" ]
+}
+
 @test "tmux-watchdog detach cleanup removes stale active-agent role markers" {
   cd "$TEST_TEMP_DIR"
   local fakebin dead_pid test_input

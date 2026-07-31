@@ -1,19 +1,5 @@
 #!/bin/bash
 set -u
-# file-guard.sh — PreToolUse guard for undeclared file modifications
-#
-# NOTE: Worktree isolation has shipped (worktree_isolation config flag).
-# When worktree_isolation is enabled, git worktrees provide filesystem
-# isolation by construction. This guard remains active as a secondary
-# enforcement layer (belt-and-suspenders) for both modes.
-#
-# Blocks Write/Edit to files not declared in active plan's files_modified,
-# but only while an execution is live (.execution-state.json status=running and
-# fresh, or a live delegated-workflow marker). A planned-but-idle phase never
-# blocks unrelated work.
-# V2 enhancement: also checks forbidden_paths from active contract when v2_hard_contracts=true.
-# Fail-open design: exit 0 on any error, exit 2 only on definitive violations
-
 INPUT=$(cat 2>/dev/null) || exit 0
 [ -z "$INPUT" ] && exit 0
 
@@ -38,14 +24,28 @@ fi
 # Best-effort absolute path resolver for boundary checks.
 # - Relative paths are resolved from current working directory.
 # - Non-existent paths still get a stable absolute lexical form.
-to_abs_path() {
-  local p="$1"
-  local base dir file cwd_base probe suffix resolved_probe
-  [ -z "$p" ] && {
-    echo ""
+resolve_lexical_path() {
+  local base="$1" probe suffix resolved_probe
+  probe=$(dirname "$base")
+  suffix="/$(basename "$base")"
+  while [ ! -d "$probe" ] && [ "$probe" != "/" ]; do
+    suffix="/$(basename "$probe")$suffix"
+    probe=$(dirname "$probe")
+  done
+  [ -d "$probe" ] || {
+    printf '%s\n' "$base"
     return 0
   }
+  resolved_probe=$(cd "$probe" 2>/dev/null && pwd -P 2>/dev/null) || resolved_probe="$probe"
+  printf '%s\n' "${resolved_probe%/}$suffix"
+}
 
+to_abs_path() {
+  local p="$1" base cwd_base
+  [ -z "$p" ] && {
+    printf '\n'
+    return 0
+  }
   case "$p" in
     /*) base="$p" ;;
     *)
@@ -53,22 +53,7 @@ to_abs_path() {
       base="$cwd_base/${p#./}"
       ;;
   esac
-
-  dir=$(dirname "$base")
-  file=$(basename "$base")
-  probe="$dir"
-  suffix="/$file"
-  while [ ! -d "$probe" ] && [ "$probe" != "/" ]; do
-    suffix="/$(basename "$probe")$suffix"
-    probe=$(dirname "$probe")
-  done
-
-  if [ -d "$probe" ]; then
-    resolved_probe=$(cd "$probe" 2>/dev/null && pwd -P 2>/dev/null) || resolved_probe="$probe"
-    echo "${resolved_probe%/}$suffix"
-  else
-    echo "$base"
-  fi
+  resolve_lexical_path "$base"
 }
 
 # Find project root by walking up from $PWD
@@ -97,45 +82,16 @@ else
 fi
 
 normalize_agent_role() {
-  local value="$1"
-  local lower
+  command -v vbw_active_agent_normalize_role >/dev/null 2>&1 || return 1
+  vbw_active_agent_normalize_role "$1"
+}
 
-  lower=$(printf '%s' "$value" | tr '[:upper:]' '[:lower:]')
-  lower="${lower#@}"
-  lower="${lower#vbw:}"
-
-  case "$lower" in
-    vbw-scout|vbw-scout-[0-9]*|scout|scout-[0-9]*|team-scout|team-scout-[0-9]*)
-      printf 'scout'
-      return 0
-      ;;
-    vbw-lead|vbw-lead-[0-9]*|lead|lead-[0-9]*|team-lead|team-lead-[0-9]*)
-      printf 'lead'
-      return 0
-      ;;
-    vbw-dev|vbw-dev-[0-9]*|dev|dev-[0-9]*|team-dev|team-dev-[0-9]*)
-      printf 'dev'
-      return 0
-      ;;
-    vbw-qa|vbw-qa-[0-9]*|qa|qa-[0-9]*|team-qa|team-qa-[0-9]*)
-      printf 'qa'
-      return 0
-      ;;
-    vbw-debugger|vbw-debugger-[0-9]*|debugger|debugger-[0-9]*|team-debugger|team-debugger-[0-9]*)
-      printf 'debugger'
-      return 0
-      ;;
-    vbw-architect|vbw-architect-[0-9]*|architect|architect-[0-9]*|team-architect|team-architect-[0-9]*)
-      printf 'architect'
-      return 0
-      ;;
-    vbw-docs|vbw-docs-[0-9]*|docs|docs-[0-9]*|team-docs|team-docs-[0-9]*)
-      printf 'docs'
-      return 0
-      ;;
-  esac
-
-  return 1
+detect_payload_agent_role() {
+  local payload_agent_id payload_agent_type
+  payload_agent_id=$(printf '%s' "$INPUT" | jq -r '.agent_id // empty' 2>/dev/null) || payload_agent_id=""
+  payload_agent_type=$(printf '%s' "$INPUT" | jq -r '.agent_type // empty' 2>/dev/null) || payload_agent_type=""
+  [ -n "$payload_agent_id" ] && [ -n "$payload_agent_type" ] || return 1
+  normalize_agent_role "$payload_agent_type"
 }
 
 detect_agent_role() {
@@ -148,6 +104,11 @@ detect_agent_role() {
       return 0
     fi
   done
+
+  if role=$(detect_payload_agent_role); then
+    printf '%s' "$role"
+    return 0
+  fi
 
   if [ -n "$PROJECT_ROOT" ]; then
     planning_dir="$PROJECT_ROOT/.vbw-planning"
@@ -434,26 +395,8 @@ if [ "$ACTIVE_AGENT_ROLE" = "qa" ] && [ -n "$PROJECT_ROOT" ]; then
   esac
 fi
 
-# --- Orchestrator delegation guard (delegated workflows) ---
-# When a VBW delegated workflow is active (execute, fix, debug) and the caller is
-# the orchestrator (no VBW_AGENT_ROLE), block product-file writes. The orchestrator
-# must delegate to Dev/Debugger subagents via Task tool. Subagents (with a role set)
-# are unaffected. Turbo/direct effort modes where the orchestrator is expected to
-# implement are exempt.
-#
-# Fail-open: missing/malformed/stale state files skip the guard.
-#
-# NOTE: VBW_AGENT_ROLE is NOT set by the Claude Code runtime for PreToolUse hooks.
-# Subagent detection uses .active-agent-count (written by agent-start.sh, decremented
-# by agent-stop.sh). If count > 0, at least one VBW subagent is running and this
-# hook invocation is from that subagent context — skip the orchestrator block.
-#
-# Execute team-mode bypass: teammate sessions may not trigger SubagentStart
-# hooks, so `.active-agent-count` alone is insufficient to detect them. VBW
-# therefore records the actual delegated workflow mode in the transient
-# `.delegated-workflow.json` marker. Only an active execute marker with
-# `delegation_mode="team"` gets the team-style bypass.
-if [ -z "${VBW_AGENT_ROLE:-}" ]; then
+# Runtime-owned agent identity prevents lifecycle-hook gaps from misclassifying subagents.
+if [ -z "$ACTIVE_AGENT_ROLE" ]; then
   # Check active-agent count: if a VBW subagent is active in the current safe
   # session, this write is from a subagent context. Other sessions' aggregate
   # root counts are not an authority when a safe session id exists.

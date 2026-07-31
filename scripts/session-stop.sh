@@ -21,6 +21,15 @@ if [ -f "$SCRIPT_DIR_STOP/lib/active-agent-state.sh" ]; then
   . "$SCRIPT_DIR_STOP/lib/active-agent-state.sh"
 fi
 
+has_vbw_background_subagent() {
+  local agent_type
+  command -v vbw_active_agent_normalize_role >/dev/null 2>&1 || return 1
+  while IFS= read -r agent_type; do
+    vbw_active_agent_normalize_role "$agent_type" >/dev/null 2>&1 && return 0
+  done < <(printf '%s' "$INPUT" | jq -r '.background_tasks[]? | select(.type == "subagent") | .agent_type // empty' 2>/dev/null)
+  return 1
+}
+
 # Extract session metrics via jq (fail-silent on missing fields)
 COST=$(echo "$INPUT" | jq -r '.cost_usd // .cost // 0' 2>/dev/null)
 DURATION=$(echo "$INPUT" | jq -r '.duration_ms // .duration // 0' 2>/dev/null)
@@ -59,12 +68,7 @@ if [ -f "$PLANNING_DIR/.cost-ledger.json" ]; then
   rm -f "$PLANNING_DIR/.cost-ledger.json" 2>/dev/null
 fi
 
-# Clean up transient agent markers and stale lock dir.
-# Keep .vbw-session so plain-text follow-ups in an active VBW flow remain
-# unblocked across assistant turns. .vbw-session is cleared by explicit
-# non-VBW slash commands in prompt-preflight.sh (and stale markers are ignored
-# by security-filter.sh after 24h).
-rmdir "$PLANNING_DIR/.active-agent-count.lock" 2>/dev/null || true
+# A Stop can precede background-agent completion, so keep its active marker.
 DELEGATED_MARKER="$PLANNING_DIR/.delegated-workflow.json"
 if [ -f "$DELEGATED_MARKER" ] && [ -f "$SCRIPT_DIR_STOP/delegated-workflow.sh" ] && command -v jq >/dev/null 2>&1; then
   _dw_status=$(bash "$SCRIPT_DIR_STOP/delegated-workflow.sh" status-json 2>/dev/null || echo "")
@@ -76,10 +80,15 @@ if [ -f "$DELEGATED_MARKER" ] && [ -f "$SCRIPT_DIR_STOP/delegated-workflow.sh" ]
     fi
   fi
 fi
-if command -v vbw_active_agent_remove_current_session >/dev/null 2>&1; then
-  vbw_active_agent_remove_current_session "$PLANNING_DIR" "$INPUT"
+if has_vbw_background_subagent; then
+  :
 else
-  rm -f "$PLANNING_DIR/.active-agent" "$PLANNING_DIR/.active-agent-count" "$PLANNING_DIR/.active-agent-roles" "$PLANNING_DIR/.active-agent-role-pids" 2>/dev/null || true
+  rmdir "$PLANNING_DIR/.active-agent-count.lock" 2>/dev/null || true
+  if command -v vbw_active_agent_remove_current_session >/dev/null 2>&1; then
+    vbw_active_agent_remove_current_session "$PLANNING_DIR" "$INPUT"
+  else
+    rm -f "$PLANNING_DIR/.active-agent" "$PLANNING_DIR/.active-agent-count" "$PLANNING_DIR/.active-agent-roles" "$PLANNING_DIR/.active-agent-role-pids" 2>/dev/null || true
+  fi
 fi
 rm -f "$PLANNING_DIR/.agent-panes" "$PLANNING_DIR/.task-verify-seen" 2>/dev/null
 rm -f "$PLANNING_DIR/.context-usage" 2>/dev/null || true
