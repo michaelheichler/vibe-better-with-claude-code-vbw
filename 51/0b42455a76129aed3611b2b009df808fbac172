@@ -1,0 +1,44 @@
+tests/role-isolation-runtime.bats
+  s_bd42f725263d8e::t_c45a730239e4c5 209
+  s_bd42f725263d8e::t_43ee40834db6ee 200-208,210-223,225-229
+  s_bd42f725263d8e::t_8c657888cb21b3 224
+tests/agent-shutdown-integration.bats
+  s_bd42f725263d8e::t_190d14400c991b 369,375
+  s_bd42f725263d8e::t_1785c3f834dd15 360
+  s_bd42f725263d8e::t_cc88313ec3d8f4 353-359,361,365-368,370,372-374,376-377
+  s_bd42f725263d8e::t_f59819685e954d 362-364,371
+scripts/session-stop.sh
+  s_bd42f725263d8e::t_3c377a88e4783d 86-91
+  s_bd42f725263d8e::t_2de422319bd282 83-84
+  s_bd42f725263d8e::t_f8ba9efdddeb7a 71
+  s_bd42f725263d8e::t_4c7f2b05f5b663 24-32
+scripts/file-guard.sh
+  s_bd42f725263d8e::t_5110cf61b18be9 89-94,108
+  s_bd42f725263d8e::t_6499aa4824583a 109-111
+  s_bd42f725263d8e::t_b217358c219079 398
+  s_bd42f725263d8e::t_094273630d0b69 399
+  s_bd42f725263d8e::t_96b6275a4f033f 27-42,44,46,56,87
+  s_bd42f725263d8e::t_5d7d5f399552ee 85-86
+  s_bd42f725263d8e::t_2c85c977a9a095 112
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.18",
+  "base_commit_sha": "510b42455a76129aed3611b2b009df808fbac172",
+  "prompts": {},
+  "humans": {
+    "h_49622c3802c0ed": {
+      "author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  },
+  "sessions": {
+    "s_bd42f725263d8e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e3e9b01e-f233-44ca-922d-6d09aa87b352",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
