@@ -42,40 +42,16 @@ _phase_detect_cache_retryable() {
   [ -z "$(printf '%s' "$PD" | tr -d '[:space:]')" ] || [ "$PD" = "phase_detect_error=true" ]
 }
 _refresh_phase_detect_link() {
-  local VBW_CACHE_ROOT R V D ANY_LINK REAL_R SESSION_LINK
-  VBW_CACHE_ROOT="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/plugins/cache/vbw-marketplace/vbw"
-  R=""
-  if [ -n "${CLAUDE_PLUGIN_ROOT:-}" ] && [ -f "${CLAUDE_PLUGIN_ROOT}/scripts/hook-wrapper.sh" ]; then R="${CLAUDE_PLUGIN_ROOT}"; fi
-  if [ -z "$R" ] && [ -f "${VBW_CACHE_ROOT}/local/scripts/hook-wrapper.sh" ]; then R="${VBW_CACHE_ROOT}/local"; fi
-  if [ -z "$R" ]; then
-    V=$(find "${VBW_CACHE_ROOT}" -maxdepth 1 -mindepth 1 2>/dev/null | awk -F/ '{print $NF}' | grep -E '^[0-9]+(\.[0-9]+)*$' | sort -t. -k1,1n -k2,2n -k3,3n | tail -1)
-    [ -n "$V" ] && [ -f "${VBW_CACHE_ROOT}/${V}/scripts/hook-wrapper.sh" ] && R="${VBW_CACHE_ROOT}/${V}"
+  local resolver
+  resolver="$L/scripts/resolve-plugin-root.sh"
+  if [ ! -f "$resolver" ]; then
+    if [ -n "${CLAUDE_PLUGIN_ROOT:-}" ] && [ -f "${CLAUDE_PLUGIN_ROOT}/scripts/resolve-plugin-root.sh" ]; then
+      resolver="${CLAUDE_PLUGIN_ROOT}/scripts/resolve-plugin-root.sh"
+    else
+      return 1
+    fi
   fi
-  if [ -z "$R" ]; then
-    V=$(find "${VBW_CACHE_ROOT}" -maxdepth 1 -mindepth 1 2>/dev/null | awk -F/ '{print $NF}' | sort | tail -1)
-    [ -n "$V" ] && [ -f "${VBW_CACHE_ROOT}/${V}/scripts/hook-wrapper.sh" ] && R="${VBW_CACHE_ROOT}/${V}"
-  fi
-  SESSION_LINK="/tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}"
-  if [ -z "$R" ] && [ -f "$SESSION_LINK/scripts/hook-wrapper.sh" ]; then
-    R="$SESSION_LINK"
-  fi
-  if [ -z "$R" ]; then
-    ANY_LINK=$(command find -H /tmp -maxdepth 1 -name '.vbw-plugin-root-link-*' -print 2>/dev/null | LC_ALL=C sort | while IFS= read -r link; do
-      if [ -f "$link/scripts/hook-wrapper.sh" ]; then
-        printf '%s\n' "$link"
-        break
-      fi
-    done || true)
-    [ -n "$ANY_LINK" ] && R="$ANY_LINK"
-  fi
-  if [ -z "$R" ]; then
-    D=$(ps axww -o args= 2>/dev/null | grep -v grep | grep -oE -- "--plugin-dir [^ ]+" | head -1)
-    D="${D#--plugin-dir }"
-    [ -n "$D" ] && [ -f "$D/scripts/hook-wrapper.sh" ] && R="$D"
-  fi
-  [ -n "$R" ] && [ -d "$R" ] && [ -f "$R/scripts/phase-detect.sh" ] || return 1
-  REAL_R=$(cd "$R" 2>/dev/null && pwd -P) || return 1
-  bash "$REAL_R/scripts/ensure-plugin-root-link.sh" "$L" "$REAL_R" >/dev/null 2>&1 || return 1
+  bash "$resolver" --require-script phase-detect.sh >/dev/null 2>&1 || return 1
   [ -L "$L" ] && [ -f "$L/scripts/phase-detect.sh" ]
 }
 i=0

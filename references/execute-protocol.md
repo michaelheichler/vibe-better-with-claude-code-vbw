@@ -7,52 +7,17 @@ Loaded on demand by /vbw:vibe Execute mode. Not a user-facing command.
 Resolve and validate `VBW_PLUGIN_ROOT` once before running script commands below:
 
 ```bash
-VBW_CACHE_ROOT="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/plugins/cache/vbw-marketplace/vbw"
-VBW_PLUGIN_ROOT=""
-
-if [ -n "${CLAUDE_PLUGIN_ROOT:-}" ] && [ -f "${CLAUDE_PLUGIN_ROOT}/scripts/hook-wrapper.sh" ]; then
-  VBW_PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT}"
-fi
-if [ -z "$VBW_PLUGIN_ROOT" ] && [ -f "${VBW_CACHE_ROOT}/local/scripts/hook-wrapper.sh" ]; then
-  VBW_PLUGIN_ROOT="${VBW_CACHE_ROOT}/local"
-fi
-if [ -z "$VBW_PLUGIN_ROOT" ]; then
-  VERSION_DIR=$(find "${VBW_CACHE_ROOT}" -maxdepth 1 -mindepth 1 2>/dev/null | awk -F/ '{print $NF}' | grep -E '^[0-9]+(\.[0-9]+)*$' | sort -t. -k1,1n -k2,2n -k3,3n | tail -1)
-  if [ -n "$VERSION_DIR" ] && [ -f "${VBW_CACHE_ROOT}/${VERSION_DIR}/scripts/hook-wrapper.sh" ]; then
-    VBW_PLUGIN_ROOT="${VBW_CACHE_ROOT}/${VERSION_DIR}"
-  else
-    FALLBACK_DIR=$(find "${VBW_CACHE_ROOT}" -maxdepth 1 -mindepth 1 2>/dev/null | awk -F/ '{print $NF}' | sort | tail -1)
-    [ -n "$FALLBACK_DIR" ] && [ -f "${VBW_CACHE_ROOT}/${FALLBACK_DIR}/scripts/hook-wrapper.sh" ] && VBW_PLUGIN_ROOT="${VBW_CACHE_ROOT}/${FALLBACK_DIR}"
-  fi
-fi
 SESSION_LINK="/tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}"
-if [ -z "$VBW_PLUGIN_ROOT" ] && [ -f "${SESSION_LINK}/scripts/hook-wrapper.sh" ]; then
-  VBW_PLUGIN_ROOT="${SESSION_LINK}"
-fi
-if [ -z "$VBW_PLUGIN_ROOT" ]; then
-  ANY_LINK=$(command find -H /tmp -maxdepth 1 -name '.vbw-plugin-root-link-*' -print 2>/dev/null | LC_ALL=C sort | while IFS= read -r link; do
-    if [ -f "$link/scripts/hook-wrapper.sh" ]; then
-      printf '%s\n' "$link"
-      break
-    fi
-  done || true)
-  if [ -n "$ANY_LINK" ]; then
-    VBW_PLUGIN_ROOT="$ANY_LINK"
+RESOLVER="${SESSION_LINK}/scripts/resolve-plugin-root.sh"
+if [ ! -f "$RESOLVER" ]; then
+  if [ -n "${CLAUDE_PLUGIN_ROOT:-}" ] && [ -f "${CLAUDE_PLUGIN_ROOT}/scripts/resolve-plugin-root.sh" ]; then
+    RESOLVER="${CLAUDE_PLUGIN_ROOT}/scripts/resolve-plugin-root.sh"
+  else
+    echo "VBW: plugin root resolution failed" >&2
+    exit 1
   fi
 fi
-if [ -z "$VBW_PLUGIN_ROOT" ]; then
-  PLUGIN_DIR_PATH=$(ps axww -o args= 2>/dev/null | grep -v grep | grep -oE -- "--plugin-dir [^ ]+" | head -1)
-  PLUGIN_DIR_PATH="${PLUGIN_DIR_PATH#--plugin-dir }"
-  [ -n "$PLUGIN_DIR_PATH" ] && [ -f "$PLUGIN_DIR_PATH/scripts/hook-wrapper.sh" ] && VBW_PLUGIN_ROOT="$PLUGIN_DIR_PATH"
-fi
-
-if [ -z "$VBW_PLUGIN_ROOT" ] || [ ! -d "$VBW_PLUGIN_ROOT" ]; then
-  echo "VBW: plugin root resolution failed (checked CLAUDE_PLUGIN_ROOT, cache local/, versioned dirs, symlink fallback, process tree)." >&2
-  exit 1
-fi
-
-# Canonicalize to real path — survives cache symlink deletion mid-session
-VBW_PLUGIN_ROOT=$(cd "$VBW_PLUGIN_ROOT" 2>/dev/null && pwd -P || echo "$VBW_PLUGIN_ROOT")
+VBW_PLUGIN_ROOT=$(bash "$RESOLVER") || exit 1
 ```
 
 All runtime script invocations below assume `VBW_PLUGIN_ROOT` is set.
