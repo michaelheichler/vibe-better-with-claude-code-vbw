@@ -343,7 +343,7 @@ If `setting=planning_tracking`, after writing config run:
   if [ -f "$PG_SCRIPT" ]; then
     bash "$PG_SCRIPT" sync-ignore .vbw-planning/config.json
   else
-    echo "VBW: planning-git.sh unavailable; skipping .gitignore sync" >&2
+    echo "⚠ VBW: planning-git.sh unavailable. Skipping .gitignore sync." >&2
   fi
 ```
 

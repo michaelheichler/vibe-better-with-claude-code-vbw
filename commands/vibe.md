@@ -887,7 +887,7 @@ If `planning_dir_exists=false`: display "Run /vbw:init first to set up your proj
    if [ -f "$PG_SCRIPT" ]; then
      bash "$PG_SCRIPT" commit-boundary "bootstrap project files" .vbw-planning/config.json
    else
-     echo "VBW: planning-git.sh unavailable; skipping planning git boundary commit" >&2
+     echo "⚠ VBW: planning-git.sh unavailable. Skipping planning git boundary commit." >&2
    fi
    ```
    Behavior: `planning_tracking=commit` commits `.vbw-planning/` + `CLAUDE.md` if changed. Other modes no-op.
@@ -920,7 +920,7 @@ If `planning_dir_exists=false`: display "Run /vbw:init first to set up your proj
    if [ -f "$PG_SCRIPT" ]; then
      bash "$PG_SCRIPT" commit-boundary "scope milestone" .vbw-planning/config.json
    else
-     echo "VBW: planning-git.sh unavailable; skipping planning git boundary commit" >&2
+     echo "⚠ VBW: planning-git.sh unavailable. Skipping planning git boundary commit." >&2
    fi
    ```
    Behavior: `planning_tracking=commit` commits `.vbw-planning/` if changed (ROADMAP.md, STATE.md, CONTEXT.md, phase dirs). Other modes no-op.
@@ -942,7 +942,7 @@ If `planning_dir_exists=false`: display "Run /vbw:init first to set up your proj
    if [ -f "$PG_SCRIPT" ]; then
      bash "$PG_SCRIPT" commit-boundary "discuss phase {NN}" .vbw-planning/config.json
    else
-     echo "VBW: planning-git.sh unavailable; skipping planning git boundary commit" >&2
+     echo "⚠ VBW: planning-git.sh unavailable. Skipping planning git boundary commit." >&2
    fi
    ```
    Behavior: `planning_tracking=commit` commits `{NN}-CONTEXT.md` and `discovery.json` if changed. Other modes no-op.
@@ -964,7 +964,7 @@ If `planning_dir_exists=false`: display "Run /vbw:init first to set up your proj
    if [ -f "$PG_SCRIPT" ]; then
      bash "$PG_SCRIPT" commit-boundary "assumptions phase {NN}" .vbw-planning/config.json
    else
-     echo "VBW: planning-git.sh unavailable; skipping planning git boundary commit" >&2
+     echo "⚠ VBW: planning-git.sh unavailable. Skipping planning git boundary commit." >&2
    fi
    ```
    Behavior: `planning_tracking=commit` commits `{NN}-CONTEXT.md` and `discovery.json` if changed. Other modes no-op.
@@ -1247,7 +1247,7 @@ Execute the remediation plan by spawning Dev agents sequentially — one per tas
     if [ -f "$PG_SCRIPT" ]; then
       bash "$PG_SCRIPT" commit-boundary "execute phase {NN} remediation round {RR}" .vbw-planning/config.json
     else
-      echo "VBW: planning-git.sh unavailable; skipping planning git boundary commit" >&2
+      echo "⚠ VBW: planning-git.sh unavailable. Skipping planning git boundary commit." >&2
     fi
     ```
   - **Continue directly into Verify mode** for this phase — do NOT stop, do NOT tell the user to run `/vbw:vibe`. Enter Verify mode (below) inline in the same turn. The pre-computed verify context may be stale (it was computed at session start, before remediation). Re-compute it:
@@ -1302,7 +1302,7 @@ This mode handles the case where a milestone was archived before UAT issues were
    if [ -f "$PG_SCRIPT" ]; then
      bash "$PG_SCRIPT" commit-boundary "create milestone remediation phases" .vbw-planning/config.json
    else
-     echo "VBW: planning-git.sh unavailable; skipping planning git boundary commit" >&2
+     echo "⚠ VBW: planning-git.sh unavailable. Skipping planning git boundary commit." >&2
    fi
    ```
    Then route to Plan mode for the first phase.
@@ -1396,7 +1396,7 @@ This mode handles the case where a milestone was archived before UAT issues were
    if [ -f "$PG_SCRIPT" ]; then
      bash "$PG_SCRIPT" commit-boundary "research phase {NN}" .vbw-planning/config.json
    else
-     echo "VBW: planning-git.sh unavailable; skipping research git boundary commit" >&2
+     echo "⚠ VBW: planning-git.sh unavailable. Skipping research git boundary commit." >&2
    fi
    ```
    Behavior: `planning_tracking=commit` commits RESEARCH.md if changed. Skipped when research was pre-existing or effort=turbo.
@@ -1472,7 +1472,7 @@ This mode handles the case where a milestone was archived before UAT issues were
    if [ -f "$PG_SCRIPT" ]; then
      bash "$PG_SCRIPT" commit-boundary "plan phase {NN}" .vbw-planning/config.json
    else
-     echo "VBW: planning-git.sh unavailable; skipping planning git boundary commit" >&2
+     echo "⚠ VBW: planning-git.sh unavailable. Skipping planning git boundary commit." >&2
    fi
    ```
    Behavior: `planning_tracking=commit` commits planning artifacts if changed. `auto_push=always` pushes when upstream exists.
@@ -1634,7 +1634,7 @@ Missing name: STOP "Usage: `/vbw:vibe --add <phase-name>`"
    if [ -f "$PG_SCRIPT" ]; then
      bash "$PG_SCRIPT" commit-boundary "add phase {NN}-{slug}" .vbw-planning/config.json
    else
-     echo "VBW: planning-git.sh unavailable; skipping planning git boundary commit" >&2
+     echo "⚠ VBW: planning-git.sh unavailable. Skipping planning git boundary commit." >&2
    fi
    ```
    Behavior: `planning_tracking=commit` commits `.vbw-planning/` if changed. Other modes no-op.
@@ -1682,7 +1682,7 @@ Inserting before completed phase: WARN + confirm.
     if [ -f "$PG_SCRIPT" ]; then
       bash "$PG_SCRIPT" commit-boundary "insert phase {NN}-{slug} at position {position}" .vbw-planning/config.json
     else
-      echo "VBW: planning-git.sh unavailable; skipping planning git boundary commit" >&2
+      echo "⚠ VBW: planning-git.sh unavailable. Skipping planning git boundary commit." >&2
     fi
     ```
     Behavior: `planning_tracking=commit` commits `.vbw-planning/` if changed. Other modes no-op.
@@ -1710,7 +1710,7 @@ Completed ([x] in roadmap): STOP "Cannot remove completed Phase {NN}."
    if [ -f "$PG_SCRIPT" ]; then
      bash "$PG_SCRIPT" commit-boundary "remove phase {NN}" .vbw-planning/config.json
    else
-     echo "VBW: planning-git.sh unavailable; skipping planning git boundary commit" >&2
+     echo "⚠ VBW: planning-git.sh unavailable. Skipping planning git boundary commit." >&2
    fi
    ```
    Behavior: `planning_tracking=commit` commits `.vbw-planning/` if changed. Other modes no-op.
@@ -1775,7 +1775,7 @@ FAIL -> STOP with remediation suggestions. WARN -> proceed with warnings.
    if [ -f "$PG_SCRIPT" ]; then
      bash "$PG_SCRIPT" commit-boundary "archive milestone {SLUG}" .vbw-planning/config.json
    else
-     echo "VBW: planning-git.sh unavailable; skipping planning git boundary commit" >&2
+     echo "⚠ VBW: planning-git.sh unavailable. Skipping planning git boundary commit." >&2
    fi
    ```
    Run this BEFORE branch merge/tag so shipped planning state is committed.

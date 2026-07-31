@@ -878,7 +878,7 @@ PG_SCRIPT="/tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}/scripts/plan
 if [ -f "$PG_SCRIPT" ]; then
   bash "$PG_SCRIPT" commit-boundary "verify phase {NN}" .vbw-planning/config.json
 else
-  echo "VBW: planning-git.sh unavailable; skipping planning git boundary commit" >&2
+  echo "⚠ VBW: planning-git.sh unavailable. Skipping planning git boundary commit." >&2
 fi
 ```
 - `planning_tracking=commit`: commits `.vbw-planning/` + `CLAUDE.md` when changed (includes UAT report)

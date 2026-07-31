@@ -176,7 +176,7 @@ PG_SCRIPT="/tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}/scripts/plan
 if [ -f "$PG_SCRIPT" ]; then
   bash "$PG_SCRIPT" sync-ignore .vbw-planning/config.json
 else
-  echo "VBW: planning-git.sh unavailable; skipping .gitignore sync" >&2
+  echo "⚠ VBW: planning-git.sh unavailable. Skipping .gitignore sync." >&2
 fi
 ```
 
@@ -511,7 +511,7 @@ If SKIP_INFERENCE=false (confirmed/corrected inference data):
   if [ -f "$PG_SCRIPT" ]; then
     bash "$PG_SCRIPT" commit-boundary "bootstrap project files" .vbw-planning/config.json
   else
-    echo "VBW: planning-git.sh unavailable; skipping planning git boundary commit" >&2
+    echo "⚠ VBW: planning-git.sh unavailable. Skipping planning git boundary commit." >&2
   fi
   ```
 - Behavior:

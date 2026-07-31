@@ -370,7 +370,7 @@ If resuming a session with `session_status=complete`: STOP "This debug session i
    if [ -f "$PG_SCRIPT" ]; then
      bash "$PG_SCRIPT" commit-boundary "complete debug session" .vbw-planning/config.json
    else
-     echo "VBW: planning-git.sh unavailable; skipping planning git boundary commit" >&2
+     echo "⚠ VBW: planning-git.sh unavailable. Skipping planning git boundary commit." >&2
    fi
    ```
    For `no_fix_yet`, do **not** set `fix_applied`; keep the session status as `investigating`.
@@ -658,7 +658,7 @@ If `AUTO_UAT` is `"true"`: skip the prompt and proceed directly.
      if [ -f "$PG_SCRIPT" ]; then
        bash "$PG_SCRIPT" commit-boundary "complete debug session" .vbw-planning/config.json
      else
-       echo "VBW: planning-git.sh unavailable; skipping planning git boundary commit" >&2
+       echo "⚠ VBW: planning-git.sh unavailable. Skipping planning git boundary commit." >&2
      fi
      ```
    - Any issues found → `bash .../debug-session-state.sh set-status .vbw-planning uat_failed`

@@ -55,7 +55,7 @@ allowed-tools: Read, Edit, Bash
    ```
    If `PLUGIN_ROOT` is empty or the helper is unavailable, keep the todo write intact and warn with the literal existing message:
    ```text
-   VBW: planning-git.sh unavailable; skipping planning git boundary commit
+   ⚠ VBW: planning-git.sh unavailable. Skipping planning git boundary commit.
    ```
    Do not add bespoke staging, commit, or push logic here — the helper owns that behavior.
    - `planning_tracking=commit`: the helper stages `.vbw-planning/` + `CLAUDE.md` and commits if there are changes.

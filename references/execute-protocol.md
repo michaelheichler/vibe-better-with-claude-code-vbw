@@ -1079,7 +1079,7 @@ PG_SCRIPT="${VBW_PLUGIN_ROOT}/scripts/planning-git.sh"
 if [ -f "$PG_SCRIPT" ]; then
   bash "$PG_SCRIPT" commit-boundary "complete phase {NN}" .vbw-planning/config.json
 else
-  echo "VBW: planning-git.sh unavailable; skipping planning git boundary commit" >&2
+  echo "⚠ VBW: planning-git.sh unavailable. Skipping planning git boundary commit." >&2
 fi
 ```
 - `planning_tracking=commit`: commits `.vbw-planning/` + `CLAUDE.md` when changed
@@ -1092,7 +1092,7 @@ PG_SCRIPT="${VBW_PLUGIN_ROOT}/scripts/planning-git.sh"
 if [ -f "$PG_SCRIPT" ]; then
   bash "$PG_SCRIPT" push-after-phase .vbw-planning/config.json
 else
-  echo "VBW: planning-git.sh unavailable; skipping planning git push-after-phase" >&2
+  echo "⚠ VBW: planning-git.sh unavailable. Skipping planning git push-after-phase." >&2
 fi
 ```
 - `auto_push=after_phase`: pushes once after phase completion (if upstream exists)
