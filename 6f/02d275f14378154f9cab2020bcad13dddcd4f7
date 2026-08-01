@@ -1,0 +1,21 @@
+tests/analyze-plan-conflicts.bats
+  s_cb6db6bc22a2a0::t_17994b5cd9e4c5 103-125
+scripts/analyze-plan-conflicts.sh
+  s_cb6db6bc22a2a0::t_b474e8dd85b2f0 142
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "6f02d275f14378154f9cab2020bcad13dddcd4f7",
+  "prompts": {},
+  "sessions": {
+    "s_cb6db6bc22a2a0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "134661bc-d3bc-43f9-89e4-713aba547780",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
