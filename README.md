@@ -23,7 +23,7 @@
 
 ## Token efficiency by design
 
-Most of VBW is not a prompt. It is 232 shell scripts that run as plain bash subprocesses at zero model-token cost, plus per-role context that gets compiled and loaded lazily instead of dumped whole into every agent. Every phase, task, and hook is a script decision first and a model decision only when a script cannot make the call. The stack is validated by 147 bats files (3,700 test cases) alongside the contract and lint suites.
+Most of VBW is not a prompt. It is 236 shell scripts that run as plain bash subprocesses at zero model-token cost, plus per-role context that gets compiled and loaded lazily instead of dumped whole into every agent. Every phase, task, and hook is a script decision first and a model decision only when a script cannot make the call. The stack is validated by 154 bats files (3,747 test cases) alongside the contract and lint suites.
 
 The `docs/*token-analysis*.md` reports estimate the resulting overhead with a line-count heuristic (roughly 15 tokens per markdown line). They are design estimates, not measured API benchmarks, and the stock-agent-teams baseline they compare against was measured on an older release. Treat the figures as directional, not as a guaranteed bill.
 
@@ -41,8 +41,8 @@ We would rather tell you how to catch us lying than just ask you to trust the nu
 | Slash commands (26) | Computed | `find commands -maxdepth 1 -name "*.md" \| wc -l` |
 | Agents (7) | Computed | `find agents -maxdepth 1 -name "vbw-*.md" \| wc -l` |
 | Hook event types (11) / handlers (30) | Computed | `jq -r '.hooks \| keys[]' hooks/hooks.json` and `jq '[.hooks[][] .hooks[]] \| length' hooks/hooks.json` |
-| Shell scripts (232, repo-wide) | Computed | `find . -path ./.git -prune -o -name "*.sh" -print \| wc -l` |
-| BATS files (147) / test cases (3,700) | Computed | `find . -name "*.bats" \| wc -l` and `grep -rh "^@test" --include="*.bats" . \| wc -l` |
+| Shell scripts (236, repo-wide) | Computed | `find . -path ./.git -prune -o -name "*.sh" -print \| wc -l` |
+| BATS files (154) / test cases (3,747) | Computed | `find . -name "*.bats" \| wc -l` and `grep -rh "^@test" --include="*.bats" . \| wc -l` |
 | VERSION (1.38.6) | Computed | `cat VERSION`, cross-checked with `bash scripts/bump-version.sh --verify` |
 | Token-efficiency figures in `docs/*token-analysis*.md` | Estimated | Line-count heuristic against an older stock-agent-teams baseline, not a measured API benchmark. See the caveat at the top of [Token efficiency by design](#token-efficiency-by-design). |
 | Cost Optimization relative percentages | Computed | Derived from list prices in `config/model-pricing.json` (collected 2026-07-31) at an assumed 1:3 input:output ratio, not from logged billing data. Treat as directional. |
