@@ -1,0 +1,28 @@
+commands/vibe.md
+  s_27ea496ab5a93e::t_5b554914f14b89 1722-1726
+references/execute-protocol.md
+  s_27ea496ab5a93e::t_4c87a78d0c70e7 140-144
+  s_27ea496ab5a93e::t_66b053552cc3dc 973-977,979,981,985
+commands/debug.md
+  s_27ea496ab5a93e::t_0829187bf565ff 251-252
+commands/map.md
+  s_27ea496ab5a93e::t_85e024f9775db7 275-279
+references/handoff-schemas.md
+  s_27ea496ab5a93e::t_3a6804bb2e52fa 330,332,334-336
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "25fedfcc0a90911e15be0173748a0e9f91cb5c64",
+  "prompts": {},
+  "sessions": {
+    "s_27ea496ab5a93e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4452c98a-815b-4051-9652-732944fc8275",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
