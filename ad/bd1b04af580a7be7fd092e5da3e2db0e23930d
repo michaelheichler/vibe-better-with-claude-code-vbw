@@ -1,0 +1,19 @@
+tests/map-staleness.bats
+  s_0e6a41e1e30cd3::t_c0a20e0ff57c0e 1-63
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "adbd1b04af580a7be7fd092e5da3e2db0e23930d",
+  "prompts": {},
+  "sessions": {
+    "s_0e6a41e1e30cd3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2f5acbb2-f08e-44f2-bc94-ad94397dd129",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
