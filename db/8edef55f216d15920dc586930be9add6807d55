@@ -1,0 +1,24 @@
+testing/verify-skill-activation.sh
+  s_cb6db6bc22a2a0::t_fe0a85493f50e0 1686
+  s_cb6db6bc22a2a0::t_b69a4d395e2836 1703-1706
+  s_cb6db6bc22a2a0::t_0d5b2a65dccafb 331
+  s_cb6db6bc22a2a0::t_996817c236c5fa 54
+testing/verify-commands-contract.sh
+  s_cb6db6bc22a2a0::t_f3fa71989614f9 1514
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "db8edef55f216d15920dc586930be9add6807d55",
+  "prompts": {},
+  "sessions": {
+    "s_cb6db6bc22a2a0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "134661bc-d3bc-43f9-89e4-713aba547780",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
