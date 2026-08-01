@@ -1,0 +1,45 @@
+scripts/analyze-plan-conflicts.sh
+  s_cb6db6bc22a2a0::t_e7db82b982cde2 18,26
+  s_cb6db6bc22a2a0::t_1e1f119a37073e 1-12,17,57-82,84-162
+  s_cb6db6bc22a2a0::t_f4017e52e099ac 83
+  s_cb6db6bc22a2a0::t_19b4f29024d4fa 13-16,19-25,27-56
+scripts/resolve-execute-delegation-mode.sh
+  s_cb6db6bc22a2a0::t_edfb055d9508d0 680-682
+  s_cb6db6bc22a2a0::t_0c2d9b58f89e1d 494,498,502-505,664
+  s_cb6db6bc22a2a0::t_509f8a6e7979e3 702-704
+  s_cb6db6bc22a2a0::t_3e3d43a2b3dbd7 546-563
+  s_cb6db6bc22a2a0::t_9e7f26faed6898 633-663
+  s_cb6db6bc22a2a0::t_2e1bd9831329a1 759-763
+  s_cb6db6bc22a2a0::t_a7772a4b0eee2d 511
+  s_cb6db6bc22a2a0::t_70848f45921b9f 778,780
+  s_cb6db6bc22a2a0::t_abed02eebf64b5 485-493,495-497,499-501,506-510,512-520
+  s_cb6db6bc22a2a0::t_542b2c72e14a8e 564
+  s_cb6db6bc22a2a0::t_c2f1cd83774378 665
+testing/verify-execute-delegation-routing.sh
+  s_cb6db6bc22a2a0::t_77d2bd3e205562 299-303
+  s_cb6db6bc22a2a0::t_262a51f86c6e34 85
+  s_cb6db6bc22a2a0::t_aea1de5a870d93 59,66
+  s_cb6db6bc22a2a0::t_924698730022b9 96-97
+  s_cb6db6bc22a2a0::t_441478995a6ce7 264-298
+  s_cb6db6bc22a2a0::t_644e15b5c04cac 304
+templates/PLAN.md
+  s_cb6db6bc22a2a0::t_9f58e3ae8afa9f 13
+tests/analyze-plan-conflicts.bats
+  s_cb6db6bc22a2a0::t_44e1d5e99af4f9 1-107
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "15b1910800909f4c63bba6c19c01c1c40c7cb727",
+  "prompts": {},
+  "sessions": {
+    "s_cb6db6bc22a2a0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "134661bc-d3bc-43f9-89e4-713aba547780",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
