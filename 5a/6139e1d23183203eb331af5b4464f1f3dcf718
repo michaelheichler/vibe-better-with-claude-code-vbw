@@ -1,0 +1,48 @@
+commands/vibe.md
+  s_cb6db6bc22a2a0::t_164cd3c46b130f 1213
+  s_cb6db6bc22a2a0::t_5e9922d649fbaa 1214
+agents/vbw-lead.md
+  s_cb6db6bc22a2a0::t_9b9fb8adfcc866 123
+agents/vbw-docs.md
+  s_cb6db6bc22a2a0::t_89d79c1e66fcba 126
+testing/verify-skill-activation.sh
+  s_cb6db6bc22a2a0::t_4a100090f707b1 573
+  s_cb6db6bc22a2a0::t_17b52c277e7d3f 591-592
+agents/vbw-qa-author.md
+  s_cb6db6bc22a2a0::t_9510416042e8f3 7
+references/handoff-schemas.md
+  s_cb6db6bc22a2a0::t_301606bec66b46 356
+README.md
+  s_cb6db6bc22a2a0::t_0069d24bc7a4b4 114
+  s_cb6db6bc22a2a0::t_c7ddc9cb8dc97e 128
+  s_cb6db6bc22a2a0::t_d59915e0d9c412 412-413
+  s_cb6db6bc22a2a0::t_265bcdb23e3bda 262
+testing/verify-ghost-team-cleanup.sh
+  s_cb6db6bc22a2a0::t_bc7253507b95e0 258-259,261-262,264
+  s_cb6db6bc22a2a0::t_caade2de19af04 227
+references/execute-protocol.md
+  s_cb6db6bc22a2a0::t_6025ca0346f201 1017
+  s_cb6db6bc22a2a0::t_29126454253300 138
+  s_cb6db6bc22a2a0::t_bcc6487254019b 982-983,985,987,991-992
+agents/vbw-dev.md
+  s_cb6db6bc22a2a0::t_83a4c4ef8ab4cd 116
+  s_cb6db6bc22a2a0::t_3e8215aa5c55cd 136
+  s_cb6db6bc22a2a0::t_47e8ec94b6cd25 8
+  s_cb6db6bc22a2a0::t_7f600cd047f6ff 29
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "5a6139e1d23183203eb331af5b4464f1f3dcf718",
+  "prompts": {},
+  "sessions": {
+    "s_cb6db6bc22a2a0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "134661bc-d3bc-43f9-89e4-713aba547780",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
