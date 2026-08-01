@@ -56,12 +56,14 @@ write_plan_inline() {
   local phase="$2"
   local plan="$3"
   local depends="$4"
+  local files_touched="${5:-src/$plan.txt}"
   cat > "$PHASE_DIR/$filename" <<PLAN
 ---
 phase: $phase
 plan: $plan
 title: Plan $plan
 depends_on: $depends
+files_touched: [$files_touched]
 ---
 # Plan $plan
 
@@ -80,6 +82,7 @@ write_plan_block() {
     printf 'phase: %s\n' "$phase"
     printf 'plan: %s\n' "$plan"
     printf 'title: Plan %s\n' "$plan"
+    printf 'files_touched: [src/%s.txt]\n' "$plan"
     printf '%s\n' 'depends_on:'
     local dep
     for dep in "$@"; do
@@ -90,7 +93,8 @@ write_plan_block() {
 }
 
 run_helper() {
-  (cd "$FIXTURE" && "$HELPER" --phase-dir .vbw-planning/phases/01-test "${@}")
+  local team_capability="${TEST_TEAM_CAPABILITY:-1}"
+  (cd "$FIXTURE" && CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS="$team_capability" "$HELPER" --phase-dir .vbw-planning/phases/01-test "${@}")
 }
 
 json_field() {
@@ -256,6 +260,47 @@ write_plan_inline 01-02-PLAN.md 01 02 '[]'
 out=$(run_helper)
 assert_eq "$(json_field "$out" '.delegation_mode')" "team" "auto + two independent delegate plans -> team"
 assert_eq "$(json_field "$out" '.max_parallel_width')" "2" "independent graph has max_parallel_width=2"
+
+make_fixture shared-file-conflict '"auto"' balanced
+write_state '{"plans":[{"id":"01-01","status":"pending"},{"id":"01-02","status":"pending"}],"effort":"balanced","phase_effort":"balanced"}'
+write_plan_inline 01-01-PLAN.md 01 01 '[]' scripts/shared.sh
+write_plan_inline 01-02-PLAN.md 01 02 '[]' scripts/shared.sh
+out=$(run_helper)
+assert_eq "$(json_field "$out" '.delegation_mode')" "subagent" "shared files demote same-wave plans to subagents"
+assert_eq "$(json_field "$out" '.max_parallel_width')" "1" "shared files reduce max_parallel_width to 1"
+assert_json_array_eq "$(jq -c '.dependency_waves' <<< "$out")" '[["01-01"],["01-02"]]' "shared files serialize the later plan id"
+
+make_fixture missing-files-touched '"auto"' balanced
+write_state '{"plans":[{"id":"01-01","status":"pending"},{"id":"01-02","status":"pending"}],"effort":"balanced","phase_effort":"balanced"}'
+write_plan_inline 01-01-PLAN.md 01 01 '[]'
+cat > "$PHASE_DIR/01-02-PLAN.md" <<'PLAN'
+---
+phase: 1
+plan: 2
+title: Plan 2
+depends_on: []
+---
+PLAN
+out=$(run_helper)
+assert_eq "$(json_field "$out" '.delegation_mode')" "subagent" "missing files_touched demotes same-wave plans"
+assert_eq "$(json_field "$out" '.max_parallel_width')" "1" "missing files_touched is conservative"
+assert_json_array_eq "$(jq -c '.dependency_waves' <<< "$out")" '[["01-01"],["01-02"]]' "missing files_touched serializes the later plan id"
+
+make_fixture teams-disabled '"auto"' balanced
+write_state '{"plans":[{"id":"01-01","status":"pending"},{"id":"01-02","status":"pending"}],"effort":"balanced","phase_effort":"balanced"}'
+write_plan_inline 01-01-PLAN.md 01 01 '[]'
+write_plan_inline 01-02-PLAN.md 01 02 '[]'
+TEST_TEAM_CAPABILITY=0
+out=$(run_helper)
+unset TEST_TEAM_CAPABILITY
+assert_eq "$(json_field "$out" '.requested_mode')" "team" "disabled teams preserve requested team mode"
+assert_eq "$(json_field "$out" '.delegation_mode')" "subagent" "disabled teams downgrade delegation mode"
+assert_eq "$(json_field "$out" '.delegation_blocked_reason')" "teams_disabled:env_disabled" "disabled teams expose the capability reason"
+TEST_TEAM_CAPABILITY=0
+out=$(run_helper --segments)
+unset TEST_TEAM_CAPABILITY
+assert_json_array_eq "$(jq -c '[.segments[].delegation_mode]' <<< "$out")" '["subagent"]' "disabled teams downgrade team segments"
+assert_eq "$(json_field "$out" '.segments[0].delegation_blocked_reason')" "teams_disabled:env_disabled" "disabled team segments expose the capability reason"
 
 # auto + completed prerequisite unlocks two delegate plans -> team
 make_fixture completed-prereq '"auto"' balanced

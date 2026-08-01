@@ -482,6 +482,42 @@ for plan_id in $(jq -r 'keys[]' <<< "$plans_json"); do
   done
 done
 
+if [ ! -f "$SCRIPT_DIR/analyze-plan-conflicts.sh" ]; then
+  fail_json "invalid_dependency_graph" "plan conflict analyzer is unavailable"
+  exit 2
+fi
+if ! conflict_analysis=$(bash "$SCRIPT_DIR/analyze-plan-conflicts.sh" "$PHASE_DIR" 2>/dev/null); then
+  fail_json "invalid_dependency_graph" "plan conflict analysis failed"
+  exit 2
+fi
+conflict_pairs_csv=""
+conflict_pairs_found=false
+while IFS='=' read -r conflict_key conflict_value; do
+  if [ "$conflict_key" = "conflict_pairs" ]; then
+    conflict_pairs_csv="$conflict_value"
+    conflict_pairs_found=true
+    break
+  fi
+done <<< "$conflict_analysis"
+if [ "$conflict_pairs_found" = false ]; then
+  fail_json "invalid_dependency_graph" "plan conflict analysis returned invalid output"
+  exit 2
+fi
+
+plan_pair_conflicts() {
+  local left="$1"
+  local right="$2"
+  local pair
+  local -a conflict_pairs_array=()
+  IFS=',' read -r -a conflict_pairs_array <<< "$conflict_pairs_csv"
+  for pair in "${conflict_pairs_array[@]}"; do
+    if [ "$pair" = "$left:$right" ] || [ "$pair" = "$right:$left" ]; then
+      return 0
+    fi
+  done
+  return 1
+}
+
 # Simulate topological waves over all remaining nodes. Count only delegate nodes in each wave.
 completed_for_sim="$completed_satisfied_nodes"
 unresolved="$remaining_nodes"
@@ -506,6 +542,25 @@ while [ "$(jq -r 'length' <<< "$unresolved")" -gt 0 ]; do
       blocked=$(json_array_add "$blocked" "$node")
     fi
   done
+
+  eligible="$runnable"
+  runnable="[]"
+  conflict_deferred="[]"
+  for node in $(jq -r 'sort[]' <<< "$eligible"); do
+    node_conflicts=false
+    for selected in $(jq -r '.[]' <<< "$runnable"); do
+      if plan_pair_conflicts "$node" "$selected"; then
+        node_conflicts=true
+        break
+      fi
+    done
+    if [ "$node_conflicts" = true ]; then
+      conflict_deferred=$(json_array_add "$conflict_deferred" "$node")
+    else
+      runnable=$(json_array_add "$runnable" "$node")
+    fi
+  done
+  blocked=$(jq -cn --argjson blocked "$blocked" --argjson deferred "$conflict_deferred" '$blocked + $deferred')
 
   runnable_count=$(jq -r 'length' <<< "$runnable")
   if [ "$runnable_count" -eq 0 ]; then
@@ -575,6 +630,39 @@ else
   esac
 fi
 
+team_capability="not_checked"
+team_capability_reason="not_requested"
+delegation_blocked_reason=""
+if [ "$delegation_mode" = "team" ]; then
+  team_capability="unavailable"
+  team_capability_reason="probe_missing"
+  if [ -f "$SCRIPT_DIR/detect-team-capability.sh" ]; then
+    probe_output=""
+    if probe_output=$(bash "$SCRIPT_DIR/detect-team-capability.sh" 2>/dev/null); then
+      probe_capability=""
+      probe_reason=""
+      while IFS='=' read -r probe_key probe_value; do
+        case "$probe_key" in
+          team_capability) probe_capability="$probe_value" ;;
+          team_capability_reason) probe_reason="$probe_value" ;;
+        esac
+      done <<< "$probe_output"
+      if { [ "$probe_capability" = "available" ] || [ "$probe_capability" = "unavailable" ]; } && [ -n "$probe_reason" ]; then
+        team_capability="$probe_capability"
+        team_capability_reason="$probe_reason"
+      else
+        team_capability_reason="probe_invalid"
+      fi
+    else
+      team_capability_reason="probe_failed"
+    fi
+  fi
+  if [ "$team_capability" != "available" ]; then
+    delegation_mode="subagent"
+    delegation_blocked_reason="teams_disabled:$team_capability_reason"
+  fi
+fi
+
 base_output=$(jq -cn \
   --arg prefer_teams "$prefer_teams" \
   --arg effective_effort "$effective_effort" \
@@ -589,6 +677,9 @@ base_output=$(jq -cn \
   --arg requested_mode "$requested_mode" \
   --arg delegation_mode "$delegation_mode" \
   --arg reason "$reason" \
+  --arg team_capability "$team_capability" \
+  --arg team_capability_reason "$team_capability_reason" \
+  --arg delegation_blocked_reason "$delegation_blocked_reason" \
   --argjson plans "$plans_json" \
   --argjson waves "$waves_json" \
   '{
@@ -608,6 +699,9 @@ base_output=$(jq -cn \
     requested_mode:$requested_mode,
     delegation_mode:$delegation_mode,
     reason:$reason,
+    team_capability:$team_capability,
+    team_capability_reason:$team_capability_reason,
+    delegation_blocked_reason:(if $delegation_blocked_reason == "" then null else $delegation_blocked_reason end),
     plans:$plans,
     dependency_waves:$waves
    }')
@@ -662,6 +756,11 @@ for wave in $(jq -cr '.[]' <<< "$waves_json"); do
         seg_reason="unknown_prefer_teams:$prefer_teams"
         ;;
     esac
+    seg_blocked_reason=""
+    if [ "$seg_mode" = "team" ] && [ "$team_capability" != "available" ]; then
+      seg_mode="subagent"
+      seg_blocked_reason="teams_disabled:$team_capability_reason"
+    fi
     team_name=""
     if [ "$seg_mode" = "team" ]; then
       team_segment_index=$((team_segment_index + 1))
@@ -676,8 +775,9 @@ for wave in $(jq -cr '.[]' <<< "$waves_json"); do
       --arg delegation_mode "$seg_mode" \
       --arg team_name "$team_name" \
       --arg reason "$seg_reason" \
+      --arg delegation_blocked_reason "$seg_blocked_reason" \
       --argjson plan_ids "$delegate_wave" \
-      '. + [{route:$route, plan_ids:$plan_ids, effort:$effort, delegation_mode:$delegation_mode, team_name:(if $team_name == "" then null else $team_name end), reason:$reason, prerequisite_merge_required:false, worktree_refresh_required:true}]' <<< "$segments_json")
+      '. + [{route:$route, plan_ids:$plan_ids, effort:$effort, delegation_mode:$delegation_mode, team_name:(if $team_name == "" then null else $team_name end), reason:$reason, delegation_blocked_reason:(if $delegation_blocked_reason == "" then null else $delegation_blocked_reason end), prerequisite_merge_required:false, worktree_refresh_required:true}]' <<< "$segments_json")
   fi
 done
 
