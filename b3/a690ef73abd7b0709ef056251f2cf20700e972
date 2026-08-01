@@ -1,0 +1,19 @@
+references/subagent-contracts.md
+  s_27ea496ab5a93e::t_aeb94d39cbcd0a 1-55
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "b3a690ef73abd7b0709ef056251f2cf20700e972",
+  "prompts": {},
+  "sessions": {
+    "s_27ea496ab5a93e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4452c98a-815b-4051-9652-732944fc8275",
+        "model": "claude-fable-5"
+      },
+      "human_author": null
+    }
+  }
+}
