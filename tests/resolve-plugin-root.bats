@@ -142,11 +142,25 @@ assert_resolved() {
   assert_resolved "$root"
 }
 
-@test "total failure exits one with the existing diagnostic" {
+@test "total failure exits one with an actionable diagnostic" {
   run bash "$RESOLVER"
 
   [ "$status" -eq 1 ]
-  [ "$output" = "VBW: plugin root resolution failed" ]
+  [ "$output" = "VBW: plugin root resolution failed. Run /vbw:doctor for diagnostics." ]
+  [ ! -e "$SESSION_LINK" ]
+}
+
+@test "link repair failure exits one with an actionable diagnostic" {
+  local root
+  root=$(make_root link-failure)
+  printf '%s\n' '#!/usr/bin/env bash' 'exit 1' > "$root/scripts/ensure-plugin-root-link.sh"
+  chmod +x "$root/scripts/ensure-plugin-root-link.sh"
+  export CLAUDE_PLUGIN_ROOT="$root"
+
+  run bash "$RESOLVER"
+
+  [ "$status" -eq 1 ]
+  [ "$output" = "VBW: plugin root link failed. Run /vbw:doctor for diagnostics." ]
   [ ! -e "$SESSION_LINK" ]
 }
 
@@ -181,7 +195,7 @@ assert_resolved() {
   run bash "$RESOLVER" --require-script phase-detect.sh
 
   [ "$status" -eq 1 ]
-  [ "$output" = "VBW: plugin root resolution failed" ]
+  [ "$output" = "VBW: plugin root resolution failed. Run /vbw:doctor for diagnostics." ]
   [ ! -e "$SESSION_LINK" ]
 }
 

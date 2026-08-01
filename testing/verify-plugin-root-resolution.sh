@@ -232,7 +232,7 @@ if output=$(CLAUDE_PLUGIN_ROOT="" CLAUDE_CONFIG_DIR="$empty_config" \
   fail "fatal resolver unexpectedly succeeded: $output"
 else
   status=$?
-  if [ "$status" -eq 1 ] && [ "$output" = "VBW: plugin root resolution failed" ]; then
+  if [ "$status" -eq 1 ] && [ "$output" = "VBW: plugin root resolution failed. Run /vbw:doctor for diagnostics." ]; then
     pass "fatal resolution failure preserves exit 1 and diagnostic"
   else
     fail "fatal resolution failure returned status $status and output: $output"

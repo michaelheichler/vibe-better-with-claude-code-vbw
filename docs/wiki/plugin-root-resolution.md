@@ -42,7 +42,7 @@ Source: `scripts/resolve-plugin-root.sh`. The nine-step command cascade is imple
 6. Exact-session symlink: `/tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}`
 7. Generic `/tmp` symlink glob: `$tmp_root/.vbw-plugin-root-link-*`, first match with a valid `scripts/${required_script}`
 8. `ps axww -o args=` piped through `grep -oE -- "--plugin-dir [^ ]+"` to recover the directory passed to a local-dev `--plugin-dir` launch
-9. Fail guard: if nothing resolved, print `"VBW: plugin root resolution failed"` to stderr and `exit 1`
+9. Fail guard: if nothing resolved, print `"VBW: plugin root resolution failed. Run /vbw:doctor for diagnostics."` to stderr and `exit 1`
 
 After resolution the helper canonicalizes the path with `cd "$resolved_root" && pwd -P`, so it survives the cache symlink being deleted mid-session, then calls `scripts/ensure-plugin-root-link.sh` to repair the exact per-session link before printing the canonical root on stdout. A failure to repair the link is itself a fatal `exit 1` in command mode.
 
@@ -56,7 +56,7 @@ RESOLVER="${SESSION_LINK}/scripts/resolve-plugin-root.sh"
 if [ ! -f "$RESOLVER" ]; then
   if [ -n "${CLAUDE_PLUGIN_ROOT:-}" ] && [ -f "${CLAUDE_PLUGIN_ROOT}/scripts/resolve-plugin-root.sh" ]; then
     RESOLVER="${CLAUDE_PLUGIN_ROOT}/scripts/resolve-plugin-root.sh"
-  else echo "VBW: plugin root resolution failed" >&2; exit 1; fi
+  else echo "VBW: plugin root resolution failed. Run /vbw:doctor for diagnostics." >&2; exit 1; fi
 fi
 bash "$RESOLVER" >/dev/null || exit 1
 echo "$SESSION_LINK"

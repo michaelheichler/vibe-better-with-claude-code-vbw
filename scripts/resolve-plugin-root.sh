@@ -42,7 +42,7 @@ fail_resolution() {
   if [ "$nonfatal" = true ]; then
     exit 0
   fi
-  echo "VBW: plugin root resolution failed" >&2
+  echo "VBW: plugin root resolution failed. Run /vbw:doctor for diagnostics." >&2
   exit 1
 }
 
@@ -50,7 +50,7 @@ fail_link() {
   if [ "$nonfatal" = true ]; then
     exit 0
   fi
-  echo "VBW: plugin root link failed" >&2
+  echo "VBW: plugin root link failed. Run /vbw:doctor for diagnostics." >&2
   exit 1
 }
 
