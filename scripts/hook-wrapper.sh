@@ -32,6 +32,11 @@ cleanup_on_sighup() {
     | (sort -V 2>/dev/null || sort -t. -k1,1n -k2,2n -k3,3n) | tail -1)
 
   if [ -z "$TRACKER" ] || [ ! -f "$TRACKER" ]; then
+    _SIB_TRACKER="$(cd "$(dirname "$0")" 2>/dev/null && pwd)/agent-pid-tracker.sh"
+    [ -f "$_SIB_TRACKER" ] && TRACKER="$_SIB_TRACKER"
+  fi
+
+  if [ -z "$TRACKER" ] || [ ! -f "$TRACKER" ]; then
     exit 1
   fi
 

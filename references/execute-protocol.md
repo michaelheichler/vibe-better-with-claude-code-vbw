@@ -7,53 +7,17 @@ Loaded on demand by /vbw:vibe Execute mode. Not a user-facing command.
 Resolve and validate `VBW_PLUGIN_ROOT` once before running script commands below:
 
 ```bash
-VBW_CACHE_ROOT="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/plugins/cache/vbw-marketplace/vbw"
-VBW_PLUGIN_ROOT=""
-
-if [ -n "${CLAUDE_PLUGIN_ROOT:-}" ] && [ -f "${CLAUDE_PLUGIN_ROOT}/scripts/hook-wrapper.sh" ]; then
-  VBW_PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT}"
-fi
-if [ -z "$VBW_PLUGIN_ROOT" ] && [ -f "${VBW_CACHE_ROOT}/local/scripts/hook-wrapper.sh" ]; then
-  VBW_PLUGIN_ROOT="${VBW_CACHE_ROOT}/local"
-fi
-if [ -z "$VBW_PLUGIN_ROOT" ]; then
-  VERSION_DIR=$(find "${VBW_CACHE_ROOT}" -maxdepth 1 -mindepth 1 2>/dev/null | awk -F/ '{print $NF}' | grep -E '^[0-9]+(\.[0-9]+)*$' | sort -t. -k1,1n -k2,2n -k3,3n | tail -1)
-  if [ -n "$VERSION_DIR" ] && [ -f "${VBW_CACHE_ROOT}/${VERSION_DIR}/scripts/hook-wrapper.sh" ]; then
-    VBW_PLUGIN_ROOT="${VBW_CACHE_ROOT}/${VERSION_DIR}"
-  else
-    FALLBACK_DIR=$(find "${VBW_CACHE_ROOT}" -maxdepth 1 -mindepth 1 2>/dev/null | awk -F/ '{print $NF}' | sort | tail -1)
-    [ -n "$FALLBACK_DIR" ] && [ -f "${VBW_CACHE_ROOT}/${FALLBACK_DIR}/scripts/hook-wrapper.sh" ] && VBW_PLUGIN_ROOT="${VBW_CACHE_ROOT}/${FALLBACK_DIR}"
-  fi
-fi
 SESSION_LINK="/tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}"
-if [ -z "$VBW_PLUGIN_ROOT" ] && [ -f "${SESSION_LINK}/scripts/hook-wrapper.sh" ]; then
-  VBW_PLUGIN_ROOT="${SESSION_LINK}"
-fi
-if [ -z "$VBW_PLUGIN_ROOT" ]; then
-  ANY_LINK=$(command find -H /tmp -maxdepth 1 -name '.vbw-plugin-root-link-*' -print 2>/dev/null | LC_ALL=C sort | while IFS= read -r link
-  do
-    if [ -f "$link/scripts/hook-wrapper.sh" ]; then
-      printf '%s\n' "$link"
-      break
-    fi
-  done || true)
-  if [ -n "$ANY_LINK" ]; then
-    VBW_PLUGIN_ROOT="$ANY_LINK"
+RESOLVER="${SESSION_LINK}/scripts/resolve-plugin-root.sh"
+if [ ! -f "$RESOLVER" ]; then
+  if [ -n "${CLAUDE_PLUGIN_ROOT:-}" ] && [ -f "${CLAUDE_PLUGIN_ROOT}/scripts/resolve-plugin-root.sh" ]; then
+    RESOLVER="${CLAUDE_PLUGIN_ROOT}/scripts/resolve-plugin-root.sh"
+  else
+    echo "VBW: plugin root resolution failed" >&2
+    exit 1
   fi
 fi
-if [ -z "$VBW_PLUGIN_ROOT" ]; then
-  PLUGIN_DIR_PATH=$(ps axww -o args= 2>/dev/null | grep -v grep | grep -oE -- "--plugin-dir [^ ]+" | head -1)
-  PLUGIN_DIR_PATH="${PLUGIN_DIR_PATH#--plugin-dir }"
-  [ -n "$PLUGIN_DIR_PATH" ] && [ -f "$PLUGIN_DIR_PATH/scripts/hook-wrapper.sh" ] && VBW_PLUGIN_ROOT="$PLUGIN_DIR_PATH"
-fi
-
-if [ -z "$VBW_PLUGIN_ROOT" ] || [ ! -d "$VBW_PLUGIN_ROOT" ]; then
-  echo "VBW: plugin root resolution failed (checked CLAUDE_PLUGIN_ROOT, cache local/, versioned dirs, symlink fallback, process tree)." >&2
-  exit 1
-fi
-
-# Canonicalize to real path: survives cache symlink deletion mid-session
-VBW_PLUGIN_ROOT=$(cd "$VBW_PLUGIN_ROOT" 2>/dev/null && pwd -P || echo "$VBW_PLUGIN_ROOT")
+VBW_PLUGIN_ROOT=$(bash "$RESOLVER") || exit 1
 ```
 
 All runtime script invocations below assume `VBW_PLUGIN_ROOT` is set.
@@ -167,11 +131,8 @@ Team request policy from helper output:
 - `prefer_teams='never'`: request explicit non-team mode.
 - Unknown normalized values preserve the raw value, use `delegation_mode=subagent`, and report `unknown_prefer_teams:<value>`.
 
-Determine whether **real team semantics** are available in the live tool set before spawning anything:
-- Real team semantics are available when either:
-  1. `TeamCreate` + teammate task spawning are available, **or**
-  2. the live teammate spawn tool accepts both `team_name` and per-teammate `name` parameters (for example `Agent(...)` with `team_name:` and `name:`)
-- If the live tool set only supports plain background spawns (for example `Agent` with `run_in_background: true` but no `team_name`), then real team semantics are **NOT** available.
+Determine whether **real team semantics** are available before spawning anything. Real team semantics require CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1 and a live Agent tool that spawns teammates. `team_name` is accepted but ignored, so it is not a capability signal. When teams are unavailable, fall back to plain sequential subagent Agent calls.
+- If the live tool set only supports plain background spawns (for example `Agent` with `run_in_background: true` and no teammate `name`), then real team semantics are **NOT** available.
 - **Plain background `Agent` spawns without team semantics are NOT an agent team. Do NOT use them as a substitute for team mode.**
 
 Process `ROUTING.segments[]` in order. For each segment, extract `route`, `plan_ids`, `effort`, `delegation_mode`, and optional `team_name` from the helper output. Before any direct, turbo, fallback, or serialized subagent segment starts, check the current delegation marker. if a live execute marker has `delegation_mode=team`, complete shutdown (`shutdown_request`, responses, `TeamDelete`, stale cleanup) and clear the marker first. Do not start a non-team segment while `.delegated-workflow.json` still reports a live team marker.
@@ -180,13 +141,12 @@ Branch each segment into exactly one runtime path and persist that segment's act
 
 1. **True team mode**
    - Use this path only when the helper segment has `delegation_mode=team` **and** real team semantics are available.
-   - **Pre-TeamCreate cleanup** (remove orphaned VBW team directories from prior sessions before creating a new team):
+   - **Pre-spawn stale-team cleanup** (remove orphaned VBW team directories from prior sessions before spawning the first teammate):
      ```bash
      bash "${VBW_PLUGIN_ROOT}/scripts/clean-stale-teams.sh" 2>/dev/null || true
      ```
-   - Set `TEAM_NAME` from the segment (`team_name`) or default to `"vbw-phase-{NN}"`.
-   - If literal `TeamCreate` is available, call it with `team_name="$TEAM_NAME"`, `description="Phase {NN}: {phase-name}"`.
-   - If literal `TeamCreate` is unavailable but the live teammate spawn tool accepts `team_name`, create the team implicitly by using the shared `TEAM_NAME` on every teammate spawn.
+   - Set `TEAM_NAME` from the segment (`team_name`) or default to `"vbw-phase-{NN}"` for VBW's own bookkeeping. The platform's real team name is session-derived ("session-" + first 8 chars of the session id); `team_name` on `Agent` is accepted but ignored, so it is not a capability signal.
+   - Agent teams are experimental (CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1). The team forms when the first teammate is spawned via the Agent tool. There is no TeamCreate setup step.
    - Persist the actual runtime mode:
      ```bash
      bash "${VBW_PLUGIN_ROOT}/scripts/delegated-workflow.sh" set execute {segment_effort} team "$TEAM_NAME"
@@ -195,7 +155,7 @@ Branch each segment into exactly one runtime path and persist that segment's act
 
 2. **Explicit non-team mode**
    - Use this path when `prefer_teams='never'`, `prefer_teams='auto'` with `max_parallel_width <= 1`, unknown `prefer_teams`, no delegate-eligible plans, segment route `turbo`/internal `direct`, or team-tooling-unavailable fallback.
-   - For serialized delegate segments (`route=delegate`, `delegation_mode=subagent`), persist the actual runtime mode as subagent, skip TeamCreate, spawn one Dev subagent, and wait for completion before the next spawn:
+   - For serialized delegate segments (`route=delegate`, `delegation_mode=subagent`), persist the actual runtime mode as subagent, do not form an agent team (do not spawn teammates), spawn one Dev subagent, and wait for completion before the next spawn:
      ```bash
      bash "${VBW_PLUGIN_ROOT}/scripts/delegated-workflow.sh" set execute {segment_effort} subagent
      ```
@@ -212,7 +172,7 @@ Branch each segment into exactly one runtime path and persist that segment's act
      ```bash
      bash "${VBW_PLUGIN_ROOT}/scripts/delegated-workflow.sh" set execute {segment_effort} subagent
      ```
-   - Skip TeamCreate and continue in explicit non-team mode.
+   - Do not form an agent team (do not spawn teammates); use plain sequential subagent Agent calls, continuing in explicit non-team mode.
    - **Do NOT preserve “parallelism” by launching multiple background `Agent` spawns without `team_name`.**
 
 After each segment completes, verify each plan's SUMMARY.md through Step 3c and write the verified status (`complete`, `partial`, or `failed`) into `.execution-state.json`. Only `complete|partial` unlock dependents. Re-run the helper against the updated execution state until no pending plans remain.
@@ -280,6 +240,8 @@ Include the first match in the Dev task prompt alongside the compiled context. P
 - **Architect (scoping time):** Evaluates installed skills in system context. Activates relevant skills before producing requirements and roadmap artifacts.
 - **Runtime skill hooks preserved:** `skill-hook-dispatch.sh` dispatches skill-defined PostToolUse/PreToolUse hooks at runtime. This is separate from skill *activation* and is unaffected by the plan-driven model.
 If compilation fails, proceed without it: Dev reads files directly.
+
+**Correctness flag (Dijkstra):** Plan tasks may carry the task attribute `correctness: dijkstra`, set by Lead at planning time for tasks involving algorithm or loop derivation, concurrency, or boundary-sensitive logic. The flag makes the trigger deterministic: Dev engages `references/dijkstra/DISCIPLINE.md` and QA verifies the invariant/variant reasoning. The orchestrator does not act on the flag itself. It passes through PLAN.md to the agents. Keep this wording in sync with Stage 2 of `agents/vbw-lead.md` (covered by `testing/verify-dijkstra-discipline.sh`).
 
 **V2 Token Budgets (REQ-12):** If control-plane.sh `compile` or `full` action was used and included token budget enforcement, skip this step. Otherwise:
 - After context compilation, enforce per-role token budgets. Pass the contract path and task number for per-task budget computation:
@@ -354,7 +316,7 @@ activeForm: "Executing {NN-MM}"
 
 Display: `◆ Spawning Dev teammate (${DEV_MODEL})...`
 
-**CRITICAL:** Set `subagent_type: "vbw:vbw-dev"` and `model: "${DEV_MODEL}"` on the live spawn call when spawning Dev teammates. If `DEV_MAX_TURNS` is non-empty, also pass `maxTurns: ${DEV_MAX_TURNS}`. If `DEV_MAX_TURNS` is empty, do NOT include maxTurns (omitting it = unlimited).
+**CRITICAL:** Set `subagent_type: "vbw:vbw-dev"` and `model: "${DEV_MODEL}"` on the live spawn call when spawning Dev teammates. If `DEV_MAX_TURNS` is non-empty, also pass `maxTurns: ${DEV_MAX_TURNS}`. If `DEV_MAX_TURNS` is empty, do NOT include maxTurns (omitting it = unlimited). If `DEV_REASONING` is non-empty, also pass `effort: "${DEV_REASONING}"`. If `DEV_REASONING` is empty, do NOT include effort (the resolved model rejects the parameter).
 **CRITICAL:** When true team mode is active, pass `team_name: "vbw-phase-{NN}"` and `name: "dev-{MM}"` on the live spawn call. If the live spawn tool is `Agent`, those parameters belong on `Agent(...)`. If the live spawn tool is `TaskCreate`, put the same parameters there. Team mode without `team_name` is invalid.
 **CRITICAL:** In explicit non-team mode or team-tooling-unavailable fallback, do NOT use `run_in_background: true` to imitate parallel team execution.
 
@@ -717,8 +679,8 @@ VERIF_BASE="${VERIF_NAME%.md}"
 
 **Post-build QA (Fast, QA_TIMING=post-build):** Spawn QA after ALL plans complete. Include in task description: "Phase context: {phase-dir}/.context-qa.md (if compiled). Model: ${QA_MODEL}. Your verification tier is {tier}. If `.vbw-planning/codebase/META.md` exists, read TESTING.md, CONCERNS.md, and ARCHITECTURE.md (whichever exist) from `.vbw-planning/codebase/` to bootstrap codebase understanding before verifying. Run {5-10|15-25|30+} checks per the tier definitions in your agent protocol. Persist your VERIFICATION.md by piping qa_verdict JSON through write-verification.sh. Output path: {phase-dir}/${VERIF_NAME}. Plugin root: ${VBW_PLUGIN_ROOT}." QA calls `write-verification.sh` directly: the orchestrator does NOT persist. If QA reports a `write-verification.sh` failure, surface the error to the user: do NOT fall back to manual VERIFICATION.md writes.
 
-**CRITICAL:** Set `subagent_type: "vbw:vbw-qa"` and `model: "${QA_MODEL}"` in the Task tool invocation when spawning QA agents. If `QA_MAX_TURNS` is non-empty, also pass `maxTurns: ${QA_MAX_TURNS}`. If `QA_MAX_TURNS` is empty, do NOT include maxTurns (omitting it = unlimited).
-**CRITICAL:** When true team mode is active, pass `team_name: "vbw-phase-{NN}"` and `name: "qa"` (or `name: "qa-wave{W}"` for per-wave QA) parameters to each QA Task tool invocation.
+**CRITICAL:** Set `subagent_type: "vbw:vbw-qa"` and `model: "${QA_MODEL}"` in the Agent tool invocation when spawning QA agents. If `QA_MAX_TURNS` is non-empty, also pass `maxTurns: ${QA_MAX_TURNS}`. If `QA_MAX_TURNS` is empty, do NOT include maxTurns (omitting it = unlimited). If `QA_REASONING` is non-empty, also pass `effort: "${QA_REASONING}"`. If `QA_REASONING` is empty, do NOT include effort (the resolved model rejects the parameter).
+**CRITICAL:** When true team mode is active, pass `team_name: "vbw-phase-{NN}"` and `name: "qa"` (or `name: "qa-wave{W}"` for per-wave QA) parameters to each QA Agent tool invocation.
 
 ### Step 4.1: QA Result Gating (NON-NEGOTIABLE)
 
@@ -796,8 +758,9 @@ This loop runs inline during execution: no second `/vbw:vibe` call needed. If th
     eval "$AGENT_SETTINGS"
     LEAD_MODEL="$RESOLVED_MODEL"
     LEAD_MAX_TURNS="$RESOLVED_MAX_TURNS"
+    LEAD_REASONING="$RESOLVED_REASONING"
     ```
-  - Spawn Lead as a plain sequential work-unit subagent with `subagent_type: "vbw:vbw-lead"` and `model: "${LEAD_MODEL}"`. If `LEAD_MAX_TURNS` is non-empty, include `maxTurns: ${LEAD_MAX_TURNS}`. If `LEAD_MAX_TURNS` is empty, omit `maxTurns` because the resolved profile is unlimited. Non-team spawn shape: omit `team_name`, `run_in_background`, `isolation`, and worktree cwd fields (`cwd`, `working_dir`, `workingDirectory`, `workdir`). `name` is optional label-only metadata. never use it for routing, lifecycle state, or team semantics.
+  - Spawn Lead as a plain sequential work-unit subagent with `subagent_type: "vbw:vbw-lead"` and `model: "${LEAD_MODEL}"`. If `LEAD_MAX_TURNS` is non-empty, include `maxTurns: ${LEAD_MAX_TURNS}`. If `LEAD_MAX_TURNS` is empty, omit `maxTurns` because the resolved profile is unlimited. If `LEAD_REASONING` is non-empty, also pass `effort: "${LEAD_REASONING}"`. If `LEAD_REASONING` is empty, omit effort because the resolved model rejects it. Non-team spawn shape: omit `team_name`, `run_in_background`, `isolation`, and worktree cwd fields (`cwd`, `working_dir`, `workingDirectory`, `workdir`). `name` is optional label-only metadata. never use it for routing, lifecycle state, or team semantics.
   - Lead prompt MUST include the authoritative `round_dir`, `source_verification_path`, `known_issues_path`, and output path `{round_dir}/R{RR}-PLAN.md`. the failed-check and known-issue inputs above. the deviation-classification and known-issue-resolution requirements above. and `Read the remediation plan template at /tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}/templates/REMEDIATION-PLAN.md and follow its structure exactly.`
   - After Lead returns, apply the QA remediation no-tool circuit breaker before normalizing plan filenames, validating the generated plan, or advancing state. If Lead reports unavailable tools, shell/Bash, filesystem, edits, or API-session access, STOP without advancing `.qa-remediation-stage` and do not retry that same Lead prompt.
   - Normalize plan filenames before validation:
@@ -1036,7 +999,7 @@ bash "${VBW_PLUGIN_ROOT}/scripts/delegated-workflow.sh" clear 2>/dev/null || tru
 
 > **Runtime enforcement limitation:** Claude Code does not expose agent-team message tool calls (e.g., `SendMessage`) to `PreToolUse`/`PostToolUse` hooks with stable `tool_name` values. Therefore VBW cannot hook-validate malformed shutdown responses at runtime. Enforcement relies on: (1) mechanical SendMessage instructions in all 6 agent prompts, (2) compaction-instructions.sh reminders that survive context compaction, (3) orchestrator retry (re-send if teammate responds in plain text), and (4) `/vbw:doctor --cleanup` as a recovery path for stuck teams.
 
-**Worktree merge and cleanup (post-TeamDelete):** If `worktree_isolation` is not `"off"` in config:
+**Worktree merge and cleanup (post-shutdown):** If `worktree_isolation` is not `"off"` in config:
 For each plan that has a `worktree_path` entry in execution-state.json (completed or failed):
 1. **Copy SUMMARY.md** from worktree to phase dir (ensure it is present in the main working tree before merge changes branch context):
    `cp "{worktree_path}/.vbw-planning/phases/{phase-dir}/{plan_id}-SUMMARY.md" ".vbw-planning/phases/{phase-dir}/{plan_id}-SUMMARY.md" 2>/dev/null || true`
@@ -1057,7 +1020,7 @@ When `worktree_isolation="off"`: skip this block silently.
 **Control Plane cleanup:** Lock and token state cleanup already handled by existing Lease Lock and Token Budget cleanup blocks.
 
 **Rolling Summary (REQ-03):** If `rolling_summary=true` in config:
-- After TeamDelete when an actual team was fully shut down, before phase_end event log:
+- After the shutdown sequence when an actual team was fully shut down, before phase_end event log:
   ```bash
   bash "${VBW_PLUGIN_ROOT}/scripts/compile-rolling-summary.sh" \
     .vbw-planning/phases .vbw-planning/ROLLING-CONTEXT.md 2>/dev/null || true

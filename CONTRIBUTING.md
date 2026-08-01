@@ -4,6 +4,7 @@ Thanks for considering a contribution. VBW is a Claude Code plugin, so the conve
 
 ## Prerequisites
 
+- Bash 4.4+ is required. Bash 5+ is recommended. macOS's bundled /bin/bash 3.2 is unsupported. Ensure `bash --version` resolves to Bash 4.4 or newer before running VBW or `testing/run-all.sh`.
 - Claude Code v1.0.33+ with Opus 4.6+
 - Agent Teams enabled
 - Familiarity with the [Claude Code plugin system](https://code.claude.com/docs/en/plugins)
@@ -181,7 +182,7 @@ Less good candidates:
 3. **Keep commits atomic** -- one logical change per commit.
 4. **Match the existing tone** in command descriptions and user-facing text. VBW is direct, dry, and self-aware. It doesn't use corporate language or unnecessary enthusiasm.
 5. **Follow code style:**
-   - Shell scripts: bash, no external dependencies beyond `jq` and `git`
+   - Shell scripts: bash, no non-shell external dependencies beyond `jq` and `git`. Bash 4.4+ is required. Bash 5+ is recommended. macOS's bundled /bin/bash 3.2 is unsupported. Ensure `bash --version` resolves to Bash 4.4 or newer before running VBW or `testing/run-all.sh`.
    - Markdown commands: YAML frontmatter with single-line `description` field
    - No prettier on `.md` files with frontmatter (use `.prettierignore`)
 6. **LSP-first policy for agents:** Any agent with LSP in its `tools` list must include the repo-standard LSP-first guidance: prefer LSP for semantic code navigation, use Search/Grep/Glob only for literal strings, filenames, non-code assets, or LSP failure cases. See `references/lsp-first-policy.md` for the canonical wording and scope boundaries. The verification script `testing/verify-lsp-first-policy.sh` enforces this.

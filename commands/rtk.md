@@ -13,12 +13,12 @@ allowed-tools: Read, Bash, AskUserQuestion
 
 Plugin root:
 ```
-!`VBW_CACHE_ROOT="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/plugins/cache/vbw-marketplace/vbw"; SESSION_KEY="${CLAUDE_SESSION_ID:-default}"; SESSION_LINK="/tmp/.vbw-plugin-root-link-${SESSION_KEY}"; R=""; if [ -n "${CLAUDE_PLUGIN_ROOT:-}" ] && [ -f "${CLAUDE_PLUGIN_ROOT}/scripts/hook-wrapper.sh" ]; then R="${CLAUDE_PLUGIN_ROOT}"; fi; if [ -z "$R" ] && [ -f "${VBW_CACHE_ROOT}/local/scripts/hook-wrapper.sh" ]; then R="${VBW_CACHE_ROOT}/local"; fi; if [ -z "$R" ]; then V=$(find "${VBW_CACHE_ROOT}" -maxdepth 1 -mindepth 1 2>/dev/null | awk -F/ '{print $NF}' | grep -E '^[0-9]+(\.[0-9]+)*$' | sort -t. -k1,1n -k2,2n -k3,3n | tail -1); [ -n "$V" ] && [ -f "${VBW_CACHE_ROOT}/${V}/scripts/hook-wrapper.sh" ] && R="${VBW_CACHE_ROOT}/${V}"; fi; if [ -z "$R" ]; then L=$(find "${VBW_CACHE_ROOT}" -maxdepth 1 -mindepth 1 2>/dev/null | awk -F/ '{print $NF}' | sort | tail -1); [ -n "$L" ] && [ -f "${VBW_CACHE_ROOT}/${L}/scripts/hook-wrapper.sh" ] && R="${VBW_CACHE_ROOT}/${L}"; fi; if [ -z "$R" ] && [ -f "${SESSION_LINK}/scripts/hook-wrapper.sh" ]; then R="${SESSION_LINK}"; fi; if [ -z "$R" ]; then ANY_LINK=$(command find -H /tmp -maxdepth 1 -name '.vbw-plugin-root-link-*' -print 2>/dev/null | LC_ALL=C sort | while IFS= read -r link; do if [ -f "$link/scripts/hook-wrapper.sh" ]; then printf '%s\n' "$link"; break; fi; done || true); [ -n "$ANY_LINK" ] && R="$ANY_LINK"; fi; if [ -z "$R" ]; then D=$(ps axww -o args= 2>/dev/null | grep -v grep | grep -oE -- "--plugin-dir [^ ]+" | head -1); D="${D#--plugin-dir }"; [ -n "$D" ] && [ -f "$D/scripts/hook-wrapper.sh" ] && R="$D"; fi; if [ -z "$R" ] || [ ! -d "$R" ]; then echo "VBW: plugin root resolution failed" >&2; exit 1; fi; LINK="${SESSION_LINK}"; REAL_R=$(cd "$R" 2>/dev/null && pwd -P) || REAL_R="$R"; bash "$REAL_R/scripts/ensure-plugin-root-link.sh" "$LINK" "$REAL_R" >/dev/null 2>&1 || { echo "VBW: plugin root link failed" >&2; exit 1; }; echo "$LINK"`
+!`L="/tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}"; R="$L/scripts/resolve-plugin-root.sh"; [ -f "$R" ] || R="${CLAUDE_PLUGIN_ROOT:-}/scripts/resolve-plugin-root.sh"; [ -f "$R" ] || { echo "VBW: plugin root unavailable. Restart this session to recreate $L." >&2; exit 1; }; bash "$R" >/dev/null || exit 1; echo "$L"`
 ```
 
 RTK state:
 ```json
-!`VBW_CACHE_ROOT="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/plugins/cache/vbw-marketplace/vbw"; SESSION_KEY="${CLAUDE_SESSION_ID:-default}"; SESSION_LINK="/tmp/.vbw-plugin-root-link-${SESSION_KEY}"; R=""; if [ -n "${CLAUDE_PLUGIN_ROOT:-}" ] && [ -f "${CLAUDE_PLUGIN_ROOT}/scripts/hook-wrapper.sh" ]; then R="${CLAUDE_PLUGIN_ROOT}"; fi; if [ -z "$R" ] && [ -f "${VBW_CACHE_ROOT}/local/scripts/hook-wrapper.sh" ]; then R="${VBW_CACHE_ROOT}/local"; fi; if [ -z "$R" ]; then V=$(find "${VBW_CACHE_ROOT}" -maxdepth 1 -mindepth 1 2>/dev/null | awk -F/ '{print $NF}' | grep -E '^[0-9]+(\.[0-9]+)*$' | sort -t. -k1,1n -k2,2n -k3,3n | tail -1); [ -n "$V" ] && [ -f "${VBW_CACHE_ROOT}/${V}/scripts/hook-wrapper.sh" ] && R="${VBW_CACHE_ROOT}/${V}"; fi; if [ -z "$R" ]; then L=$(find "${VBW_CACHE_ROOT}" -maxdepth 1 -mindepth 1 2>/dev/null | awk -F/ '{print $NF}' | sort | tail -1); [ -n "$L" ] && [ -f "${VBW_CACHE_ROOT}/${L}/scripts/hook-wrapper.sh" ] && R="${VBW_CACHE_ROOT}/${L}"; fi; if [ -z "$R" ] && [ -f "${SESSION_LINK}/scripts/hook-wrapper.sh" ]; then R="${SESSION_LINK}"; fi; if [ -z "$R" ]; then ANY_LINK=$(command find -H /tmp -maxdepth 1 -name '.vbw-plugin-root-link-*' -print 2>/dev/null | LC_ALL=C sort | while IFS= read -r link; do if [ -f "$link/scripts/hook-wrapper.sh" ]; then printf '%s\n' "$link"; break; fi; done || true); [ -n "$ANY_LINK" ] && R="$ANY_LINK"; fi; if [ -z "$R" ]; then D=$(ps axww -o args= 2>/dev/null | grep -v grep | grep -oE -- "--plugin-dir [^ ]+" | head -1); D="${D#--plugin-dir }"; [ -n "$D" ] && [ -f "$D/scripts/hook-wrapper.sh" ] && R="$D"; fi; if [ -n "$R" ]; then REAL_R=$(cd "$R" 2>/dev/null && pwd -P) || REAL_R="$R"; bash "$REAL_R/scripts/ensure-plugin-root-link.sh" "$SESSION_LINK" "$REAL_R" >/dev/null 2>&1 || true; bash "$REAL_R/scripts/rtk-manager.sh" status --json 2>/dev/null && exit 0; fi; echo '{"status_unavailable":true,"summary":"RTK status unavailable","next_action":"install","compatibility":"unknown"}'`
+!`R="/tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}/scripts/resolve-plugin-root.sh"; [ -f "$R" ] || R="${CLAUDE_PLUGIN_ROOT:-}/scripts/resolve-plugin-root.sh"; ROOT=""; if [ -f "$R" ]; then ROOT=$(bash "$R" --nonfatal 2>/dev/null); fi; if [ -n "$ROOT" ] && bash "$ROOT/scripts/rtk-manager.sh" status --json 2>/dev/null; then exit 0; fi; echo '{"status_unavailable":true,"summary":"RTK status unavailable","next_action":"install","compatibility":"unknown"}'`
 ```
 
 AskUserQuestion reference: @${CLAUDE_PLUGIN_ROOT}/references/ask-user-question.md
@@ -28,7 +28,7 @@ AskUserQuestion reference: @${CLAUDE_PLUGIN_ROOT}/references/ask-user-question.m
 - Store the Plugin root output above as `{plugin-root}`.
 - Do not run RTK install, update, hook activation, or uninstall unless the user explicitly invoked the matching RTK subcommand or confirmed the no-args menu.
 - `/vbw:rtk install` and no-args install/repair selections are explicit consent for complete setup: binary install, RTK config bootstrap, Claude Code hook activation, and hook verification/fallback.
-- `/vbw:rtk init` is explicit consent for setup/repair of Claude Code RTK integration for an RTK binary already on PATH; it does not install or update the binary, but may validate the RTK CLI and bootstrap RTK config when missing.
+- `/vbw:rtk init` is explicit consent for setup/repair of Claude Code RTK integration for an RTK binary already on PATH. It does not install or update the binary, but may validate the RTK CLI and bootstrap RTK config when missing.
 - Keep separate confirmation for destructive or ambiguous manage flows such as update and uninstall.
 - Default `status` is read-only and offline. Only `status --check-updates`, `install`, or `update` may query GitHub release metadata.
 - Managed setup must not use `sudo`, edit shell profiles, or pipe downloaded scripts into `sh`.
@@ -43,7 +43,7 @@ If no subcommand is provided, use the RTK state JSON to present one bounded AskU
 
 - header: `RTK setup`
 - question: `What do you want to do?`
-- options: choose 2–4 relevant visible options only:
+- options: choose 2-4 relevant visible options only:
   - `Install or repair RTK setup` first when `status_unavailable=true`
   - `Install RTK and enable Claude hook` first when `rtk_present=false`
   - `Verify RTK/VBW coexistence` second when `status_unavailable=true` or `rtk_present=false`
@@ -85,13 +85,13 @@ For `/vbw:rtk install` or a no-args install/repair selection, first run the dry-
 bash "{plugin-root}/scripts/rtk-manager.sh" install --dry-run
 ```
 
-The install preflight must show compact lines for `Method`, `Will run`, `Writes`, `Fallback`, `Restart`, `Risk`, and `Next step`. State once that the explicit subcommand or selected install/repair option is consent for binary install plus hook setup. Then run exactly one mutating helper command; do not ask a second install question:
+The install preflight must show compact lines for `Method`, `Will run`, `Writes`, `Fallback`, `Restart`, `Risk`, and `Next step`. State once that the explicit subcommand or selected install/repair option is consent for binary install plus hook setup. Then run exactly one mutating helper command and do not ask a second install question:
 
 ```bash
 bash "{plugin-root}/scripts/rtk-manager.sh" install --yes
 ```
 
-If the helper prints a PATH note, show it as optional guidance for future manual `rtk` shell usage. Do not treat off-`PATH` as a setup blocker; the helper must complete setup with the selected binary path or fail clearly.
+If the helper prints a PATH note, show it as optional guidance for future manual `rtk` shell usage. Do not treat off-`PATH` as a setup blocker. The helper must complete setup with the selected binary path or fail clearly.
 
 For `/vbw:rtk update`, first run the dry-run preflight and show it verbatim:
 
@@ -129,7 +129,7 @@ First inspect deterministic helper state:
 bash "{plugin-root}/scripts/rtk-manager.sh" verify --json
 ```
 
-If `compatibility="verified"` and `proof_source` is concrete, run the human-readable verifier and report the runtime proof. Keep any `diagnostic_caveat` or `upstream_issue` as diagnostic detail only; a valid proof quiets normal warning noise for this local setup.
+If `compatibility="verified"` and `proof_source` is concrete, run the human-readable verifier and report the runtime proof. Keep any `diagnostic_caveat` or `upstream_issue` as diagnostic detail only. A valid proof quiets normal warning noise for this local setup.
 
 ```bash
 bash "{plugin-root}/scripts/rtk-manager.sh" verify

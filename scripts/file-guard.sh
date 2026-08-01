@@ -1,6 +1,5 @@
 #!/bin/bash
 set -u
-
 INPUT=$(cat 2>/dev/null) || exit 0
 [ -z "$INPUT" ] && exit 0
 
@@ -9,12 +8,10 @@ FILE_PATH=$(echo "$INPUT" | jq -r '.tool_input.file_path // ""' 2>/dev/null) || 
 
 _FG_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 if [ -f "$_FG_SCRIPT_DIR/lib/active-agent-state.sh" ]; then
-  # shellcheck source=lib/active-agent-state.sh
   . "$_FG_SCRIPT_DIR/lib/active-agent-state.sh"
 fi
 _FG_SHARED_ROOT_RESOLVED=false
 if [ -f "$_FG_SCRIPT_DIR/lib/vbw-config-root.sh" ]; then
-  # shellcheck source=lib/vbw-config-root.sh
   if source "$_FG_SCRIPT_DIR/lib/vbw-config-root.sh" 2>/dev/null; then
     if find_vbw_root "$_FG_SCRIPT_DIR" >/dev/null 2>&1; then
       _FG_SHARED_ROOT_RESOLVED=true
@@ -45,7 +42,7 @@ to_abs_path() {
     return 0
   }
   case "$p" in
-    /*) base="$p" ;;
+    "/"*) base="$p" ;;
     *)
       cwd_base=$(pwd -P 2>/dev/null || pwd)
       base="$cwd_base/${p#./}"
@@ -90,40 +87,36 @@ if [ -n "$_FG_PAYLOAD_AGENT_TYPE" ] || [ -n "$_FG_PAYLOAD_AGENT_ID" ]; then
   _FG_PAYLOAD_HAS_AGENT=true
 fi
 _FG_CALLER_IS_DELEGATED="$_FG_PAYLOAD_HAS_AGENT"
-# Advisory only: env hints and the undocumented child flag are caller-controlled, so this is not a security boundary.
+
+# Caller hints are advisory because they are not a security boundary.
 if [ "${CLAUDE_CODE_CHILD_SESSION:-}" = "1" ]; then
   _FG_CALLER_IS_DELEGATED=true
 fi
 
-# Keep env role precedence over payload role because VBW spawns rely on exported role hints, then classify child callers before orchestrators.
+# Environment roles take precedence because VBW exports them for spawned agents.
 detect_agent_role() {
   local candidate role planning_dir
-
   for candidate in "${VBW_AGENT_ROLE:-}" "${VBW_ACTIVE_AGENT:-}"; do
     [ -z "$candidate" ] && continue
-    if role=$(normalize_agent_role "$candidate"); then
-      printf '%s' "$role"
-      return 0
-    fi
+    role=$(normalize_agent_role "$candidate") || continue
+    printf '%s' "$role"
+    return 0
   done
-
   for candidate in "$_FG_PAYLOAD_AGENT_TYPE" "$_FG_PAYLOAD_AGENT_ID"; do
     [ -z "$candidate" ] && continue
-    if role=$(normalize_agent_role "$candidate"); then
-      printf '%s' "$role"
-      return 0
-    fi
+    role=$(normalize_agent_role "$candidate") || continue
+    printf '%s' "$role"
+    return 0
   done
-
   [ "$_FG_PAYLOAD_HAS_AGENT" = true ] || return 1
-  if [ -n "$PROJECT_ROOT" ]; then
-    planning_dir="$PROJECT_ROOT/.vbw-planning"
-    if command -v vbw_active_agent_current_scout >/dev/null 2>&1 && vbw_active_agent_current_scout "$planning_dir" "$INPUT"; then
-      printf 'scout'
-      return 0
-    fi
-  fi
-
+  [ -n "$PROJECT_ROOT" ] || return 1
+  planning_dir="$PROJECT_ROOT/.vbw-planning"
+  command -v vbw_active_agent_current_scout >/dev/null 2>&1 \
+    && vbw_active_agent_current_scout "$planning_dir" "$INPUT" \
+    && { printf 'scout'; return 0; }
+  command -v vbw_active_agent_current_qa >/dev/null 2>&1 \
+    && vbw_active_agent_current_qa "$planning_dir" "$INPUT" \
+    && { printf 'qa'; return 0; }
   return 1
 }
 
@@ -159,10 +152,10 @@ if [ -n "${VBW_CLAUDE_SIDECHAIN_ROOT:-}" ] && [ -n "${VBW_CLAUDE_SIDECHAIN_HOST_
   _FG_BLOCKED_TARGET="$FILE_PATH"
 
   case "$FILE_PATH" in
-    /*)
+    "/"*)
       _FG_TARGET_ABS=$(to_abs_path "$FILE_PATH")
       case "$_FG_TARGET_ABS" in
-        "$VBW_CLAUDE_SIDECHAIN_ROOT"|"$VBW_CLAUDE_SIDECHAIN_ROOT"/*)
+        "$VBW_CLAUDE_SIDECHAIN_ROOT"|"$VBW_CLAUDE_SIDECHAIN_ROOT""/"*)
           _FG_SIDECHAIN_BLOCK=true
           _FG_BLOCKED_TARGET="$_FG_TARGET_ABS"
           ;;
@@ -189,7 +182,7 @@ if [ "$ACTIVE_AGENT_ROLE" = "scout" ] && [ -n "$PROJECT_ROOT" ]; then
   _FG_TARGET_ABS=$(to_abs_path "$FILE_PATH")
   _FG_PLANNING_ABS=$(to_abs_path "$PROJECT_ROOT/.vbw-planning")
   case "$_FG_TARGET_ABS" in
-    "$_FG_PLANNING_ABS"|"$_FG_PLANNING_ABS"/*)
+    "$_FG_PLANNING_ABS"|"$_FG_PLANNING_ABS""/"*)
       :
       ;;
     *)
@@ -200,7 +193,7 @@ if [ "$ACTIVE_AGENT_ROLE" = "scout" ] && [ -n "$PROJECT_ROOT" ]; then
 fi
 
 case "$FILE_PATH" in
-  *.vbw-planning/milestones/*/phases/*)
+  *.vbw-planning/milestones/*/phases"/"*)
     # Other milestone root files must fall through because archival writes SHIPPED.md and moves STATE.md and ROADMAP.md.
     echo "Blocked: writes to archived milestone phases are not allowed ($FILE_PATH)" >&2
     exit 2
@@ -210,7 +203,15 @@ case "$FILE_PATH" in
     exit 0
     ;;
   *.vbw-planning/*-SUMMARY.md)
-    _FG_SUM_STATUS=$(echo "$INPUT" | jq -r '.tool_input.content // ""' 2>/dev/null | sed -n '/^---$/,/^---$/{ /^status:/{ s/^status:[[:space:]]*//; s/["'"'"']//g; p; }; }' | head -1 | tr -d '[:space:]')
+    _FG_SUM_STATUS=$(echo "$INPUT" | jq -r '.tool_input.content // ""' 2>/dev/null | sed -n '
+      /^---$/,/^---$/ {
+        /^status:/ {
+          s/^status:[[:space:]]*//
+          s/["'"'"']//g
+          p
+        }
+      }
+    ' | head -1 | tr -d '[:space:]')
     if [ -n "$_FG_SUM_STATUS" ]; then
       case "$_FG_SUM_STATUS" in
         complete|completed|partial|failed) ;;
@@ -233,9 +234,9 @@ esac
 
 _FG_STATUS_LIB="${_FG_SCRIPT_DIR}/summary-utils.sh"
 if [ -f "$_FG_STATUS_LIB" ]; then
-  # shellcheck source=summary-utils.sh
-  source "$_FG_STATUS_LIB"
-  is_plan_finalized() { is_summary_terminal "$1"; }
+  is_plan_finalized() {
+    bash -c '. "$1"; is_summary_terminal "$2"' _ "$_FG_STATUS_LIB" "$1"
+  }
 else
   is_plan_finalized() { return 1; }
 fi
@@ -245,10 +246,10 @@ normalize_path() {
   local absolute_path absolute_root
   if [ -n "$PROJECT_ROOT" ]; then
     case "$input_path" in
-      "$PROJECT_ROOT"/*)
+      "$PROJECT_ROOT""/"*)
         input_path="${input_path#"$PROJECT_ROOT"/}"
         ;;
-      /*)
+      "/"*)
         absolute_path=$(to_abs_path "$input_path")
         absolute_root=$(to_abs_path "$PROJECT_ROOT")
         if [ "$absolute_path" = "$absolute_root" ]; then
@@ -340,11 +341,25 @@ if [ -d "$CONTRACT_DIR" ]; then
   done
 fi
 
+if [ "$ACTIVE_AGENT_ROLE" = "qa" ] && [ -n "$PROJECT_ROOT" ]; then
+  _FG_TARGET_ABS=$(to_abs_path "$FILE_PATH")
+  _FG_PLANNING_ABS=$(to_abs_path "$PROJECT_ROOT/.vbw-planning")
+  case "$_FG_TARGET_ABS" in
+    "$_FG_PLANNING_ABS"|"$_FG_PLANNING_ABS""/"*)
+      :
+      ;;
+    *)
+      echo "Blocked: role 'qa' cannot write outside .vbw-planning/" >&2
+      exit 2
+      ;;
+  esac
+fi
+
 _DG_PROJECT_ABS=$(to_abs_path "$PROJECT_ROOT")
 _DG_TARGET_ABS=$(to_abs_path "$FILE_PATH")
 _DG_TARGET_IN_PROJECT=false
 case "$_DG_TARGET_ABS" in
-  "$_DG_PROJECT_ABS"|"$_DG_PROJECT_ABS"/*) _DG_TARGET_IN_PROJECT=true ;;
+  "$_DG_PROJECT_ABS"|"$_DG_PROJECT_ABS""/"*) _DG_TARGET_IN_PROJECT=true ;;
 esac
 
 if [ "$_DG_TARGET_IN_PROJECT" = true ] && [ -z "${VBW_AGENT_ROLE:-}" ] && [ -z "${VBW_ACTIVE_AGENT:-}" ] && [ "$_FG_CALLER_IS_DELEGATED" = false ]; then
@@ -434,6 +449,36 @@ if [ -n "$AGENT_ROLE" ]; then
       ;;
   esac
 fi
+
+execution_is_live() {
+  local exec_state="$PROJECT_ROOT/.vbw-planning/.execution-state.json"
+  local exec_status now mtime age marker_status marker_live
+  if [ -f "$exec_state" ]; then
+    exec_status=$(jq -r '.status // ""' "$exec_state" 2>/dev/null) || exec_status=""
+    if [ "$exec_status" = "running" ]; then
+      now=$(date +%s 2>/dev/null || echo 0)
+      if [ "$(uname)" = "Darwin" ]; then
+        mtime=$(stat -f %m "$exec_state" 2>/dev/null || echo 0)
+      else
+        mtime=$(stat -c %Y "$exec_state" 2>/dev/null || echo 0)
+      fi
+      age=$((now - mtime))
+      if [ "$age" -ge 0 ] && [ "$age" -lt 14400 ]; then
+        return 0
+      fi
+    fi
+  fi
+  if [ -f "$PROJECT_ROOT/.vbw-planning/.delegated-workflow.json" ]; then
+    marker_status=$(VBW_PLANNING_DIR="$PROJECT_ROOT/.vbw-planning" bash "${_FG_SCRIPT_DIR}/delegated-workflow.sh" status-json 2>/dev/null) || marker_status=""
+    if [ -n "$marker_status" ]; then
+      marker_live=$(echo "$marker_status" | jq -r '.live // false' 2>/dev/null) || marker_live="false"
+      [ "$marker_live" = "true" ] && return 0
+    fi
+  fi
+  return 1
+}
+
+execution_is_live || exit 0
 
 ACTIVE_PLAN=""
 for PLAN_FILE in "$PHASES_DIR"/*/*-PLAN.md; do

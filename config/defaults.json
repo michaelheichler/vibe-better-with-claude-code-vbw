@@ -20,6 +20,11 @@
   "custom_profiles": {},
   "model_profile": "quality",
   "model_overrides": {},
+  "model_matrix": {},
+  "model_catalog": [],
+  "model_catalog_extra": [],
+  "reasoning_matrix": {},
+  "reasoning_overrides": {},
   "agent_max_turns": {
     "scout": 15,
     "qa": 25,
@@ -28,7 +33,9 @@
     "lead": 50,
     "dev": 75
   },
-  "qa_skip_agents": ["docs"],
+  "qa_skip_agents": [
+    "docs"
+  ],
   "worktree_isolation": "off",
   "token_budgets": true,
   "two_phase_completion": true,

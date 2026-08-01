@@ -3,7 +3,7 @@ name: vbw:vibe
 category: lifecycle
 description: "The one command. Detects state, parses intent, routes to any lifecycle mode -- bootstrap, scope, plan, execute, verify, discuss, archive, and more."
 argument-hint: "[intent or flags] [--plan] [--execute] [--verify] [--discuss] [--assumptions] [--scope] [--add] [--insert] [--remove] [--archive] [--yolo] [--effort=level] [--skip-qa] [--skip-audit] [--plan=NN] [N]"
-allowed-tools: Read, Write, Edit, Bash, Glob, Grep, WebFetch, WebSearch, AskUserQuestion, Agent, TeamCreate, TaskCreate, SendMessage, TeamDelete, Skill, LSP, TodoWrite
+allowed-tools: Read, Write, Edit, Bash, Glob, Grep, WebFetch, WebSearch, AskUserQuestion, Agent, TaskCreate, SendMessage, Skill, LSP, TodoWrite
 disable-model-invocation: true
 ---
 
@@ -21,7 +21,7 @@ Working directory:
 ```
 Plugin root:
 ```
-!`VBW_CACHE_ROOT="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/plugins/cache/vbw-marketplace/vbw"; SESSION_KEY="${CLAUDE_SESSION_ID:-default}"; SESSION_LINK="/tmp/.vbw-plugin-root-link-${SESSION_KEY}"; R=""; if [ -n "${CLAUDE_PLUGIN_ROOT:-}" ] && [ -f "${CLAUDE_PLUGIN_ROOT}/scripts/hook-wrapper.sh" ]; then R="${CLAUDE_PLUGIN_ROOT}"; fi; if [ -z "$R" ] && [ -f "${VBW_CACHE_ROOT}/local/scripts/hook-wrapper.sh" ]; then R="${VBW_CACHE_ROOT}/local"; fi; if [ -z "$R" ]; then V=$(find "${VBW_CACHE_ROOT}" -maxdepth 1 -mindepth 1 2>/dev/null | awk -F/ '{print $NF}' | grep -E '^[0-9]+(\.[0-9]+)*$' | sort -t. -k1,1n -k2,2n -k3,3n | tail -1); [ -n "$V" ] && [ -f "${VBW_CACHE_ROOT}/${V}/scripts/hook-wrapper.sh" ] && R="${VBW_CACHE_ROOT}/${V}"; fi; if [ -z "$R" ]; then L=$(find "${VBW_CACHE_ROOT}" -maxdepth 1 -mindepth 1 2>/dev/null | awk -F/ '{print $NF}' | sort | tail -1); [ -n "$L" ] && [ -f "${VBW_CACHE_ROOT}/${L}/scripts/hook-wrapper.sh" ] && R="${VBW_CACHE_ROOT}/${L}"; fi; if [ -z "$R" ] && [ -f "${SESSION_LINK}/scripts/hook-wrapper.sh" ]; then R="${SESSION_LINK}"; fi; if [ -z "$R" ]; then ANY_LINK=$(command find -H /tmp -maxdepth 1 -name '.vbw-plugin-root-link-*' -print 2>/dev/null | LC_ALL=C sort | while IFS= read -r link; do if [ -f "$link/scripts/hook-wrapper.sh" ]; then printf '%s\n' "$link"; break; fi; done || true); [ -n "$ANY_LINK" ] && R="$ANY_LINK"; fi; if [ -z "$R" ]; then D=$(ps axww -o args= 2>/dev/null | grep -v grep | grep -oE -- "--plugin-dir [^ ]+" | head -1); D="${D#--plugin-dir }"; [ -n "$D" ] && [ -f "$D/scripts/hook-wrapper.sh" ] && R="$D"; fi; if [ -z "$R" ] || [ ! -d "$R" ]; then echo "VBW: plugin root resolution failed" >&2; exit 1; fi; LINK="${SESSION_LINK}"; P="/tmp/.vbw-phase-detect-${SESSION_KEY}.txt"; PTMP="${P}.tmp.$$"; LOCK="/tmp/.vbw-phase-detect-live-${SESSION_KEY}.lock"; REAL_R=$(cd "$R" 2>/dev/null && pwd -P) || { echo "VBW: plugin root canonicalization failed" >&2; exit 1; }; bash "$REAL_R/scripts/ensure-plugin-root-link.sh" "$LINK" "$REAL_R" >/dev/null 2>&1 || { echo "VBW: plugin root link failed" >&2; exit 1; }; LOCKED=false; i=0; while [ $i -lt 100 ]; do if mkdir "$LOCK" 2>/dev/null; then LOCKED=true; break; fi; sleep 0.1; i=$((i+1)); done; if [ "$LOCKED" = true ]; then bash "$LINK/scripts/phase-detect.sh" > "$PTMP" 2>/dev/null || printf '%s\n' 'phase_detect_error=true' > "$PTMP"; mv "$PTMP" "$P"; rmdir "$LOCK" 2>/dev/null || true; else j=0; while [ $j -lt 100 ]; do [ -f "$P" ] && break; sleep 0.1; j=$((j+1)); done; [ -f "$P" ] || { printf '%s\n' 'phase_detect_error=true' > "$PTMP"; mv "$PTMP" "$P"; }; fi; echo "$LINK"`
+!`SESSION_KEY="${CLAUDE_SESSION_ID:-default}"; L="/tmp/.vbw-plugin-root-link-${SESSION_KEY}"; R="$L/scripts/resolve-plugin-root.sh"; [ -f "$R" ] || R="${CLAUDE_PLUGIN_ROOT:-}/scripts/resolve-plugin-root.sh"; [ -f "$R" ] || { echo "VBW: plugin root unavailable. Restart this session to recreate $L." >&2; exit 1; }; bash "$R" >/dev/null || exit 1; LINK="$L"; P="/tmp/.vbw-phase-detect-${SESSION_KEY}.txt"; PTMP="${P}.tmp.$$"; LOCK="/tmp/.vbw-phase-detect-live-${SESSION_KEY}.lock"; LOCKED=false; i=0; while [ $i -lt 100 ]; do if mkdir "$LOCK" 2>/dev/null; then LOCKED=true; break; fi; sleep 0.1; i=$((i+1)); done; if [ "$LOCKED" = true ]; then bash "$LINK/scripts/phase-detect.sh" > "$PTMP" 2>/dev/null || printf '%s\n' 'phase_detect_error=true' > "$PTMP"; mv "$PTMP" "$P"; rmdir "$LOCK" 2>/dev/null || true; else j=0; while [ $j -lt 100 ]; do [ -f "$P" ] && break; sleep 0.1; j=$((j+1)); done; [ -f "$P" ] || { printf '%s\n' 'phase_detect_error=true' > "$PTMP"; mv "$PTMP" "$P"; }; fi; echo "$LINK"`
 ```
 
 Pre-computed state (via phase-detect.sh):
@@ -42,40 +42,16 @@ _phase_detect_cache_retryable() {
   [ -z "$(printf '%s' "$PD" | tr -d '[:space:]')" ] || [ "$PD" = "phase_detect_error=true" ]
 }
 _refresh_phase_detect_link() {
-  local VBW_CACHE_ROOT R V D ANY_LINK REAL_R SESSION_LINK
-  VBW_CACHE_ROOT="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/plugins/cache/vbw-marketplace/vbw"
-  R=""
-  if [ -n "${CLAUDE_PLUGIN_ROOT:-}" ] && [ -f "${CLAUDE_PLUGIN_ROOT}/scripts/hook-wrapper.sh" ]; then R="${CLAUDE_PLUGIN_ROOT}"; fi
-  if [ -z "$R" ] && [ -f "${VBW_CACHE_ROOT}/local/scripts/hook-wrapper.sh" ]; then R="${VBW_CACHE_ROOT}/local"; fi
-  if [ -z "$R" ]; then
-    V=$(find "${VBW_CACHE_ROOT}" -maxdepth 1 -mindepth 1 2>/dev/null | awk -F/ '{print $NF}' | grep -E '^[0-9]+(\.[0-9]+)*$' | sort -t. -k1,1n -k2,2n -k3,3n | tail -1)
-    [ -n "$V" ] && [ -f "${VBW_CACHE_ROOT}/${V}/scripts/hook-wrapper.sh" ] && R="${VBW_CACHE_ROOT}/${V}"
+  local resolver
+  resolver="$L/scripts/resolve-plugin-root.sh"
+  if [ ! -f "$resolver" ]; then
+    if [ -n "${CLAUDE_PLUGIN_ROOT:-}" ] && [ -f "${CLAUDE_PLUGIN_ROOT}/scripts/resolve-plugin-root.sh" ]; then
+      resolver="${CLAUDE_PLUGIN_ROOT}/scripts/resolve-plugin-root.sh"
+    else
+      return 1
+    fi
   fi
-  if [ -z "$R" ]; then
-    V=$(find "${VBW_CACHE_ROOT}" -maxdepth 1 -mindepth 1 2>/dev/null | awk -F/ '{print $NF}' | sort | tail -1)
-    [ -n "$V" ] && [ -f "${VBW_CACHE_ROOT}/${V}/scripts/hook-wrapper.sh" ] && R="${VBW_CACHE_ROOT}/${V}"
-  fi
-  SESSION_LINK="/tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}"
-  if [ -z "$R" ] && [ -f "$SESSION_LINK/scripts/hook-wrapper.sh" ]; then
-    R="$SESSION_LINK"
-  fi
-  if [ -z "$R" ]; then
-    ANY_LINK=$(command find -H /tmp -maxdepth 1 -name '.vbw-plugin-root-link-*' -print 2>/dev/null | LC_ALL=C sort | while IFS= read -r link; do
-      if [ -f "$link/scripts/hook-wrapper.sh" ]; then
-        printf '%s\n' "$link"
-        break
-      fi
-    done || true)
-    [ -n "$ANY_LINK" ] && R="$ANY_LINK"
-  fi
-  if [ -z "$R" ]; then
-    D=$(ps axww -o args= 2>/dev/null | grep -v grep | grep -oE -- "--plugin-dir [^ ]+" | head -1)
-    D="${D#--plugin-dir }"
-    [ -n "$D" ] && [ -f "$D/scripts/hook-wrapper.sh" ] && R="$D"
-  fi
-  [ -n "$R" ] && [ -d "$R" ] && [ -f "$R/scripts/phase-detect.sh" ] || return 1
-  REAL_R=$(cd "$R" 2>/dev/null && pwd -P) || return 1
-  bash "$REAL_R/scripts/ensure-plugin-root-link.sh" "$L" "$REAL_R" >/dev/null 2>&1 || return 1
+  bash "$resolver" --require-script phase-detect.sh >/dev/null 2>&1 || return 1
   [ -L "$L" ] && [ -f "$L/scripts/phase-detect.sh" ]
 }
 i=0
@@ -124,242 +100,6 @@ fi`
 Config:
 ```
 !`cat .vbw-planning/config.json 2>/dev/null || echo "No config found"`
-```
-
-Milestone UAT issues (milestone recovery only):
-```
-!`SESSION_KEY="${CLAUDE_SESSION_ID:-default}"
-L="/tmp/.vbw-plugin-root-link-${SESSION_KEY}"
-P="/tmp/.vbw-phase-detect-${SESSION_KEY}.txt"
-PD=""
-_PD_START_TS=$(date +%s 2>/dev/null || echo 0)
-_phase_detect_cache_fresh() {
-  local m=""
-  [ -f "$P" ] || return 1
-  m=$(stat -c %Y "$P" 2>/dev/null || stat -f %m "$P" 2>/dev/null || echo "")
-  [ -n "$m" ] || return 1
-  [ "$m" -ge "$_PD_START_TS" ] 2>/dev/null
-}
-_phase_detect_cache_retryable() {
-  [ -z "$(printf '%s' "$PD" | tr -d '[:space:]')" ] || [ "$PD" = "phase_detect_error=true" ]
-}
-_refresh_phase_detect_link() {
-  local VBW_CACHE_ROOT R V D ANY_LINK REAL_R SESSION_LINK
-  VBW_CACHE_ROOT="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/plugins/cache/vbw-marketplace/vbw"
-  R=""
-  if [ -n "${CLAUDE_PLUGIN_ROOT:-}" ] && [ -f "${CLAUDE_PLUGIN_ROOT}/scripts/hook-wrapper.sh" ]; then R="${CLAUDE_PLUGIN_ROOT}"; fi
-  if [ -z "$R" ] && [ -f "${VBW_CACHE_ROOT}/local/scripts/hook-wrapper.sh" ]; then R="${VBW_CACHE_ROOT}/local"; fi
-  if [ -z "$R" ]; then
-    V=$(find "${VBW_CACHE_ROOT}" -maxdepth 1 -mindepth 1 2>/dev/null | awk -F/ '{print $NF}' | grep -E '^[0-9]+(\.[0-9]+)*$' | sort -t. -k1,1n -k2,2n -k3,3n | tail -1)
-    [ -n "$V" ] && [ -f "${VBW_CACHE_ROOT}/${V}/scripts/hook-wrapper.sh" ] && R="${VBW_CACHE_ROOT}/${V}"
-  fi
-  if [ -z "$R" ]; then
-    V=$(find "${VBW_CACHE_ROOT}" -maxdepth 1 -mindepth 1 2>/dev/null | awk -F/ '{print $NF}' | sort | tail -1)
-    [ -n "$V" ] && [ -f "${VBW_CACHE_ROOT}/${V}/scripts/hook-wrapper.sh" ] && R="${VBW_CACHE_ROOT}/${V}"
-  fi
-  SESSION_LINK="/tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}"
-  if [ -z "$R" ] && [ -f "$SESSION_LINK/scripts/hook-wrapper.sh" ]; then
-    R="$SESSION_LINK"
-  fi
-  if [ -z "$R" ]; then
-    ANY_LINK=$(command find -H /tmp -maxdepth 1 -name '.vbw-plugin-root-link-*' -print 2>/dev/null | LC_ALL=C sort | while IFS= read -r link; do
-      if [ -f "$link/scripts/hook-wrapper.sh" ]; then
-        printf '%s\n' "$link"
-        break
-      fi
-    done || true)
-    [ -n "$ANY_LINK" ] && R="$ANY_LINK"
-  fi
-  if [ -z "$R" ]; then
-    D=$(ps axww -o args= 2>/dev/null | grep -v grep | grep -oE -- "--plugin-dir [^ ]+" | head -1)
-    D="${D#--plugin-dir }"
-    [ -n "$D" ] && [ -f "$D/scripts/hook-wrapper.sh" ] && R="$D"
-  fi
-  [ -n "$R" ] && [ -d "$R" ] && [ -f "$R/scripts/phase-detect.sh" ] || return 1
-  REAL_R=$(cd "$R" 2>/dev/null && pwd -P) || return 1
-  bash "$REAL_R/scripts/ensure-plugin-root-link.sh" "$L" "$REAL_R" >/dev/null 2>&1 || return 1
-  [ -L "$L" ] && [ -f "$L/scripts/phase-detect.sh" ]
-}
-i=0
-while [ $i -lt 100 ]; do
-  if _phase_detect_cache_fresh; then
-    PD=$(cat "$P")
-    break
-  fi
-  sleep 0.1
-  i=$((i+1))
-done
-if _phase_detect_cache_retryable; then
-  _refresh_phase_detect_link || true
-fi
-if _phase_detect_cache_retryable && [ -L "$L" ] && [ -f "$L/scripts/phase-detect.sh" ]; then
-  LOCK="/tmp/.vbw-phase-detect-live-${SESSION_KEY}.lock"
-  i=0
-  while [ $i -lt 100 ]; do
-    if _phase_detect_cache_fresh; then
-      PD=$(cat "$P")
-      if ! _phase_detect_cache_retryable; then
-        break
-      fi
-    fi
-    if mkdir "$LOCK" 2>/dev/null; then
-      PTMP="${P}.reader.$$.$RANDOM"
-      PD=$(bash "$L/scripts/phase-detect.sh" 2>/dev/null) || PD=""
-      if [ -n "$(printf '%s' "$PD" | tr -d '[:space:]')" ] && [ "$PD" != "phase_detect_error=true" ]; then
-        printf '%s\n' "$PD" > "$PTMP" 2>/dev/null && mv "$PTMP" "$P" 2>/dev/null || true
-      fi
-      rmdir "$LOCK" 2>/dev/null || true
-      break
-    fi
-    sleep 0.1
-    i=$((i+1))
-  done
-fi
-[ -z "$(printf '%s' "$PD" | tr -d '[:space:]')" ] && _phase_detect_cache_fresh && PD=$(cat "$P")
-if [ -z "$(printf '%s' "$PD" | tr -d '[:space:]')" ] || [ "$PD" = "phase_detect_error=true" ]; then
-  echo "milestone_extract_unavailable=true"
-  exit 0
-fi
-if printf '%s' "$PD" | grep -q '^---MILESTONE_UAT_EXTRACT_START---$'; then
-  printf '%s\n' "$PD" | awk '/^---MILESTONE_UAT_EXTRACT_START---$/{f=1; next} /^---MILESTONE_UAT_EXTRACT_END---$/{exit} f{print}'
-else
-  MS_UAT=$(printf '%s' "$PD" | grep '^milestone_uat_issues=' | head -1 | cut -d= -f2)
-  if [ "$MS_UAT" = "true" ]; then
-    echo "milestone_extract_unavailable=true"
-  else
-    echo "not_milestone_recovery"
-  fi
-fi`
-```
-
-Verify context (verify routing only — needs_reverification OR needs_verification):
-```
-!`SESSION_KEY="${CLAUDE_SESSION_ID:-default}"
-L="/tmp/.vbw-plugin-root-link-${SESSION_KEY}"
-P="/tmp/.vbw-phase-detect-${SESSION_KEY}.txt"
-PD=""
-_PD_START_TS=$(date +%s 2>/dev/null || echo 0)
-_phase_detect_cache_fresh() {
-  local m=""
-  [ -f "$P" ] || return 1
-  m=$(stat -c %Y "$P" 2>/dev/null || stat -f %m "$P" 2>/dev/null || echo "")
-  [ -n "$m" ] || return 1
-  [ "$m" -ge "$_PD_START_TS" ] 2>/dev/null
-}
-_phase_detect_cache_retryable() {
-  [ -z "$(printf '%s' "$PD" | tr -d '[:space:]')" ] || [ "$PD" = "phase_detect_error=true" ]
-}
-_refresh_phase_detect_link() {
-  local VBW_CACHE_ROOT R V D ANY_LINK REAL_R SESSION_LINK
-  VBW_CACHE_ROOT="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/plugins/cache/vbw-marketplace/vbw"
-  R=""
-  if [ -n "${CLAUDE_PLUGIN_ROOT:-}" ] && [ -f "${CLAUDE_PLUGIN_ROOT}/scripts/hook-wrapper.sh" ]; then R="${CLAUDE_PLUGIN_ROOT}"; fi
-  if [ -z "$R" ] && [ -f "${VBW_CACHE_ROOT}/local/scripts/hook-wrapper.sh" ]; then R="${VBW_CACHE_ROOT}/local"; fi
-  if [ -z "$R" ]; then
-    V=$(find "${VBW_CACHE_ROOT}" -maxdepth 1 -mindepth 1 2>/dev/null | awk -F/ '{print $NF}' | grep -E '^[0-9]+(\.[0-9]+)*$' | sort -t. -k1,1n -k2,2n -k3,3n | tail -1)
-    [ -n "$V" ] && [ -f "${VBW_CACHE_ROOT}/${V}/scripts/hook-wrapper.sh" ] && R="${VBW_CACHE_ROOT}/${V}"
-  fi
-  if [ -z "$R" ]; then
-    V=$(find "${VBW_CACHE_ROOT}" -maxdepth 1 -mindepth 1 2>/dev/null | awk -F/ '{print $NF}' | sort | tail -1)
-    [ -n "$V" ] && [ -f "${VBW_CACHE_ROOT}/${V}/scripts/hook-wrapper.sh" ] && R="${VBW_CACHE_ROOT}/${V}"
-  fi
-  SESSION_LINK="/tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}"
-  if [ -z "$R" ] && [ -f "$SESSION_LINK/scripts/hook-wrapper.sh" ]; then
-    R="$SESSION_LINK"
-  fi
-  if [ -z "$R" ]; then
-    ANY_LINK=$(command find -H /tmp -maxdepth 1 -name '.vbw-plugin-root-link-*' -print 2>/dev/null | LC_ALL=C sort | while IFS= read -r link; do
-      if [ -f "$link/scripts/hook-wrapper.sh" ]; then
-        printf '%s\n' "$link"
-        break
-      fi
-    done || true)
-    [ -n "$ANY_LINK" ] && R="$ANY_LINK"
-  fi
-  if [ -z "$R" ]; then
-    D=$(ps axww -o args= 2>/dev/null | grep -v grep | grep -oE -- "--plugin-dir [^ ]+" | head -1)
-    D="${D#--plugin-dir }"
-    [ -n "$D" ] && [ -f "$D/scripts/hook-wrapper.sh" ] && R="$D"
-  fi
-  [ -n "$R" ] && [ -d "$R" ] && [ -f "$R/scripts/phase-detect.sh" ] || return 1
-  REAL_R=$(cd "$R" 2>/dev/null && pwd -P) || return 1
-  bash "$REAL_R/scripts/ensure-plugin-root-link.sh" "$L" "$REAL_R" >/dev/null 2>&1 || return 1
-  [ -L "$L" ] && [ -f "$L/scripts/phase-detect.sh" ]
-}
-i=0
-while [ $i -lt 100 ]; do
-  if _phase_detect_cache_fresh; then
-    PD=$(cat "$P")
-    break
-  fi
-  sleep 0.1
-  i=$((i+1))
-done
-if _phase_detect_cache_retryable; then
-  _refresh_phase_detect_link || true
-fi
-if _phase_detect_cache_retryable && [ -L "$L" ] && [ -f "$L/scripts/phase-detect.sh" ]; then
-  LOCK="/tmp/.vbw-phase-detect-live-${SESSION_KEY}.lock"
-  i=0
-  while [ $i -lt 100 ]; do
-    if _phase_detect_cache_fresh; then
-      PD=$(cat "$P")
-      if ! _phase_detect_cache_retryable; then
-        break
-      fi
-    fi
-    if mkdir "$LOCK" 2>/dev/null; then
-      PTMP="${P}.reader.$$.$RANDOM"
-      PD=$(bash "$L/scripts/phase-detect.sh" 2>/dev/null) || PD=""
-      if [ -n "$(printf '%s' "$PD" | tr -d '[:space:]')" ] && [ "$PD" != "phase_detect_error=true" ]; then
-        printf '%s\n' "$PD" > "$PTMP" 2>/dev/null && mv "$PTMP" "$P" 2>/dev/null || true
-      fi
-      rmdir "$LOCK" 2>/dev/null || true
-      break
-    fi
-    sleep 0.1
-    i=$((i+1))
-  done
-fi
-[ -z "$(printf '%s' "$PD" | tr -d '[:space:]')" ] && _phase_detect_cache_fresh && PD=$(cat "$P")
-if [ -z "$(printf '%s' "$PD" | tr -d '[:space:]')" ] || [ "$PD" = "phase_detect_error=true" ]; then
-  echo "verify_context=unavailable"
-else
-  STATE=$(printf '%s' "$PD" | grep '^next_phase_state=' | head -1 | cut -d= -f2)
-  AUTO_UAT=$(printf '%s' "$PD" | grep '^config_auto_uat=' | head -1 | cut -d= -f2)
-  HAS_UV=$(printf '%s' "$PD" | grep '^has_unverified_phases=' | head -1 | cut -d= -f2)
-  TARGET=""
-  if [ "$STATE" = "needs_reverification" ] || [ "$STATE" = "needs_verification" ]; then
-    TARGET=$(printf '%s' "$PD" | grep '^next_phase_slug=' | head -1 | cut -d= -f2)
-  elif [ "$AUTO_UAT" = "true" ] && [ "$HAS_UV" = "true" ]; then
-    TARGET=$(printf '%s' "$PD" | grep '^first_unverified_slug=' | head -1 | cut -d= -f2)
-  fi
-  if [ -n "$TARGET" ]; then
-    PDIR=".vbw-planning/phases/$TARGET"
-    echo "verify_target_slug=$TARGET"
-    if [ -d "$PDIR" ] && [ -L "$L" ] && [ -f "$L/scripts/compile-verify-context-for-uat.sh" ]; then
-      bash "$L/scripts/compile-verify-context-for-uat.sh" "$PDIR" 2>/dev/null || echo "verify_context_error=true"
-    else
-      echo "verify_context_error=true"
-    fi
-    echo "---"
-    if [ "$STATE" = "needs_reverification" ]; then
-      echo "uat_resume=pending_archive"
-    elif [ "$STATE" = "needs_verification" ]; then
-      if [ -d "$PDIR" ] && [ -L "$L" ] && [ -f "$L/scripts/extract-uat-resume.sh" ]; then
-        bash "$L/scripts/extract-uat-resume.sh" "$PDIR" 2>/dev/null || echo "uat_resume=error"
-      else
-        echo "uat_resume=unavailable"
-      fi
-    elif [ -d "$PDIR" ] && [ -L "$L" ] && [ -f "$L/scripts/extract-uat-resume.sh" ]; then
-      bash "$L/scripts/extract-uat-resume.sh" "$PDIR" 2>/dev/null || echo "uat_resume=error"
-    else
-      echo "uat_resume=error"
-    fi
-  else
-    echo "verify_context=unavailable"
-  fi
-fi`
 ```
 
 !`SESSION_KEY="${CLAUDE_SESSION_ID:-default}"; L="/tmp/.vbw-plugin-root-link-${SESSION_KEY}"; i=0; while [ ! -L "$L" ] && [ $i -lt 20 ]; do sleep 0.1; i=$((i+1)); done; bash "$L/scripts/suggest-compact.sh" execute 2>/dev/null || true`
@@ -465,7 +205,7 @@ Then re-run phase-detect.sh and use updated output for routing below.
 State detects needs_uat_remediation → TaskCreate("Research"), TaskCreate("Plan"), TaskCreate("Execute") with blocking dependencies → stages run as separate delegated tasks, breaking state management and losing orchestrator control between stages
 </example>
 <example type="correct" label="RIGHT — inline orchestration with agent spawning per stage">
-State detects needs_uat_remediation → enters mode inline → step 4 creates TodoWrite progress list (Research, Plan, Execute) → step 6 spawns Scout for research stage via Task tool → advances state → spawns Lead for plan stage → advances → spawns Dev for execute stage → chains into re-verification
+State detects needs_uat_remediation → enters mode inline → step 4 creates TodoWrite progress list (Research, Plan, Execute) → step 6 spawns Scout for research stage via Agent tool → advances state → spawns Lead for plan stage → advances → spawns Dev for execute stage → chains into re-verification
 </example>
 </examples>
 
@@ -585,7 +325,7 @@ When `next_phase_state=needs_qa_remediation`, resume QA remediation at the persi
   `round_dir`, `source_verification_path`, `known_issues_path`, and `verification_path` are authoritative host-repository paths from `qa-remediation-state.sh` metadata. Claude Code may run subagents from `.claude/worktrees/agent-*` sidechain CWDs; pass these exact paths to Lead, Dev, and QA prompts and never rewrite them relative to the current CWD. Rewriting them relative to sidechain CWDs can write or read remediation artifacts from the wrong location and break resume or verification.
   </qa_remediation_artifact_contract>
   <qa_remediation_spawn_contract>
-  QA remediation spawns are plain sequential subagent calls. Do not use TeamCreate. Non-team spawn shape: omit `team_name`, `run_in_background`, `isolation`, and worktree cwd fields (`cwd`, `working_dir`, `workingDirectory`, `workdir`). `name` is optional label-only metadata; never use it for routing, lifecycle state, or team semantics. Use the remediation metadata paths above instead of forcing Claude worktree isolation or spawn cwd handoffs.
+  QA remediation spawns are plain sequential subagent calls. Do not form an agent team (do not spawn teammates); use plain sequential subagent Agent calls. Non-team spawn shape: omit `team_name`, `run_in_background`, `isolation`, and worktree cwd fields (`cwd`, `working_dir`, `workingDirectory`, `workdir`). `name` is optional label-only metadata; never use it for routing, lifecycle state, or team semantics. Use the remediation metadata paths above instead of forcing Claude worktree isolation or spawn cwd handoffs.
   </qa_remediation_spawn_contract>
   <qa_remediation_no_tool_circuit_breaker>
   After any QA remediation Lead, Dev, or QA subagent returns, inspect returned text before artifact validation, deterministic gates, or state advancement. If it says tools, shell/Bash, filesystem, edits, or API-session access are unavailable, treat that as a platform/tool provisioning failure: STOP without advancing `.qa-remediation-stage`, report the failed role and stage/task, and do not retry the same prompt. Repeating a no-tool spawn cannot fix tool provisioning and wastes tokens.
@@ -640,8 +380,9 @@ When `next_phase_state=needs_qa_remediation`, resume QA remediation at the persi
     eval "$AGENT_SETTINGS"
     LEAD_MODEL="$RESOLVED_MODEL"
     LEAD_MAX_TURNS="$RESOLVED_MAX_TURNS"
+    LEAD_REASONING="$RESOLVED_REASONING"
     ```
-  - Spawn Lead as a plain sequential work-unit subagent with `subagent_type: "vbw:vbw-lead"` and `model: "${LEAD_MODEL}"`. If `LEAD_MAX_TURNS` is non-empty, include `maxTurns: ${LEAD_MAX_TURNS}`. If `LEAD_MAX_TURNS` is empty, omit `maxTurns` because the resolved profile is unlimited. Non-team spawn shape: omit `team_name`, `run_in_background`, `isolation`, and worktree cwd fields (`cwd`, `working_dir`, `workingDirectory`, `workdir`). `name` is optional label-only metadata; never use it for routing, lifecycle state, or team semantics.
+  - Spawn Lead as a plain sequential work-unit subagent with `subagent_type: "vbw:vbw-lead"` and `model: "${LEAD_MODEL}"`. If `LEAD_MAX_TURNS` is non-empty, include `maxTurns: ${LEAD_MAX_TURNS}`. If `LEAD_MAX_TURNS` is empty, omit `maxTurns` because the resolved profile is unlimited. Non-team spawn shape: omit `team_name`, `run_in_background`, `isolation`, and worktree cwd fields (`cwd`, `working_dir`, `workingDirectory`, `workdir`). `name` is optional label-only metadata; never use it for routing, lifecycle state, or team semantics. If `LEAD_REASONING` is non-empty, also pass `effort: "${LEAD_REASONING}"`. If `LEAD_REASONING` is empty, do NOT include effort (the resolved model rejects the parameter).
   - Lead prompt MUST include the authoritative `round_dir`, `source_verification_path`, `known_issues_path`, and output path `{round_dir}/R{RR}-PLAN.md`; the failed-check and known-issue inputs above; the deviation-classification and known-issue-resolution requirements above; and `Read the remediation plan template at /tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}/templates/REMEDIATION-PLAN.md and follow its structure exactly.`
   - After Lead returns, apply the QA remediation no-tool circuit breaker before normalization, plan validation, or state advancement. If Lead reports unavailable tools, shell/Bash, filesystem, edits, or API-session access, STOP without advancing `.qa-remediation-stage` and do not retry that same Lead prompt.
   - Normalize plan filenames before validation:
@@ -659,7 +400,7 @@ When `next_phase_state=needs_qa_remediation`, resume QA remediation at the persi
   - After plan validation passes, advance state: `bash {plugin-root}/scripts/qa-remediation-state.sh advance {phase-dir}`
 
 - **stage=execute:** Spawn a Dev subagent per `R{RR}-PLAN.md`:
-  - Before composing the Dev task description, evaluate installed skills visible in your system context — read each skill's description and select all materially helpful installed skills for this task, including adjacent/supporting domain skills surfaced by the prompt, logs, error text, related files, or stack context — not just the single most direct skill. The Dev prompt MUST begin with exactly one explicit skill outcome block: use `<skill_activation>{For each selected skill: "Call Skill({skill-name})"}</skill_activation>` when one or more installed skills are preselected at orchestration time, or `<skill_no_activation>Evaluated installed skills for this task. No skills were preselected at orchestration time. Reason: {brief task-specific reason}.</skill_no_activation>` when none are preselected. Silent omission of both blocks is invalid. After evaluating, state the skill outcome in your response (e.g., "Skills: activating {skill-name}" or "Skills: none preselected — {reason}") so the user has visibility before the agent is spawned. Example: if the prompt or error mentions SwiftData, include `swiftdata` alongside relevant test/build/debug skills. After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting — do not scan entire skill folders or read unrelated references.
+  - Before composing the Dev task description, evaluate installed skills visible in your system context — read each skill's description and select all materially helpful installed skills for this task, including adjacent/supporting domain skills surfaced by the prompt, logs, error text, related files, or stack context — not just the single most direct skill. The Dev prompt MUST begin with exactly one explicit skill outcome block: use `<skill_activation>{For each selected skill: "Call Skill({skill-name})"}</skill_activation>` when one or more installed skills are preselected at orchestration time, or `<skill_no_activation>Evaluated installed skills for this task. No skills were preselected at orchestration time. Reason: {brief task-specific reason}.</skill_no_activation>` when none are preselected. Silent omission of both blocks is invalid. After evaluating, state the skill outcome in your response (e.g., "Skills: activating {skill-name}" or "Skills: none preselected — {reason}") so the user has visibility before the agent is spawned. Example: if the prompt or error mentions SwiftData, include `swiftdata` alongside relevant test/build/debug skills. After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting. Do not scan entire skill folders or read unrelated references.
   - If one or more skills were preselected, run `bash "{plugin-root}/scripts/extract-skill-follow-up-files.sh" "{all preselected skill names from the activation block}" 2>/dev/null || true` before spawning the Dev remediation agent. If the helper prints a `<skill_follow_up_files>` block, paste it immediately after the follow-up-read sentence in the spawned payload. Otherwise omit that block.
   - Use this payload prefix as the FIRST lines of the Dev remediation prompt:
     ```text
@@ -667,7 +408,7 @@ When `next_phase_state=needs_qa_remediation`, resume QA remediation at the persi
     Call Skill('{relevant-skill-1}').
     Call Skill('{relevant-skill-2}').
     </skill_activation>
-    After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting — do not scan entire skill folders or read unrelated references.
+    After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting. Do not scan entire skill folders or read unrelated references.
     <skill_follow_up_files>
     {If one or more skills were preselected, run `bash "{plugin-root}/scripts/extract-skill-follow-up-files.sh" "{all preselected skill names from the activation block}" 2>/dev/null || true` before spawning and replace this block with the emitted absolute follow-up file paths. Omit this block when the helper prints nothing.}
     </skill_follow_up_files>
@@ -677,7 +418,7 @@ When `next_phase_state=needs_qa_remediation`, resume QA remediation at the persi
     <skill_no_activation>
     Evaluated installed skills for this task. No skills were preselected at orchestration time. Reason: {brief task-specific reason}.
     </skill_no_activation>
-    After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting — do not scan entire skill folders or read unrelated references.
+    After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting. Do not scan entire skill folders or read unrelated references.
     ```
   - Always subagent — NO team creation for QA remediation (NON-NEGOTIABLE)
   - Dev fixes code, commits, writes `R{RR}-SUMMARY.md` in `{round_dir}` using `templates/REMEDIATION-SUMMARY.md` (NOT `templates/SUMMARY.md`)
@@ -689,7 +430,7 @@ When `next_phase_state=needs_qa_remediation`, resume QA remediation at the persi
 
 - **stage=verify:** Re-run QA:
   - Run `compile-verify-context.sh --remediation-only {phase-dir}` to get compounded verification history plus the current round's plan/summary context only
-  - Before composing the QA task description, evaluate installed skills visible in your system context — read each skill's description and select all materially helpful installed skills for this verification pass, including adjacent/supporting domain skills surfaced by the prompt, logs, error text, related files, or stack context — not just the single most direct skill. The QA prompt MUST begin with exactly one explicit skill outcome block: use `<skill_activation>{For each selected skill: "Call Skill({skill-name})"}</skill_activation>` when one or more installed skills are preselected at orchestration time, or `<skill_no_activation>Evaluated installed skills for this task. No skills were preselected at orchestration time. Reason: {brief task-specific reason}.</skill_no_activation>` when none are preselected. Silent omission of both blocks is invalid. After evaluating, state the skill outcome in your response (e.g., "Skills: activating {skill-name}" or "Skills: none preselected — {reason}") so the user has visibility before the agent is spawned. Example: if the prompt or error mentions SwiftData, include `swiftdata` alongside relevant test/build/debug skills. After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting — do not scan entire skill folders or read unrelated references.
+  - Before composing the QA task description, evaluate installed skills visible in your system context — read each skill's description and select all materially helpful installed skills for this verification pass, including adjacent/supporting domain skills surfaced by the prompt, logs, error text, related files, or stack context — not just the single most direct skill. The QA prompt MUST begin with exactly one explicit skill outcome block: use `<skill_activation>{For each selected skill: "Call Skill({skill-name})"}</skill_activation>` when one or more installed skills are preselected at orchestration time, or `<skill_no_activation>Evaluated installed skills for this task. No skills were preselected at orchestration time. Reason: {brief task-specific reason}.</skill_no_activation>` when none are preselected. Silent omission of both blocks is invalid. After evaluating, state the skill outcome in your response (e.g., "Skills: activating {skill-name}" or "Skills: none preselected — {reason}") so the user has visibility before the agent is spawned. Example: if the prompt or error mentions SwiftData, include `swiftdata` alongside relevant test/build/debug skills. After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting. Do not scan entire skill folders or read unrelated references.
   - If one or more skills were preselected, run `bash "{plugin-root}/scripts/extract-skill-follow-up-files.sh" "{all preselected skill names from the activation block}" 2>/dev/null || true` before spawning the QA remediation agent. If the helper prints a `<skill_follow_up_files>` block, paste it immediately after the follow-up-read sentence in the spawned payload. Otherwise omit that block.
   - Use this payload prefix as the FIRST lines of the QA remediation prompt:
     ```text
@@ -697,7 +438,7 @@ When `next_phase_state=needs_qa_remediation`, resume QA remediation at the persi
     Call Skill('{relevant-skill-1}').
     Call Skill('{relevant-skill-2}').
     </skill_activation>
-    After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting — do not scan entire skill folders or read unrelated references.
+    After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting. Do not scan entire skill folders or read unrelated references.
     <skill_follow_up_files>
     {If one or more skills were preselected, run `bash "{plugin-root}/scripts/extract-skill-follow-up-files.sh" "{all preselected skill names from the activation block}" 2>/dev/null || true` before spawning and replace this block with the emitted absolute follow-up file paths. Omit this block when the helper prints nothing.}
     </skill_follow_up_files>
@@ -707,7 +448,7 @@ When `next_phase_state=needs_qa_remediation`, resume QA remediation at the persi
     <skill_no_activation>
     Evaluated installed skills for this task. No skills were preselected at orchestration time. Reason: {brief task-specific reason}.
     </skill_no_activation>
-    After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting — do not scan entire skill folders or read unrelated references.
+    After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting. Do not scan entire skill folders or read unrelated references.
     ```
   - Also evaluate available MCP tools in your system context. If any MCP servers provide build, test, documentation, or domain-specific capabilities relevant to verification, note them in the QA task context.
   - Spawn QA agent as subagent — writes to `{verification_path}` (from `qa-remediation-state.sh get` metadata)
@@ -823,10 +564,11 @@ If `planning_dir_exists=false`: display "Run /vbw:init first to set up your proj
          eval "$SCOUT_SETTINGS"
          SCOUT_MODEL="$RESOLVED_MODEL"
          SCOUT_MAX_TURNS="$RESOLVED_MAX_TURNS"
+         SCOUT_REASONING="$RESOLVED_REASONING"
        fi
        ```
        Use these variables when you execute the Task invocation in step 6.
-    3. Before composing the Scout task description, evaluate installed skills visible in your system context — read each skill's description and select all materially helpful installed skills for this task, including adjacent/supporting domain skills surfaced by the prompt, logs, error text, related files, or stack context — not just the single most direct skill. The Scout prompt MUST begin with exactly one explicit skill outcome block: use `<skill_activation>{For each selected skill: "Call Skill({skill-name})"}</skill_activation>` when one or more installed skills are preselected at orchestration time, or `<skill_no_activation>Evaluated installed skills for this task. No skills were preselected at orchestration time. Reason: {brief task-specific reason}.</skill_no_activation>` when none are preselected. Silent omission of both blocks is invalid. After evaluating, state the skill outcome in your response (e.g., "Skills: activating {skill-name}" or "Skills: none preselected — {reason}") so the user has visibility before the agent is spawned. Example: if the prompt or error mentions SwiftData, include `swiftdata` alongside relevant test/build/debug skills. After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting — do not scan entire skill folders or read unrelated references.
+    3. Before composing the Scout task description, evaluate installed skills visible in your system context — read each skill's description and select all materially helpful installed skills for this task, including adjacent/supporting domain skills surfaced by the prompt, logs, error text, related files, or stack context — not just the single most direct skill. The Scout prompt MUST begin with exactly one explicit skill outcome block: use `<skill_activation>{For each selected skill: "Call Skill({skill-name})"}</skill_activation>` when one or more installed skills are preselected at orchestration time, or `<skill_no_activation>Evaluated installed skills for this task. No skills were preselected at orchestration time. Reason: {brief task-specific reason}.</skill_no_activation>` when none are preselected. Silent omission of both blocks is invalid. After evaluating, state the skill outcome in your response (e.g., "Skills: activating {skill-name}" or "Skills: none preselected — {reason}") so the user has visibility before the agent is spawned. Example: if the prompt or error mentions SwiftData, include `swiftdata` alongside relevant test/build/debug skills. After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting. Do not scan entire skill folders or read unrelated references.
     3.25. If one or more skills were preselected, run `bash "{plugin-root}/scripts/extract-skill-follow-up-files.sh" "{all preselected skill names from the activation block}" 2>/dev/null || true` before spawning the bootstrap domain-research Scout. If the helper prints a `<skill_follow_up_files>` block, paste it immediately after the follow-up-read sentence in the spawned payload. Otherwise omit that block.
      3.5. Use this payload prefix as the FIRST lines of the bootstrap domain-research Scout prompt:
        ```text
@@ -834,7 +576,7 @@ If `planning_dir_exists=false`: display "Run /vbw:init first to set up your proj
        Call Skill('{relevant-skill-1}').
        Call Skill('{relevant-skill-2}').
        </skill_activation>
-       After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting — do not scan entire skill folders or read unrelated references.
+       After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting. Do not scan entire skill folders or read unrelated references.
       <skill_follow_up_files>
       {If one or more skills were preselected, run `bash "{plugin-root}/scripts/extract-skill-follow-up-files.sh" "{all preselected skill names from the activation block}" 2>/dev/null || true` before spawning and replace this block with the emitted absolute follow-up file paths. Omit this block when the helper prints nothing.}
       </skill_follow_up_files>
@@ -844,11 +586,11 @@ If `planning_dir_exists=false`: display "Run /vbw:init first to set up your proj
        <skill_no_activation>
        Evaluated installed skills for this task. No skills were preselected at orchestration time. Reason: {brief task-specific reason}.
        </skill_no_activation>
-       After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting — do not scan entire skill folders or read unrelated references.
+       After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting. Do not scan entire skill folders or read unrelated references.
        ```
     4. Also evaluate available MCP tools in your system context. If any MCP servers provide documentation, search, or data retrieval capabilities relevant to this research topic, note them in the Scout's task context so it prioritizes those tools over generic WebSearch/WebFetch where applicable.
-    5. Spawn Scout agent via Task tool with prompt: "Research the {domain} domain. Write your findings directly to the output path. <output_path>.vbw-planning/domain-research.md</output_path> Structure as four sections: ## Table Stakes (features every {domain} app has), ## Common Pitfalls (what projects get wrong), ## Architecture Patterns (how similar apps are structured), ## Competitor Landscape (existing products). Use WebSearch (or relevant MCP tools if available). Be concise (2-3 bullets per section)."
-    6. Set `subagent_type: "vbw:vbw-scout"` and `timeout: 120000` in the Task tool invocation. If `SCOUT_MODEL` is non-empty, also pass `model: "${SCOUT_MODEL}"`. If `SCOUT_MODEL` is empty, omit model so the default applies. If `SCOUT_MAX_TURNS` is non-empty, also pass `maxTurns: ${SCOUT_MAX_TURNS}`. If `SCOUT_MAX_TURNS` is empty, do NOT include maxTurns (omitting it = unlimited). Non-team spawn shape: omit `team_name`, `run_in_background`, `isolation`, and worktree cwd fields (`cwd`, `working_dir`, `workingDirectory`, `workdir`). `name` is optional label-only metadata; never use it for routing, lifecycle state, or team semantics.
+    5. Spawn Scout agent via Agent tool with prompt: "Research the {domain} domain. Write your findings directly to the output path. <output_path>.vbw-planning/domain-research.md</output_path> Structure as four sections: ## Table Stakes (features every {domain} app has), ## Common Pitfalls (what projects get wrong), ## Architecture Patterns (how similar apps are structured), ## Competitor Landscape (existing products). Use WebSearch (or relevant MCP tools if available). Be concise (2-3 bullets per section)."
+    6. Set `subagent_type: "vbw:vbw-scout"` and `timeout: 120000` in the Agent tool invocation. If `SCOUT_MODEL` is non-empty, also pass `model: "${SCOUT_MODEL}"`. If `SCOUT_MODEL` is empty, omit model so the default applies. If `SCOUT_MAX_TURNS` is non-empty, also pass `maxTurns: ${SCOUT_MAX_TURNS}`. If `SCOUT_MAX_TURNS` is empty, do NOT include maxTurns (omitting it = unlimited). Non-team spawn shape: omit `team_name`, `run_in_background`, `isolation`, and worktree cwd fields (`cwd`, `working_dir`, `workingDirectory`, `workdir`). `name` is optional label-only metadata; never use it for routing, lifecycle state, or team semantics. If `SCOUT_REASONING` is non-empty, also pass `effort: "${SCOUT_REASONING}"`. If `SCOUT_REASONING` is empty, do NOT include effort (the resolved model rejects the parameter).
     7. On success: Read `.vbw-planning/domain-research.md` (Scout wrote it directly). Extract brief summary (3-5 lines max). Display to user: "◆ Domain Research: {brief summary}\n\n✓ Research complete. Now let's explore your specific needs..."
     8. On failure: Log warning "⚠ Domain research timed out, proceeding with general questions". Set RESEARCH_AVAILABLE=false, continue.
   - **B2.2: Discussion Engine** -- Read `/tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}/references/discussion-engine.md` and follow its protocol.
@@ -887,7 +629,7 @@ If `planning_dir_exists=false`: display "Run /vbw:init first to set up your proj
    if [ -f "$PG_SCRIPT" ]; then
      bash "$PG_SCRIPT" commit-boundary "bootstrap project files" .vbw-planning/config.json
    else
-     echo "VBW: planning-git.sh unavailable; skipping planning git boundary commit" >&2
+     echo "⚠ VBW: planning-git.sh unavailable. Skipping planning git boundary commit." >&2
    fi
    ```
    Behavior: `planning_tracking=commit` commits `.vbw-planning/` + `CLAUDE.md` if changed. Other modes no-op.
@@ -920,7 +662,7 @@ If `planning_dir_exists=false`: display "Run /vbw:init first to set up your proj
    if [ -f "$PG_SCRIPT" ]; then
      bash "$PG_SCRIPT" commit-boundary "scope milestone" .vbw-planning/config.json
    else
-     echo "VBW: planning-git.sh unavailable; skipping planning git boundary commit" >&2
+     echo "⚠ VBW: planning-git.sh unavailable. Skipping planning git boundary commit." >&2
    fi
    ```
    Behavior: `planning_tracking=commit` commits `.vbw-planning/` if changed (ROADMAP.md, STATE.md, CONTEXT.md, phase dirs). Other modes no-op.
@@ -942,7 +684,7 @@ If `planning_dir_exists=false`: display "Run /vbw:init first to set up your proj
    if [ -f "$PG_SCRIPT" ]; then
      bash "$PG_SCRIPT" commit-boundary "discuss phase {NN}" .vbw-planning/config.json
    else
-     echo "VBW: planning-git.sh unavailable; skipping planning git boundary commit" >&2
+     echo "⚠ VBW: planning-git.sh unavailable. Skipping planning git boundary commit." >&2
    fi
    ```
    Behavior: `planning_tracking=commit` commits `{NN}-CONTEXT.md` and `discovery.json` if changed. Other modes no-op.
@@ -964,7 +706,7 @@ If `planning_dir_exists=false`: display "Run /vbw:init first to set up your proj
    if [ -f "$PG_SCRIPT" ]; then
      bash "$PG_SCRIPT" commit-boundary "assumptions phase {NN}" .vbw-planning/config.json
    else
-     echo "VBW: planning-git.sh unavailable; skipping planning git boundary commit" >&2
+     echo "⚠ VBW: planning-git.sh unavailable. Skipping planning git boundary commit." >&2
    fi
    ```
    Behavior: `planning_tracking=commit` commits `{NN}-CONTEXT.md` and `discovery.json` if changed. Other modes no-op.
@@ -1005,8 +747,8 @@ If `planning_dir_exists=false`: display "Run /vbw:init first to set up your proj
     In migrated `layout=legacy` projects, non-empty `research_path` or `plan_path` may be an absolute phase-root artifact selected by `uat-remediation-state.sh`; validate that exact metadata path directly instead of rewriting it to `round_dir` or searching for alternatives.
     </uat_remediation_artifact_contract>
     <uat_remediation_spawn_contract>
-    The Research → Plan → Execute (or Fix) list is session progress tracking only. TodoWrite is the only progress tracker for these stages; do not create or update stage-progress items with TaskCreate, TaskUpdate, Agent, or TeamCreate. TaskCreate/Agent is allowed only for real Scout/Lead/Dev work-unit delegation inside the current stage, never to represent the stage list itself.
-    UAT remediation spawns are plain sequential subagent calls. Do not use TeamCreate. Non-team spawn shape: omit `team_name`, `run_in_background`, `isolation`, and worktree cwd fields (`cwd`, `working_dir`, `workingDirectory`, `workdir`). `name` is optional label-only metadata; never use it for routing, lifecycle state, or team semantics. Claude Code worktree isolation and spawn cwd handoffs are not reliable for this path; exact absolute host paths keep the orchestrator and subagents on the same `.vbw-planning/.../remediation/uat/...` artifacts.
+    The Research → Plan → Execute (or Fix) list is session progress tracking only. TodoWrite is the only progress tracker for these stages; do not create or update stage-progress items with TaskCreate, TaskUpdate, or Agent. TaskCreate/Agent is allowed only for real Scout/Lead/Dev work-unit delegation inside the current stage, never to represent the stage list itself.
+    UAT remediation spawns are plain sequential subagent calls. Do not form an agent team (do not spawn teammates); use plain sequential subagent Agent calls. Non-team spawn shape: omit `team_name`, `run_in_background`, `isolation`, and worktree cwd fields (`cwd`, `working_dir`, `workingDirectory`, `workdir`). `name` is optional label-only metadata; never use it for routing, lifecycle state, or team semantics. Claude Code worktree isolation and spawn cwd handoffs are not reliable for this path; exact absolute host paths keep the orchestrator and subagents on the same `.vbw-planning/.../remediation/uat/...` artifacts.
     </uat_remediation_spawn_contract>
     <examples>
     <example type="anti-pattern" label="WRONG — stage progress via delegated task manager">
@@ -1063,7 +805,7 @@ bash /tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}/scripts/validate-u
 ```
 If validation fails, display the validator error and STOP without advancing state. Otherwise, skip to advancing the stage.
 
-If `research_path` is empty, spawn Scout (with `subagent_type: "vbw:vbw-scout"`; non-team spawn shape: omit `team_name`, `run_in_background`, `isolation`, and worktree cwd fields (`cwd`, `working_dir`, `workingDirectory`, `workdir`); `name` is optional label-only metadata and must never be used for routing, lifecycle state, or team semantics) with the normalized issue list from steps 3-5, **ordered by failure_count descending**, so Scout investigates the relevant code areas for each issue. Use `round` from step 4 as `{RR}`. Pass `<output_path>{round_dir}/R{RR}-RESEARCH.md</output_path>` in the Scout prompt so Scout writes the file directly to the absolute host-repository round directory. Before composing the Scout task description, evaluate installed skills visible in your system context — read each skill's description and select only skills directly needed for this research task. Do not include implementation, build, or adjacent domain skills solely because they might become useful in a later Lead or Dev stage. The Scout prompt MUST begin with exactly one explicit skill outcome block: use `<skill_activation>{For each selected skill: "Call Skill({skill-name})"}</skill_activation>` when one or more installed skills are preselected at orchestration time, or `<skill_no_activation>Evaluated installed skills for this task. No skills were preselected at orchestration time. Reason: {brief task-specific reason}.</skill_no_activation>` when none are preselected. Silent omission of both blocks is invalid. After evaluating, state the skill outcome in your response (e.g., "Skills: activating {skill-name}" or "Skills: none preselected — {reason}") so the user has visibility before the agent is spawned. Example: if the prompt or error mentions SwiftData and the research task requires SwiftData model semantics, include `swiftdata`; do not include it only as a possible future implementation aid. After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting — do not scan entire skill folders or read unrelated references. Also evaluate available MCP tools in your system context — if any MCP servers provide documentation, search, or data retrieval capabilities relevant to investigating these issues, note them in the Scout's task context so it prioritizes those tools over generic WebSearch/WebFetch where applicable.
+If `research_path` is empty, spawn Scout (with `subagent_type: "vbw:vbw-scout"`; non-team spawn shape: omit `team_name`, `run_in_background`, `isolation`, and worktree cwd fields (`cwd`, `working_dir`, `workingDirectory`, `workdir`); `name` is optional label-only metadata and must never be used for routing, lifecycle state, or team semantics) with the normalized issue list from steps 3-5, **ordered by failure_count descending**, so Scout investigates the relevant code areas for each issue. Use `round` from step 4 as `{RR}`. Pass `<output_path>{round_dir}/R{RR}-RESEARCH.md</output_path>` in the Scout prompt so Scout writes the file directly to the absolute host-repository round directory. Before composing the Scout task description, evaluate installed skills visible in your system context — read each skill's description and select only skills directly needed for this research task. Do not include implementation, build, or adjacent domain skills solely because they might become useful in a later Lead or Dev stage. The Scout prompt MUST begin with exactly one explicit skill outcome block: use `<skill_activation>{For each selected skill: "Call Skill({skill-name})"}</skill_activation>` when one or more installed skills are preselected at orchestration time, or `<skill_no_activation>Evaluated installed skills for this task. No skills were preselected at orchestration time. Reason: {brief task-specific reason}.</skill_no_activation>` when none are preselected. Silent omission of both blocks is invalid. After evaluating, state the skill outcome in your response (e.g., "Skills: activating {skill-name}" or "Skills: none preselected — {reason}") so the user has visibility before the agent is spawned. Example: if the prompt or error mentions SwiftData and the research task requires SwiftData model semantics, include `swiftdata`; do not include it only as a possible future implementation aid. After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting. Do not scan entire skill folders or read unrelated references. Also evaluate available MCP tools in your system context — if any MCP servers provide documentation, search, or data retrieval capabilities relevant to investigating these issues, note them in the Scout's task context so it prioritizes those tools over generic WebSearch/WebFetch where applicable.
 
 If one or more skills were preselected, run `bash "{plugin-root}/scripts/extract-skill-follow-up-files.sh" "{all preselected skill names from the activation block}" 2>/dev/null || true` before spawning the UAT remediation research Scout. If the helper prints a `<skill_follow_up_files>` block, paste it immediately after the follow-up-read sentence in the spawned payload. Otherwise omit that block.
 
@@ -1073,7 +815,7 @@ Use this payload prefix as the FIRST lines of the UAT remediation research Scout
 Call Skill('{relevant-skill-1}').
 Call Skill('{relevant-skill-2}').
 </skill_activation>
-After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting — do not scan entire skill folders or read unrelated references.
+After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting. Do not scan entire skill folders or read unrelated references.
 <skill_follow_up_files>
 {If one or more skills were preselected, run `bash "{plugin-root}/scripts/extract-skill-follow-up-files.sh" "{all preselected skill names from the activation block}" 2>/dev/null || true` before spawning and replace this block with the emitted absolute follow-up file paths. Omit this block when the helper prints nothing.}
 </skill_follow_up_files>
@@ -1083,7 +825,7 @@ When no installed skills apply, use this prefix instead:
 <skill_no_activation>
 Evaluated installed skills for this task. No skills were preselected at orchestration time. Reason: {brief task-specific reason}.
 </skill_no_activation>
-After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting — do not scan entire skill folders or read unrelated references.
+After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting. Do not scan entire skill folders or read unrelated references.
 ```
 
 - **Live data validation:** When any issue involves external data sources (APIs, databases, services), include in the Scout prompt: *"Public/anonymous HTTP validation uses WebFetch. Authenticated/private read-only checks use verified-safe Bash helper scripts or curl wrappers after preflight. Do not run unsafe or mutating checks; defer those to Dev/Debugger. When live validation runs or is deferred, include `## Live Validation Evidence` with `command_shape`, `exit_status`, `redacted_evidence`, `expected_shape`, `confidence`, and `limitations_or_deferred_reason`."*
@@ -1109,7 +851,7 @@ If validation fails, display the validator error and STOP without advancing stat
 
 If `plan_path` is empty, spawn Lead as a **single subagent** to write the remediation plan.
 
-**NO team creation (NON-NEGOTIABLE).** Do NOT use TeamCreate — remediation planning spawns Lead directly via Task tool. Non-team spawn shape: omit `team_name`, `run_in_background`, `isolation`, and worktree cwd fields (`cwd`, `working_dir`, `workingDirectory`, `workdir`). `name` is optional label-only metadata; never use it for routing, lifecycle state, or team semantics. This is NOT "Plan mode steps 1-12" — remediation has its own sequential flow that does not use the standard planning pipeline.
+**NO team creation (NON-NEGOTIABLE).** Do not form an agent team (do not spawn teammates); use plain sequential subagent Agent calls — remediation planning spawns Lead directly via Agent tool. Non-team spawn shape: omit `team_name`, `run_in_background`, `isolation`, and worktree cwd fields (`cwd`, `working_dir`, `workingDirectory`, `workdir`). `name` is optional label-only metadata; never use it for routing, lifecycle state, or team semantics. This is NOT "Plan mode steps 1-12" — remediation has its own sequential flow that does not use the standard planning pipeline.
 
 - Resolve Lead model:
   ```bash
@@ -1120,8 +862,9 @@ If `plan_path` is empty, spawn Lead as a **single subagent** to write the remedi
   eval "$AGENT_SETTINGS"
   LEAD_MODEL="$RESOLVED_MODEL"
   LEAD_MAX_TURNS="$RESOLVED_MAX_TURNS"
+  LEAD_REASONING="$RESOLVED_REASONING"
   ```
-- Before composing the Lead task description, evaluate installed skills visible in your system context — read each skill's description and select only skills directly needed to write the remediation plan. Do not preselect implementation-heavy skills such as SwiftData, SwiftUI, XcodeBuildMCP, database, or accessibility skills unless the planning task itself requires that documentation to produce correct tasks. Instead, record recommended Dev-stage skills in the plan when implementation work will need them. The Lead prompt MUST begin with exactly one explicit skill outcome block: use `<skill_activation>{For each selected skill: "Call Skill({skill-name})"}</skill_activation>` when one or more installed skills are preselected at orchestration time, or `<skill_no_activation>Evaluated installed skills for this task. No skills were preselected at orchestration time. Reason: {brief task-specific reason}.</skill_no_activation>` when none are preselected. Silent omission of both blocks is invalid. After evaluating, state the skill outcome in your response (e.g., "Skills: activating {skill-name}" or "Skills: none preselected — {reason}") so the user has visibility before the agent is spawned. After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting — do not scan entire skill folders or read unrelated references.
+- Before composing the Lead task description, evaluate installed skills visible in your system context — read each skill's description and select only skills directly needed to write the remediation plan. Do not preselect implementation-heavy skills such as SwiftData, SwiftUI, XcodeBuildMCP, database, or accessibility skills unless the planning task itself requires that documentation to produce correct tasks. Instead, record recommended Dev-stage skills in the plan when implementation work will need them. The Lead prompt MUST begin with exactly one explicit skill outcome block: use `<skill_activation>{For each selected skill: "Call Skill({skill-name})"}</skill_activation>` when one or more installed skills are preselected at orchestration time, or `<skill_no_activation>Evaluated installed skills for this task. No skills were preselected at orchestration time. Reason: {brief task-specific reason}.</skill_no_activation>` when none are preselected. Silent omission of both blocks is invalid. After evaluating, state the skill outcome in your response (e.g., "Skills: activating {skill-name}" or "Skills: none preselected — {reason}") so the user has visibility before the agent is spawned. After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting. Do not scan entire skill folders or read unrelated references.
 - If one or more skills were preselected, run `bash "{plugin-root}/scripts/extract-skill-follow-up-files.sh" "{all preselected skill names from the activation block}" 2>/dev/null || true` before spawning the UAT remediation Lead. If the helper prints a `<skill_follow_up_files>` block, paste it immediately after the follow-up-read sentence in the spawned payload. Otherwise omit that block.
 - Use this payload prefix as the FIRST lines of the UAT remediation Lead prompt:
   ```text
@@ -1129,7 +872,7 @@ If `plan_path` is empty, spawn Lead as a **single subagent** to write the remedi
   Call Skill('{relevant-skill-1}').
   Call Skill('{relevant-skill-2}').
   </skill_activation>
-  After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting — do not scan entire skill folders or read unrelated references.
+  After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting. Do not scan entire skill folders or read unrelated references.
   <skill_follow_up_files>
   {If one or more skills were preselected, run `bash "{plugin-root}/scripts/extract-skill-follow-up-files.sh" "{all preselected skill names from the activation block}" 2>/dev/null || true` before spawning and replace this block with the emitted absolute follow-up file paths. Omit this block when the helper prints nothing.}
   </skill_follow_up_files>
@@ -1139,10 +882,10 @@ If `plan_path` is empty, spawn Lead as a **single subagent** to write the remedi
   <skill_no_activation>
   Evaluated installed skills for this task. No skills were preselected at orchestration time. Reason: {brief task-specific reason}.
   </skill_no_activation>
-  After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting — do not scan entire skill folders or read unrelated references.
+  After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting. Do not scan entire skill folders or read unrelated references.
   ```
 - Also evaluate available MCP tools in your system context. If any MCP servers provide capabilities relevant to this planning task, use them to derive concise facts, docs, results, or recommended Dev-stage CLIs/skills for the Lead's task context. Dev subagents may call any MCP tools available in their runtime; no orchestrator-side gating is required.
-- Spawn vbw-lead via Task tool: Set `subagent_type: "vbw:vbw-lead"` and `model: "${LEAD_MODEL}"`. If `LEAD_MAX_TURNS` is non-empty, also pass `maxTurns: ${LEAD_MAX_TURNS}`. If empty, omit maxTurns.
+- Spawn vbw-lead via Agent tool: Set `subagent_type: "vbw:vbw-lead"` and `model: "${LEAD_MODEL}"`. If `LEAD_MAX_TURNS` is non-empty, also pass `maxTurns: ${LEAD_MAX_TURNS}`. If empty, omit maxTurns. If `LEAD_REASONING` is non-empty, also pass `effort: "${LEAD_REASONING}"`. If `LEAD_REASONING` is empty, do NOT include effort (the resolved model rejects the parameter).
 - Lead prompt MUST include:
   - If `research_path` from step 4 is non-empty: `Read {research_path} for full research findings before planning.` (Lead must read the file, do NOT inline a summary.)
   - The priority-ranked issue list from step 5 with recurring-issue annotations.
@@ -1173,7 +916,7 @@ Then continue to the next stage (`execute`), respecting autonomy confirmation ru
 
 Execute the remediation plan by spawning Dev agents sequentially — one per task in the plan. Do NOT use "normal Execute flow" or `execute-protocol.md` — remediation execution is self-contained with no wave parallelism.
 
-**NO team creation (NON-NEGOTIABLE).** Do NOT use TeamCreate — remediation execution spawns Dev agents directly via Task tool. Non-team spawn shape: omit `team_name`, `run_in_background`, `isolation`, and worktree cwd fields (`cwd`, `working_dir`, `workingDirectory`, `workdir`). `name` is optional label-only metadata; never use it for routing, lifecycle state, or team semantics.
+**NO team creation (NON-NEGOTIABLE).** Do not form an agent team (do not spawn teammates); use plain sequential subagent Agent calls — remediation execution spawns Dev agents directly via Agent tool. Non-team spawn shape: omit `team_name`, `run_in_background`, `isolation`, and worktree cwd fields (`cwd`, `working_dir`, `workingDirectory`, `workdir`). `name` is optional label-only metadata; never use it for routing, lifecycle state, or team semantics.
 
 - Read `plan_path` when it is non-empty; otherwise read `{round_dir}/R{RR}-PLAN.md` (using `round` and the absolute `round_dir` from step 4). Extract the task list from the plan frontmatter/body. Each task has an ID (e.g., `P07`, `P08`, `UAT-3`).
 - Resolve Dev model:
@@ -1185,8 +928,9 @@ Execute the remediation plan by spawning Dev agents sequentially — one per tas
   eval "$AGENT_SETTINGS"
   DEV_MODEL="$RESOLVED_MODEL"
   DEV_MAX_TURNS="$RESOLVED_MAX_TURNS"
+  DEV_REASONING="$RESOLVED_REASONING"
   ```
-- Before composing Dev task descriptions, evaluate installed skills visible in your system context — read each skill's description and select the task-specific skills listed in the remediation plan plus any directly required build, test, documentation, or domain skills for the current task. Do not carry over broad Scout/Lead context or activate skills for unrelated future tasks. The Dev prompt MUST begin with exactly one explicit skill outcome block: use `<skill_activation>{For each selected skill: "Call Skill({skill-name})"}</skill_activation>` when one or more installed skills are preselected at orchestration time, or `<skill_no_activation>Evaluated installed skills for this task. No skills were preselected at orchestration time. Reason: {brief task-specific reason}.</skill_no_activation>` when none are preselected. Silent omission of both blocks is invalid. After evaluating, state the skill outcome in your response (e.g., "Skills: activating {skill-name}" or "Skills: none preselected — {reason}") so the user has visibility before the agent is spawned. After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting — do not scan entire skill folders or read unrelated references.
+- Before composing Dev task descriptions, evaluate installed skills visible in your system context — read each skill's description and select the task-specific skills listed in the remediation plan plus any directly required build, test, documentation, or domain skills for the current task. Do not carry over broad Scout/Lead context or activate skills for unrelated future tasks. The Dev prompt MUST begin with exactly one explicit skill outcome block: use `<skill_activation>{For each selected skill: "Call Skill({skill-name})"}</skill_activation>` when one or more installed skills are preselected at orchestration time, or `<skill_no_activation>Evaluated installed skills for this task. No skills were preselected at orchestration time. Reason: {brief task-specific reason}.</skill_no_activation>` when none are preselected. Silent omission of both blocks is invalid. After evaluating, state the skill outcome in your response (e.g., "Skills: activating {skill-name}" or "Skills: none preselected — {reason}") so the user has visibility before the agent is spawned. After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting. Do not scan entire skill folders or read unrelated references.
 - If one or more skills were preselected, run `bash "{plugin-root}/scripts/extract-skill-follow-up-files.sh" "{all preselected skill names from the activation block}" 2>/dev/null || true` before spawning the UAT remediation Dev. If the helper prints a `<skill_follow_up_files>` block, paste it immediately after the follow-up-read sentence in the spawned payload. Otherwise omit that block.
 - Use this payload prefix as the FIRST lines of the UAT remediation Dev prompt:
   ```text
@@ -1194,7 +938,7 @@ Execute the remediation plan by spawning Dev agents sequentially — one per tas
   Call Skill('{relevant-skill-1}').
   Call Skill('{relevant-skill-2}').
   </skill_activation>
-  After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting — do not scan entire skill folders or read unrelated references.
+  After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting. Do not scan entire skill folders or read unrelated references.
   <skill_follow_up_files>
   {If one or more skills were preselected, run `bash "{plugin-root}/scripts/extract-skill-follow-up-files.sh" "{all preselected skill names from the activation block}" 2>/dev/null || true` before spawning and replace this block with the emitted absolute follow-up file paths. Omit this block when the helper prints nothing.}
   </skill_follow_up_files>
@@ -1204,10 +948,10 @@ Execute the remediation plan by spawning Dev agents sequentially — one per tas
   <skill_no_activation>
   Evaluated installed skills for this task. No skills were preselected at orchestration time. Reason: {brief task-specific reason}.
   </skill_no_activation>
-  After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting — do not scan entire skill folders or read unrelated references.
+  After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting. Do not scan entire skill folders or read unrelated references.
   ```
 - For each task in the plan (**sequentially**, one at a time — wait for each Dev to complete before spawning the next):
-  - Spawn vbw-dev via Task tool: Set `subagent_type: "vbw:vbw-dev"` and `model: "${DEV_MODEL}"`. If `DEV_MAX_TURNS` is non-empty, also pass `maxTurns: ${DEV_MAX_TURNS}`. If empty, omit maxTurns.
+  - Spawn vbw-dev via Agent tool: Set `subagent_type: "vbw:vbw-dev"` and `model: "${DEV_MODEL}"`. If `DEV_MAX_TURNS` is non-empty, also pass `maxTurns: ${DEV_MAX_TURNS}`. If empty, omit maxTurns. If `DEV_REASONING` is non-empty, also pass `effort: "${DEV_REASONING}"`. If `DEV_REASONING` is empty, do NOT include effort (the resolved model rejects the parameter).
   - Dev prompt MUST include:
     - The task details from the plan (description, files to modify, acceptance criteria).
     - `"Read the remediation summary template at /tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}/templates/REMEDIATION-SUMMARY.md and follow its structure for your task section."` For the **first task only**, also include: `"Create {summary_path} with the YAML frontmatter from the template (populate phase, round, title from the plan; set status to in-progress, tasks_completed to 0, tasks_total to {total}) followed by your ## Task {N}: {name} section."` For **subsequent tasks**, include: `"Append your ## Task {N}: {name} section to {summary_path}. Do NOT rewrite the frontmatter or earlier task sections. Do NOT leave trailing blank lines after your section."`
@@ -1246,6 +990,8 @@ Execute the remediation plan by spawning Dev agents sequentially — one per tas
     PG_SCRIPT="/tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}/scripts/planning-git.sh"
     if [ -f "$PG_SCRIPT" ]; then
       bash "$PG_SCRIPT" commit-boundary "execute phase {NN} remediation round {RR}" .vbw-planning/config.json
+    else
+      echo "⚠ VBW: planning-git.sh unavailable. Skipping planning git boundary commit." >&2
     fi
     ```
   - **Continue directly into Verify mode** for this phase — do NOT stop, do NOT tell the user to run `/vbw:vibe`. Enter Verify mode (below) inline in the same turn. The pre-computed verify context may be stale (it was computed at session start, before remediation). Re-compute it:
@@ -1279,8 +1025,100 @@ Only when re-verification chaining could not complete in this turn — e.g., con
 This mode handles the case where a milestone was archived before UAT issues were resolved (e.g., due to a missing audit gate in older versions).
 
 **Steps:**
-1. Use pre-computed milestone UAT issues from the "Milestone UAT issues" context block above. Each block starts with `milestone_phase_dir=<path>` followed by `extract-uat-issues.sh` output (header line + issue lines). Do NOT read UAT files from the milestone — all issue data is already extracted.
-   If `milestone_uat_count` > 1, multiple blocks are present (one per affected phase, separated by `---`). If `milestone_uat_count` = 1, a single block is present.
+1. After milestone-recovery routing is selected, extract milestone UAT issues with this route-local block:
+   ```bash
+   MILESTONE_UAT_CONTEXT=$(
+     SESSION_KEY="${CLAUDE_SESSION_ID:-default}"
+     L="/tmp/.vbw-plugin-root-link-${SESSION_KEY}"
+     P="/tmp/.vbw-phase-detect-${SESSION_KEY}.txt"
+     PD=""
+     _PD_START_TS=$(date +%s 2>/dev/null || echo 0)
+     _phase_detect_cache_fresh() {
+       local m=""
+       [ -f "$P" ] || return 1
+       m=$(stat -c %Y "$P" 2>/dev/null || stat -f %m "$P" 2>/dev/null || echo "")
+       [ -n "$m" ] || return 1
+       [ "$m" -ge "$_PD_START_TS" ] 2>/dev/null
+     }
+     _phase_detect_cache_retryable() {
+       [ -z "$(printf '%s' "$PD" | tr -d '[:space:]')" ] || [ "$PD" = "phase_detect_error=true" ]
+     }
+     REAL_R=$(cd "$L" 2>/dev/null && pwd -P) || REAL_R=""
+     if [ -n "$REAL_R" ]
+     then
+       bash "$REAL_R/scripts/ensure-plugin-root-link.sh" "$L" "$REAL_R" >/dev/null 2>&1 || true
+     fi
+     i=0
+     while [ $i -lt 100 ]
+     do
+       if _phase_detect_cache_fresh
+       then
+         PD=$(cat "$P")
+         break
+       fi
+       sleep 0.1
+       i=$((i+1))
+     done
+     if _phase_detect_cache_retryable && [ -L "$L" ] && [ -f "$L/scripts/phase-detect.sh" ]
+     then
+       LOCK="/tmp/.vbw-phase-detect-live-${SESSION_KEY}.lock"
+       i=0
+       while [ $i -lt 100 ]
+       do
+         if _phase_detect_cache_fresh
+         then
+           PD=$(cat "$P")
+           if ! _phase_detect_cache_retryable
+           then
+             break
+           fi
+         fi
+         if mkdir "$LOCK" 2>/dev/null
+         then
+           PTMP="${P}.reader.$$.$RANDOM"
+           PD=$(bash "$L/scripts/phase-detect.sh" 2>/dev/null) || PD=""
+           if [ -n "$(printf '%s' "$PD" | tr -d '[:space:]')" ] && [ "$PD" != "phase_detect_error=true" ]
+           then
+             printf '%s\n' "$PD" > "$PTMP" 2>/dev/null && mv "$PTMP" "$P" 2>/dev/null || true
+           fi
+           rmdir "$LOCK" 2>/dev/null || true
+           break
+         fi
+         sleep 0.1
+         i=$((i+1))
+       done
+     fi
+     [ -z "$(printf '%s' "$PD" | tr -d '[:space:]')" ] && _phase_detect_cache_fresh && PD=$(cat "$P")
+     if _phase_detect_cache_retryable
+     then
+       echo "milestone_extract_unavailable=true"
+     elif printf '%s' "$PD" | grep -q '^---MILESTONE_UAT_EXTRACT_START---$'
+     then
+       printf '%s\n' "$PD" | awk '
+         /^---MILESTONE_UAT_EXTRACT_START---$/ {
+           found=1
+           next
+         }
+         /^---MILESTONE_UAT_EXTRACT_END---$/ {
+           exit
+         }
+         found {
+           print
+         }
+       '
+     else
+       MS_UAT=$(printf '%s' "$PD" | grep '^milestone_uat_issues=' | head -1 | cut -d= -f2)
+       if [ "$MS_UAT" = "true" ]
+       then
+         echo "milestone_extract_unavailable=true"
+       else
+         echo "not_milestone_recovery"
+       fi
+     fi
+   )
+   ```
+   Each extracted block starts with `milestone_phase_dir=<path>` followed by `extract-uat-issues.sh` output (header line plus issue lines). Do NOT read UAT files from the milestone. All issue data is already in `MILESTONE_UAT_CONTEXT`.
+   If `milestone_uat_count` > 1, multiple blocks are present, one per affected phase separated by `---`. If `milestone_uat_count` = 1, a single block is present.
 2. Display the unresolved issues to the user with milestone context (milestone slug, affected phase count, severity mix). Then call AskUserQuestion with three options:
    - **"Create remediation phases"** (set `isRecommended` when `milestone_uat_major_or_higher=true`): Create one remediation phase per affected milestone phase. Auto-populate each phase goal from the UAT issue descriptions. Route to Plan mode for the first created phase.
    - **"Start fresh with new work"**: Acknowledge the stale UAT issues, mark them as acknowledged (`.remediated`) so they don't re-trigger archive blocking, then proceed as if all_done. The user can define new work via `/vbw:vibe` with arguments.
@@ -1300,7 +1138,7 @@ This mode handles the case where a milestone was archived before UAT issues were
    if [ -f "$PG_SCRIPT" ]; then
      bash "$PG_SCRIPT" commit-boundary "create milestone remediation phases" .vbw-planning/config.json
    else
-     echo "VBW: planning-git.sh unavailable; skipping planning git boundary commit" >&2
+     echo "⚠ VBW: planning-git.sh unavailable. Skipping planning git boundary commit." >&2
    fi
    ```
    Then route to Plan mode for the first phase.
@@ -1369,12 +1207,13 @@ This mode handles the case where a milestone was archived before UAT issues were
      eval "$AGENT_SETTINGS"
      SCOUT_MODEL="$RESOLVED_MODEL"
      SCOUT_MAX_TURNS="$RESOLVED_MAX_TURNS"
+     SCOUT_REASONING="$RESOLVED_REASONING"
      ```
      - **Multi-stream research:** Use this path only when `TEAM_CAPABILITY=available`, `PREFER_TEAMS` is not `never`, and the phase goal decomposes into 2-4 genuinely distinct research facets. Judge facets from the phase goal, choosing only applicable areas such as separate codebase areas, external documentation or APIs, and testing or verification approaches. Do not manufacture facets to enable parallelism.
-       Before TeamCreate, run `bash /tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}/scripts/clean-stale-teams.sh 2>/dev/null || true`. Create one team with `team_name="vbw-plan-research-{NN}"` and `description="Phase {NN} research"`, then create one Scout teammate per facet via TaskCreate so the 2-4 Scouts run in parallel. Set `subagent_type: "vbw:vbw-scout"` and `model: "${SCOUT_MODEL}"` on every TaskCreate. If `SCOUT_MAX_TURNS` is non-empty, also pass `maxTurns: ${SCOUT_MAX_TURNS}`. If it is empty, omit maxTurns. Do not pass `isolation` or worktree cwd fields (`cwd`, `working_dir`, `workingDirectory`, `workdir`). Each prompt must focus on exactly one facet while retaining the phase goal, requirements, relevant compiled context, live-validation policy, and MCP guidance. Apply the skill evaluation and payload-prefix rules below independently to every Scout prompt. Give each Scout a unique slug and `<output_path>{phase-dir}/{NN}-RESEARCH-{facet-slug}.md</output_path>`.
+       Before TeamCreate, run `bash /tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}/scripts/clean-stale-teams.sh 2>/dev/null || true`. Create one team with `team_name="vbw-plan-research-{NN}"` and `description="Phase {NN} research"`, then create one Scout teammate per facet via TaskCreate so the 2-4 Scouts run in parallel. Set `subagent_type: "vbw:vbw-scout"` and `model: "${SCOUT_MODEL}"` on every TaskCreate. If `SCOUT_MAX_TURNS` is non-empty, also pass `maxTurns: ${SCOUT_MAX_TURNS}`. If it is empty, omit maxTurns. If `SCOUT_REASONING` is non-empty, also pass `effort: "${SCOUT_REASONING}"`. If `SCOUT_REASONING` is empty, omit effort because the resolved model rejects it. Do not pass `isolation` or worktree cwd fields (`cwd`, `working_dir`, `workingDirectory`, `workdir`). Each prompt must focus on exactly one facet while retaining the phase goal, requirements, relevant compiled context, live-validation policy, and MCP guidance. Apply the skill evaluation and payload-prefix rules below independently to every Scout prompt. Give each Scout a unique slug and `<output_path>{phase-dir}/{NN}-RESEARCH-{facet-slug}.md</output_path>`.
        Wait for all Scouts to return and confirm each facet file exists by reading its first line. Synthesize the available facet files into canonical `{phase-dir}/${RESEARCH_NAME}` by merging findings, noting contradictions, and ranking conclusions by confidence. Leave the facet files in place as provenance. Send `shutdown_request` to every teammate, wait for each `shutdown_response`, call TeamDelete, then run `bash /tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}/scripts/clean-stale-teams.sh 2>/dev/null || true` before continuing.
      - **Single-Scout fallback:** Use this path when team capability is unavailable, `PREFER_TEAMS=never`, or the phase goal is genuinely single-faceted. Spawn Scout agent to research the phase goal, requirements, and relevant codebase patterns. Scout writes its findings directly to the output path. Pass `<output_path>{phase-dir}/${RESEARCH_NAME}</output_path>` in the Scout prompt so Scout writes the file using its Write tool. After Scout completes, confirm the file exists (read first line).
-  For the single-Scout fallback, pass `subagent_type: "vbw:vbw-scout"` and `model: "${SCOUT_MODEL}"` to the Task tool. If `SCOUT_MAX_TURNS` is non-empty, also pass `maxTurns: ${SCOUT_MAX_TURNS}`. If `SCOUT_MAX_TURNS` is empty, do NOT include maxTurns (omitting it = unlimited). Non-team spawn shape: omit `team_name`, `run_in_background`, `isolation`, and worktree cwd fields (`cwd`, `working_dir`, `workingDirectory`, `workdir`). `name` is optional label-only metadata. Never use it for routing, lifecycle state, or team semantics. For either path, before composing each Scout task description, evaluate installed skills visible in your system context — read each skill's description and select all materially helpful installed skills for this task, including adjacent/supporting domain skills surfaced by the prompt, logs, error text, related files, or stack context — not just the single most direct skill. The Scout prompt MUST begin with exactly one explicit skill outcome block: use `<skill_activation>{For each selected skill: "Call Skill({skill-name})"}</skill_activation>` when one or more installed skills are preselected at orchestration time, or `<skill_no_activation>Evaluated installed skills for this task. No skills were preselected at orchestration time. Reason: {brief task-specific reason}.</skill_no_activation>` when none are preselected. Silent omission of both blocks is invalid. After evaluating, state the skill outcome in your response (e.g., "Skills: activating {skill-name}" or "Skills: none preselected — {reason}") so the user has visibility before the agent is spawned. Example: if the prompt or error mentions SwiftData, include `swiftdata` alongside relevant test/build/debug skills. After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting — do not scan entire skill folders or read unrelated references. Also evaluate available MCP tools in your system context — if any MCP servers provide documentation, search, or data retrieval capabilities relevant to this research, note them in the Scout's task context so it prioritizes those tools over generic WebSearch/WebFetch where applicable.
+  For the single-Scout fallback, pass `subagent_type: "vbw:vbw-scout"` and `model: "${SCOUT_MODEL}"` to the Task tool. If `SCOUT_MAX_TURNS` is non-empty, also pass `maxTurns: ${SCOUT_MAX_TURNS}`. If `SCOUT_MAX_TURNS` is empty, do NOT include maxTurns (omitting it = unlimited). If `SCOUT_REASONING` is non-empty, also pass `effort: "${SCOUT_REASONING}"`. If `SCOUT_REASONING` is empty, omit effort because the resolved model rejects it. Non-team spawn shape: omit `team_name`, `run_in_background`, `isolation`, and worktree cwd fields (`cwd`, `working_dir`, `workingDirectory`, `workdir`). `name` is optional label-only metadata. Never use it for routing, lifecycle state, or team semantics. For either path, before composing each Scout task description, evaluate installed skills visible in your system context — read each skill's description and select all materially helpful installed skills for this task, including adjacent/supporting domain skills surfaced by the prompt, logs, error text, related files, or stack context — not just the single most direct skill. The Scout prompt MUST begin with exactly one explicit skill outcome block: use `<skill_activation>{For each selected skill: "Call Skill({skill-name})"}</skill_activation>` when one or more installed skills are preselected at orchestration time, or `<skill_no_activation>Evaluated installed skills for this task. No skills were preselected at orchestration time. Reason: {brief task-specific reason}.</skill_no_activation>` when none are preselected. Silent omission of both blocks is invalid. After evaluating, state the skill outcome in your response (e.g., "Skills: activating {skill-name}" or "Skills: none preselected — {reason}") so the user has visibility before the agent is spawned. Example: if the prompt or error mentions SwiftData, include `swiftdata` alongside relevant test/build/debug skills. After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting — do not scan entire skill folders or read unrelated references. Also evaluate available MCP tools in your system context — if any MCP servers provide documentation, search, or data retrieval capabilities relevant to this research, note them in the Scout's task context so it prioritizes those tools over generic WebSearch/WebFetch where applicable.
   If one or more skills were preselected, run `bash "{plugin-root}/scripts/extract-skill-follow-up-files.sh" "{all preselected skill names from the activation block}" 2>/dev/null || true` before spawning each phase research Scout. If the helper prints a `<skill_follow_up_files>` block, paste it immediately after the follow-up-read sentence in that Scout payload. Otherwise omit that block.
   Use this payload prefix as the FIRST lines of every phase research Scout prompt:
   ```text
@@ -1382,7 +1221,7 @@ This mode handles the case where a milestone was archived before UAT issues were
   Call Skill('{relevant-skill-1}').
   Call Skill('{relevant-skill-2}').
   </skill_activation>
-  After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting — do not scan entire skill folders or read unrelated references.
+  After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting. Do not scan entire skill folders or read unrelated references.
   <skill_follow_up_files>
   {If one or more skills were preselected, run `bash "{plugin-root}/scripts/extract-skill-follow-up-files.sh" "{all preselected skill names from the activation block}" 2>/dev/null || true` before spawning and replace this block with the emitted absolute follow-up file paths. Omit this block when the helper prints nothing.}
   </skill_follow_up_files>
@@ -1392,7 +1231,7 @@ This mode handles the case where a milestone was archived before UAT issues were
   <skill_no_activation>
   Evaluated installed skills for this task. No skills were preselected at orchestration time. Reason: {brief task-specific reason}.
   </skill_no_activation>
-  After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting — do not scan entire skill folders or read unrelated references.
+  After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting. Do not scan entire skill folders or read unrelated references.
   ```
     - **If exists (phase-wide or legacy single-file brownfield):** Record the RESEARCH.md path (phase-wide `${RESEARCH_NAME}` or brownfield `${BROWNFIELD_RESEARCH}`) for inclusion in the Lead prompt. The Lead prompt MUST include the directive: `Read {research-path} for full research findings before planning.` Do NOT inline a summary of the research as a substitute — the Lead must read the file itself to get the complete, unabridged findings. Multiple per-plan research files are not phase-wide research; if no real phase-wide file exists, Scout should create `${RESEARCH_NAME}`. Lead may update the phase-wide RESEARCH.md if new information emerges.
    - **On failure:** Log warning, continue planning without research. Do not block.
@@ -1404,7 +1243,7 @@ This mode handles the case where a milestone was archived before UAT issues were
    if [ -f "$PG_SCRIPT" ]; then
      bash "$PG_SCRIPT" commit-boundary "research phase {NN}" .vbw-planning/config.json
    else
-     echo "VBW: planning-git.sh unavailable; skipping research git boundary commit" >&2
+     echo "⚠ VBW: planning-git.sh unavailable. Skipping research git boundary commit." >&2
    fi
    ```
    Behavior: `planning_tracking=commit` commits RESEARCH.md if changed. Skipped when research was pre-existing or effort=turbo.
@@ -1424,6 +1263,7 @@ This mode handles the case where a milestone was archived before UAT issues were
      eval "$AGENT_SETTINGS"
      LEAD_MODEL="$RESOLVED_MODEL"
      LEAD_MAX_TURNS="$RESOLVED_MAX_TURNS"
+     LEAD_REASONING="$RESOLVED_REASONING"
      ```
   **Team creation in Plan mode is limited to the step 3 RESEARCH fan-out.** All Scouts must complete and the orchestrator must write canonical RESEARCH.md before Lead starts. Lead is always a single plain subagent. Execute mode may later choose true team mode or serialized Dev subagents based on dependency-aware routing and its own `prefer_teams` evaluation.
   - Before composing the Lead task description, evaluate installed skills visible in your system context — read each skill's description and select all materially helpful installed skills for this task, including adjacent/supporting domain skills surfaced by the prompt, logs, error text, related files, or stack context — not just the single most direct skill. The Lead prompt MUST begin with exactly one explicit skill outcome block: use `<skill_activation>{For each selected skill: "Call Skill({skill-name})"}</skill_activation>` when one or more installed skills are preselected at orchestration time, or `<skill_no_activation>Evaluated installed skills for this task. No skills were preselected at orchestration time. Reason: {brief task-specific reason}.</skill_no_activation>` when none are preselected. Silent omission of both blocks is invalid. After evaluating, state the skill outcome in your response (e.g., "Skills: activating {skill-name}" or "Skills: none preselected — {reason}") so the user has visibility before the agent is spawned. Example: if the prompt or error mentions SwiftData, include `swiftdata` alongside relevant test/build/debug skills. After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting — do not scan entire skill folders or read unrelated references.
@@ -1434,7 +1274,7 @@ This mode handles the case where a milestone was archived before UAT issues were
     Call Skill('{relevant-skill-1}').
     Call Skill('{relevant-skill-2}').
     </skill_activation>
-    After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting — do not scan entire skill folders or read unrelated references.
+    After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting. Do not scan entire skill folders or read unrelated references.
     <skill_follow_up_files>
     {If one or more skills were preselected, run `bash "{plugin-root}/scripts/extract-skill-follow-up-files.sh" "{all preselected skill names from the activation block}" 2>/dev/null || true` before spawning and replace this block with the emitted absolute follow-up file paths. Omit this block when the helper prints nothing.}
     </skill_follow_up_files>
@@ -1444,11 +1284,11 @@ This mode handles the case where a milestone was archived before UAT issues were
     <skill_no_activation>
     Evaluated installed skills for this task. No skills were preselected at orchestration time. Reason: {brief task-specific reason}.
     </skill_no_activation>
-    After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting — do not scan entire skill folders or read unrelated references.
+    After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting. Do not scan entire skill folders or read unrelated references.
     ```
   - Also evaluate available MCP tools in your system context. If any MCP servers provide capabilities relevant to this planning task, use them to derive concise facts, docs, results, or recommended Dev-stage CLIs/skills for the Lead's task context. Dev subagents may call any MCP tools available in their runtime; no orchestrator-side gating is required.
-   - Spawn vbw-lead as subagent via Task tool with compiled context (or full file list as fallback).
-  - **CRITICAL:** Set `subagent_type: "vbw:vbw-lead"` and `model: "${LEAD_MODEL}"` in the Task tool invocation. If `LEAD_MAX_TURNS` is non-empty, also pass `maxTurns: ${LEAD_MAX_TURNS}`. If `LEAD_MAX_TURNS` is empty, do NOT include maxTurns (omitting it = unlimited). Non-team spawn shape: omit `team_name`, `run_in_background`, `isolation`, and worktree cwd fields (`cwd`, `working_dir`, `workingDirectory`, `workdir`). `name` is optional label-only metadata; never use it for routing, lifecycle state, or team semantics.
+   - Spawn vbw-lead as subagent via Agent tool with compiled context (or full file list as fallback).
+  - **CRITICAL:** Set `subagent_type: "vbw:vbw-lead"` and `model: "${LEAD_MODEL}"` in the Agent tool invocation. If `LEAD_MAX_TURNS` is non-empty, also pass `maxTurns: ${LEAD_MAX_TURNS}`. If `LEAD_MAX_TURNS` is empty, do NOT include maxTurns (omitting it = unlimited). Non-team spawn shape: omit `team_name`, `run_in_background`, `isolation`, and worktree cwd fields (`cwd`, `working_dir`, `workingDirectory`, `workdir`). `name` is optional label-only metadata; never use it for routing, lifecycle state, or team semantics. If `LEAD_REASONING` is non-empty, also pass `effort: "${LEAD_REASONING}"`. If `LEAD_REASONING` is empty, do NOT include effort (the resolved model rejects the parameter).
    - **CRITICAL:** If a RESEARCH.md was found or created in step 3, include in the Lead prompt: `Read {research-path} for full research findings before planning.` where `{research-path}` is the per-plan or legacy path from step 3. The Lead must read the file itself — do NOT substitute an inlined summary.
   - Required Lead guidance: "Execute may run plans as true team teammates or as serialized Dev subagents. Model real dependencies accurately. Same-wave plans must be genuinely independent and modify disjoint file sets; linear chains are valid when dependencies are real. Do not invent independence to increase wave 1 size — dependency-aware Execute uses teams only for real parallel delegate work, and false same-wave grouping can cause stale inputs or file conflicts."
    - **CRITICAL:** Include in the Lead prompt: `Use resolve-artifact-path.sh to compute plan filenames: bash ${RESOLVE_SCRIPT} plan "{phase-dir}" --plan-number {MM}` where `RESOLVE_SCRIPT` is the path from step 3. The script returns the canonical filename (e.g., `03-01-PLAN.md`). Call it once per plan with the plan number.
@@ -1480,7 +1320,7 @@ This mode handles the case where a milestone was archived before UAT issues were
    if [ -f "$PG_SCRIPT" ]; then
      bash "$PG_SCRIPT" commit-boundary "plan phase {NN}" .vbw-planning/config.json
    else
-     echo "VBW: planning-git.sh unavailable; skipping planning git boundary commit" >&2
+     echo "⚠ VBW: planning-git.sh unavailable. Skipping planning git boundary commit." >&2
    fi
    ```
    Behavior: `planning_tracking=commit` commits planning artifacts if changed. `auto_push=always` pushes when upstream exists.
@@ -1531,10 +1371,95 @@ No SUMMARY.md: STOP "Phase {NN} has no completed plans. Run /vbw:vibe first."
 **Inline execution (NON-NEGOTIABLE):** UAT is an interactive conversation with the human user via AskUserQuestion CHECKPOINT prompts. Do NOT spawn a QA agent, Dev agent, or any subagent for UAT verification. Do NOT use TaskCreate to delegate UAT. The AskUserQuestion tool is only available to the orchestrator — subagents cannot interact with the user, so delegating UAT to a subagent bypasses user input entirely and produces auto-written UAT files without human judgment. Run the verify.md CHECKPOINT loop directly in this conversation, the same way UAT Remediation coordinates its stages inline.
 
 **Steps:**
-1. Read `/tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}/commands/verify.md` protocol. When entering from `needs_reverification` or `auto_uat` routing, the pre-computed verify context (verify_scope, uat_path, uat_resume) is already available from the Context section above — use it unless the `needs_reverification` flow above just refreshed verify context and resume metadata after `prepare-reverification.sh`, in which case use that refreshed output instead. **Error guard:** If the active verify block contains `verify_context_error=true` or `verify_context=unavailable`, display: "⚠ Verify context compilation failed. Run `bash /tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}/scripts/compile-verify-context.sh .vbw-planning/phases/{NN}-{slug}` manually to debug." STOP. Do NOT improvise by scanning PLAN/SUMMARY files manually in this routed path.
-2. Execute the verify.md steps inline in this conversation. Specifically: generate test scenarios (verify.md Step 4), then run the CHECKPOINT loop (verify.md Step 5) presenting one test at a time via AskUserQuestion and waiting for the user's response before proceeding to the next test. Use the pre-computed "Verify context" block from this command's Context section — it contains the PLAN/SUMMARY aggregation and UAT resume metadata for the target phase. Pass the full UAT resume metadata through to the verify protocol, including `uat_resume_scenario`, `uat_resume_expected`, and summary-deviation source fields when present, so verify.md can ask the first resumed checkpoint without re-reading the UAT file. After each persisted answer, verify.md re-runs `extract-uat-resume.sh` and uses the refreshed deterministic fields for the next checkpoint. Do NOT read individual PLAN/SUMMARY files or scan-parse UAT.md for resume state.
+1. Resolve the final target phase from the selected Verify route before compiling context. An explicit `--verify N` target wins. Otherwise, use the phase chosen by state-driven Verify or auto-UAT routing. Set `PHASE_DIR` to that exact active phase directory. If an upstream re-verification or QA-remediation transition in this turn already produced fresh verify context and UAT resume metadata for the same `PHASE_DIR`, reuse it. Otherwise run:
+   ```bash
+   SESSION_KEY="${CLAUDE_SESSION_ID:-default}"
+   L="/tmp/.vbw-plugin-root-link-${SESSION_KEY}"
+   P="/tmp/.vbw-phase-detect-${SESSION_KEY}.txt"
+   PDIR="$PHASE_DIR"
+   PD=""
+   _PD_START_TS=$(date +%s 2>/dev/null || echo 0)
+   _phase_detect_cache_fresh() {
+     local m=""
+     [ -f "$P" ] || return 1
+     m=$(stat -c %Y "$P" 2>/dev/null || stat -f %m "$P" 2>/dev/null || echo "")
+     [ -n "$m" ] || return 1
+     [ "$m" -ge "$_PD_START_TS" ] 2>/dev/null
+   }
+   _phase_detect_cache_retryable() {
+     [ -z "$(printf '%s' "$PD" | tr -d '[:space:]')" ] || [ "$PD" = "phase_detect_error=true" ]
+   }
+   REAL_R=$(cd "$L" 2>/dev/null && pwd -P) || REAL_R=""
+   if [ -n "$REAL_R" ]
+   then
+     bash "$REAL_R/scripts/ensure-plugin-root-link.sh" "$L" "$REAL_R" >/dev/null 2>&1 || true
+   fi
+   i=0
+   while [ $i -lt 100 ]
+   do
+     if _phase_detect_cache_fresh
+     then
+       PD=$(cat "$P")
+       break
+     fi
+     sleep 0.1
+     i=$((i+1))
+   done
+   if _phase_detect_cache_retryable && [ -L "$L" ] && [ -f "$L/scripts/phase-detect.sh" ]
+   then
+     LOCK="/tmp/.vbw-phase-detect-live-${SESSION_KEY}.lock"
+     i=0
+     while [ $i -lt 100 ]
+     do
+       if _phase_detect_cache_fresh
+       then
+         PD=$(cat "$P")
+         if ! _phase_detect_cache_retryable
+         then
+           break
+         fi
+       fi
+       if mkdir "$LOCK" 2>/dev/null
+       then
+         PTMP="${P}.reader.$$.$RANDOM"
+         PD=$(bash "$L/scripts/phase-detect.sh" 2>/dev/null) || PD=""
+         if [ -n "$(printf '%s' "$PD" | tr -d '[:space:]')" ] && [ "$PD" != "phase_detect_error=true" ]
+         then
+           printf '%s\n' "$PD" > "$PTMP" 2>/dev/null && mv "$PTMP" "$P" 2>/dev/null || true
+         fi
+         rmdir "$LOCK" 2>/dev/null || true
+         break
+       fi
+       sleep 0.1
+       i=$((i+1))
+     done
+   fi
+   [ -z "$(printf '%s' "$PD" | tr -d '[:space:]')" ] && _phase_detect_cache_fresh && PD=$(cat "$P")
+   if _phase_detect_cache_retryable
+   then
+     PD="phase_detect_error=true"
+   fi
+   VERIFY_CONTEXT=$(
+     if [ "$PD" = "phase_detect_error=true" ]; then
+       echo "verify_context=unavailable"
+     elif [ -d "$PDIR" ] && [ -f "$L/scripts/compile-verify-context-for-uat.sh" ]; then
+       bash "$L/scripts/compile-verify-context-for-uat.sh" "$PDIR" 2>/dev/null || echo "verify_context_error=true"
+     else
+       echo "verify_context_error=true"
+     fi
+   )
+   UAT_RESUME=$(
+     if [ -d "$PDIR" ] && [ -f "$L/scripts/extract-uat-resume.sh" ]; then
+       bash "$L/scripts/extract-uat-resume.sh" "$PDIR" 2>/dev/null || echo "uat_resume=error"
+     else
+       echo "uat_resume=unavailable"
+     fi
+   )
+   ```
+   This runtime call is route-local. Do not compile verify context while parsing inputs or routing to Plan, Discuss, Scope, Archive, or any other non-Verify mode. Read `/tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}/commands/verify.md` and use `VERIFY_CONTEXT` plus `UAT_RESUME` as the active protocol context. **Error guard:** If `VERIFY_CONTEXT` contains `verify_context_error=true` or `verify_context=unavailable`, display: "⚠ Verify context compilation failed. Run `bash /tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}/scripts/compile-verify-context.sh .vbw-planning/phases/{NN}-{slug}` manually to debug." STOP. Do NOT improvise by scanning PLAN/SUMMARY files manually in this routed path.
+2. Execute the verify.md steps inline in this conversation. Specifically: generate test scenarios (verify.md Step 4), then run the CHECKPOINT loop (verify.md Step 5) presenting one test at a time via AskUserQuestion and waiting for the user's response before proceeding to the next test. Use the active `VERIFY_CONTEXT` aggregation and `UAT_RESUME` metadata for the target phase. Pass the full UAT resume metadata through to the verify protocol, including `uat_resume_scenario`, `uat_resume_expected`, and summary-deviation source fields when present, so verify.md can ask the first resumed checkpoint without re-reading the UAT file. After each persisted answer, verify.md re-runs `extract-uat-resume.sh` and uses the refreshed deterministic fields for the next checkpoint. Do NOT read individual PLAN/SUMMARY files or scan-parse UAT.md for resume state.
 3. Display results per verify.md output format.
-4. **UAT Remediation Auto-Continuation:** This step only applies when verify.md emitted `remediation_continue=true` (which happens when `verify_scope=remediation` AND `status=issues_found` AND running in orchestrated mode from vibe.md). If `remediation_continue` was not set (first-time UAT, complete result, or standalone verify), skip this step entirely — the command ends after step 3.
+4. **UAT Remediation Auto-Continuation:** This step only applies when verify.md emitted `remediation_continue=true` (which happens when `verify_scope=remediation` AND `status=issues_found` AND running in orchestrated mode from vibe.md). If `remediation_continue` was not set (first-time UAT, complete result, or standalone verify), skip this step entirely. The command ends after step 3.
 
    **Prepare the next remediation round through the safe transition helper:** Run `prepare-reverification.sh` exactly once for this transition. This helper finalizes and validates the active UAT before state mutation, applies the UAT remediation round cap, and then performs the next-round transition when allowed. A direct `needs-round` call is not the transition path here because it can mutate `.uat-remediation-stage` before the current UAT is terminal.
 
@@ -1605,10 +1530,11 @@ Missing name: STOP "Usage: `/vbw:vibe --add <phase-name>`"
       eval "$SCOUT_SETTINGS"
       SCOUT_MODEL="$RESOLVED_MODEL"
       SCOUT_MAX_TURNS="$RESOLVED_MAX_TURNS"
+      SCOUT_REASONING="$RESOLVED_REASONING"
     fi
     ```
-  - Spawn Scout agent (with `subagent_type: "vbw:vbw-scout"`) to research the problem in the codebase. If `SCOUT_MODEL` is non-empty, pass `model: "$SCOUT_MODEL"` to the Task invocation. If `SCOUT_MODEL` is empty, omit model so the default applies. If `SCOUT_MAX_TURNS` is non-empty, also pass `maxTurns: ${SCOUT_MAX_TURNS}`. If `SCOUT_MAX_TURNS` is empty, omit maxTurns. Non-team spawn shape: omit `team_name`, `run_in_background`, `isolation`, and worktree cwd fields (`cwd`, `working_dir`, `workingDirectory`, `workdir`). `name` is optional label-only metadata; never use it for routing, lifecycle state, or team semantics. Pass `<output_path>{phase-dir}/{NN}-RESEARCH.md</output_path>` in the Scout prompt so Scout writes its findings directly using its Write tool.
-    - Before composing the Scout task description, evaluate installed skills visible in your system context — read each skill's description and select all materially helpful installed skills for this task, including adjacent/supporting domain skills surfaced by the prompt, logs, error text, related files, or stack context — not just the single most direct skill. The Scout prompt MUST begin with exactly one explicit skill outcome block: use `<skill_activation>{For each selected skill: "Call Skill({skill-name})"}</skill_activation>` when one or more installed skills are preselected at orchestration time, or `<skill_no_activation>Evaluated installed skills for this task. No skills were preselected at orchestration time. Reason: {brief task-specific reason}.</skill_no_activation>` when none are preselected. Silent omission of both blocks is invalid. After evaluating, state the skill outcome in your response (e.g., "Skills: activating {skill-name}" or "Skills: none preselected — {reason}") so the user has visibility before the agent is spawned. Example: if the prompt or error mentions SwiftData, include `swiftdata` alongside relevant test/build/debug skills. After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting — do not scan entire skill folders or read unrelated references.
+  - Spawn Scout agent (with `subagent_type: "vbw:vbw-scout"`) to research the problem in the codebase. If `SCOUT_MODEL` is non-empty, pass `model: "$SCOUT_MODEL"` to the Task invocation. If `SCOUT_MODEL` is empty, omit model so the default applies. If `SCOUT_MAX_TURNS` is non-empty, also pass `maxTurns: ${SCOUT_MAX_TURNS}`. If `SCOUT_MAX_TURNS` is empty, omit maxTurns. Non-team spawn shape: omit `team_name`, `run_in_background`, `isolation`, and worktree cwd fields (`cwd`, `working_dir`, `workingDirectory`, `workdir`). `name` is optional label-only metadata; never use it for routing, lifecycle state, or team semantics. Pass `<output_path>{phase-dir}/{NN}-RESEARCH.md</output_path>` in the Scout prompt so Scout writes its findings directly using its Write tool. If `SCOUT_REASONING` is non-empty, also pass `effort: "${SCOUT_REASONING}"`. If `SCOUT_REASONING` is empty, do NOT include effort (the resolved model rejects the parameter).
+    - Before composing the Scout task description, evaluate installed skills visible in your system context — read each skill's description and select all materially helpful installed skills for this task, including adjacent/supporting domain skills surfaced by the prompt, logs, error text, related files, or stack context — not just the single most direct skill. The Scout prompt MUST begin with exactly one explicit skill outcome block: use `<skill_activation>{For each selected skill: "Call Skill({skill-name})"}</skill_activation>` when one or more installed skills are preselected at orchestration time, or `<skill_no_activation>Evaluated installed skills for this task. No skills were preselected at orchestration time. Reason: {brief task-specific reason}.</skill_no_activation>` when none are preselected. Silent omission of both blocks is invalid. After evaluating, state the skill outcome in your response (e.g., "Skills: activating {skill-name}" or "Skills: none preselected — {reason}") so the user has visibility before the agent is spawned. Example: if the prompt or error mentions SwiftData, include `swiftdata` alongside relevant test/build/debug skills. After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting. Do not scan entire skill folders or read unrelated references.
     - If one or more skills were preselected, run `bash "{plugin-root}/scripts/extract-skill-follow-up-files.sh" "{all preselected skill names from the activation block}" 2>/dev/null || true` before spawning the add-phase Scout. If the helper prints a `<skill_follow_up_files>` block, paste it immediately after the follow-up-read sentence in the spawned payload. Otherwise omit that block.
     - Use this payload prefix as the FIRST lines of the add-phase Scout prompt:
       ```text
@@ -1616,7 +1542,7 @@ Missing name: STOP "Usage: `/vbw:vibe --add <phase-name>`"
       Call Skill('{relevant-skill-1}').
       Call Skill('{relevant-skill-2}').
       </skill_activation>
-      After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting — do not scan entire skill folders or read unrelated references.
+      After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting. Do not scan entire skill folders or read unrelated references.
       <skill_follow_up_files>
       {If one or more skills were preselected, run `bash "{plugin-root}/scripts/extract-skill-follow-up-files.sh" "{all preselected skill names from the activation block}" 2>/dev/null || true` before spawning and replace this block with the emitted absolute follow-up file paths. Omit this block when the helper prints nothing.}
       </skill_follow_up_files>
@@ -1626,7 +1552,7 @@ Missing name: STOP "Usage: `/vbw:vibe --add <phase-name>`"
       <skill_no_activation>
       Evaluated installed skills for this task. No skills were preselected at orchestration time. Reason: {brief task-specific reason}.
       </skill_no_activation>
-      After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting — do not scan entire skill folders or read unrelated references.
+      After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting. Do not scan entire skill folders or read unrelated references.
       ```
     - Also evaluate available MCP tools — if any MCP servers provide documentation, search, or data retrieval capabilities relevant to this research, note them in the Scout's task context.
     - After Scout completes, confirm the file exists (read first line).
@@ -1642,7 +1568,7 @@ Missing name: STOP "Usage: `/vbw:vibe --add <phase-name>`"
    if [ -f "$PG_SCRIPT" ]; then
      bash "$PG_SCRIPT" commit-boundary "add phase {NN}-{slug}" .vbw-planning/config.json
    else
-     echo "VBW: planning-git.sh unavailable; skipping planning git boundary commit" >&2
+     echo "⚠ VBW: planning-git.sh unavailable. Skipping planning git boundary commit." >&2
    fi
    ```
    Behavior: `planning_tracking=commit` commits `.vbw-planning/` if changed. Other modes no-op.
@@ -1661,7 +1587,7 @@ Inserting before completed phase: WARN + confirm.
 3. Identify renumbering: all phases >= position shift up by 1.
 4. Renumber dirs in REVERSE order: rename dir {NN}-{slug} -> {NN+1}-{slug}, rename internal PLAN/SUMMARY files, update `phase:` frontmatter, update `depends_on` references.
 5. Create dir: `mkdir -p .vbw-planning/phases/{NN}-{slug}/`
-6. **Problem research (conditional):** If $ARGUMENTS contain a problem description, spawn Scout (with `subagent_type: "vbw:vbw-scout"`; non-team spawn shape: omit `team_name`, `run_in_background`, `isolation`, and worktree cwd fields (`cwd`, `working_dir`, `workingDirectory`, `workdir`); `name` is optional label-only metadata and must never be used for routing, lifecycle state, or team semantics) to research the codebase. Pass `<output_path>{phase-dir}/{NN}-RESEARCH.md</output_path>` in the Scout prompt so Scout writes the file directly. Before composing the Scout task description, evaluate installed skills visible in your system context — read each skill's description and select all materially helpful installed skills for this task, including adjacent/supporting domain skills surfaced by the prompt, logs, error text, related files, or stack context — not just the single most direct skill. The Scout prompt MUST begin with exactly one explicit skill outcome block: use `<skill_activation>{For each selected skill: "Call Skill({skill-name})"}</skill_activation>` when one or more installed skills are preselected at orchestration time, or `<skill_no_activation>Evaluated installed skills for this task. No skills were preselected at orchestration time. Reason: {brief task-specific reason}.</skill_no_activation>` when none are preselected. Silent omission of both blocks is invalid. After evaluating, state the skill outcome in your response (e.g., "Skills: activating {skill-name}" or "Skills: none preselected — {reason}") so the user has visibility before the agent is spawned. Example: if the prompt or error mentions SwiftData, include `swiftdata` alongside relevant test/build/debug skills. After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting — do not scan entire skill folders or read unrelated references. Also evaluate available MCP tools — if any MCP servers provide documentation, search, or data retrieval capabilities relevant to this research, note them in the Scout's task context. After Scout completes, confirm the file exists (read first line). This prevents Plan mode from duplicating the research.
+6. **Problem research (conditional):** If $ARGUMENTS contain a problem description, spawn Scout (with `subagent_type: "vbw:vbw-scout"`; non-team spawn shape: omit `team_name`, `run_in_background`, `isolation`, and worktree cwd fields (`cwd`, `working_dir`, `workingDirectory`, `workdir`); `name` is optional label-only metadata and must never be used for routing, lifecycle state, or team semantics) to research the codebase. Pass `<output_path>{phase-dir}/{NN}-RESEARCH.md</output_path>` in the Scout prompt so Scout writes the file directly. Before composing the Scout task description, evaluate installed skills visible in your system context — read each skill's description and select all materially helpful installed skills for this task, including adjacent/supporting domain skills surfaced by the prompt, logs, error text, related files, or stack context — not just the single most direct skill. The Scout prompt MUST begin with exactly one explicit skill outcome block: use `<skill_activation>{For each selected skill: "Call Skill({skill-name})"}</skill_activation>` when one or more installed skills are preselected at orchestration time, or `<skill_no_activation>Evaluated installed skills for this task. No skills were preselected at orchestration time. Reason: {brief task-specific reason}.</skill_no_activation>` when none are preselected. Silent omission of both blocks is invalid. After evaluating, state the skill outcome in your response (e.g., "Skills: activating {skill-name}" or "Skills: none preselected — {reason}") so the user has visibility before the agent is spawned. Example: if the prompt or error mentions SwiftData, include `swiftdata` alongside relevant test/build/debug skills. After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting. Do not scan entire skill folders or read unrelated references. Also evaluate available MCP tools — if any MCP servers provide documentation, search, or data retrieval capabilities relevant to this research, note them in the Scout's task context. After Scout completes, confirm the file exists (read first line). This prevents Plan mode from duplicating the research.
   If one or more skills were preselected, run `bash "{plugin-root}/scripts/extract-skill-follow-up-files.sh" "{all preselected skill names from the activation block}" 2>/dev/null || true` before spawning the insert-phase Scout. If the helper prints a `<skill_follow_up_files>` block, paste it immediately after the follow-up-read sentence in the spawned payload. Otherwise omit that block.
   Use this payload prefix as the FIRST lines of the insert-phase Scout prompt:
   ```text
@@ -1669,7 +1595,7 @@ Inserting before completed phase: WARN + confirm.
   Call Skill('{relevant-skill-1}').
   Call Skill('{relevant-skill-2}').
   </skill_activation>
-  After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting — do not scan entire skill folders or read unrelated references.
+  After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting. Do not scan entire skill folders or read unrelated references.
   <skill_follow_up_files>
   {If one or more skills were preselected, run `bash "{plugin-root}/scripts/extract-skill-follow-up-files.sh" "{all preselected skill names from the activation block}" 2>/dev/null || true` before spawning and replace this block with the emitted absolute follow-up file paths. Omit this block when the helper prints nothing.}
   </skill_follow_up_files>
@@ -1679,7 +1605,7 @@ Inserting before completed phase: WARN + confirm.
   <skill_no_activation>
   Evaluated installed skills for this task. No skills were preselected at orchestration time. Reason: {brief task-specific reason}.
   </skill_no_activation>
-  After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting — do not scan entire skill folders or read unrelated references.
+  After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting. Do not scan entire skill folders or read unrelated references.
   ```
 7. Update ROADMAP.md: insert new phase entry + details at position (using Scout findings if available), renumber subsequent entries/headers/cross-refs, update progress table.
 8. If `.vbw-planning/CONTEXT.md` exists, rewrite it to reflect the updated milestone decomposition (phase count/grouping, ordering, scope coverage, and requirement mapping). Preserve project-level key decisions and deferred ideas where still valid.
@@ -1690,7 +1616,7 @@ Inserting before completed phase: WARN + confirm.
     if [ -f "$PG_SCRIPT" ]; then
       bash "$PG_SCRIPT" commit-boundary "insert phase {NN}-{slug} at position {position}" .vbw-planning/config.json
     else
-      echo "VBW: planning-git.sh unavailable; skipping planning git boundary commit" >&2
+      echo "⚠ VBW: planning-git.sh unavailable. Skipping planning git boundary commit." >&2
     fi
     ```
     Behavior: `planning_tracking=commit` commits `.vbw-planning/` if changed. Other modes no-op.
@@ -1718,7 +1644,7 @@ Completed ([x] in roadmap): STOP "Cannot remove completed Phase {NN}."
    if [ -f "$PG_SCRIPT" ]; then
      bash "$PG_SCRIPT" commit-boundary "remove phase {NN}" .vbw-planning/config.json
    else
-     echo "VBW: planning-git.sh unavailable; skipping planning git boundary commit" >&2
+     echo "⚠ VBW: planning-git.sh unavailable. Skipping planning git boundary commit." >&2
    fi
    ```
    Behavior: `planning_tracking=commit` commits `.vbw-planning/` if changed. Other modes no-op.
@@ -1783,7 +1709,7 @@ FAIL -> STOP with remediation suggestions. WARN -> proceed with warnings.
    if [ -f "$PG_SCRIPT" ]; then
      bash "$PG_SCRIPT" commit-boundary "archive milestone {SLUG}" .vbw-planning/config.json
    else
-     echo "VBW: planning-git.sh unavailable; skipping planning git boundary commit" >&2
+     echo "⚠ VBW: planning-git.sh unavailable. Skipping planning git boundary commit." >&2
    fi
    ```
    Run this BEFORE branch merge/tag so shipped planning state is committed.
@@ -1801,7 +1727,7 @@ FAIL -> STOP with remediation suggestions. WARN -> proceed with warnings.
 
 After Execute mode completes (autonomy=pure-vibe only): if more unbuilt phases exist, auto-continue to next phase (Plan + Execute). Loop until `next_phase_state=all_done` or error. Other autonomy levels: STOP after phase.
 
-**CRITICAL — Between iterations:** Before starting the next phase's Plan mode, inspect the prior Execute delegation marker/state. Send `shutdown_request` and call TeamDelete only when the prior run actually persisted `delegation_mode=team` with a real `TEAM_NAME`. If the prior run used serialized subagents, turbo/internal direct, or fallback non-team mode, rely on completed subagent/direct execution plus the cleared delegation state; do not send team shutdown messages without a real team.
+**CRITICAL — Between iterations:** Before starting the next phase's Plan mode, inspect the prior Execute delegation marker/state. Only when the prior run actually persisted `delegation_mode=team` with a real `TEAM_NAME`: send `shutdown_request` to each teammate and await responses, then run Post-shutdown residual cleanup. The team config directory is removed automatically when the session exits; there is no TeamDelete call. If the prior run used serialized subagents, turbo/internal direct, or fallback non-team mode, rely on completed subagent/direct execution plus the cleared delegation state; do not send team shutdown messages without a real team.
 
 ## Output Format
 

@@ -163,6 +163,7 @@ load test_helper
 @test "file-guard exits 0 when no plan files exist" {
   setup_temp_dir
   mkdir -p "$TEST_TEMP_DIR/.vbw-planning/phases"
+  echo '{}' > "$TEST_TEMP_DIR/.vbw-planning/config.json"
   INPUT='{"tool_input":{"file_path":"'"$TEST_TEMP_DIR"'/src/index.ts"}}'
   run bash -c "cd '$TEST_TEMP_DIR' && echo '$INPUT' | bash '$SCRIPTS_DIR/file-guard.sh'"
   teardown_temp_dir

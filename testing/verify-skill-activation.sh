@@ -328,7 +328,7 @@ verify_payload_prefix_block() {
 
   close_line=$(printf '%s\n' "$block_content" | awk -v tag="$close_tag" 'index($0, tag) { print NR; exit }')
   if [ -n "$close_line" ]; then
-    sentence_line=$(printf '%s\n' "$block_content" | awk -v prefix="$SKILL_FOLLOW_UP_PREFIX" -v suffix="$SKILL_FOLLOW_UP_SUFFIX" -v separator="$SKILL_FOLLOW_UP_SEPARATOR_RE" -v after="$close_line" 'NR > after && index($0, prefix) && index($0, suffix) && $0 ~ separator { print NR; exit }')
+    sentence_line=$(printf '%s\n' "$block_content" | awk -v prefix="$SKILL_FOLLOW_UP_PREFIX" -v suffix="$SKILL_FOLLOW_UP_SUFFIX" -v separator="$SKILL_FOLLOW_UP_SEPARATOR_RE" -v after="$close_line" 'NR > after && index($0, prefix) && index(tolower($0), suffix) && $0 ~ separator { print NR; exit }')
   else
     sentence_line=""
   fi
@@ -501,7 +501,7 @@ verify_skill_contract_sites() {
       pass "$file_name: site $site_number removed old narrowing/no-rescan wording"
     fi
 
-    if grep -q 'do not scan entire skill folders or read unrelated references\|not entire skill folders or unrelated references' <<< "$segment"; then
+    if grep -qi 'do not scan entire skill folders or read unrelated references\|not entire skill folders or unrelated references' <<< "$segment"; then
       pass "$file_name: site $site_number has skill follow-up read nudge"
     else
       fail "$file_name: site $site_number missing skill follow-up read nudge"
@@ -1634,7 +1634,7 @@ echo ""
 echo "=== Skill Follow-Up Read Nudge ==="
 
 # execute-protocol.md: overview block (Spawned agents bullet) has the nudge
-if grep -q 'do not scan entire skill folders or read unrelated references' "$PROTOCOL"; then
+if grep -qi 'do not scan entire skill folders or read unrelated references' "$PROTOCOL"; then
   pass "execute-protocol.md: has skill follow-up read nudge"
 else
   fail "execute-protocol.md: missing skill follow-up read nudge"
@@ -1651,7 +1651,7 @@ fi
 # All command skill-contract files have the nudge
 for contract_file in "${COMMAND_SKILL_CONTRACT_FILES[@]}"; do
   contract_name=$(basename "$contract_file")
-  if grep -q 'do not scan entire skill folders or read unrelated references' "$contract_file"; then
+  if grep -qi 'do not scan entire skill folders or read unrelated references' "$contract_file"; then
     pass "$contract_name: has skill follow-up read nudge"
   else
     fail "$contract_name: missing skill follow-up read nudge"
@@ -1677,13 +1677,12 @@ for agent_file in "${AGENT_SKILL_CONTRACT_FILES[@]}"; do
   fi
 done
 
-# All 7 agent files have the runtime-local follow-up read line
-# The fallback layer now uses the full exact sentence in both the top-level
-# and runtime-local locations, so each agent file must contain the exact line
-# at least twice.
 for agent_file in "${AGENT_SKILL_CONTRACT_FILES[@]}"; do
   agent_name=$(basename "$agent_file")
-  if [ "$(grep -F "$SKILL_FOLLOW_UP_PREFIX" "$agent_file" | grep -Fi "$SKILL_FOLLOW_UP_SUFFIX" | grep -Ec "$SKILL_FOLLOW_UP_SEPARATOR_RE")" -ge 2 ]; then
+  required_count=2
+  # Architect has no per-task execution loop, so one planning nudge is sufficient.
+  [ "$agent_name" = "vbw-architect.md" ] && required_count=1
+  if [ "$(grep -F "$SKILL_FOLLOW_UP_PREFIX" "$agent_file" | grep -Fi "$SKILL_FOLLOW_UP_SUFFIX" | grep -Ec "$SKILL_FOLLOW_UP_SEPARATOR_RE")" -ge "$required_count" ]; then
     pass "$agent_name: has runtime-local follow-up read nudge"
   else
     fail "$agent_name: missing runtime-local follow-up read nudge"
@@ -1691,7 +1690,7 @@ for agent_file in "${AGENT_SKILL_CONTRACT_FILES[@]}"; do
 done
 
 # debug.md: all 3 loci have the nudge
-_DEBUG_NUDGE_COUNT=$(grep -c 'do not scan entire skill folders or read unrelated references' "$DEBUG_CMD")
+_DEBUG_NUDGE_COUNT=$(grep -ci 'do not scan entire skill folders or read unrelated references' "$DEBUG_CMD")
 if [ "$_DEBUG_NUDGE_COUNT" -ge 3 ]; then
   pass "debug.md: follow-up read nudge present across the 3 debug skill sites (raw occurrences: $_DEBUG_NUDGE_COUNT)"
 else

@@ -1,8 +1,6 @@
 #!/bin/bash
 set -u
-# PreToolUse hook: Block destructive Bash commands
-# Exit 2 = block, Exit 0 = allow
-# Fail-CLOSED: exit 2 on parse error (never allow unvalidated input through)
+# Parse failures block because unvalidated commands cannot be trusted.
 
 if ! command -v jq >/dev/null 2>&1; then
   echo "Blocked: jq not available, cannot validate bash command" >&2
@@ -19,7 +17,6 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PLUGIN_ROOT="$(dirname "$SCRIPT_DIR")"
 
 if [ -z "${VBW_PLANNING_DIR:-}" ] && [ -f "$SCRIPT_DIR/lib/vbw-config-root.sh" ]; then
-  # shellcheck source=lib/vbw-config-root.sh
   if source "$SCRIPT_DIR/lib/vbw-config-root.sh" 2>/dev/null; then
     find_vbw_root "$SCRIPT_DIR" >/dev/null 2>&1 || true
   fi
@@ -29,50 +26,25 @@ PLANNING_DIR="${VBW_PLANNING_DIR:-.vbw-planning}"
 DEFAULT_PATTERNS="$PLUGIN_ROOT/config/destructive-commands.txt"
 LOCAL_PATTERNS="$PLANNING_DIR/destructive-commands.local.txt"
 if [ -f "$SCRIPT_DIR/lib/active-agent-state.sh" ]; then
-  # shellcheck source=lib/active-agent-state.sh
   . "$SCRIPT_DIR/lib/active-agent-state.sh"
 fi
 
 normalize_agent_role() {
-  local value="$1"
   local lower
-
-  lower=$(printf '%s' "$value" | tr '[:upper:]' '[:lower:]')
+  lower=$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')
   lower="${lower#@}"
   lower="${lower#vbw:}"
 
   case "$lower" in
-    vbw-scout|vbw-scout-[0-9]*|scout|scout-[0-9]*|team-scout|team-scout-[0-9]*)
-      printf 'scout'
-      return 0
-      ;;
-    vbw-lead|vbw-lead-[0-9]*|lead|lead-[0-9]*|team-lead|team-lead-[0-9]*)
-      printf 'lead'
-      return 0
-      ;;
-    vbw-dev|vbw-dev-[0-9]*|dev|dev-[0-9]*|team-dev|team-dev-[0-9]*)
-      printf 'dev'
-      return 0
-      ;;
-    vbw-qa|vbw-qa-[0-9]*|qa|qa-[0-9]*|team-qa|team-qa-[0-9]*)
-      printf 'qa'
-      return 0
-      ;;
-    vbw-debugger|vbw-debugger-[0-9]*|debugger|debugger-[0-9]*|team-debugger|team-debugger-[0-9]*)
-      printf 'debugger'
-      return 0
-      ;;
-    vbw-architect|vbw-architect-[0-9]*|architect|architect-[0-9]*|team-architect|team-architect-[0-9]*)
-      printf 'architect'
-      return 0
-      ;;
-    vbw-docs|vbw-docs-[0-9]*|docs|docs-[0-9]*|team-docs|team-docs-[0-9]*)
-      printf 'docs'
-      return 0
-      ;;
+    vbw-scout|vbw-scout-[0-9]*|scout|scout-[0-9]*|team-scout|team-scout-[0-9]*) printf 'scout' ;;
+    vbw-lead|vbw-lead-[0-9]*|lead|lead-[0-9]*|team-lead|team-lead-[0-9]*) printf 'lead' ;;
+    vbw-dev|vbw-dev-[0-9]*|dev|dev-[0-9]*|team-dev|team-dev-[0-9]*) printf 'dev' ;;
+    vbw-qa|vbw-qa-[0-9]*|qa|qa-[0-9]*|team-qa|team-qa-[0-9]*) printf 'qa' ;;
+    vbw-debugger|vbw-debugger-[0-9]*|debugger|debugger-[0-9]*|team-debugger|team-debugger-[0-9]*) printf 'debugger' ;;
+    vbw-architect|vbw-architect-[0-9]*|architect|architect-[0-9]*|team-architect|team-architect-[0-9]*) printf 'architect' ;;
+    vbw-docs|vbw-docs-[0-9]*|docs|docs-[0-9]*|team-docs|team-docs-[0-9]*) printf 'docs' ;;
+    *) return 1 ;;
   esac
-
-  return 1
 }
 
 _BG_PAYLOAD_AGENT_TYPE=$(printf '%s' "$INPUT" | jq -r '.agent_type // ""' 2>/dev/null) || _BG_PAYLOAD_AGENT_TYPE=""
@@ -84,29 +56,25 @@ fi
 
 detect_agent_role() {
   local candidate role
-
   for candidate in "${VBW_AGENT_ROLE:-}" "${VBW_ACTIVE_AGENT:-}"; do
     [ -z "$candidate" ] && continue
-    if role=$(normalize_agent_role "$candidate"); then
-      printf '%s' "$role"
-      return 0
-    fi
+    role=$(normalize_agent_role "$candidate") || continue
+    printf '%s' "$role"
+    return 0
   done
-
   for candidate in "$_BG_PAYLOAD_AGENT_TYPE" "$_BG_PAYLOAD_AGENT_ID"; do
     [ -z "$candidate" ] && continue
-    if role=$(normalize_agent_role "$candidate"); then
-      printf '%s' "$role"
-      return 0
-    fi
-  done
-
-  [ "$_BG_PAYLOAD_HAS_AGENT" = true ] || return 1
-  if command -v vbw_active_agent_current_scout >/dev/null 2>&1 && vbw_active_agent_current_scout "$PLANNING_DIR" "$INPUT"; then
-    printf 'scout'
+    role=$(normalize_agent_role "$candidate") || continue
+    printf '%s' "$role"
     return 0
-  fi
-
+  done
+  [ "$_BG_PAYLOAD_HAS_AGENT" = true ] || return 1
+  command -v vbw_active_agent_current_scout >/dev/null 2>&1 \
+    && vbw_active_agent_current_scout "$PLANNING_DIR" "$INPUT" \
+    && { printf 'scout'; return 0; }
+  command -v vbw_active_agent_current_qa >/dev/null 2>&1 \
+    && vbw_active_agent_current_qa "$PLANNING_DIR" "$INPUT" \
+    && { printf 'qa'; return 0; }
   return 1
 }
 
@@ -117,11 +85,9 @@ else
   ACTIVE_AGENT_ROLE=""
 fi
 
-# Build combined pattern from all sources
 PATTERNS=""
 for PFILE in "$DEFAULT_PATTERNS" "$LOCAL_PATTERNS"; do
   [ -f "$PFILE" ] || continue
-  # Strip comments and empty lines, join with |
   FILE_PATTERNS=$(grep -v '^\s*#' "$PFILE" | grep -v '^\s*$' | tr '\n' '|' | sed 's/|$//')
   [ -n "$FILE_PATTERNS" ] && {
     [ -n "$PATTERNS" ] && PATTERNS="$PATTERNS|$FILE_PATTERNS" || PATTERNS="$FILE_PATTERNS"
@@ -130,57 +96,65 @@ done
 
 log_block_event() {
   local matched="$1"
-  local preview matched_esc agent ts
+  local preview matched_esc agent timestamp
 
   if [ -d "$PLANNING_DIR" ]; then
     preview=$(echo "$COMMAND" | head -c 40)
     agent="${ACTIVE_AGENT_ROLE:-${VBW_ACTIVE_AGENT:-unknown}}"
-    ts=$(date -u +"%Y-%m-%dT%H:%M:%SZ" 2>/dev/null || date +"%s")
+    timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ" 2>/dev/null || date +"%s")
     preview=$(echo "$preview" | sed 's/"/\\"/g')
     matched_esc=$(echo "$matched" | sed 's/"/\\"/g')
     printf '{"event":"bash_guard_block","command_preview":"%s","pattern_matched":"%s","agent":"%s","timestamp":"%s"}\n' \
-      "$preview" "$matched_esc" "$agent" "$ts" >> "$PLANNING_DIR/.event-log.jsonl" 2>/dev/null
+      "$preview" "$matched_esc" "$agent" "$timestamp" >> "$PLANNING_DIR/.event-log.jsonl" 2>/dev/null
   fi
 }
 
-block_scout_command() {
+block_readonly_agent_command() {
   local reason="$1"
-  echo "Blocked: Scout Bash is read-only ($reason)" >&2
-  log_block_event "scout:$reason"
+  local role_label
+
+  case "$ACTIVE_AGENT_ROLE" in
+    scout) role_label="Scout" ;;
+    qa) role_label="QA" ;;
+    *) role_label="Agent" ;;
+  esac
+
+  echo "Blocked: $role_label Bash is read-only ($reason)" >&2
+  log_block_event "${ACTIVE_AGENT_ROLE:-unknown}:$reason"
   exit 2
 }
 
 has_shell_file_write_redirection() {
   local command="$1"
-  local i=0 len ch next in_single=0 in_double=0 escaped=0
+  local index=0 length character next_character in_single=0 in_double=0 escaped=0
 
-  len=${#command}
-  while [ "$i" -lt "$len" ]; do
-    ch="${command:$i:1}"
+  length=${#command}
+  while [ "$index" -lt "$length" ]; do
+    character="${command:$index:1}"
 
     if [ "$escaped" -eq 1 ]; then
       escaped=0
-      i=$((i + 1))
+      index=$((index + 1))
       continue
     fi
 
     if [ "$in_single" -eq 1 ]; then
-      [ "$ch" = "'" ] && in_single=0
-      i=$((i + 1))
+      [ "$character" = "'" ] && in_single=0
+      index=$((index + 1))
       continue
     fi
 
     if [ "$in_double" -eq 1 ]; then
-      if [ "$ch" = "\\" ]; then
+      if [ "$character" = "\\" ]; then
         escaped=1
-      elif [ "$ch" = '"' ]; then
+      elif [ "$character" = '"' ]; then
         in_double=0
       fi
-      i=$((i + 1))
+      index=$((index + 1))
       continue
     fi
 
-    case "$ch" in
+    case "$character" in
       "'")
         in_single=1
         ;;
@@ -194,12 +168,12 @@ has_shell_file_write_redirection() {
         return 0
         ;;
       "<")
-        next="${command:$((i + 1)):1}"
-        [ "$next" = "<" ] && return 0
+        next_character="${command:$((index + 1)):1}"
+        [ "$next_character" = "<" ] && return 0
         ;;
     esac
 
-    i=$((i + 1))
+    index=$((index + 1))
   done
 
   return 1
@@ -207,25 +181,25 @@ has_shell_file_write_redirection() {
 
 command_has_command_substitution() {
   local command="$1"
-  local i=0 len ch next in_single=0 in_double=0 escaped=0
+  local index=0 length character next_character in_single=0 in_double=0 escaped=0
 
-  len=${#command}
-  while [ "$i" -lt "$len" ]; do
-    ch="${command:$i:1}"
+  length=${#command}
+  while [ "$index" -lt "$length" ]; do
+    character="${command:$index:1}"
 
     if [ "$escaped" -eq 1 ]; then
       escaped=0
-      i=$((i + 1))
+      index=$((index + 1))
       continue
     fi
 
     if [ "$in_single" -eq 1 ]; then
-      [ "$ch" = "'" ] && in_single=0
-      i=$((i + 1))
+      [ "$character" = "'" ] && in_single=0
+      index=$((index + 1))
       continue
     fi
 
-    case "$ch" in
+    case "$character" in
       "'")
         [ "$in_double" -eq 0 ] && in_single=1
         ;;
@@ -240,15 +214,15 @@ command_has_command_substitution() {
         escaped=1
         ;;
       '$')
-        next="${command:$((i + 1)):1}"
-        [ "$next" = "(" ] && return 0
+        next_character="${command:$((index + 1)):1}"
+        [ "$next_character" = "(" ] && return 0
         ;;
       '`')
         return 0
         ;;
     esac
 
-    i=$((i + 1))
+    index=$((index + 1))
   done
 
   return 1
@@ -256,35 +230,35 @@ command_has_command_substitution() {
 
 command_has_process_substitution() {
   local command="$1"
-  local i=0 len ch next in_single=0 in_double=0 escaped=0
+  local index=0 length character next_character in_single=0 in_double=0 escaped=0
 
-  len=${#command}
-  while [ "$i" -lt "$len" ]; do
-    ch="${command:$i:1}"
+  length=${#command}
+  while [ "$index" -lt "$length" ]; do
+    character="${command:$index:1}"
 
     if [ "$escaped" -eq 1 ]; then
       escaped=0
-      i=$((i + 1))
+      index=$((index + 1))
       continue
     fi
 
     if [ "$in_single" -eq 1 ]; then
-      [ "$ch" = "'" ] && in_single=0
-      i=$((i + 1))
+      [ "$character" = "'" ] && in_single=0
+      index=$((index + 1))
       continue
     fi
 
     if [ "$in_double" -eq 1 ]; then
-      if [ "$ch" = "\\" ]; then
+      if [ "$character" = "\\" ]; then
         escaped=1
-      elif [ "$ch" = '"' ]; then
+      elif [ "$character" = '"' ]; then
         in_double=0
       fi
-      i=$((i + 1))
+      index=$((index + 1))
       continue
     fi
 
-    case "$ch" in
+    case "$character" in
       "'")
         in_single=1
         ;;
@@ -295,12 +269,12 @@ command_has_process_substitution() {
         escaped=1
         ;;
       "<"|">")
-        next="${command:$((i + 1)):1}"
-        [ "$next" = "(" ] && return 0
+        next_character="${command:$((index + 1)):1}"
+        [ "$next_character" = "(" ] && return 0
         ;;
     esac
 
-    i=$((i + 1))
+    index=$((index + 1))
   done
 
   return 1
@@ -308,59 +282,59 @@ command_has_process_substitution() {
 
 command_without_quoted_text() {
   local command="$1"
-  local i=0 len ch out="" in_single=0 in_double=0 escaped=0
+  local index=0 length character output="" in_single=0 in_double=0 escaped=0
 
-  len=${#command}
-  while [ "$i" -lt "$len" ]; do
-    ch="${command:$i:1}"
+  length=${#command}
+  while [ "$index" -lt "$length" ]; do
+    character="${command:$index:1}"
 
     if [ "$escaped" -eq 1 ]; then
-      out="${out} "
+      output="${output} "
       escaped=0
-      i=$((i + 1))
+      index=$((index + 1))
       continue
     fi
 
     if [ "$in_single" -eq 1 ]; then
-      [ "$ch" = "'" ] && in_single=0
-      out="${out} "
-      i=$((i + 1))
+      [ "$character" = "'" ] && in_single=0
+      output="${output} "
+      index=$((index + 1))
       continue
     fi
 
     if [ "$in_double" -eq 1 ]; then
-      if [ "$ch" = "\\" ]; then
+      if [ "$character" = "\\" ]; then
         escaped=1
-      elif [ "$ch" = '"' ]; then
+      elif [ "$character" = '"' ]; then
         in_double=0
       fi
-      out="${out} "
-      i=$((i + 1))
+      output="${output} "
+      index=$((index + 1))
       continue
     fi
 
-    case "$ch" in
+    case "$character" in
       "'")
         in_single=1
-        out="${out} "
+        output="${output} "
         ;;
       '"')
         in_double=1
-        out="${out} "
+        output="${output} "
         ;;
       "\\")
         escaped=1
-        out="${out} "
+        output="${output} "
         ;;
       *)
-        out="${out}${ch}"
+        output="${output}${character}"
         ;;
     esac
 
-    i=$((i + 1))
+    index=$((index + 1))
   done
 
-  printf '%s' "$out"
+  printf '%s' "$output"
 }
 
 command_has_unquoted_eval() {
@@ -386,42 +360,42 @@ is_shell_interpreter_token() {
 
 shell_visible_tokens() {
   local command="$1"
-  local i=0 len ch token="" in_single=0 in_double=0 escaped=0
+  local index=0 length character token="" in_single=0 in_double=0 escaped=0
 
-  len=${#command}
-  while [ "$i" -lt "$len" ]; do
-    ch="${command:$i:1}"
+  length=${#command}
+  while [ "$index" -lt "$length" ]; do
+    character="${command:$index:1}"
 
     if [ "$escaped" -eq 1 ]; then
-      token="${token}${ch}"
+      token="${token}${character}"
       escaped=0
-      i=$((i + 1))
+      index=$((index + 1))
       continue
     fi
 
     if [ "$in_single" -eq 1 ]; then
-      if [ "$ch" = "'" ]; then
+      if [ "$character" = "'" ]; then
         in_single=0
       else
-        token="${token}${ch}"
+        token="${token}${character}"
       fi
-      i=$((i + 1))
+      index=$((index + 1))
       continue
     fi
 
     if [ "$in_double" -eq 1 ]; then
-      if [ "$ch" = "\\" ]; then
+      if [ "$character" = "\\" ]; then
         escaped=1
-      elif [ "$ch" = '"' ]; then
+      elif [ "$character" = '"' ]; then
         in_double=0
       else
-        token="${token}${ch}"
+        token="${token}${character}"
       fi
-      i=$((i + 1))
+      index=$((index + 1))
       continue
     fi
 
-    case "$ch" in
+    case "$character" in
       "'")
         in_single=1
         ;;
@@ -438,11 +412,11 @@ shell_visible_tokens() {
         fi
         ;;
       *)
-        token="${token}${ch}"
+        token="${token}${character}"
         ;;
     esac
 
-    i=$((i + 1))
+    index=$((index + 1))
   done
 
   if [ -n "$token" ]; then
@@ -618,8 +592,6 @@ command_has_sensitive_file_reference() {
   local command="$1"
   local token
 
-  # Static command-shape filter for obvious credential-store paths. This is a
-  # best-effort guardrail, not a complete secret inventory or shell sandbox.
   while IFS= read -r token; do
     [ -z "$token" ] && continue
     if is_sensitive_path_token "$token"; then
@@ -634,122 +606,140 @@ command_has_sensitive_file_reference() {
   return 1
 }
 
-check_scout_command() {
+command_has_db_cli_mutation_keyword() {
+  local command="$1"
+  local masked
+
+  echo "$command" | grep -qE '(^|[[:space:];|&])([^[:space:];|&]*/)?(mysql|psql|sqlite3|mongo|mongosh)([[:space:]]|$)' || return 1
+
+  masked=$(command_without_quoted_text "$command")
+
+  # Fails closed: redirected SQL content cannot be statically inspected for mutation intent.
+  if echo "$masked" | grep -qE '(^|[[:space:];|&])([^[:space:];|&]*/)?(mysql|psql|sqlite3|mongo|mongosh)[^;|&]*<'; then
+    return 0
+  fi
+
+  if echo "$command" | grep -iqE '\b(INSERT|UPDATE|DELETE|ALTER|DROP|TRUNCATE|CREATE|REPLACE|GRANT|REVOKE|MERGE|VACUUM|CALL|EXEC|EXECUTE|PERFORM|DO)\b'; then
+    return 0
+  fi
+
+  echo "$command" | grep -qE '\.(insertOne|insertMany|updateOne|updateMany|deleteOne|deleteMany|dropDatabase|dropCollection|findOneAndUpdate|findOneAndDelete|findOneAndReplace|bulkWrite|replaceOne|createIndex|dropIndex|renameCollection|remove|save)[[:space:]]*\('
+}
+
+check_readonly_agent_command() {
   local command="$1"
   local matched=""
 
   if [ -n "$PATTERNS" ] && echo "$command" | grep -iqE "$PATTERNS"; then
     matched=$(echo "$command" | grep -ioE "$PATTERNS" | head -1)
-    block_scout_command "destructive command detected: $matched"
+    block_readonly_agent_command "destructive command detected: $matched"
   fi
 
   if command_has_command_substitution "$command"; then
-    block_scout_command "command substitution"
+    block_readonly_agent_command "command substitution"
   fi
 
   if command_has_process_substitution "$command"; then
-    block_scout_command "process substitution"
+    block_readonly_agent_command "process substitution"
   fi
 
   if command_has_unquoted_eval "$command"; then
-    block_scout_command "eval command"
+    block_readonly_agent_command "eval command"
   fi
 
   if command_has_nested_shell_execution "$command"; then
-    block_scout_command "nested shell execution"
+    block_readonly_agent_command "nested shell execution"
   fi
 
   if has_shell_file_write_redirection "$command"; then
-    block_scout_command "shell file write/redirection"
+    block_readonly_agent_command "shell file write/redirection"
   fi
 
   if echo "$command" | grep -iqE '(^|[[:space:];|&])tee([[:space:]]|$)'; then
-    block_scout_command "tee can write files"
+    block_readonly_agent_command "tee can write files"
   fi
 
   if echo "$command" | grep -iqE '(^|[[:space:];|&])((npm|pnpm|yarn|bun)([[:space:]]+(--prefix|--dir|--cwd|-C)(=|[[:space:]]+)[^[:space:];|&]+|[[:space:]]+--[[:alnum:]-]+(=[^[:space:];|&]+)?)*[[:space:]]+(install|i|ci|add|update|upgrade|remove|uninstall)|pip3?[[:space:]]+install|bundle[[:space:]]+install|gem[[:space:]]+install|cargo[[:space:]]+(install|update|add)|go[[:space:]]+get|brew[[:space:]]+(install|upgrade|uninstall)|apt(-get)?[[:space:]]+(install|upgrade|remove)|composer[[:space:]]+(install|update|require|remove))([[:space:]]|$)'; then
-    block_scout_command "package or dependency mutation command"
+    block_readonly_agent_command "package or dependency mutation command"
   fi
 
   if echo "$command" | grep -iqE '(^|[[:space:];|&])(rm|mv|cp|mkdir|rmdir|touch|chmod|chown|ln|install|truncate)([[:space:]]|$)'; then
-    block_scout_command "filesystem mutation command"
+    block_readonly_agent_command "filesystem mutation command"
   fi
 
   if echo "$command" | grep -iqE '(^|[[:space:];|&])sed[[:space:]][^;|&]*(--in-place(=|[[:space:]]|$)|-[^[:space:];|&]*i([^[:alnum:]]|$))|(^|[[:space:];|&])perl[[:space:]][^;|&]*-[^[:space:];|&]*p?i([^[:alnum:]]|$)'; then
-    block_scout_command "in-place edit command"
+    block_readonly_agent_command "in-place edit command"
   fi
 
   if echo "$command" | grep -qE '(^|[[:space:];|&])git([^;|&]*)[[:space:]]+diff([^;|&]*)(--output(=|[[:space:]]|$))'; then
-    block_scout_command "git output file command"
+    block_readonly_agent_command "git output file command"
   fi
 
   if echo "$command" | grep -qE '(^|[[:space:];|&])git[[:space:]]+' && ! scout_git_segments_are_readonly "$command"; then
-    block_scout_command "git state mutation command"
+    block_readonly_agent_command "git state mutation command"
   fi
 
   if echo "$command" | grep -iqE '(^|[[:space:];|&])git([[:space:]]+(-C|-c|--git-dir|--work-tree|--namespace)(=|[[:space:]]+)[^[:space:];|&]+|[[:space:]]+(--no-pager|--bare|--literal-pathspecs|--[[:alnum:]-]+(=[^[:space:];|&]+)?))*[[:space:]]+(add|commit|push|reset|checkout|switch|merge|rebase|cherry-pick|tag|branch|clean|stash|restore|rm|mv|pull|fetch)([[:space:]]|$)'; then
-    block_scout_command "git state mutation command"
+    block_readonly_agent_command "git state mutation command"
   fi
 
   if echo "$command" | grep -iqE '(^|[[:space:];|&])((systemctl|service|launchctl)[[:space:]]+(start|stop|restart|reload)|brew[[:space:]]+services[[:space:]]+(start|stop|restart)|docker([[:space:]]+compose)?[[:space:]]+(up|down|rm|rmi|volume|system|network))([[:space:]]|$)'; then
-    block_scout_command "service/container mutation command"
+    block_readonly_agent_command "service/container mutation command"
   fi
 
   if echo "$command" | grep -qE '(^|[[:space:];|&])curl([^;|&]*)([[:space:]]-X[[:space:]]*([Pp][Oo][Ss][Tt]|[Pp][Uu][Tt]|[Pp][Aa][Tt][Cc][Hh]|[Dd][Ee][Ll][Ee][Tt][Ee])|[[:space:]]-X([Pp][Oo][Ss][Tt]|[Pp][Uu][Tt]|[Pp][Aa][Tt][Cc][Hh]|[Dd][Ee][Ll][Ee][Tt][Ee])|--request(=|[[:space:]]+)([Pp][Oo][Ss][Tt]|[Pp][Uu][Tt]|[Pp][Aa][Tt][Cc][Hh]|[Dd][Ee][Ll][Ee][Tt][Ee])|--data($|[=[:space:]])|--data-(ascii|raw|binary)(=|[[:space:]]|$)|--json(=|[[:space:]]|$)|[[:space:]]-[[:alnum:]]*d($|[[:space:]]|[^[:space:];|&])|--form(=|[[:space:]]|$)|[[:space:]]-[[:alnum:]]*F($|[[:space:]]|[^[:space:];|&])|[[:space:]]-[[:alnum:]]*T($|[[:space:]]|[^[:space:];|&])|--upload-file(=|[[:space:]]|$))'; then
-    block_scout_command "mutating curl request"
+    block_readonly_agent_command "mutating curl request"
   fi
 
   if echo "$command" | grep -qE '(^|[[:space:];|&])curl([^;|&]*)--data-urlencode(=|[[:space:]]|$)' && ! curl_uses_get_query_mode "$command"; then
-    block_scout_command "mutating curl request"
+    block_readonly_agent_command "mutating curl request"
   fi
 
   if echo "$command" | grep -iqE '(^|[[:space:];|&])curl([^;|&]*)([[:space:]]-[[:alnum:]]*o[[:alnum:]]*($|[[:space:]]|[^[:space:];|&])|--output(=|[[:space:]]|$)|--output-dir(=|[[:space:]]|$)|--remote-name([[:space:]]|$))|(^|[[:space:];|&])wget([[:space:]]|$)'; then
-    block_scout_command "local output file command"
+    block_readonly_agent_command "local output file command"
   fi
 
   if echo "$command" | grep -qE '(^|[[:space:];|&])gh[[:space:]]+api([^;|&]*)(--method(=|[[:space:]]+)([Pp][Oo][Ss][Tt]|[Pp][Uu][Tt]|[Pp][Aa][Tt][Cc][Hh]|[Dd][Ee][Ll][Ee][Tt][Ee])|-X[[:space:]]*([Pp][Oo][Ss][Tt]|[Pp][Uu][Tt]|[Pp][Aa][Tt][Cc][Hh]|[Dd][Ee][Ll][Ee][Tt][Ee])|-X([Pp][Oo][Ss][Tt]|[Pp][Uu][Tt]|[Pp][Aa][Tt][Cc][Hh]|[Dd][Ee][Ll][Ee][Tt][Ee]))'; then
-    block_scout_command "mutating gh api request"
+    block_readonly_agent_command "mutating gh api request"
   fi
 
   if echo "$command" | grep -qE '(^|[[:space:];|&])gh[[:space:]]+api([^;|&]*)(--input(=|[[:space:]]|$))'; then
-    block_scout_command "mutating gh api request"
+    block_readonly_agent_command "mutating gh api request"
   fi
 
   if echo "$command" | grep -qE '(^|[[:space:];|&])gh[[:space:]]+api([^;|&]*)(--field(=|[[:space:]]|$)|--raw-field(=|[[:space:]]|$)|-f($|[[:space:]]|[^[:space:];|&])|-F($|[[:space:]]|[^[:space:];|&]))' && ! gh_api_uses_explicit_get "$command"; then
-    block_scout_command "mutating gh api request"
+    block_readonly_agent_command "mutating gh api request"
   fi
 
   if echo "$command" | grep -qE '(^|[[:space:];|&])gh[[:space:]]+' && ! scout_gh_segments_are_readonly "$command"; then
-    block_scout_command "mutating gh command"
+    block_readonly_agent_command "mutating gh command"
   fi
 
   if command_has_sensitive_file_reference "$command"; then
-    block_scout_command "sensitive file read"
+    block_readonly_agent_command "sensitive file read"
+  fi
+
+  if command_has_db_cli_mutation_keyword "$command"; then
+    block_readonly_agent_command "raw database mutation via CLI"
   fi
 }
 
-if [ "$ACTIVE_AGENT_ROLE" = "scout" ]; then
-  check_scout_command "$COMMAND"
-fi
+case "$ACTIVE_AGENT_ROLE" in
+  scout|qa)
+    check_readonly_agent_command "$COMMAND"
+    ;;
+esac
 
-# --- Override checks for the generic destructive-command classifier ---
-
-# Env var override
 [ "${VBW_ALLOW_DESTRUCTIVE:-0}" = "1" ] && exit 0
 
-# Config override: bash_guard=false disables generic destructive classifier.
 if [ -f "$PLANNING_DIR/config.json" ]; then
   GUARD=$(jq -r '.bash_guard // true' "$PLANNING_DIR/config.json" 2>/dev/null)
   [ "$GUARD" = "false" ] && exit 0
 fi
 
-# No patterns loaded = nothing to check
 [ -z "$PATTERNS" ] && exit 0
 
-# --- Match ---
-
 if echo "$COMMAND" | grep -iqE "$PATTERNS"; then
-  # Extract which pattern matched (for logging)
   MATCHED=$(echo "$COMMAND" | grep -ioE "$PATTERNS" | head -1)
   echo "Blocked: destructive command detected ($MATCHED)" >&2
   echo "Hint: Use VBW_ALLOW_DESTRUCTIVE=1 to override, or run outside VBW." >&2

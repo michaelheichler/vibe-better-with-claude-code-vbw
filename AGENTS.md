@@ -1,6 +1,6 @@
 # VBW Instructions
 
-A Claude Code plugin adding structured development workflows (plan, execute, verify) via 8 specialized agents. Zero external dependencies beyond `jq` and `git`. All logic is bash scripts and markdown.
+A Claude Code plugin adding structured development workflows (plan, execute, verify) via 8 specialized agents. Zero non-shell external dependencies beyond `jq` and `git`. All logic is bash scripts + markdown. Bash 4.4+ is required. Bash 5+ is recommended. macOS's bundled /bin/bash 3.2 is unsupported. Ensure `bash --version` resolves to Bash 4.4 or newer before running VBW or `testing/run-all.sh`.
 
 ## Communication Style
 
@@ -10,7 +10,7 @@ A Claude Code plugin adding structured development workflows (plan, execute, ver
 
 ## Debugging VBW Behavior
 
-When the user reports VBW misbehavior by pasting Claude Code session output, describing incorrect command behavior, or showing unexpected file state, first resolve the contributor's **local debug target repo** instead of guessing a maintainer-specific path.
+When the user reports VBW misbehavior (pasting Claude Code session output, describing incorrect command behavior, or showing unexpected file state), first resolve the contributor's **local debug target repo** instead of guessing a maintainer-specific path.
 
 ### Local debug target configuration (private, not committed)
 
@@ -50,7 +50,7 @@ Resolution order:
 2. `$(git rev-parse --git-common-dir)/info/vbw-debug-target.txt` in the current clone (preferred persistent local config, shared across worktrees)
 3. `./.claude/vbw-debug-target.txt` in the current checkout/worktree (legacy fallback, absolute path only)
 4. `<claude-config-dir>/vbw/debug-target.txt` (user-global fallback, absolute path only). `<claude-config-dir>` is resolved by `scripts/resolve-claude-dir.sh`: `CLAUDE_CONFIG_DIR` if set, else `$HOME/.config/claude-code` when that directory exists, else `$HOME/.claude`.
-5. If none are configured, **ask the user for the target repo path**: do not guess.
+5. If none are configured, **ask the user for the target repo path**. Do not guess.
 
 Use the shared resolver when debugging:
 
@@ -115,23 +115,24 @@ cat "$CLAUDE_PROJECT_DIR"/<session-id>/subagents/agent-*.jsonl
 ## Conventions
 
 - **Naming**: Commands are kebab-case `.md`, agents are `vbw-{role}.md`, scripts are kebab-case `.sh`, phase dirs are `{NN}-{slug}/`
-- **Commits**: `{type}({scope}): {description}`: one atomic commit per task, stage files explicitly (never `git add .`)
+- **Commits**: `{type}({scope}): {description}`. One atomic commit per task, stage files explicitly (never `git add .`)
 - **JSON parsing**: Always use `jq`, never grep/sed on JSON
 - **No dependencies**: No package.json, npm, or build step. Everything is bash + markdown
 - **YAML frontmatter**: `description` field must be single-line. Use `.prettierignore` for formatting exclusions (no `prettier-ignore` comments)
-- **Plugin isolation**: VBW files live in `.vbw-planning/`, GSD files in `.planning/`: never cross-reference between them
+- **Plugin isolation**: VBW files live in `.vbw-planning/`, GSD files in `.planning/`. Never cross-reference between them
 - **Token reduction**: When the LLM needs context to make decisions, prefer pre-extracting data via bash scripts (injected in command template expansions) over instructing the LLM to read files at runtime. Scripts produce compact, deterministic output and avoid burning tokens on file reads the agent doesn't need to reason about. Apply this principle whenever adding context to commands.
 - **Claude Code template expansion semantics**: Standalone one-line `` !`command` `` directives and fenced `` !`command` `` blocks execute. Embedded `` !`command` `` spans inside prose, paths, or larger strings do **not** execute. Claude passes them through literally. Never build runtime paths or sentence fragments with embedded `!` spans. Precompute the value in a fenced block or helper script and reference the resolved output instead.
 - **Root-cause fixes only (non-negotiable)**: Every fix must address the underlying root cause. Masking/symptom-only fixes are not allowed. If a temporary mitigation is added, it must be accompanied by a root-cause fix in the same work item (or the task is incomplete).
 - **No Python in terminal**: Never run `python3` or `python` via the terminal. Use the available Python execution tool instead. **Exception**: the `.github/scripts/wait-github.py` helper is invoked as `python3 .github/scripts/wait-github.py ...` from fix-issue workflow steps. It is a long-running polling helper that must survive outside a short-lived in-process execution and must preserve its own exit code, so it is explicitly allowed to run in the terminal.
 - **LSP-first code navigation**: Any agent with LSP in its `tools` list must prefer LSP for semantic code navigation (definitions, references, symbols, call hierarchy) and reserve Search/Grep/Glob for literal strings, filenames, non-code assets, or LSP failure cases. See `references/lsp-first-policy.md` for the canonical policy.
+- **README claim drift**: `README.md` restates computed counts (script count, BATS files/tests) in prose outside its own "Accuracy and freshness" table. Re-run that table's cited `find`/`grep`/`jq` commands and check the prose copies too before trusting either.
 
 ## Architecture
 
 - **Commands** (`commands/*.md`): Slash commands with YAML frontmatter. Command `name` values are explicitly prefixed (e.g. `name: vbw:init`) so slash commands appear as `/vbw:*`. The frontmatter `description` must be single-line (multi-line breaks plugin discovery).
 - **Agents** (`agents/vbw-{role}.md`): 8 agents (Scout, Architect, Lead, Dev, QA Author, QA, Debugger, Docs) with platform-enforced tool permissions via YAML `tools`/`disallowedTools`. Scout and QA are read-only (`permissionMode: plan`). QA Author writes only red-stage tests for the opt-in TDD pipeline.
-- **Hooks** (`hooks/hooks.json`): 24 handlers across 11 event types (SessionStart, Stop, PreToolUse, PostToolUse, SubagentStart, SubagentStop, Notification, PreCompact, TaskCompleted, TeammateIdle, UserPromptSubmit). All route through `scripts/hook-wrapper.sh` which resolves from plugin cache via `ls | sort -V | tail -1` with a `CLAUDE_PLUGIN_ROOT` fallback for `--plugin-dir` installs, logs failures, and always exits 0: no hook can break a session.
-- **Scripts** (`scripts/*.sh`): bash scripts for hook handlers, context compilation, state management, bootstrap, metrics, diagnostics, and codebase mapping. Target bash (not POSIX sh). Use `set -euo pipefail` for critical scripts, `set -u` minimum otherwise.
+- **Hooks** (`hooks/hooks.json`): 30 handlers across 11 event types (SessionStart, Stop, PreToolUse, PostToolUse, SubagentStart, SubagentStop, Notification, PreCompact, TaskCompleted, TeammateIdle, UserPromptSubmit). All route through `scripts/hook-wrapper.sh` which resolves from plugin cache via `ls | sort -V | tail -1` with a `CLAUDE_PLUGIN_ROOT` fallback for `--plugin-dir` installs, logs failures, and always exits 0 (no hook can break a session).
+- **Scripts** (`scripts/*.sh`): bash scripts for hook handlers, context compilation, state management, bootstrap, metrics, diagnostics, and codebase mapping. Target bash (not POSIX sh). Use `set -euo pipefail` for critical scripts, `set -u` minimum otherwise. Bash 4.4+ is required. Bash 5+ is recommended. macOS's bundled /bin/bash 3.2 is unsupported. Ensure `bash --version` resolves to Bash 4.4 or newer before running VBW or `testing/run-all.sh`.
 - **References** (`references/*.md`): protocol docs loaded on-demand by commands (for example `execute-protocol.md` and `verification-protocol.md`).
 - **Templates** (`templates/*.md`): artifact templates (CONTEXT, PLAN, PROJECT, REQUIREMENTS, ROADMAP, SUMMARY, UAT, VERIFICATION, etc.).
 - **Config** (`config/`): `defaults.json` (settings), `model-profiles.json` (3 presets: quality/balanced/budget), `stack-mappings.json` (tech detection → skill suggestions), `token-budgets.json` (context budgets), `rollout-stages.json` (feature rollout), `destructive-commands.txt` (guarded commands list), `schemas/` (message schemas).
@@ -149,16 +150,18 @@ Two resolution cascades exist: one for hooks (DXP-01) and one for commands. They
 4. `ps axww` + `grep -oE -- "--plugin-dir [^ ]+"` extraction
 5. Graceful no-op (`exit 0`)
 
-**Command cascade**: `CLAUDE_PLUGIN_ROOT` first because an explicit env var should take priority when the user invokes a command. Exits 1 on failure so the user knows the plugin is misconfigured:
+**Command cascade**: implemented once in `scripts/resolve-plugin-root.sh` and invoked via a session-link trampoline by the 19 target commands (`commands/*.md`) and by `references/execute-protocol.md`. `CLAUDE_PLUGIN_ROOT` is checked first because an explicit env var should take priority when the user invokes a command. Exits 1 on failure so the user knows the plugin is misconfigured (the `--nonfatal` mode returns 0 instead, used only by `commands/rtk.md` status):
 1. `CLAUDE_PLUGIN_ROOT` env var
 2. `cache/local` symlink
 3. Versioned cache dir (`find … sort … tail -1`)
 4. Generic cache dir fallback
-5. `/tmp/.vbw-plugin-root-link-*` symlink glob
-6. `ps axww` + `grep -oE -- "--plugin-dir [^ ]+"` extraction
-7. Fail guard (`exit 1`)
+5. Marketplace-root scan under `plugins/marketplaces/*/`
+6. Exact `/tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}` session link
+7. Generic `/tmp/.vbw-plugin-root-link-*` symlink glob
+8. `ps axww` + `grep -oE -- "--plugin-dir [^ ]+"` extraction
+9. Fail guard (`exit 1`)
 
-After resolution, commands create a session symlink at `/tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}` pointing to the resolved root, so subsequent template expansions and hooks can find it.
+The helper canonicalizes the resolved root with `pwd -P`, repairs the exact per-session link via `scripts/ensure-plugin-root-link.sh`, then prints it on stdout. `--require-script <name>` swaps the validated sentinel from the default `hook-wrapper.sh` to another script (used by the five phase-detect preambles and `vibe.md` for `phase-detect.sh`). SessionStart (`scripts/session-start.sh`) bootstraps the deterministic session link from its own `SCRIPT_DIR/..` location before the first command runs, so the trampoline can reach the helper without first resolving the root itself. The trampoline's `CLAUDE_PLUGIN_ROOT` branch is only a defensive fallback for a fresh session whose bootstrap lost that race.
 
 Inside scripts, `CLAUDE_PLUGIN_ROOT` is available and used normally.
 
@@ -169,17 +172,17 @@ Inside scripts, `CLAUDE_PLUGIN_ROOT` is available and used normally.
 Runtime state lives in `.vbw-planning/` (created per-project by `/vbw:init`): `STATE.md`, `ROADMAP.md`, `PROJECT.md`, `REQUIREMENTS.md`, `config.json`, `phases/{NN}-{slug}/` with PLAN.md and SUMMARY.md per plan.
 
 ### Model routing
-`scripts/resolve-agent-model.sh` reads `config.json` profile + overrides against `config/model-profiles.json`. The resolved model string is passed as an explicit `model:` parameter to Task tool invocations (session `/model` doesn't propagate to subagents).
+`scripts/resolve-agent-model.sh` resolves each agent's model with precedence: `model_overrides.<agent>` > `model_matrix.<agent>.<effort>` > `model_profile` preset from `config/model-profiles.json`. Override and matrix values may be a single model id or a preference array (first entry present in the detected catalog wins, or the first entry is trusted when no catalog exists). `scripts/detect-models.sh` treats the Claude Code binary's embedded model table as the sole primary source (credential-free, works offline), falling back to `${ANTHROPIC_BASE_URL}/v1/models` only as a last resort when the binary yields nothing and `ANTHROPIC_API_KEY`/`ANTHROPIC_AUTH_TOKEN` exists. Cache is 1h, keyed on binary path/mtime/size, so a re-patched binary is picked up immediately. A `--labeled` mode emits `id` TAB `description` for proposal flows. `/vbw:init` Step 1.8 writes the user-confirmed `model_matrix` + `model_catalog` into `.vbw-planning/config.json`, applying the role guidance in `references/model-profiles.md` (see "Choosing models per role"). The resolved model string is passed as an explicit `model:` parameter to Task tool invocations (session `/model` does not propagate to subagents).
 
 ## Testing
 
 Run all checks (tests + lint): `bash testing/run-all.sh`
 
-Run `testing/run-all.sh` directly: do not pipe it through `| tail`, `| tail -20`, `| tail -40`, `| tee`, or similar wrappers, especially from concurrent worktrees. `tail` pipelines buffer until EOF, hide live progress, and can make a healthy long-running suite look hung while also obscuring the real exit status.
+Run `testing/run-all.sh` directly. Do not pipe it through `| tail`, `| tail -20`, `| tail -40`, `| tee`, or similar wrappers, especially from concurrent worktrees. `tail` pipelines buffer until EOF, hide live progress, and can make a healthy long-running suite look hung while also obscuring the real exit status.
 
 ### Zero-tolerance test failure policy (non-negotiable)
 
-Every test and lint failure must be investigated and resolved before committing: **no exceptions**. Never dismiss a failure as "not from my changes" or "pre-existing." If a test fails after your change, one of two things is true:
+Every test and lint failure must be investigated and resolved before committing. **No exceptions**. Never dismiss a failure as "not from my changes" or "pre-existing." If a test fails after your change, one of two things is true:
 1. **The test is correct** and your change (or a recent change) broke real behavior: fix the code.
 2. **The test is outdated** and no longer matches the intended behavior: update the test to match the new behavior.
 
@@ -189,15 +192,15 @@ Either way, you own the fix. Do not leave failures for the user to resolve manua
 
 This project is markdown consumed by LLMs plus bash scripts. No single testing methodology fits both. Use the right tier for each artifact type:
 
-#### Tier 1: Behavior tests (BATS) for bash scripts
+#### Tier 1: Behavior tests (BATS) -> bash scripts
 
 For scripts that produce observable outputs. Write tests that assert what a script *does* (outputs, exit codes, side effects, file state) rather than *how* it does it internally.
 
-#### Tier 2: Contract tests (`verify-*.sh`) for markdown, JSON, and YAML structure
+#### Tier 2: Contract tests (`verify-*.sh`) -> markdown, JSON, YAML structure
 
 For structural invariants that can be validated mechanically. These confirm required structure exists but cannot validate that LLM-consumed prose is *correct*.
 
-#### Tier 3: Smoke tests for the integrated system
+#### Tier 3: Smoke tests -> integrated system
 
 The real test of a markdown instruction file is whether the LLM does the right thing when it reads it. Smoke-test slash commands in a separate sandbox repo, not the plugin repo itself.
 
@@ -227,10 +230,11 @@ Direct push access to `swt-labs/vibe-better-with-claude-code-vbw`. Single `origi
 
 ### Branch Cleanup
 
-- **`fetch.prune`** is enabled: stale remote tracking refs are removed on every fetch.
-- **`git merged`**: custom alias that finds local branches fully merged into `origin/main` and removes them locally. Also prunes worktrees in `../<repo-name>-worktrees/` whose branches have been merged or whose PRs have been merged/closed. Safe to run anytime: skips `main` and `dev`.
-- **`git cleanup`**: fetches, prunes, and deletes local branches whose remote tracking branch is gone.
-- After a PR is merged, run `git merged` to clean up local branches and their worktrees.
+- **`fetch.prune`** is enabled. Stale remote tracking refs are removed on every fetch.
+- **`git merged`** and **`git cleanup`** are personal git aliases some contributors configure locally. Neither ships as a repo default or is provisioned by any script in `scripts/`, so treat any reference to them below as describing the intended behavior of an alias you set up yourself, not an out-of-the-box command.
+- **`git merged`** (as commonly configured): finds local branches fully merged into `origin/main` and removes them locally. Also prunes worktrees in `../<repo-name>-worktrees/` whose branches have been merged or whose PRs have been merged/closed. Safe to run anytime, skips `main` and `dev`.
+- **`git cleanup`** (as commonly configured): fetches, prunes, and deletes local branches whose remote tracking branch is gone.
+- After a PR is merged, use whatever branch/worktree cleanup approach you have configured (or `git worktree remove` / `git worktree prune` and `git branch -d` manually) to clean up local branches and their worktrees.
 
 ### Worktrees
 
@@ -238,7 +242,7 @@ The issue-fix workflow uses git worktrees for parallel-safe issue work.
 
 - **Location**: `../<repo-name>-worktrees/<branch-name>/` (sibling directory, outside the repo)
 - **Creation**: `git worktree add -b` creates branch + worktree atomically
-- **Cleanup**: the workflow never removes worktrees automatically. Use `git merged` after merge.
+- **Cleanup**: the workflow never removes worktrees automatically. Use a `git merged`-style alias (see Branch Cleanup above) or manual `git worktree remove` / `git worktree prune` after merge
 - **Manual removal**: `git worktree remove <path>` or `git worktree prune`
 
 ### Branch Protection
@@ -272,7 +276,7 @@ See `CONTRIBUTING.md` for full guidelines. Key points:
 - Push branches to `origin`. PRs target `main`.
 - Load locally with `claude --plugin-dir .` or `claude --plugin-dir /absolute/path/to/vibe-better-with-claude-code-vbw`.
 - Run `bash scripts/install-hooks.sh` for the pre-push hook.
-- Version bumps are done by the author: the pre-push hook only checks version file consistency.
+- Version bumps are done by the author. The pre-push hook only checks version file consistency.
 - Good candidates: bug fixes in hooks/scripts, new commands fitting the lifecycle model, stack-to-skill mappings, template improvements.
 - Not welcome without discussion: core lifecycle rewrites, features requiring dependencies.
 - Update consumer-facing docs (`docs/`, `README.md`) whenever a change alters behavior, adds a feature, or modifies a workflow.
@@ -290,24 +294,25 @@ When asked to fix a bug or implement an issue-driven change, use the tracked iss
 <!-- gitnexus:start -->
 # GitNexus: Code Intelligence
 
-This project is indexed by GitNexus as **vibe-better-with-claude-code-vbw** (1666 symbols, 1659 relationships, 0 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **vibe-better-with-claude-code-vbw** (2074 symbols, 2071 relationships, 0 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
-> If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
+> Index stale? Run `node .gitnexus/run.cjs analyze` from the project root. It auto-selects an available runner. No `.gitnexus/run.cjs` yet? `npx gitnexus analyze` (npm 11 crash -> `npm i -g gitnexus`, see #1939).
 
 ## Always Do
 
-- **MUST run impact analysis before editing any symbol.** Before modifying a function, class, or method, run `gitnexus_impact({target: "symbolName", direction: "upstream"})` and report the blast radius (direct callers, affected processes, risk level) to the user.
-- **MUST run `gitnexus_detect_changes()` before committing** to verify your changes only affect expected symbols and execution flows.
+- **MUST run impact analysis before editing any symbol.** Before modifying a function, class, or method, run `impact({target: "symbolName", direction: "upstream"})` and report the blast radius (direct callers, affected processes, risk level) to the user.
+- **MUST run `detect_changes()` before committing** to verify your changes only affect expected symbols and execution flows. For regression review, compare against the default branch: `detect_changes({scope: "compare", base_ref: "main"})`.
 - **MUST warn the user** if impact analysis returns HIGH or CRITICAL risk before proceeding with edits.
-- When exploring unfamiliar code, use `gitnexus_query({query: "concept"})` to find execution flows instead of grepping. It returns process-grouped results ranked by relevance.
-- When you need a symbol's callers, callees, and execution flows, use `gitnexus_context({name: "symbolName"})`.
+- When exploring unfamiliar code, use `query({search_query: "concept"})` to find execution flows instead of grepping. It returns process-grouped results ranked by relevance.
+- When you need full context on a specific symbol (callers, callees, which execution flows it participates in), use `context({name: "symbolName"})`.
+- For security review, `explain({target: "fileOrSymbol"})` lists taint findings (source-to-sink flows, needs `analyze --pdg`).
 
 ## Never Do
 
-- NEVER edit a function, class, or method without first running `gitnexus_impact` on it.
+- NEVER edit a function, class, or method without first running `impact` on it.
 - NEVER ignore HIGH or CRITICAL risk warnings from impact analysis.
-- NEVER rename symbols with find-and-replace: use `gitnexus_rename` which understands the call graph.
-- NEVER commit changes without running `gitnexus_detect_changes()` to check affected scope.
+- NEVER rename symbols with find-and-replace. Use `rename` which understands the call graph.
+- NEVER commit changes without running `detect_changes()` to check affected scope.
 
 ## Resources
 

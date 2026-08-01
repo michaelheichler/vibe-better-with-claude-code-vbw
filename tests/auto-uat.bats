@@ -930,7 +930,10 @@ EOF
   chmod +x "$plugin_root/scripts/extract-uat-resume.sh"
   printf '%s\n' '#!/bin/bash' 'true' > "$plugin_root/scripts/hook-wrapper.sh"
   printf '%s\n' '#!/bin/bash' 'cat "'"$cache"'"' > "$plugin_root/scripts/phase-detect.sh"
-  chmod +x "$plugin_root/scripts/hook-wrapper.sh" "$plugin_root/scripts/phase-detect.sh"
+  cp "$SCRIPTS_DIR/resolve-plugin-root.sh" "$SCRIPTS_DIR/resolve-claude-dir.sh" \
+    "$SCRIPTS_DIR/ensure-plugin-root-link.sh" "$plugin_root/scripts/"
+  chmod +x "$plugin_root/scripts/hook-wrapper.sh" "$plugin_root/scripts/phase-detect.sh" \
+    "$plugin_root/scripts/resolve-plugin-root.sh" "$plugin_root/scripts/ensure-plugin-root-link.sh"
   ln -s "$plugin_root" "$link"
 
   printf '%s\n' \
@@ -952,7 +955,9 @@ EOF
   ' "$PROJECT_ROOT/commands/verify.md")
 
   cd "$TEST_TEMP_DIR"
-  run env CLAUDE_SESSION_ID="$session" bash -c "$cmd"
+  run env CLAUDE_SESSION_ID="$session" CLAUDE_PLUGIN_ROOT="" \
+    CLAUDE_CONFIG_DIR="$TEST_TEMP_DIR/empty-claude" VBW_CACHE_ROOT="$TEST_TEMP_DIR/empty-cache" \
+    bash -c "$cmd"
 
   [ "$status" -eq 0 ]
   [[ "$output" == *"uat_resume_target_slug=01-setup"* ]]

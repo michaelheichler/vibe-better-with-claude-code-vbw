@@ -165,7 +165,7 @@ test_non_vbw_repo() {
 
   local input
   input=$(jq -n '{"tool_input":{"file_path":"src/app.js"}}')
-  if (cd "$tmpdir" && bash "$FILE_GUARD" <<< "$input") >/dev/null 2>&1; then
+  if (cd "$tmpdir" && VBW_CONFIG_ROOT="$tmpdir" bash "$FILE_GUARD" <<< "$input") >/dev/null 2>&1; then
     pass "Non-VBW repo: no block"
   else
     fail "Non-VBW repo: unexpected block (exit $?)"
@@ -457,7 +457,7 @@ test_gsd_unaffected() {
 
   local input
   input=$(jq -n '{"tool_input":{"file_path":"src/app.js"}}')
-  if (cd "$tmpdir" && bash "$FILE_GUARD" <<< "$input") >/dev/null 2>&1; then
+  if (cd "$tmpdir" && VBW_CONFIG_ROOT="$tmpdir" bash "$FILE_GUARD" <<< "$input") >/dev/null 2>&1; then
     pass "GSD-only repo (.planning/ without .vbw-planning/): no block"
   else
     fail "GSD-only repo: unexpected block (exit $?)"

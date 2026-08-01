@@ -18,7 +18,7 @@ Working directory:
 ```
 Plugin root:
 ```bash
-!`VBW_CACHE_ROOT="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/plugins/cache/vbw-marketplace/vbw"; SESSION_KEY="${CLAUDE_SESSION_ID:-default}"; SESSION_LINK="/tmp/.vbw-plugin-root-link-${SESSION_KEY}"; R=""; if [ -n "${CLAUDE_PLUGIN_ROOT:-}" ] && [ -f "${CLAUDE_PLUGIN_ROOT}/scripts/hook-wrapper.sh" ]; then R="${CLAUDE_PLUGIN_ROOT}"; fi; if [ -z "$R" ] && [ -f "${VBW_CACHE_ROOT}/local/scripts/hook-wrapper.sh" ]; then R="${VBW_CACHE_ROOT}/local"; fi; if [ -z "$R" ]; then V=$(find "${VBW_CACHE_ROOT}" -maxdepth 1 -mindepth 1 2>/dev/null | awk -F/ '{print $NF}' | grep -E '^[0-9]+(\.[0-9]+)*$' | sort -t. -k1,1n -k2,2n -k3,3n | tail -1); [ -n "$V" ] && [ -f "${VBW_CACHE_ROOT}/${V}/scripts/hook-wrapper.sh" ] && R="${VBW_CACHE_ROOT}/${V}"; fi; if [ -z "$R" ]; then L=$(find "${VBW_CACHE_ROOT}" -maxdepth 1 -mindepth 1 2>/dev/null | awk -F/ '{print $NF}' | sort | tail -1); [ -n "$L" ] && [ -f "${VBW_CACHE_ROOT}/${L}/scripts/hook-wrapper.sh" ] && R="${VBW_CACHE_ROOT}/${L}"; fi; if [ -z "$R" ] && [ -f "${SESSION_LINK}/scripts/hook-wrapper.sh" ]; then R="${SESSION_LINK}"; fi; if [ -z "$R" ]; then ANY_LINK=$(command find -H /tmp -maxdepth 1 -name '.vbw-plugin-root-link-*' -print 2>/dev/null | LC_ALL=C sort | while IFS= read -r link; do if [ -f "$link/scripts/hook-wrapper.sh" ]; then printf '%s\n' "$link"; break; fi; done || true); [ -n "$ANY_LINK" ] && R="$ANY_LINK"; fi; if [ -z "$R" ]; then D=$(ps axww -o args= 2>/dev/null | grep -v grep | grep -oE -- "--plugin-dir [^ ]+" | head -1); D="${D#--plugin-dir }"; [ -n "$D" ] && [ -f "$D/scripts/hook-wrapper.sh" ] && R="$D"; fi; if [ -z "$R" ] || [ ! -d "$R" ]; then echo "VBW: plugin root resolution failed" >&2; exit 1; fi; LINK="${SESSION_LINK}"; REAL_R=$(cd "$R" 2>/dev/null && pwd -P) || { echo "VBW: plugin root canonicalization failed" >&2; exit 1; }; bash "$REAL_R/scripts/ensure-plugin-root-link.sh" "$LINK" "$REAL_R" >/dev/null 2>&1 || { echo "VBW: plugin root link failed" >&2; exit 1; }; bash "$LINK/scripts/phase-detect.sh" > "/tmp/.vbw-phase-detect-${SESSION_KEY}.txt" 2>/dev/null || echo "phase_detect_error=true" > "/tmp/.vbw-phase-detect-${SESSION_KEY}.txt"; echo "$LINK"`
+!`SESSION_KEY="${CLAUDE_SESSION_ID:-default}"; L="/tmp/.vbw-plugin-root-link-${SESSION_KEY}"; R="$L/scripts/resolve-plugin-root.sh"; [ -f "$R" ] || R="${CLAUDE_PLUGIN_ROOT:-}/scripts/resolve-plugin-root.sh"; [ -f "$R" ] || { echo "VBW: plugin root unavailable. Restart this session to recreate $L." >&2; exit 1; }; bash "$R" >/dev/null || exit 1; bash "$L/scripts/phase-detect.sh" > "/tmp/.vbw-phase-detect-${SESSION_KEY}.txt" 2>/dev/null || echo "phase_detect_error=true" > "/tmp/.vbw-phase-detect-${SESSION_KEY}.txt"; echo "$L"`
 ```
 
 Store the plugin root path output above as `{plugin-root}` for use in script invocations below. Replace `{plugin-root}` with the literal `Plugin root` value from Context whenever a step below references a script or reference file.
@@ -42,43 +42,17 @@ L="/tmp/.vbw-plugin-root-link-${SESSION_KEY}"
 P="/tmp/.vbw-phase-detect-${SESSION_KEY}.txt"
 PD=""
 _refresh_phase_detect() {
-  local VBW_CACHE_ROOT R V D REAL_R
-  VBW_CACHE_ROOT="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/plugins/cache/vbw-marketplace/vbw"
-  R=""
-  if [ -z "$R" ] && [ -n "${CLAUDE_PLUGIN_ROOT:-}" ] && [ -f "${CLAUDE_PLUGIN_ROOT}/scripts/hook-wrapper.sh" ]; then R="${CLAUDE_PLUGIN_ROOT}"; fi
-  if [ -z "$R" ] && [ -f "${VBW_CACHE_ROOT}/local/scripts/hook-wrapper.sh" ]; then R="${VBW_CACHE_ROOT}/local"; fi
-  if [ -z "$R" ]; then
-    V=$(find "${VBW_CACHE_ROOT}" -maxdepth 1 -mindepth 1 2>/dev/null | awk -F/ '{print $NF}' | grep -E '^[0-9]+(\.[0-9]+)*$' | sort -t. -k1,1n -k2,2n -k3,3n | tail -1)
-    [ -n "$V" ] && [ -f "${VBW_CACHE_ROOT}/${V}/scripts/hook-wrapper.sh" ] && R="${VBW_CACHE_ROOT}/${V}"
+  local resolver root
+  resolver="$L/scripts/resolve-plugin-root.sh"
+  if [ ! -f "$resolver" ]; then
+    if [ -n "${CLAUDE_PLUGIN_ROOT:-}" ] && [ -f "${CLAUDE_PLUGIN_ROOT}/scripts/resolve-plugin-root.sh" ]; then
+      resolver="${CLAUDE_PLUGIN_ROOT}/scripts/resolve-plugin-root.sh"
+    else
+      return 1
+    fi
   fi
-  if [ -z "$R" ]; then
-    V=$(find "${VBW_CACHE_ROOT}" -maxdepth 1 -mindepth 1 2>/dev/null | awk -F/ '{print $NF}' | sort | tail -1)
-    [ -n "$V" ] && [ -f "${VBW_CACHE_ROOT}/${V}/scripts/hook-wrapper.sh" ] && R="${VBW_CACHE_ROOT}/${V}"
-  fi
-  SESSION_LINK="/tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}"
-  if [ -z "$R" ] && [ -f "$SESSION_LINK/scripts/hook-wrapper.sh" ]; then
-    R="$SESSION_LINK"
-  fi
-  if [ -z "$R" ]; then
-    ANY_LINK=$(command find -H /tmp -maxdepth 1 -name '.vbw-plugin-root-link-*' -print 2>/dev/null | LC_ALL=C sort | while IFS= read -r link; do
-      if [ -f "$link/scripts/hook-wrapper.sh" ]; then
-        printf '%s\n' "$link"
-        break
-      fi
-    done || true)
-    [ -n "$ANY_LINK" ] && R="$ANY_LINK"
-  fi
-  if [ -z "$R" ]; then
-    D=$(ps axww -o args= 2>/dev/null | grep -v grep | grep -oE -- "--plugin-dir [^ ]+" | head -1)
-    D="${D#--plugin-dir }"
-    [ -n "$D" ] && [ -f "$D/scripts/hook-wrapper.sh" ] && R="$D"
-  fi
-  if [ -z "$R" ] || [ ! -d "$R" ] || [ ! -f "$R/scripts/phase-detect.sh" ]; then
-    return 1
-  fi
-  REAL_R=$(cd "$R" 2>/dev/null && pwd -P) || return 1
-  bash "$REAL_R/scripts/ensure-plugin-root-link.sh" "$L" "$REAL_R" >/dev/null 2>&1 || true
-  PD=$(bash "$REAL_R/scripts/phase-detect.sh" 2>/dev/null) || PD=""
+  root=$(bash "$resolver" --require-script phase-detect.sh 2>/dev/null) || return 1
+  PD=$(bash "$root/scripts/phase-detect.sh" 2>/dev/null) || PD=""
   if [ -z "$(printf '%s' "$PD" | tr -d '[:space:]')" ] || [ "$PD" = "phase_detect_error=true" ]; then
     return 1
   fi
@@ -102,74 +76,27 @@ fi`
 Pre-computed verify context (PLAN/SUMMARY aggregation):
 ```
 !`SESSION_KEY="${CLAUDE_SESSION_ID:-default}"
-L="/tmp/.vbw-plugin-root-link-${SESSION_KEY}"
 P="/tmp/.vbw-phase-detect-${SESSION_KEY}.txt"
 PD=""
-_refresh_phase_detect() {
-  local VBW_CACHE_ROOT R V D REAL_R
-  VBW_CACHE_ROOT="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/plugins/cache/vbw-marketplace/vbw"
-  R=""
-  if [ -z "$R" ] && [ -n "${CLAUDE_PLUGIN_ROOT:-}" ] && [ -f "${CLAUDE_PLUGIN_ROOT}/scripts/hook-wrapper.sh" ]; then R="${CLAUDE_PLUGIN_ROOT}"; fi
-  if [ -z "$R" ] && [ -f "${VBW_CACHE_ROOT}/local/scripts/hook-wrapper.sh" ]; then R="${VBW_CACHE_ROOT}/local"; fi
-  if [ -z "$R" ]; then
-    V=$(find "${VBW_CACHE_ROOT}" -maxdepth 1 -mindepth 1 2>/dev/null | awk -F/ '{print $NF}' | grep -E '^[0-9]+(\.[0-9]+)*$' | sort -t. -k1,1n -k2,2n -k3,3n | tail -1)
-    [ -n "$V" ] && [ -f "${VBW_CACHE_ROOT}/${V}/scripts/hook-wrapper.sh" ] && R="${VBW_CACHE_ROOT}/${V}"
-  fi
-  if [ -z "$R" ]; then
-    V=$(find "${VBW_CACHE_ROOT}" -maxdepth 1 -mindepth 1 2>/dev/null | awk -F/ '{print $NF}' | sort | tail -1)
-    [ -n "$V" ] && [ -f "${VBW_CACHE_ROOT}/${V}/scripts/hook-wrapper.sh" ] && R="${VBW_CACHE_ROOT}/${V}"
-  fi
-  SESSION_LINK="/tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}"
-  if [ -z "$R" ] && [ -f "$SESSION_LINK/scripts/hook-wrapper.sh" ]; then
-    R="$SESSION_LINK"
-  fi
-  if [ -z "$R" ]; then
-    ANY_LINK=$(command find -H /tmp -maxdepth 1 -name '.vbw-plugin-root-link-*' -print 2>/dev/null | LC_ALL=C sort | while IFS= read -r link; do
-      if [ -f "$link/scripts/hook-wrapper.sh" ]; then
-        printf '%s\n' "$link"
-        break
-      fi
-    done || true)
-    [ -n "$ANY_LINK" ] && R="$ANY_LINK"
-  fi
-  if [ -z "$R" ]; then
-    D=$(ps axww -o args= 2>/dev/null | grep -v grep | grep -oE -- "--plugin-dir [^ ]+" | head -1)
-    D="${D#--plugin-dir }"
-    [ -n "$D" ] && [ -f "$D/scripts/hook-wrapper.sh" ] && R="$D"
-  fi
-  if [ -z "$R" ] || [ ! -d "$R" ] || [ ! -f "$R/scripts/phase-detect.sh" ]; then
-    return 1
-  fi
-  REAL_R=$(cd "$R" 2>/dev/null && pwd -P) || return 1
-  bash "$REAL_R/scripts/ensure-plugin-root-link.sh" "$L" "$REAL_R" >/dev/null 2>&1 || true
-  PD=$(bash "$REAL_R/scripts/phase-detect.sh" 2>/dev/null) || PD=""
-  if [ -z "$(printf '%s' "$PD" | tr -d '[:space:]')" ] || [ "$PD" = "phase_detect_error=true" ]; then
-    return 1
-  fi
-  printf '%s' "$PD" > "$P"
-  return 0
-}
-if ! _refresh_phase_detect; then
-  PD="phase_detect_error=true"
-  printf '%s\n' "$PD" > "$P"
-fi
 [ -f "$P" ] && PD=$(cat "$P")
-if [ -z "$(printf '%s' "$PD" | tr -d '[:space:]')" ] || [ "$PD" = "phase_detect_error=true" ]; then
-  echo "verify_context=unavailable"
+if [ -z "$(printf '%s' "$PD" | tr -d '[:space:]')" ] || [ "$PD" = "phase_detect_error=true" ]
+then
+  echo "verify_target_slug=unavailable"
 else
   STATE=$(printf '%s' "$PD" | grep '^next_phase_state=' | head -1 | cut -d= -f2)
   SLUG=$(printf '%s' "$PD" | grep '^next_phase_slug=' | head -1 | cut -d= -f2)
   FU_SLUG=$(printf '%s' "$PD" | grep '^first_unverified_slug=' | head -1 | cut -d= -f2)
-  if [ "$STATE" = "needs_reverification" ] || [ "$STATE" = "needs_verification" ]; then TARGET="$SLUG"; else TARGET="${FU_SLUG:-$SLUG}"; fi
-  PDIR=".vbw-planning/phases/$TARGET"
-  if [ -n "$TARGET" ] && [ -d "$PDIR" ] && [ -L "$L" ] && [ -f "$L/scripts/compile-verify-context-for-uat.sh" ]; then
-    echo "verify_target_slug=$TARGET"
-    bash "$L/scripts/compile-verify-context-for-uat.sh" "$PDIR" 2>/dev/null || echo "verify_context_error=true"
+  if [ "$STATE" = "needs_reverification" ] || [ "$STATE" = "needs_verification" ]
+  then
+    TARGET="$SLUG"
   else
-    echo "verify_context=unavailable"
+    TARGET="${FU_SLUG:-$SLUG}"
   fi
-fi`
+  echo "verify_target_slug=$TARGET"
+fi
+echo "verify_context=deferred_until_target_resolution"`
 ```
+This lightweight block emits only the auto-detected target hint. It does not compile PLAN or SUMMARY aggregation. Step 1 resolves any explicit target before the single Step 2 compiler call.
 
 Pre-computed UAT resume metadata:
 ```
@@ -178,43 +105,17 @@ L="/tmp/.vbw-plugin-root-link-${SESSION_KEY}"
 P="/tmp/.vbw-phase-detect-${SESSION_KEY}.txt"
 PD=""
 _refresh_phase_detect() {
-  local VBW_CACHE_ROOT R V D REAL_R
-  VBW_CACHE_ROOT="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/plugins/cache/vbw-marketplace/vbw"
-  R=""
-  if [ -z "$R" ] && [ -n "${CLAUDE_PLUGIN_ROOT:-}" ] && [ -f "${CLAUDE_PLUGIN_ROOT}/scripts/hook-wrapper.sh" ]; then R="${CLAUDE_PLUGIN_ROOT}"; fi
-  if [ -z "$R" ] && [ -f "${VBW_CACHE_ROOT}/local/scripts/hook-wrapper.sh" ]; then R="${VBW_CACHE_ROOT}/local"; fi
-  if [ -z "$R" ]; then
-    V=$(find "${VBW_CACHE_ROOT}" -maxdepth 1 -mindepth 1 2>/dev/null | awk -F/ '{print $NF}' | grep -E '^[0-9]+(\.[0-9]+)*$' | sort -t. -k1,1n -k2,2n -k3,3n | tail -1)
-    [ -n "$V" ] && [ -f "${VBW_CACHE_ROOT}/${V}/scripts/hook-wrapper.sh" ] && R="${VBW_CACHE_ROOT}/${V}"
+  local resolver root
+  resolver="$L/scripts/resolve-plugin-root.sh"
+  if [ ! -f "$resolver" ]; then
+    if [ -n "${CLAUDE_PLUGIN_ROOT:-}" ] && [ -f "${CLAUDE_PLUGIN_ROOT}/scripts/resolve-plugin-root.sh" ]; then
+      resolver="${CLAUDE_PLUGIN_ROOT}/scripts/resolve-plugin-root.sh"
+    else
+      return 1
+    fi
   fi
-  if [ -z "$R" ]; then
-    V=$(find "${VBW_CACHE_ROOT}" -maxdepth 1 -mindepth 1 2>/dev/null | awk -F/ '{print $NF}' | sort | tail -1)
-    [ -n "$V" ] && [ -f "${VBW_CACHE_ROOT}/${V}/scripts/hook-wrapper.sh" ] && R="${VBW_CACHE_ROOT}/${V}"
-  fi
-  SESSION_LINK="/tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}"
-  if [ -z "$R" ] && [ -f "$SESSION_LINK/scripts/hook-wrapper.sh" ]; then
-    R="$SESSION_LINK"
-  fi
-  if [ -z "$R" ]; then
-    ANY_LINK=$(command find -H /tmp -maxdepth 1 -name '.vbw-plugin-root-link-*' -print 2>/dev/null | LC_ALL=C sort | while IFS= read -r link; do
-      if [ -f "$link/scripts/hook-wrapper.sh" ]; then
-        printf '%s\n' "$link"
-        break
-      fi
-    done || true)
-    [ -n "$ANY_LINK" ] && R="$ANY_LINK"
-  fi
-  if [ -z "$R" ]; then
-    D=$(ps axww -o args= 2>/dev/null | grep -v grep | grep -oE -- "--plugin-dir [^ ]+" | head -1)
-    D="${D#--plugin-dir }"
-    [ -n "$D" ] && [ -f "$D/scripts/hook-wrapper.sh" ] && R="$D"
-  fi
-  if [ -z "$R" ] || [ ! -d "$R" ] || [ ! -f "$R/scripts/phase-detect.sh" ]; then
-    return 1
-  fi
-  REAL_R=$(cd "$R" 2>/dev/null && pwd -P) || return 1
-  bash "$REAL_R/scripts/ensure-plugin-root-link.sh" "$L" "$REAL_R" >/dev/null 2>&1 || true
-  PD=$(bash "$REAL_R/scripts/phase-detect.sh" 2>/dev/null) || PD=""
+  root=$(bash "$resolver" --require-script phase-detect.sh 2>/dev/null) || return 1
+  PD=$(bash "$root/scripts/phase-detect.sh" 2>/dev/null) || PD=""
   if [ -z "$(printf '%s' "$PD" | tr -d '[:space:]')" ] || [ "$PD" = "phase_detect_error=true" ]; then
     return 1
   fi
@@ -259,7 +160,7 @@ QA verification summary (pre-extracted from VERIFICATION.md):
   If `active_session != none` AND exported `session_status` is `uat_pending` or `uat_failed` AND (`phase_count=0` OR `$ARGUMENTS` contains `--session`) → skip ALL remaining guards and jump directly to `<debug_session_uat>` below.
   If phases exist (`phase_count > 0`) AND `$ARGUMENTS` does NOT contain `--session`, skip this override — standard phase UAT takes priority.
 - **Phase-detect error guard (NON-NEGOTIABLE):** If Phase state (from Context above) contains `phase_detect_error=true`, display: "⚠ Phase detection failed. Run `bash \"{plugin-root}/scripts/phase-detect.sh\"` manually to debug." STOP. Do NOT fall back to phase-dir scanning or ad-hoc `VERIFICATION.md` checks when phase-detect failed.
-- **Verify-context error guard (NON-NEGOTIABLE):** If the pre-computed verify context block contains `verify_context_error=true` or `verify_context=unavailable`, display: "⚠ Verify context compilation failed. Run `bash "{plugin-root}/scripts/compile-verify-context.sh" .vbw-planning/phases/{NN}-{slug}` manually to debug." STOP. Do NOT improvise by reading individual PLAN/SUMMARY files unless the user explicitly targeted a different phase number (see Step 1).
+- **Verify-context error guard (NON-NEGOTIABLE):** Apply this guard only after Step 2 resolves and compiles the final target. If the active verify context contains `verify_context_error=true` or `verify_context=unavailable`, display: "⚠ Verify context compilation failed. Run `bash "{plugin-root}/scripts/compile-verify-context.sh" .vbw-planning/phases/{NN}-{slug}` manually to debug." STOP. Do NOT improvise by reading individual PLAN/SUMMARY files.
 - **Brownfield normalization:** If Phase state (from Context above) contains `misnamed_plans=true`, normalize all phase directories before proceeding:
   ```bash
   NORM_SCRIPT="{plugin-root}/scripts/normalize-plan-filenames.sh"
@@ -274,7 +175,7 @@ QA verification summary (pre-extracted from VERIFICATION.md):
   ```bash
   bash "{plugin-root}/scripts/phase-detect.sh" > "/tmp/.vbw-phase-detect-${CLAUDE_SESSION_ID:-default}.txt"
   ```
-  Use the refreshed phase-detect output for all subsequent guard checks and steps. Also regenerate pre-computed verify context and UAT resume metadata for the target phase after auto-detection (Step 1).
+  Use the refreshed phase-detect output for all subsequent guard checks and target resolution. Record that normalization ran so Step 2 refreshes UAT resume metadata after compiling the final target.
 - **Auto-detect phase** (no explicit number): Phase detection is pre-computed in Context above (or refreshed by normalization above). Use `next_phase` and `next_phase_slug` for the target phase.
   - If `next_phase_state=needs_reverification`: use `next_phase` directly — this is the phase that just completed remediation and needs re-verification.
   - If `next_phase_state=needs_verification`: use `next_phase` directly — this is either the first fully-built phase that needs UAT verification (auto_uat routing) or an active current-round UAT that should resume Verify mode.
@@ -425,46 +326,27 @@ When routed here, skip the standard phase-resolution Steps entirely. Instead:
 
 ## Steps
 
-### 1. Resolve phase and load summaries
+### 1. Resolve the final phase target
 
-- Parse explicit phase number from $ARGUMENTS, or use auto-detected phase
-- Use `.vbw-planning/phases/` for phase directories
-- **If initial Phase state contained `misnamed_plans=true`:** re-run compile-verify-context.sh and extract-uat-resume.sh for the resolved target phase dir, since pre-computed blocks used stale filenames:
-  ```bash
-  PDIR=".vbw-planning/phases/{target-slug}"
-  bash "{plugin-root}/scripts/compile-verify-context-for-uat.sh" "$PDIR"
-  bash "{plugin-root}/scripts/extract-uat-resume.sh" "$PDIR"
-  ```
-  Use the refreshed output in place of the pre-computed blocks from Context.
-- Use pre-computed verify context from the "Pre-computed verify context" block above (or refreshed output if normalization ran or Step 2 refreshed re-verification state) — it contains per-plan titles, must_haves, what was built, files modified, and status. Do NOT read individual `*-SUMMARY.md` or `*-PLAN.md` files.
-- **Parse `verify_scope`** from the first line of the verify context block. When `verify_scope=remediation round=RR`, this is a re-verification session scoped to remediation round RR only. When `verify_scope=full`, standard full-scope verification. Use this in Step 4 to determine test framing.
-- **Parse `uat_path`** from the second line of the verify context block. This is the relative path (from phase dir) where the UAT file should be written — e.g., `03-UAT.md` for full scope or `remediation/uat/round-01/R01-UAT.md` for remediation scope. Use this in Steps 4, 8, and 9 instead of hardcoding `{phase}-UAT.md`.
-- **Parse `SUMMARY_DEVIATION:` records** from the verify context block. Each record has `signature`, `source_plan`, `source_path`, and `text`. These records are already filtered against `{phase-dir}/remediation/uat/accepted-deviations.json`; do not re-prefill any deviation that is absent because it was previously accepted. Use the remaining records in Step 4 to create reviewable summary-deviation checkpoints before generated plan checkpoints.
-- **Remediation safety check:** If `verify_scope=remediation` and `uat_path` does not already point at the current remediation round's round-scoped UAT path (`remediation/uat/round-{RR}/R{RR}-UAT.md` for round-dir layout, `remediation/round-{RR}/R{RR}-UAT.md` for legacy layout), run:
-  ```bash
-  bash "{plugin-root}/scripts/uat-remediation-state.sh" get-or-init "{phase-dir}" major
-  ```
-  Parse `round=RR` and `layout=...`, then override `uat_path` with the matching round-scoped path for that layout before Step 4 writes any UAT file. This applies to resumed `needs_reverification` sessions too.
-- **If user specified an explicit phase number** that differs from `verify_target_slug`, ignore the pre-computed verify context, `next_phase_state`, `qa_status`, and UAT resume metadata from the auto-detected phase. Recompute target-specific verify context and UAT resume metadata:
-  ```bash
-  PDIR=".vbw-planning/phases/{target-slug}"
-  bash "{plugin-root}/scripts/compile-verify-context-for-uat.sh" "$PDIR"
-  bash "{plugin-root}/scripts/extract-uat-resume.sh" "$PDIR"
-  ```
-  Use this target-specific output instead of the auto-detected blocks from Context. Do NOT force full scope — let `compile-verify-context-for-uat.sh` decide whether the explicit target phase is full-scope verification or remediation re-verification. Apply the QA gate above to the explicit target phase only.
-  Then check the explicit target's own remediation stage:
+- Parse an explicit phase number from $ARGUMENTS before selecting any target. When a number is present, it wins over all auto-detected phase state. Otherwise, use the auto-detected phase from the Guard section.
+- Resolve exactly one matching directory under `.vbw-planning/phases/`. Store its slug as `TARGET_SLUG` and its path as `PDIR`. Apply the target phase's SUMMARY and QA guards above before continuing.
+- If initial Phase state contained `misnamed_plans=true`, use the normalized filenames and refreshed phase-detect output produced by the Guard section. Do not compile context during normalization.
+- If the user specified an explicit phase number that differs from `verify_target_slug`, ignore the pre-computed verify context, `next_phase_state`, `qa_status`, and UAT resume metadata from the auto-detected phase. Apply the QA gate above to the explicit target phase only. Do NOT force full scope. Step 2 lets `compile-verify-context-for-uat.sh` decide whether the explicit target is full-scope verification or remediation re-verification.
+- Check the explicit target's own remediation stage:
   ```bash
   bash "{plugin-root}/scripts/uat-remediation-state.sh" get "{phase-dir}"
   ```
   If that stage is `research`, `plan`, `execute`, or `fix`, STOP: `Phase {NN} has active UAT remediation (stage {stage}). Run /vbw:vibe to continue remediation before re-verification.`
+- Do not invoke `compile-verify-context-for-uat.sh` until target resolution and the optional Step 2 re-verification preparation are complete.
 
-### 2. Handle re-verification state
+### 2. Handle optional re-verification, then compile once
 
-- If the active target phase needs re-verification:
+- Determine re-verification state for `PDIR` without compiling context:
   - For auto-detected routing, use `next_phase_state=needs_reverification` from Context above.
-  - For an explicit target phase, ignore the auto-detected `next_phase_state` and only enter this step when the explicit target's own current UAT status is `issues_found` and its UAT remediation stage is `done` or `verify`.
-  - Treat `prepare-reverification.sh` output as: `archived=kept|in-round-dir|<original-uat-basename>` plus `skipped=already_archived|ready_for_verify|cap_reached`.
-  - Run `prepare-reverification.sh {phase-dir}` to archive the old UAT and reset remediation stage
+  - For an explicit target, ignore the auto-detected `next_phase_state`. Prepare re-verification only when that target's own current UAT status is `issues_found` and its UAT remediation stage is `done` or `verify`.
+- If the active target needs re-verification:
+  - Treat `prepare-reverification.sh` output as `archived=kept|in-round-dir|<original-uat-basename>` plus `skipped=already_archived|ready_for_verify|cap_reached`.
+  - Run `prepare-reverification.sh {phase-dir}` to archive the old UAT and reset remediation state.
   - If the script outputs `skipped=already_archived`, display: `UAT already archived. Starting fresh re-verification.`
   - If the script outputs `skipped=ready_for_verify`, display: `Round {NN} remediation complete. Starting fresh re-verification.`
   - If the script outputs `skipped=cap_reached`, parse `max_rounds={N}` from the script output and display:
@@ -475,31 +357,48 @@ When routed here, skip the standard phase-resolution Steps entirely. Instead:
       in config.json.
     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     ```
-    STOP — do not continue to Step 3 or enter a fresh verify loop.
-  - If the script fails (non-zero exit), display the error message and **STOP** — do not continue to Step 3
-  - If `archived=kept`: display: `Phase UAT preserved. Starting fresh re-verification in round dir.`
-  - If `archived=in-round-dir`: display: `Archived previous UAT → {round_file}. Starting fresh re-verification.`
-  - Otherwise, when `archived=` is the original phase-root UAT basename (flat/legacy layout), display: `Archived previous UAT → {round_file}. Starting fresh re-verification.`
-  - Immediately refresh verify context and UAT resume metadata:
-    ```bash
-    bash "{plugin-root}/scripts/compile-verify-context-for-uat.sh" "{phase-dir}"
-    bash "{plugin-root}/scripts/extract-uat-resume.sh" "{phase-dir}"
-    ```
-  - Use this refreshed output instead of the pre-computed verify context and UAT resume metadata for the rest of the session.
-  - Continue to Step 3 (generate new tests) — do NOT resume the old UAT
+    STOP. Do not compile context or enter a fresh verify loop.
+  - If the script fails with a non-zero exit, display its error and STOP. Do not compile context.
+  - If `archived=kept`, display: `Phase UAT preserved. Starting fresh re-verification in round dir.`
+  - If `archived=in-round-dir`, display: `Archived previous UAT -> {round_file}. Starting fresh re-verification.`
+  - Otherwise, when `archived=` is the original phase-root UAT basename, display: `Archived previous UAT -> {round_file}. Starting fresh re-verification.`
+- After the optional preparation finishes, compile verify context exactly once for the final target:
+  ```bash
+  VERIFY_CONTEXT=$(bash "{plugin-root}/scripts/compile-verify-context-for-uat.sh" "$PDIR" 2>/dev/null) || VERIFY_CONTEXT="verify_context_error=true"
+  if [ -z "$(printf '%s' "$VERIFY_CONTEXT" | tr -d '[:space:]')" ]
+  then
+    VERIFY_CONTEXT="verify_context_error=true"
+  fi
+  ```
+  Do not invoke this compiler again later in the command. If `VERIFY_CONTEXT` contains `verify_context_error=true` or `verify_context=unavailable`, apply the fail-closed Guard above and STOP. Do NOT scan individual PLAN or SUMMARY files as a fallback.
+- Resolve UAT resume metadata for the same final target. Reuse the pre-computed UAT resume block only when its `uat_resume_target_slug` equals `TARGET_SLUG` and neither normalization nor re-verification preparation changed the target artifacts. Otherwise run:
+  ```bash
+  UAT_RESUME=$(bash "{plugin-root}/scripts/extract-uat-resume.sh" "$PDIR" 2>/dev/null) || UAT_RESUME="uat_resume=error"
+  ```
+  Use UAT resume metadata for the active target phase from this point onward.
+- Use `VERIFY_CONTEXT` as the sole PLAN and SUMMARY aggregation. It contains per-plan titles, must_haves, what was built, files modified, and status. Do NOT read individual `*-SUMMARY.md` or `*-PLAN.md` files.
+- Parse `verify_scope` from the first line. `verify_scope=remediation round=RR` scopes the session to remediation round RR. `verify_scope=full` selects standard full-scope verification. Use this in Step 4.
+- Parse `uat_path` from the second line. This is the phase-relative UAT output path, such as `03-UAT.md` or `remediation/uat/round-01/R01-UAT.md`. Use it in Steps 4, 8, and 9.
+- Parse `SUMMARY_DEVIATION:` records from `VERIFY_CONTEXT`. Each record has `signature`, `source_plan`, `source_path`, and `text`. They are already filtered against `{phase-dir}/remediation/uat/accepted-deviations.json`. Use the remaining records in Step 4 before generated plan checkpoints.
+- **Remediation safety check:** If `verify_scope=remediation` and `uat_path` does not point at the current round-scoped UAT path (`remediation/uat/round-{RR}/R{RR}-UAT.md` for round-dir layout or `remediation/round-{RR}/R{RR}-UAT.md` for legacy layout), run:
+  ```bash
+  bash "{plugin-root}/scripts/uat-remediation-state.sh" get-or-init "{phase-dir}" major
+  ```
+  Parse `round=RR` and `layout=...`, then override `uat_path` with the matching round-scoped path before Step 4 writes a UAT file.
+- Continue to Step 3. A prepared re-verification starts a new UAT and must not resume the old report.
 
 ### 3. Check for existing UAT session (resume support)
 
-- Use UAT resume metadata for the active target phase (the pre-computed auto-detected block, the target-specific refresh from Step 1, or the refreshed metadata from Step 2 for re-verification):
+- Use `UAT_RESUME` selected for the active target phase in Step 2:
   - `uat_resume=none`: no existing UAT session — proceed to Step 4 (generate tests)
   - `uat_resume=all_done uat_completed=N uat_total=N`: all tests already have results — display the summary, STOP
   - `uat_resume=<test-id> uat_completed=N uat_total=N`: resume at `<test-id>` only when `<test-id>` is a valid checkpoint ID (`P...`, `PR...`, or `D...`). Display: `Resuming UAT session -- {completed}/{total} tests done`. Use the following `uat_resume_*` lines as the authoritative prompt context for the first resumed checkpoint: normal product checkpoints use `uat_resume_scenario` + `uat_resume_expected`; summary-deviation checkpoints use `uat_resume_deviation`, `uat_resume_source_plan`, `uat_resume_source_summary`, and `uat_resume_deviation_signature`.
 - Treat `uat_resume=unavailable`, `uat_resume=error`, and `uat_resume=pending_archive` as compact wrapper sentinels, not checkpoint IDs.
 - Do NOT scan-parse the UAT file to find the resume point — the pre-computed metadata already identifies it. If the required `uat_resume_*` fields for the active checkpoint type are absent or incomplete, read the UAT.md once as a recoverable legacy/malformed-artifact fallback, then jump to the CHECKPOINT loop at the resume point.
 
-### 4. Generate test scenarios from pre-computed verify context
+### 4. Generate test scenarios from the active verify context
 
-**Check `verify_scope` in the pre-computed verify context block.** Two modes:
+**Check `verify_scope` in `VERIFY_CONTEXT`.** Two modes:
 
 **Re-verification mode** (`verify_scope=remediation round=RR`): The context contains ONLY plans from the latest remediation round. These plans fixed issues found in a previous UAT session. Frame test scenarios to verify the remediation worked:
 - Each plan's `must_haves` reference the original UAT issues that were remediated
@@ -522,7 +421,7 @@ When routed here, skip the standard phase-resolution Steps entirely. Instead:
 - Initial frontmatter `total_tests` includes these `D{NN}` review checkpoints plus generated plan checkpoints. Initial `issues` remains `0`; unresolved review checkpoints are counted as incomplete until the human answers.
 - If there are no `SUMMARY_DEVIATION:` records, do not create any prefilled deviation checkpoints.
 
-For each plan in the pre-computed verify context block:
+For each plan in `VERIFY_CONTEXT`:
 - Use the pre-computed `what_was_built`, `files_modified`, and `must_haves` data. Do NOT read SUMMARY.md or PLAN.md files.
 - Generate 1-3 test scenarios that require HUMAN judgment — things only a person can verify
 - Minimum 1 test per plan, even for pure refactors (use "verify nothing broke" regression test)
@@ -878,7 +777,7 @@ PG_SCRIPT="/tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}/scripts/plan
 if [ -f "$PG_SCRIPT" ]; then
   bash "$PG_SCRIPT" commit-boundary "verify phase {NN}" .vbw-planning/config.json
 else
-  echo "VBW: planning-git.sh unavailable; skipping planning git boundary commit" >&2
+  echo "⚠ VBW: planning-git.sh unavailable. Skipping planning git boundary commit." >&2
 fi
 ```
 - `planning_tracking=commit`: commits `.vbw-planning/` + `CLAUDE.md` when changed (includes UAT report)

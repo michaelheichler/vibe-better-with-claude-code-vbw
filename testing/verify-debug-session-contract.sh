@@ -372,7 +372,7 @@ else
 fi
 
 patha_teardown_line=$(first_matching_line_number "$DEBUG_PATH_A_BLOCK" '**Teardown phase — HARD GATE before any implementation:**')
-patha_zero_line=$(first_matching_line_number "$DEBUG_PATH_A_BLOCK" 'Verify: after TeamDelete, there must be ZERO active teammates.')
+patha_zero_line=$(first_matching_line_number "$DEBUG_PATH_A_BLOCK" 'Verify: after shutdown, there must be ZERO active teammates.')
 patha_impl_line=$(first_matching_line_number "$DEBUG_PATH_A_BLOCK" 'If `RESOLUTION_OBSERVATION=needs_change`: spawn ONE fresh post-synthesis implementation owner')
 
 if [ -n "$patha_teardown_line" ] && [ -n "$patha_zero_line" ] && [ -n "$patha_impl_line" ] \
@@ -449,7 +449,7 @@ fi
 debug_complete_matches=$(grep -nF 'bash "{plugin-root}/scripts/debug-session-state.sh" set-status .vbw-planning complete' "$DEBUG_CMD" 2>/dev/null || true)
 debug_pg_matches=$(grep -nF 'PG_SCRIPT="/tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}/scripts/planning-git.sh"' "$DEBUG_CMD" 2>/dev/null || true)
 debug_commit_matches=$(grep -nF 'bash "$PG_SCRIPT" commit-boundary "complete debug session" .vbw-planning/config.json' "$DEBUG_CMD" 2>/dev/null || true)
-debug_warning_matches=$(grep -nF 'VBW: planning-git.sh unavailable; skipping planning git boundary commit' "$DEBUG_CMD" 2>/dev/null || true)
+debug_warning_matches=$(grep -nF '⚠ VBW: planning-git.sh unavailable. Skipping planning git boundary commit.' "$DEBUG_CMD" 2>/dev/null || true)
 
 debug_complete_first=$(printf '%s\n' "$debug_complete_matches" | sed -n '1s/:.*//p')
 debug_complete_second=$(printf '%s\n' "$debug_complete_matches" | sed -n '2s/:.*//p')
@@ -541,7 +541,7 @@ fi
 DEBUGGER_PROTOCOL_BLOCK="$(sed -n '/## Investigation Protocol/,/^## /p' "$DEBUGGER_AGENT" 2>/dev/null || true)"
 DEBUGGER_TEAMMATE_BLOCK="$(sed -n '/## Teammate Mode/,/^## /p' "$DEBUGGER_AGENT" 2>/dev/null || true)"
 
-if contains_literal "$DEBUGGER_PROTOCOL_BLOCK" 'Historical accepted process-exception or backlog/UAT-deviation metadata is not an `already_fixed` signal.' \
+if contains_literal "$DEBUGGER_PROTOCOL_BLOCK" 'Historical `accepted-process-exception` or backlog/UAT-deviation metadata is not an `already_fixed` signal.' \
   && contains_literal "$DEBUGGER_PROTOCOL_BLOCK" 'Use `already_fixed` only with fresh current evidence.' \
   && contains_literal "$DEBUGGER_PROTOCOL_BLOCK" 'Report an explicit blocker instead of claiming completion when remediation is impossible.'; then
   pass "vbw-debugger.md Investigation Protocol rejects historical accepted metadata as already_fixed evidence"

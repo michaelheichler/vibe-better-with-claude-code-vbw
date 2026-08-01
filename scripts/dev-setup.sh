@@ -262,7 +262,7 @@ do_teardown() {
   echo ""
   echo "To reinstall VBW from the marketplace, start Claude Code and run:"
   echo ""
-  echo "  /plugin marketplace add yidakee/vibe-better-with-claude-code-vbw"
+  echo "  /plugin marketplace add michaelheichler/vibe-better-with-claude-code-vbw"
   echo "  /plugin install vbw@vbw-marketplace"
   echo ""
 }

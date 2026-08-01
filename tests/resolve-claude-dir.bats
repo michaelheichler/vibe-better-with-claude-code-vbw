@@ -135,18 +135,18 @@ teardown() {
   [[ "$gsd" == "$HOME/.claude/skills" ]]
 }
 
-@test "detect-stack.sh reports project-local find-skills availability" {
+@test "detect-stack.sh discovers a project-local find-skills skill directory" {
   local project_dir="$TEST_TEMP_DIR/project"
   mkdir -p "$project_dir/.claude/skills/find-skills"
 
   run bash "$SCRIPTS_DIR/detect-stack.sh" "$project_dir"
   [ "$status" -eq 0 ]
 
-  [ "$(echo "$output" | jq -r '.find_skills_available')" = "true" ]
+  [ "$(echo "$output" | jq -r 'has("find_skills_available")')" = "false" ]
   [ "$(echo "$output" | jq -r '.installed.project | index("find-skills") != null')" = "true" ]
 }
 
-@test "detect-stack.sh ignores HOME/.agents skills for discovery and find-skills availability" {
+@test "detect-stack.sh ignores HOME/.agents skills for discovery" {
   local project_dir="$TEST_TEMP_DIR/project"
   mkdir -p "$project_dir"
   mkdir -p "$HOME/.agents/skills/find-skills"
@@ -155,7 +155,6 @@ teardown() {
   run bash "$SCRIPTS_DIR/detect-stack.sh" "$project_dir"
   [ "$status" -eq 0 ]
 
-  [ "$(echo "$output" | jq -r '.find_skills_available')" = "false" ]
   [ "$(echo "$output" | jq -r '.installed.global | length')" = "0" ]
   [ "$(echo "$output" | jq -r '.installed.project | length')" = "0" ]
   [ "$(echo "$output" | jq -r '.installed | has("agents")')" = "false" ]

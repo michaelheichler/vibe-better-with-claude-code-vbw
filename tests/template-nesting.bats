@@ -150,6 +150,13 @@ _track_tmp_test_path() {
   TMP_TEST_PATHS+=("$1")
 }
 
+_install_shared_resolver_fixture() {
+  local root="$1"
+  cp "$PROJECT_ROOT/scripts/resolve-plugin-root.sh" "$PROJECT_ROOT/scripts/resolve-claude-dir.sh" \
+    "$PROJECT_ROOT/scripts/ensure-plugin-root-link.sh" "$root/scripts/"
+  chmod +x "$root/scripts/resolve-plugin-root.sh" "$root/scripts/ensure-plugin-root-link.sh"
+}
+
 teardown() {
   local p
   for p in "${TMP_TEST_PATHS[@]}"; do
@@ -347,7 +354,7 @@ EOF
 printf '%s\n' 'next_phase_state=fresh_live' 'phase_detect_complete=true'
 EOF
   : > "$root/scripts/hook-wrapper.sh"
-  cp "$PROJECT_ROOT/scripts/ensure-plugin-root-link.sh" "$root/scripts/ensure-plugin-root-link.sh"
+  _install_shared_resolver_fixture "$root"
   chmod +x "$root/scripts/phase-detect.sh" "$root/scripts/ensure-plugin-root-link.sh"
 
   printf '%s\n' 'phase_detect_error=true' > "$cache"
@@ -381,7 +388,7 @@ EOF
 echo "phase_detect_error=true"
 EOF
   : > "$root/scripts/hook-wrapper.sh"
-  cp "$PROJECT_ROOT/scripts/ensure-plugin-root-link.sh" "$root/scripts/ensure-plugin-root-link.sh"
+  _install_shared_resolver_fixture "$root"
   chmod +x "$root/scripts/phase-detect.sh" "$root/scripts/ensure-plugin-root-link.sh"
 
   printf '%s\n' 'phase_detect_error=true' > "$cache"
@@ -501,66 +508,42 @@ EOF
   grep -q 'xcodebuild test, pytest, bats, jest' "$PROJECT_ROOT/commands/verify.md"
 }
 
-# ── Content validation in plugin root resolution ────────────────────────────
-# The preamble must validate directories have scripts (hook-wrapper.sh) before
-# accepting them, to guard against empty stub directories from --plugin-dir mode.
+# ── Shared plugin root resolver ownership ───────────────────────────────────
 
-_content_validation_pattern() {
-  printf 'scripts/hook-wrapper.sh'
-}
-
-@test "all 6 preamble commands use content validation for local/ check" {
+@test "shared resolver validates candidates by required script" {
+  grep -Fq '[ -f "$candidate/scripts/$required_script" ]' "$PROJECT_ROOT/scripts/resolve-plugin-root.sh"
+  # Invariant: every visited command delegates validation. Variant: unvisited commands.
   for cmd in vibe verify discuss help qa skills; do
-    local count
-    count=$(grep -c "$(_content_validation_pattern)" "$PROJECT_ROOT/commands/${cmd}.md")
-    [ "$count" -ge 1 ] || { echo "FAIL: ${cmd}.md missing content validation"; return 1; }
+    grep -Fq 'resolve-plugin-root.sh' "$PROJECT_ROOT/commands/${cmd}.md" || \
+      { echo "FAIL: ${cmd}.md missing shared resolver delegation"; return 1; }
   done
 }
 
-@test "preamble does NOT use bare [ -d ] for local/ acceptance" {
-  # The old pattern [ -d "${VBW_CACHE_ROOT}/local" ] accepts empty stubs
+@test "command trampolines do NOT use bare [ -d ] for local/ acceptance" {
   for cmd in vibe verify discuss help qa skills; do
     run bash -c "grep 'elif \\[ -d.*VBW_CACHE_ROOT.*local' \"$PROJECT_ROOT/commands/${cmd}.md\" 2>/dev/null"
     [ "$status" -eq 1 ] || { echo "FAIL: ${cmd}.md still has bare [ -d ] local/ check"; return 1; }
   done
 }
 
-# ── Process-tree fallback for --plugin-dir mode ─────────────────────────────
-# When cache resolution fails, the preamble falls back to detecting the plugin
-# directory from the process tree (ps axww).
-
-_process_tree_pattern() {
-  printf 'ps axww -o args='
+@test "shared resolver owns process-tree fallback" {
+  grep -Fq 'ps axww -o args=' "$PROJECT_ROOT/scripts/resolve-plugin-root.sh"
+  run bash -c "grep -nF 'ps axww -o args=' \"$PROJECT_ROOT\"/commands/{vibe,verify,discuss,help,qa,skills}.md"
+  [ "$status" -eq 1 ]
 }
 
-@test "all 6 preamble commands have process-tree fallback" {
-  for cmd in vibe verify discuss help qa skills; do
-    grep -q "$(_process_tree_pattern)" "$PROJECT_ROOT/commands/${cmd}.md" || \
-      { echo "FAIL: ${cmd}.md missing process-tree fallback"; return 1; }
+@test "shared resolver owns canonical pwd -P resolution" {
+  grep -Fq 'canonical_root=$(cd "$resolved_root" 2>/dev/null && pwd -P)' \
+    "$PROJECT_ROOT/scripts/resolve-plugin-root.sh"
+  # Invariant: every visited preamble delegates canonicalization. Variant: unvisited commands.
+  for cmd in config debug discuss doctor fix help init map qa report research resume rtk skills status update verify vibe whats-new; do
+    grep -Fq 'resolve-plugin-root.sh' "$PROJECT_ROOT/commands/${cmd}.md" || \
+      { echo "FAIL: ${cmd}.md missing shared resolver delegation"; return 1; }
   done
 }
 
-# ── Canonical symlink resolution via pwd -P ─────────────────────────────────
-# Preambles must canonicalize $R via (cd "$R" && pwd -P) before creating the
-# /tmp symlink. This survives cache "local" symlink deletion mid-session by
-# pointing the /tmp link directly at the real directory, not via the cache chain.
-
-_canonical_pwd_pattern() {
-  printf 'cd "$R" 2>/dev/null && pwd -P'
-}
-
-@test "all 16 preamble commands use pwd -P for canonical symlink resolution" {
-  # todo and list-todos intentionally have no shell preamble (fix for #201)
-  for cmd in config debug discuss fix help init map qa research resume skills status update verify vibe whats-new; do
-    grep -q "$(_canonical_pwd_pattern)" "$PROJECT_ROOT/commands/${cmd}.md" || \
-      { echo "FAIL: ${cmd}.md missing canonical pwd -P resolution"; return 1; }
-  done
-}
-
-@test "all 16 preamble commands link REAL_R not raw R" {
-  # todo and list-todos intentionally have no shell preamble (fix for #201)
-  for cmd in config debug discuss fix help init map qa research resume skills status update verify vibe whats-new; do
-    grep -q 'ensure-plugin-root-link.sh" "$LINK" "$REAL_R"' "$PROJECT_ROOT/commands/${cmd}.md" || \
-      { echo "FAIL: ${cmd}.md missing ensure-plugin-root-link helper call"; return 1; }
-  done
+@test "shared resolver repairs links with canonical_root" {
+  grep -Fq 'bash "$canonical_root/scripts/ensure-plugin-root-link.sh"' \
+    "$PROJECT_ROOT/scripts/resolve-plugin-root.sh"
+  grep -Fq '"$session_link" "$canonical_root"' "$PROJECT_ROOT/scripts/resolve-plugin-root.sh"
 }

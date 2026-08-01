@@ -114,7 +114,59 @@ EOF
   done
 }
 
-@test "file-guard: active agent count never bypasses delegated orchestrator block" {
+@test "file-guard: active qa marker blocks non-planning writes before delegation-guard bypass" {
+  cd "$TEST_TEMP_DIR"
+  create_plan_with_files
+  echo "1" > "$TEST_TEMP_DIR/.vbw-planning/.active-agent-count"
+  echo "qa" > "$TEST_TEMP_DIR/.vbw-planning/.active-agent"
+
+  INPUT='{"agent_id":"qa-1","agent_type":"vbw:vbw-qa","tool_name":"Write","tool_input":{"file_path":"src/file.js","content":"bad"}}'
+  run bash -c "unset VBW_AGENT_ROLE; echo '$INPUT' | bash '$SCRIPTS_DIR/file-guard.sh'"
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"cannot write outside .vbw-planning/"* ]]
+}
+
+@test "file-guard: active qa marker allows planning artifact writes" {
+  cd "$TEST_TEMP_DIR"
+  create_plan_with_files
+  echo "1" > "$TEST_TEMP_DIR/.vbw-planning/.active-agent-count"
+  echo "qa" > "$TEST_TEMP_DIR/.vbw-planning/.active-agent"
+
+  INPUT='{"tool_name":"Write","tool_input":{"file_path":".vbw-planning/phases/01-test/01-RESEARCH.md","content":"ok"}}'
+  run bash -c "unset VBW_AGENT_ROLE; echo '$INPUT' | bash '$SCRIPTS_DIR/file-guard.sh'"
+  [ "$status" -eq 0 ]
+}
+
+@test "file-guard: active qa marker still allows always-exempt files, unlike scout" {
+  cd "$TEST_TEMP_DIR"
+  create_plan_with_files
+  echo "1" > "$TEST_TEMP_DIR/.vbw-planning/.active-agent-count"
+  echo "qa" > "$TEST_TEMP_DIR/.vbw-planning/.active-agent"
+
+  for target in "CLAUDE.md" "STATE.md" "foo-VERIFICATION.md"; do
+    INPUT=$(jq -n --arg fp "$target" '{"tool_name":"Write","tool_input":{"file_path":$fp,"content":"ok"}}')
+    run bash -c "unset VBW_AGENT_ROLE; echo '$INPUT' | bash '$SCRIPTS_DIR/file-guard.sh'"
+    [ "$status" -eq 0 ]
+  done
+}
+
+@test "file-guard: active QA in session A does not restrict writes in session B" {
+  cd "$TEST_TEMP_DIR"
+  create_plan_with_files
+  printf '%s\n' '{"session_id":"session-A","agent_type":"vbw:vbw-qa","pid":"10102"}' | \
+    VBW_PLANNING_DIR="$TEST_TEMP_DIR/.vbw-planning" bash "$SCRIPTS_DIR/agent-start.sh"
+
+  INPUT=$(jq -n --arg sid 'session-B' '{session_id:$sid,tool_name:"Write",tool_input:{file_path:"src/allowed.js",content:"ok"}}')
+  run bash -c 'unset VBW_AGENT_ROLE; printf "%s\n" "$1" | bash "$2"' _ "$INPUT" "$SCRIPTS_DIR/file-guard.sh"
+  [ "$status" -eq 0 ]
+
+  INPUT=$(jq -n --arg sid 'session-A' '{session_id:$sid,agent_id:"qa-1",agent_type:"vbw:vbw-qa",tool_name:"Write",tool_input:{file_path:"src/allowed.js",content:"bad"}}')
+  run bash -c 'unset VBW_AGENT_ROLE; printf "%s\n" "$1" | bash "$2"' _ "$INPUT" "$SCRIPTS_DIR/file-guard.sh"
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"cannot write outside .vbw-planning/"* ]]
+}
+
+@test "file-guard: active count in session A does not bypass delegated write block in session B" {
   cd "$TEST_TEMP_DIR"
   create_plan_with_files
   create_contract
@@ -133,6 +185,54 @@ JSON
     [ "$status" -eq 2 ]
     [[ "$output" == *"orchestrator cannot write product files"* ]]
   done
+}
+
+@test "file-guard: active agent count never bypasses delegated orchestrator block" {
+  cd "$TEST_TEMP_DIR"
+  create_plan_with_files
+  create_contract
+  mkdir -p src
+  cat > "$TEST_TEMP_DIR/.vbw-planning/.execution-state.json" <<'JSON'
+{"phase":1,"phase_name":"test","status":"running","effort":"balanced","correlation_id":"corr-123","plans":[]}
+JSON
+  echo "1" > "$TEST_TEMP_DIR/.vbw-planning/.active-agent-count"
+  echo "dev" > "$TEST_TEMP_DIR/.vbw-planning/.active-agent"
+
+  for sid in session-A session-B; do
+    INPUT=$(jq -n --arg sid "$sid" '{session_id:$sid,tool_name:"Write",tool_input:{file_path:"src/allowed.js",content:"blocked"}}')
+    run bash -c 'unset CLAUDE_CODE_CHILD_SESSION VBW_AGENT_ROLE; printf "%s\n" "$1" | bash "$2"' _ "$INPUT" "$SCRIPTS_DIR/file-guard.sh"
+    [ "$status" -eq 2 ]
+    [[ "$output" == *"orchestrator cannot write product files"* ]]
+  done
+}
+
+@test "file-guard: runtime Dev identity works when SubagentStart marker is absent" {
+  cd "$TEST_TEMP_DIR"
+  create_plan_with_files
+  create_contract
+  mkdir -p src
+  cat > "$TEST_TEMP_DIR/.vbw-planning/.execution-state.json" <<'JSON'
+{"phase":1,"phase_name":"test","status":"running","effort":"balanced","correlation_id":"corr-123","plans":[]}
+JSON
+
+  INPUT=$(jq -n --arg cwd "$TEST_TEMP_DIR" '{session_id:"session-A",transcript_path:($cwd + "/session.jsonl"),cwd:$cwd,hook_event_name:"PreToolUse",agent_id:"agent-123",agent_type:"vbw:vbw-dev",tool_name:"Write",tool_use_id:"toolu-123",tool_input:{file_path:"src/allowed.js",content:"allowed"}}')
+  [ ! -d "$TEST_TEMP_DIR/.vbw-planning/.active-agents" ]
+  run bash -c 'unset VBW_AGENT_ROLE VBW_ACTIVE_AGENT CLAUDE_SESSION_ID; printf "%s\n" "$1" | bash "$2"' _ "$INPUT" "$SCRIPTS_DIR/file-guard.sh"
+  [ "$status" -eq 0 ]
+}
+
+@test "file-guard: agent type alone from payload classifies role and unblocks contract-scoped write" {
+  cd "$TEST_TEMP_DIR"
+  create_plan_with_files
+  create_contract
+  mkdir -p src
+  cat > "$TEST_TEMP_DIR/.vbw-planning/.execution-state.json" <<'JSON'
+{"phase":1,"phase_name":"test","status":"running","effort":"balanced","correlation_id":"corr-123","plans":[]}
+JSON
+
+  INPUT=$(jq -n --arg cwd "$TEST_TEMP_DIR" '{session_id:"session-A",transcript_path:($cwd + "/session.jsonl"),cwd:$cwd,hook_event_name:"PreToolUse",agent_type:"vbw:vbw-dev",tool_name:"Write",tool_use_id:"toolu-123",tool_input:{file_path:"src/allowed.js",content:"allowed"}}')
+  run bash -c 'unset VBW_AGENT_ROLE VBW_ACTIVE_AGENT CLAUDE_SESSION_ID; printf "%s\n" "$1" | bash "$2"' _ "$INPUT" "$SCRIPTS_DIR/file-guard.sh"
+  [ "$status" -eq 0 ]
 }
 
 @test "file-guard: degraded mixed-role markers do not leave stale Scout write block" {
@@ -193,7 +293,7 @@ EOF
   cd "$NON_VBW"
 
   INPUT='{"tool_name":"Write","tool_input":{"file_path":"src/outside.js","content":"bad"}}'
-  run bash -c "VBW_AGENT_ROLE=scout echo '$INPUT' | VBW_AGENT_ROLE=scout bash '$SCRIPTS_DIR/file-guard.sh'"
+  run bash -c "VBW_AGENT_ROLE=scout VBW_CONFIG_ROOT='$NON_VBW' echo '$INPUT' | VBW_AGENT_ROLE=scout VBW_CONFIG_ROOT='$NON_VBW' bash '$SCRIPTS_DIR/file-guard.sh'"
   [ "$status" -eq 0 ]
 }
 
@@ -221,4 +321,55 @@ EOF
   INPUT='{"tool_name":"Write","tool_input":{"file_path":"src/allowed.js","content":"ok"}}'
   run bash -c "unset CLAUDE_CODE_CHILD_SESSION VBW_AGENT_ROLE; echo '$INPUT' | bash '$SCRIPTS_DIR/file-guard.sh'"
   [ "$status" -eq 0 ]
+}
+
+@test "file-guard: unfinalized plan alone does not block arbitrary writes when no execution is live" {
+  cd "$TEST_TEMP_DIR"
+  create_plan_with_files
+
+  INPUT='{"tool_name":"Write","tool_input":{"file_path":"src/unrelated.js","content":"maintainer work"}}'
+  run bash -c "unset VBW_AGENT_ROLE; echo '$INPUT' | bash '$SCRIPTS_DIR/file-guard.sh'"
+  [ "$status" -eq 0 ]
+}
+
+@test "file-guard: files_modified still blocks undeclared writes while execution-state is running" {
+  cd "$TEST_TEMP_DIR"
+  create_plan_with_files
+  cat > "$TEST_TEMP_DIR/.vbw-planning/.execution-state.json" <<'JSON'
+{"phase":1,"phase_name":"test","status":"running","effort":"balanced","correlation_id":"corr-123","plans":[]}
+JSON
+
+  INPUT='{"tool_name":"Write","tool_input":{"file_path":"src/undeclared.js","content":"bad"}}'
+  run bash -c "VBW_AGENT_ROLE=dev echo '$INPUT' | VBW_AGENT_ROLE=dev bash '$SCRIPTS_DIR/file-guard.sh'"
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"not in active plan's files_modified"* ]]
+
+  INPUT='{"tool_name":"Write","tool_input":{"file_path":"src/allowed.js","content":"ok"}}'
+  run bash -c "VBW_AGENT_ROLE=dev echo '$INPUT' | VBW_AGENT_ROLE=dev bash '$SCRIPTS_DIR/file-guard.sh'"
+  [ "$status" -eq 0 ]
+}
+
+@test "file-guard: stale execution-state does not enforce files_modified" {
+  cd "$TEST_TEMP_DIR"
+  create_plan_with_files
+  cat > "$TEST_TEMP_DIR/.vbw-planning/.execution-state.json" <<'JSON'
+{"phase":1,"phase_name":"test","status":"running","effort":"balanced","correlation_id":"corr-123","plans":[]}
+JSON
+  touch -t 202001010000 "$TEST_TEMP_DIR/.vbw-planning/.execution-state.json"
+
+  INPUT='{"tool_name":"Write","tool_input":{"file_path":"src/undeclared.js","content":"ok"}}'
+  run bash -c "VBW_AGENT_ROLE=dev echo '$INPUT' | VBW_AGENT_ROLE=dev bash '$SCRIPTS_DIR/file-guard.sh'"
+  [ "$status" -eq 0 ]
+}
+
+@test "file-guard: live delegated-workflow marker enforces files_modified" {
+  cd "$TEST_TEMP_DIR"
+  create_plan_with_files
+  CLAUDE_SESSION_ID="session-marker" VBW_PLANNING_DIR="$TEST_TEMP_DIR/.vbw-planning" \
+    bash "$SCRIPTS_DIR/delegated-workflow.sh" set fix balanced subagent
+
+  INPUT='{"tool_name":"Write","tool_input":{"file_path":"src/undeclared.js","content":"bad"}}'
+  run bash -c "VBW_AGENT_ROLE=dev echo '$INPUT' | VBW_AGENT_ROLE=dev bash '$SCRIPTS_DIR/file-guard.sh'"
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"not in active plan's files_modified"* ]]
 }

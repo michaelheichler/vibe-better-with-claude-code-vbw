@@ -13,7 +13,7 @@ allowed-tools: Read, Write, Edit, Bash, Glob, AskUserQuestion
 
 Plugin root:
 ```
-!`VBW_CACHE_ROOT="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/plugins/cache/vbw-marketplace/vbw"; SESSION_KEY="${CLAUDE_SESSION_ID:-default}"; SESSION_LINK="/tmp/.vbw-plugin-root-link-${SESSION_KEY}"; R=""; if [ -n "${CLAUDE_PLUGIN_ROOT:-}" ] && [ -f "${CLAUDE_PLUGIN_ROOT}/scripts/hook-wrapper.sh" ]; then R="${CLAUDE_PLUGIN_ROOT}"; fi; if [ -z "$R" ] && [ -f "${VBW_CACHE_ROOT}/local/scripts/hook-wrapper.sh" ]; then R="${VBW_CACHE_ROOT}/local"; fi; if [ -z "$R" ]; then V=$(find "${VBW_CACHE_ROOT}" -maxdepth 1 -mindepth 1 2>/dev/null | awk -F/ '{print $NF}' | grep -E '^[0-9]+(\.[0-9]+)*$' | sort -t. -k1,1n -k2,2n -k3,3n | tail -1); [ -n "$V" ] && [ -f "${VBW_CACHE_ROOT}/${V}/scripts/hook-wrapper.sh" ] && R="${VBW_CACHE_ROOT}/${V}"; fi; if [ -z "$R" ]; then L=$(find "${VBW_CACHE_ROOT}" -maxdepth 1 -mindepth 1 2>/dev/null | awk -F/ '{print $NF}' | sort | tail -1); [ -n "$L" ] && [ -f "${VBW_CACHE_ROOT}/${L}/scripts/hook-wrapper.sh" ] && R="${VBW_CACHE_ROOT}/${L}"; fi; if [ -z "$R" ] && [ -f "${SESSION_LINK}/scripts/hook-wrapper.sh" ]; then R="${SESSION_LINK}"; fi; if [ -z "$R" ]; then ANY_LINK=$(command find -H /tmp -maxdepth 1 -name '.vbw-plugin-root-link-*' -print 2>/dev/null | LC_ALL=C sort | while IFS= read -r link; do if [ -f "$link/scripts/hook-wrapper.sh" ]; then printf '%s\n' "$link"; break; fi; done || true); [ -n "$ANY_LINK" ] && R="$ANY_LINK"; fi; if [ -z "$R" ]; then D=$(ps axww -o args= 2>/dev/null | grep -v grep | grep -oE -- "--plugin-dir [^ ]+" | head -1); D="${D#--plugin-dir }"; [ -n "$D" ] && [ -f "$D/scripts/hook-wrapper.sh" ] && R="$D"; fi; if [ -z "$R" ] || [ ! -d "$R" ]; then echo "VBW: plugin root resolution failed" >&2; exit 1; fi; LINK="${SESSION_LINK}"; REAL_R=$(cd "$R" 2>/dev/null && pwd -P) || REAL_R="$R"; bash "$REAL_R/scripts/ensure-plugin-root-link.sh" "$LINK" "$REAL_R" >/dev/null 2>&1 || { echo "VBW: plugin root link failed" >&2; exit 1; }; echo "$LINK"`
+!`L="/tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}"; R="$L/scripts/resolve-plugin-root.sh"; [ -f "$R" ] || R="${CLAUDE_PLUGIN_ROOT:-}/scripts/resolve-plugin-root.sh"; [ -f "$R" ] || { echo "VBW: plugin root unavailable. Restart this session to recreate $L." >&2; exit 1; }; bash "$R" >/dev/null || exit 1; echo "$L"`
 ```
 
 Store the plugin root path output above as `{plugin-root}` for use in script and config lookups below. Replace `{plugin-root}` with the literal `Plugin root` value from Context whenever a step below references a script or file in the installed plugin.
@@ -167,14 +167,37 @@ After a core setting value is chosen, continue to Step 3 and apply it there with
 - options:
   - `Use preset profile` — quality, balanced, or budget
   - `Configure each agent individually` — 6 per-agent model questions
+  - `Model matrix`: Re-detect available models and rebuild the agent x effort matrix
 
 Store selection in variable `PROFILE_METHOD`.
 
 **Branching:**
 - If `PROFILE_METHOD = "Use preset profile"`: AskUserQuestion with 1 question and 3 options (`quality`, `balanced`, `budget`). Store the selected preset in `PROFILE`, then continue to Step 3 and apply it there using the `Model profile switching` logic below.
 - If `PROFILE_METHOD = "Configure each agent individually"`: Proceed to individual agent configuration flow (Round 1 below).
+- If `PROFILE_METHOD = "Model matrix"`: run the model matrix flow below, then continue to Step 4.
+
+**Model matrix flow:**
+
+Run `bash "{plugin-root}/scripts/detect-models.sh" --labeled`. Detection reads the Claude Code binary model table first and merges the endpoint catalog when auth env exists. Each output line is `id<TAB>description`.
+
+- **Empty output (rare):** display `○ No model catalog detectable (static tiers apply)` and return to the Step 2.7 question. Do not stop the command.
+- **Non-empty output:** show the current `model_matrix` (if any) side by side with the detected catalog, printing each detected id together with its description. Then read `{plugin-root}/references/model-profiles.md` and follow its "Task performance" tables and "Choosing models per role" section to propose an updated matrix over agents (lead, dev, qa, scout, debugger, architect, docs) x effort levels (thorough, balanced, fast, turbo). Rank each role by its measured task performance, not by a generic capability ladder. Use the description column to judge family and strength. Never invent ids: every entry must appear verbatim in the id column. Every preference array must end in a Claude tier id. Present the proposal as a compact table plus a legend of id and description.
+
+Alongside the model matrix, propose a `reasoning_matrix` over the same agents and effort levels, using the "Reasoning effort" section of `model-profiles.md` for the per-family accepted values and the per-profile defaults. Render it as an extra column beside each model cell. Two hard rules: never propose a value outside the target model's accepted set, and leave the cell empty for any model that rejects the parameter (`claude-haiku-4-5` and every model whose `reasoning_efforts` is `[]` in `{plugin-root}/config/model-pricing.json`).
+
+Confirm via AskUserQuestion (single select): "Use this model matrix?" with options `Use matrix` / `Edit` / `Cancel`.
+
+**Edit loop:** if the user selects `Edit`, or supplies freeform text through the built-in `Other` path, apply the requested changes to the proposed matrix (rejecting any id not in the detected list), re-render the revised table and legend, and immediately call AskUserQuestion again with the same three options. Repeat for every further `Edit` or freeform reply. Never end this flow in plain prose. Every revision round MUST end with a new AskUserQuestion call. The only exits are `Use matrix` and `Cancel`.
+
+On `Use matrix`, write `model_matrix`, `reasoning_matrix`, `model_catalog`, and `model_catalog_detected_at` to `.vbw-planning/config.json` with the same jq pattern as init Step 1.8, where `model_catalog` is an id-only array built from the id column alone (`cut -f1`). Display `✓ Model matrix written (N models detected)` and continue to Step 4.
+
+On `Cancel`, display `○ Model matrix unchanged` and return to the Step 2.7 question.
 
 **Individual Configuration - Round 1 (4 agents):**
+
+Run `bash "{plugin-root}/scripts/detect-models.sh" --labeled` once and store the `id<TAB>description` lines as the detected catalog. Read `{plugin-root}/references/model-profiles.md` and follow its "Choosing models per role" section when ranking candidates.
+
+For every per-agent question in Round 1 and Round 2 below, build the options from that catalog: offer the 3 most suitable detected ids for that role, list the agent's current model first and mark it `(current)`, and put the id's description text in the option description. Never offer an id that is not in the detected id column. Only when the catalog is empty, fall back to the tier names `opus` / `sonnet` / `haiku`. Any other detected id can be given via the built-in `Other` path.
 
 Calculate OLD_COST before making changes (cost weights: opus=100, sonnet=20, haiku=2):
 ```bash
@@ -211,10 +234,10 @@ CURRENT_SCOUT=$(bash "{plugin-root}/scripts/resolve-agent-model.sh" scout .vbw-p
 ```
 
 AskUserQuestion with 4 questions:
-- Lead model (current: $CURRENT_LEAD): opus | sonnet | haiku
-- Dev model (current: $CURRENT_DEV): opus | sonnet | haiku
-- QA model (current: $CURRENT_QA): opus | sonnet | haiku
-- Scout model (current: $CURRENT_SCOUT): opus | sonnet | haiku
+- Lead model (current: $CURRENT_LEAD)
+- Dev model (current: $CURRENT_DEV)
+- QA model (current: $CURRENT_QA)
+- Scout model (current: $CURRENT_SCOUT)
 
 Store selections in variables `LEAD_MODEL`, `DEV_MODEL`, `QA_MODEL`, `SCOUT_MODEL`.
 
@@ -227,8 +250,8 @@ CURRENT_ARCHITECT=$(bash "{plugin-root}/scripts/resolve-agent-model.sh" architec
 ```
 
 AskUserQuestion with 2 questions:
-- Debugger model (current: $CURRENT_DEBUGGER): opus | sonnet | haiku
-- Architect model (current: $CURRENT_ARCHITECT): opus | sonnet | haiku
+- Debugger model (current: $CURRENT_DEBUGGER)
+- Architect model (current: $CURRENT_ARCHITECT)
 
 Store selections in variables `DEBUGGER_MODEL`, `ARCHITECT_MODEL`.
 
@@ -322,7 +345,7 @@ If `setting=planning_tracking`, after writing config run:
   if [ -f "$PG_SCRIPT" ]; then
     bash "$PG_SCRIPT" sync-ignore .vbw-planning/config.json
   else
-    echo "VBW: planning-git.sh unavailable; skipping .gitignore sync" >&2
+    echo "⚠ VBW: planning-git.sh unavailable. Skipping .gitignore sync." >&2
   fi
 ```
 
@@ -356,14 +379,34 @@ fi
 # Get current profile
 OLD_PROFILE=$(jq -r '.model_profile // "quality"' .vbw-planning/config.json)
 
-# Calculate cost estimate
-# Cost weights: opus=100, sonnet=20, haiku=2
+# Calculate cost estimate.
+# Weights come from config/model-pricing.json so matrix and gateway models are
+# scored too. The legacy opus=100/sonnet=20/haiku=2 table only knew three ids.
+# Weight = input + 3 * output per MTok, scaled by 10, matching a roughly
+# 1:3 input:output ratio per agent turn. Unknown ids fall back to sonnet.
+PRICING_PATH="{plugin-root}/config/model-pricing.json"
+
+model_weight() {
+  local model=$1
+  jq -r --arg m "$model" '
+    (.aliases[$m] // $m) as $id
+    | (.models[$id] // .models["claude-sonnet-5"]) as $e
+    | (if ($e.input | type) == "array" then $e.input[0].usd else $e.input end) as $in
+    | (if ($e.output | type) == "array" then $e.output[0].usd else $e.output end) as $out
+    | (($in + 3 * $out) * 10) | round
+  ' "$PRICING_PATH" 2>/dev/null || echo 320
+}
+
 calc_cost() {
   local profile=$1
-  local opus=$(jq "[.$profile | to_entries[] | select(.value == \"opus\")] | length" "$PROFILES_PATH")
-  local sonnet=$(jq "[.$profile | to_entries[] | select(.value == \"sonnet\")] | length" "$PROFILES_PATH")
-  local haiku=$(jq "[.$profile | to_entries[] | select(.value == \"haiku\")] | length" "$PROFILES_PATH")
-  echo $(( opus * 100 + sonnet * 20 + haiku * 2 ))
+  local total=0
+  local agent model
+  for agent in lead dev qa scout debugger architect docs
+  do
+    model=$(jq -r ".$profile.$agent // \"sonnet\"" "$PROFILES_PATH")
+    total=$(( total + $(model_weight "$model") ))
+  done
+  echo "$total"
 }
 
 OLD_COST=$(calc_cost "$OLD_PROFILE")
@@ -452,7 +495,12 @@ Note: `auto_commit` controls source-task commits during Execute mode. Planning a
 | active_profile | string | profile name or "custom" | default |
 | custom_profiles | object | user-defined profiles | {} |
 | model_profile | string | quality/balanced/budget | quality |
-| model_overrides | object | agent-to-model map | {} |
+| model_overrides | object | agent-to-model map (value: model id or preference array) | {} |
+| model_matrix | object | agent x effort map to model id or preference array, written by /vbw:init from the detected catalog | {} |
+| model_catalog | array | model ids detected from ${ANTHROPIC_BASE_URL}/v1/models at init | [] |
+| model_catalog_extra | array | trusted model ids treated as available for preference-array resolution even when absent from the detected catalog | [] |
+| reasoning_matrix | object | agent x effort map to a reasoning effort (low/medium/high/xhigh/max), reconciled against the resolved model's accepted set | {} |
+| reasoning_overrides | object | agent-to-reasoning-effort map, highest precedence | {} |
 | agent_max_turns | object | per-agent turns (number), 0/false = unlimited | scout=15, qa=25, architect=30, debugger=80, lead=50, dev=75 |
 | qa_skip_agents | array | array of agent role names | ["docs"] |
 | context_compiler | boolean | true/false | true |

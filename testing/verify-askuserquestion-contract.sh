@@ -86,29 +86,24 @@ extract_heading_block() {
   local file="$1"
   local heading="$2"
   local end_regex="$3"
-
   awk -v h="$heading" -v end_re="$end_regex" '
     function trim_line(s) {
       sub(/^[[:space:]]+/, "", s)
       sub(/[[:space:]]+$/, "", s)
       return s
     }
-
     {
       line=$0
       gsub(/\r/, "", line)
       trimmed=trim_line(line)
-
       if (trimmed == h) {
         found=1
         print line
         next
       }
-
       if (found && trimmed ~ end_re) {
         exit
       }
-
       if (found) {
         print line
       }
@@ -420,8 +415,8 @@ require_file_exists "ask-user-question: shared reference exists" "$ASK_USER_QUES
 require_file_literal "ask-user-question: source note metadata present" "Source note:" "$ASK_USER_QUESTION_REF"
 require_file_literal "ask-user-question: last reviewed metadata present" "Last reviewed:" "$ASK_USER_QUESTION_REF"
 require_file_literal "ask-user-question: documents short-header guidance" "Keep headers short" "$ASK_USER_QUESTION_REF"
-require_file_regex "ask-user-question: documents 2-4 option sweet spot" '2[-–]4 options' "$ASK_USER_QUESTION_REF"
-require_file_regex "ask-user-question: documents 1-4 question guidance" '1[-–]4 questions' "$ASK_USER_QUESTION_REF"
+require_file_regex "ask-user-question: documents 2-4 option sweet spot" '2-4 options' "$ASK_USER_QUESTION_REF"
+require_file_regex "ask-user-question: documents 1-4 question guidance" '1-4 questions' "$ASK_USER_QUESTION_REF"
 require_file_literal "ask-user-question: documents built-in Other path" '`Other` path' "$ASK_USER_QUESTION_REF"
 require_file_literal "ask-user-question: documents self-contained modal context" 'minimal answer-critical context in the `question` itself' "$ASK_USER_QUESTION_REF"
 require_file_literal "ask-user-question: documents intentional freeform boundary" "high-cardinality or unbounded" "$ASK_USER_QUESTION_REF"
@@ -431,6 +426,10 @@ require_file_literal "ask-user-question: documents fake bounded menu anti-patter
 require_file_literal "ask-user-question: includes structured example" "### Example — structured single-select" "$ASK_USER_QUESTION_REF"
 require_file_literal "ask-user-question: includes intentional-freeform example" "### Example — intentional freeform" "$ASK_USER_QUESTION_REF"
 require_file_literal "ask-user-question: includes decision-gate example" "### Example — decision gate" "$ASK_USER_QUESTION_REF"
+require_file_literal "ask-user-question: documents multiSelect schema field" '`multiSelect`' "$ASK_USER_QUESTION_REF"
+require_file_literal "ask-user-question: documents preview schema field" '`preview`' "$ASK_USER_QUESTION_REF"
+require_file_literal "ask-user-question: documents annotations schema field" '`annotations`' "$ASK_USER_QUESTION_REF"
+require_file_literal "ask-user-question: documents metadata.source schema field" '`metadata.source`' "$ASK_USER_QUESTION_REF"
 forbid_file_regex "ask-user-question: no volatile upstream issue links" 'github\.com/.*issues|fixes #[0-9]+|see #[0-9]+|issue #[0-9]+|parent.*#[0-9]+' "$ASK_USER_QUESTION_REF"
 
 # --------------------------------------------------------------------------
@@ -461,7 +460,7 @@ else
   fail "vibe: confirmation gate preserves vibe-local routing constructs"
 fi
 
-if grep -Eq '2[-–]4 options|1[-–]4 questions|high-cardinality' <<< "$VIBE_CONFIRMATION_BLOCK" \
+if grep -Eq '2-4 options|1-4 questions|high-cardinality' <<< "$VIBE_CONFIRMATION_BLOCK" \
   || grep -Fq '`Other` path' <<< "$VIBE_CONFIRMATION_BLOCK" \
   || grep -Fq 'Keep headers short' <<< "$VIBE_CONFIRMATION_BLOCK" \
   || grep -Fq 'dialog obscures' <<< "$VIBE_CONFIRMATION_BLOCK" \
@@ -699,8 +698,8 @@ echo ""
 echo "--- Check 7: /vbw:skills structured/freeform boundary ---"
 
 SKILLS_STEP_5="$(extract_regex_block "$SKILLS_COMMAND_FILE" '^### Step 5: Offer installation$' '^### ' || true)"
-SKILLS_ONE_CANDIDATE_BRANCH="$(extract_regex_block "$SKILLS_COMMAND_FILE" 'If the combined list has exactly 1 candidate' 'If the combined list has 2[-–]4 candidates' || true)"
-SKILLS_BOUNDED_MULTI_BRANCH="$(extract_regex_block "$SKILLS_COMMAND_FILE" 'If the combined list has 2[-–]4 candidates' 'If the combined list has more than 4 candidates' || true)"
+SKILLS_ONE_CANDIDATE_BRANCH="$(extract_regex_block "$SKILLS_COMMAND_FILE" 'If the combined list has exactly 1 candidate' 'If the combined list has 2-4 candidates' || true)"
+SKILLS_BOUNDED_MULTI_BRANCH="$(extract_regex_block "$SKILLS_COMMAND_FILE" 'If the combined list has 2-4 candidates' 'If the combined list has more than 4 candidates' || true)"
 SKILLS_HIGH_CARDINALITY_BRANCH="$(extract_regex_block "$SKILLS_COMMAND_FILE" 'If the combined list has more than 4 candidates' '^### Step 5b:' || true)"
 
 if [ -n "$SKILLS_STEP_5" ]; then
@@ -733,14 +732,14 @@ require_text_literal "skills: one candidate asks a single bounded question" "Ask
 require_text_literal "skills: one candidate preserves install option" 'Install {skill-name}' "$SKILLS_ONE_CANDIDATE_BRANCH"
 require_text_literal "skills: one candidate preserves skip option" 'Skip for now' "$SKILLS_ONE_CANDIDATE_BRANCH"
 forbid_text_regex "skills: one candidate branch excludes freeform parser anti-patterns" 'numbered list|comma-separated|high-cardinality|numeric/freeform|Type numbers|Accept comma-separated|Reject out-of-range|freeform response|do NOT use `options` array' "$SKILLS_ONE_CANDIDATE_BRANCH"
-require_text_regex "skills: 2-4 candidates stay structured" 'If the combined list has 2[-–]4 candidates: keep it structured' "$SKILLS_BOUNDED_MULTI_BRANCH"
-require_text_regex "skills: 2-4 candidates use per-skill AskUserQuestion prompts" 'Use AskUserQuestion with 1 question per skill \(2[-–]4 questions total\)' "$SKILLS_BOUNDED_MULTI_BRANCH"
+require_text_regex "skills: 2-4 candidates stay structured" 'If the combined list has 2-4 candidates: keep it structured' "$SKILLS_BOUNDED_MULTI_BRANCH"
+require_text_regex "skills: 2-4 candidates use per-skill AskUserQuestion prompts" 'Use AskUserQuestion with 1 question per skill \(2-4 questions total\)' "$SKILLS_BOUNDED_MULTI_BRANCH"
 require_text_literal "skills: 2-4 candidates preserve install option" '`Install`' "$SKILLS_BOUNDED_MULTI_BRANCH"
 require_text_literal "skills: 2-4 candidates preserve skip option" '`Skip`' "$SKILLS_BOUNDED_MULTI_BRANCH"
 forbid_text_regex "skills: 2-4 candidate branch excludes freeform parser anti-patterns" 'numbered list|comma-separated|high-cardinality|numeric/freeform|Type numbers|Accept comma-separated|Reject out-of-range|freeform response|do NOT use `options` array' "$SKILLS_BOUNDED_MULTI_BRANCH"
 require_text_literal "skills: bounded branches acknowledge built-in Other path" 'the built-in `Other` path is still part of that question' "$SKILLS_STEP_5"
 require_text_literal "skills: bounded branches accept hybrid number replies" 'accept hybrid replies anchored to one of those visible option numbers' "$SKILLS_STEP_5"
-require_text_literal "skills: no-selection stops before installation scope" 'Do not ask Step 5b and do not enter Step 6.' "$SKILLS_STEP_5"
+require_text_literal "skills: no-selection stops before installation" 'Do not enter Step 6.' "$SKILLS_STEP_5"
 require_text_literal "skills: 5+ candidates use intentional high-cardinality freeform" "If the combined list has more than 4 candidates: use intentional high-cardinality freeform input." "$SKILLS_HIGH_CARDINALITY_BRANCH"
 require_text_literal "skills: 5+ candidate branch forbids options array" 'do NOT use `options` array' "$SKILLS_HIGH_CARDINALITY_BRANCH"
 require_text_literal "skills: 5+ candidate branch presents numbered list in question text" "numbered list in the AskUserQuestion text" "$SKILLS_HIGH_CARDINALITY_BRANCH"

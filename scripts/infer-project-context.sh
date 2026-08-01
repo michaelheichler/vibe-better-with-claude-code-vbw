@@ -1,15 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# infer-project-context.sh — Extract project context from codebase mapping files
-#
-# Usage: infer-project-context.sh CODEBASE_DIR [REPO_ROOT]
-#   CODEBASE_DIR  Path to .vbw-planning/codebase/ mapping files
-#   REPO_ROOT     Optional, defaults to current directory (for git repo name extraction)
-#
-# Output: Structured JSON to stdout with source attribution per field
-# Exit: 0 on success, non-zero only on critical errors (missing CODEBASE_DIR)
-
 if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
   echo "Usage: infer-project-context.sh CODEBASE_DIR [REPO_ROOT]"
   echo ""
@@ -36,11 +27,9 @@ if [[ ! -d "$CODEBASE_DIR" ]]; then
   exit 1
 fi
 
-# --- Project name extraction (priority: git repo > plugin.json > directory) ---
 NAME_VALUE=""
 NAME_SOURCE=""
 
-# Try git repo name
 if [[ -z "$NAME_VALUE" ]]; then
   repo_url=$(git -C "$REPO_ROOT" remote get-url origin 2>/dev/null || true)
   if [[ -n "$repo_url" ]]; then
@@ -52,7 +41,6 @@ if [[ -z "$NAME_VALUE" ]]; then
   fi
 fi
 
-# Try plugin.json name
 if [[ -z "$NAME_VALUE" ]]; then
   plugin_json="$REPO_ROOT/.claude-plugin/plugin.json"
   if [[ -f "$plugin_json" ]]; then
@@ -64,20 +52,16 @@ if [[ -z "$NAME_VALUE" ]]; then
   fi
 fi
 
-# Fallback to directory name
 if [[ -z "$NAME_VALUE" ]]; then
   NAME_VALUE=$(basename "$REPO_ROOT")
   NAME_SOURCE="directory"
 fi
 
-# Build name JSON
 NAME_JSON=$(jq -n --arg v "$NAME_VALUE" --arg s "$NAME_SOURCE" \
   '{value: $v, source: $s}')
 
-# --- Tech stack extraction from STACK.md ---
 STACK_FILE="$CODEBASE_DIR/STACK.md"
 if [[ -f "$STACK_FILE" ]]; then
-  # Extract languages from the Languages table and technologies from Key Technologies
   stack_items=()
 
   # Parse Languages table: lines matching "| Name | ..." pattern (skip header/separator)
@@ -100,7 +84,6 @@ if [[ -f "$STACK_FILE" ]]; then
     fi
   done < "$STACK_FILE"
 
-  # Parse Key Technologies section only (not Model Routing or other sections)
   in_key_tech=false
   while IFS= read -r line; do
     if [[ "$line" == "## Key Technologies" ]]; then
@@ -129,10 +112,8 @@ else
   STACK_JSON='{"value": null, "source": null}'
 fi
 
-# --- Architecture extraction from ARCHITECTURE.md ---
 ARCH_FILE="$CODEBASE_DIR/ARCHITECTURE.md"
 if [[ -f "$ARCH_FILE" ]]; then
-  # Extract the Overview section (first paragraph after ## Overview)
   arch_text=""
   in_overview=false
   while IFS= read -r line; do
@@ -163,42 +144,45 @@ else
   ARCH_JSON='{"value": null, "source": null}'
 fi
 
-# --- Purpose extraction from CONCERNS.md ---
-CONCERNS_FILE="$CODEBASE_DIR/CONCERNS.md"
-if [[ -f "$CONCERNS_FILE" ]]; then
-  # Extract the document title (first # heading) and first concern as domain indicator
-  purpose_text=""
-  while IFS= read -r line; do
-    if [[ "$line" == "# "* ]]; then
-      purpose_text=$(echo "$line" | sed 's/^# //')
-      break
+extract_first_paragraph() {
+  local file="$1" heading="$2" in_section=false paragraph="" line
+
+  # Invariant: paragraph contains only the selected section's first paragraph. Variant: unread input lines.
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    if [[ "$line" == "$heading" ]]; then
+      in_section=true
+      continue
     fi
-  done < "$CONCERNS_FILE"
+    $in_section || continue
+    [[ "$line" == "## "* ]] && break
+    if [[ -z "$line" ]]; then
+      [[ -n "$paragraph" ]] && break
+      continue
+    fi
+    paragraph+="${paragraph:+ }$line"
+  done < "$file"
 
-  # Also extract concern headings as domain signals
-  concerns=()
-  while IFS= read -r line; do
-    concern=$(echo "$line" | sed 's/^## //')
-    concerns+=("$concern")
-  done < <(grep -E '^## ' "$CONCERNS_FILE" || true)
+  printf '%s' "$paragraph"
+}
 
-  if [[ -n "$purpose_text" && ${#concerns[@]} -gt 0 ]]; then
-    concern_list=$(printf '%s\n' "${concerns[@]}" | jq -R . | jq -s 'join(", ")')
-    PURPOSE_JSON=$(jq -n --arg title "$purpose_text" --argjson concerns "$concern_list" \
-      '{value: ($title + " — key concerns: " + $concerns), source: "CONCERNS.md"}')
-  elif [[ -n "$purpose_text" ]]; then
-    PURPOSE_JSON=$(jq -n --arg v "$purpose_text" '{value: $v, source: "CONCERNS.md"}')
-  else
-    PURPOSE_JSON='{"value": null, "source": null}'
+PURPOSE_JSON='{"value": null, "source": null}'
+if [[ -f "$STACK_FILE" ]]; then
+  purpose_heading="## Purpose"
+  purpose_text=$(extract_first_paragraph "$STACK_FILE" "$purpose_heading")
+
+  if [[ -z "$purpose_text" ]]; then
+    purpose_heading="## What this repo is"
+    purpose_text=$(extract_first_paragraph "$STACK_FILE" "$purpose_heading")
   fi
-else
-  PURPOSE_JSON='{"value": null, "source": null}'
+
+  if [[ -n "$purpose_text" ]]; then
+    purpose_source="STACK.md: ${purpose_heading#\#\# }"
+    PURPOSE_JSON=$(jq -n --arg v "$purpose_text" --arg s "$purpose_source" '{value: $v, source: $s}')
+  fi
 fi
 
-# --- Features extraction from INDEX.md ---
 INDEX_FILE="$CODEBASE_DIR/INDEX.md"
 if [[ -f "$INDEX_FILE" ]]; then
-  # Extract Cross-Cutting Themes section (bullet points after ## Cross-Cutting Themes)
   features=()
   in_themes=false
   while IFS= read -r line; do
@@ -211,7 +195,6 @@ if [[ -f "$INDEX_FILE" ]]; then
         break
       fi
       if [[ "$line" == "- "* ]]; then
-        # Extract the bold title from each bullet: "- **Title**: description"
         feature=$(echo "$line" | sed 's/^- \*\*//' | sed 's/\*\*:.*//')
         if [[ -n "$feature" ]]; then
           features+=("$feature")
@@ -229,7 +212,6 @@ else
   FEATURES_JSON='{"value": null, "source": null}'
 fi
 
-# --- Combine all fields into final JSON output ---
 jq -n \
   --argjson name "$NAME_JSON" \
   --argjson tech_stack "$STACK_JSON" \

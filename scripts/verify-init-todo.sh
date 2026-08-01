@@ -64,7 +64,7 @@ check "TODO-13" "todo command never hard-codes the session symlink planning-git 
 check "TODO-14" "todo command forbids bespoke git staging or commit instructions" \
   bash -c '! grep -qE "(^|[^[:alnum:]_])git (add|commit|push)([^[:alnum:]_]|$)" "$1"' _ "$TODO_CMD"
 check "TODO-15" "todo command reuses the planning-git unavailable warning" \
-  grep -Fq 'VBW: planning-git.sh unavailable; skipping planning git boundary commit' "$TODO_CMD"
+  grep -Fq '⚠ VBW: planning-git.sh unavailable. Skipping planning git boundary commit.' "$TODO_CMD"
 
 write_line=$(grep -nF '3. **Add plain todo to STATE.md:**' "$TODO_CMD" | head -1 | cut -d: -f1 || true)
 ref_line=$(grep -nF 'edit the exact todo line you just added in `STATE.md` to append `(ref:HASH)`' "$TODO_CMD" | head -1 | cut -d: -f1 || true)

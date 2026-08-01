@@ -258,7 +258,7 @@ Agents read it for quick lookups (e.g., "What phases were completed in GSD?") wi
 Not currently. One `.planning/` import per VBW project. Multi-project import is out of scope.
 
 **Q: Does import work without jq?**
-No. The index generation script requires jq (VBW's zero-dependency principle: jq is the ONLY external dep).
+No. The index generation script requires `jq`. VBW has no non-shell external dependencies beyond `jq` and `git`, but it does require a supported Bash runtime (4.4+).
 
 ---
 

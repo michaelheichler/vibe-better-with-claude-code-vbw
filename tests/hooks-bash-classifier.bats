@@ -40,6 +40,8 @@ load test_helper
 # - notification-log.sh (Notification)
 
 setup() {
+  unset CLAUDE_SESSION_ID 2>/dev/null || true
+
   EXPECTED_HOOK_COUNT=$(grep -c '"command":' "$PROJECT_ROOT/hooks/hooks.json")
 
   # Store the common hook-wrapper.sh resolution pattern (quad-resolution)

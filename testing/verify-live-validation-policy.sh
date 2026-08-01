@@ -13,6 +13,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 EXEC_PROTO="$ROOT/references/execute-protocol.md"
 SCOUT_FILE="$ROOT/agents/vbw-scout.md"
+SCOUT_POLICY_FILE="$ROOT/references/scout-live-validation-policy.md"
 VIBE_FILE="$ROOT/commands/vibe.md"
 RESEARCH_FILE="$ROOT/commands/research.md"
 
@@ -63,13 +64,13 @@ else
   fail "vbw-scout.md: missing public-vs-authenticated distinction"
 fi
 
-if grep -qi 'verified-safe Bash helper scripts\|curl wrappers' "$SCOUT_FILE"; then
+if grep -qi 'verified-safe Bash helper scripts\|curl wrappers' "$SCOUT_POLICY_FILE"; then
   pass "vbw-scout.md: authenticated read-only validation can use Bash helpers"
 else
   fail "vbw-scout.md: missing verified-safe Bash helper guidance"
 fi
 
-if grep -qi 'eval' "$SCOUT_FILE" && grep -qi 'command.*substitution' "$SCOUT_FILE" && grep -qi 'process.*substitution' "$SCOUT_FILE" && grep -qi 'nested shell execution' "$SCOUT_FILE" && grep -qi 'quoted/absolute\|absolute.*interpreter' "$SCOUT_FILE" && grep -qi 'control syntax\|grouping' "$SCOUT_FILE"; then
+if grep -qi 'eval' "$SCOUT_POLICY_FILE" && grep -qi 'command.*substitution' "$SCOUT_POLICY_FILE" && grep -qi 'process.*substitution' "$SCOUT_POLICY_FILE" && grep -qi 'nested shell execution' "$SCOUT_POLICY_FILE" && grep -qi 'quoted/absolute\|absolute.*interpreter' "$SCOUT_POLICY_FILE" && grep -qi 'control syntax\|grouping' "$SCOUT_POLICY_FILE"; then
   pass "vbw-scout.md: blocks shell evaluation containers"
 else
   fail "vbw-scout.md: missing shell evaluation container guidance"
@@ -104,7 +105,7 @@ else
   fail "commands/research.md: missing Scout public-vs-authenticated live-validation split"
 fi
 
-for required_file in "$SCOUT_FILE" "$VIBE_FILE" "$RESEARCH_FILE"; do
+for required_file in "$SCOUT_POLICY_FILE" "$VIBE_FILE" "$RESEARCH_FILE"; do
   file_label=${required_file#"$ROOT/"}
   if grep -Fq '## Live Validation Evidence' "$required_file" && \
      grep -Fq 'command_shape' "$required_file" && \

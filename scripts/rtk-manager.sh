@@ -852,7 +852,7 @@ smoke_start() {
 verify_bash_guard_smoke() {
   local status
   set +e
-  printf '%s\n' '{"tool_input":{"command":"python manage.py flush"}}' | bash "$SCRIPT_DIR/bash-guard.sh" >/dev/null 2>&1
+  printf '%s\n' '{"tool_input":{"command":"python manage.py flush"}}' | env -u VBW_AGENT_ROLE -u VBW_ACTIVE_AGENT bash "$SCRIPT_DIR/bash-guard.sh" >/dev/null 2>&1
   status=$?
   set -e
   [ "$status" -eq 2 ]

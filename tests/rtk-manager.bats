@@ -2069,6 +2069,21 @@ JSON
   [ ! -f "$VBW_RTK_DIR/rtk-compatibility-proof.json" ]
 }
 
+@test "rtk-manager: bash-guard smoke ignores inherited agent role" {
+  run_smoke_start_ready
+  export VBW_ALLOW_DESTRUCTIVE=1
+  export VBW_AGENT_ROLE=qa
+  write_rtk_history \
+    'Total commands: 13' \
+    'rtk ls -la .' \
+    'rtk git status --short' \
+    'rtk git log -n 2 --oneline'
+  run rtk_manager smoke-finish
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"VBW Bash guard smoke verification failed"* ]]
+  [ ! -f "$VBW_RTK_DIR/rtk-compatibility-proof.json" ]
+}
+
 @test "rtk-manager: validated quoted absolute hook proof can produce doctor PASS" {
   local binary
   binary="$(create_managed_rtk "0.1.0" "$TEST_TEMP_DIR/managed bin with space")"

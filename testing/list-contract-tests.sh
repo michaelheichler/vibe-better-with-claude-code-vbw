@@ -33,6 +33,7 @@ printf '%s\t%s\n' \
   lead-research-conditional    testing/verify-lead-research-conditional.sh \
   lsp-setup                    testing/verify-lsp-setup.sh \
   lsp-first-policy             testing/verify-lsp-first-policy.sh \
+  dijkstra-discipline          testing/verify-dijkstra-discipline.sh \
   claude-md-staleness          testing/verify-claude-md-staleness.sh \
   dev-recovery-guidance        testing/verify-dev-recovery-guidance.sh \
   live-validation-policy       testing/verify-live-validation-policy.sh \

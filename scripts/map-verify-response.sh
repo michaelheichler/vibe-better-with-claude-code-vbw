@@ -16,8 +16,17 @@ if [ -z "$input" ]; then
   exit 0
 fi
 
-normalized=$(printf '%s' "$input" |  tr '\n' ' ' |  tr '[:upper:]' '[:lower:]' |
-  sed -E "s/[’‘]/'/g; s/[–—]/-/g; s/[[:space:]]+/ /g; s/^ //; s/ $//")
+_ascii_input="${input//$'\n'/ }"
+right_quote=$'\342\200\231'
+left_quote=$'\342\200\230'
+en_dash=$'\342\200\223'
+em_dash=$'\342\200\224'
+_ascii_input="${_ascii_input//$right_quote/\'}"
+_ascii_input="${_ascii_input//$left_quote/\'}"
+_ascii_input="${_ascii_input//$en_dash/-}"
+_ascii_input="${_ascii_input//$em_dash/-}"
+normalized=$(printf '%s' "$_ascii_input" | tr '[:upper:]' '[:lower:]' |
+  sed -E "s/[[:space:]]+/ /g; s/^ //; s/ $//")
 
 skip_re='(^|[^[:alnum:]_])(skip|skipped|next|n/a|na|later|defer)([^[:alnum:]_]|$)'
 pass_re="(^|[^[:alnum:]_])(pass|passed|looks good|works|correct|confirmed|yes|good|fine|ok|okay|not bad|can't complain|cant complain|cannot complain)([^[:alnum:]_]|$)"

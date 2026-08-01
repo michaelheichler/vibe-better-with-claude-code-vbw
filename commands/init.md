@@ -28,7 +28,7 @@ Working directory:
 ```
 Plugin root:
 ```
-!`VBW_CACHE_ROOT="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/plugins/cache/vbw-marketplace/vbw"; SESSION_KEY="${CLAUDE_SESSION_ID:-default}"; SESSION_LINK="/tmp/.vbw-plugin-root-link-${SESSION_KEY}"; R=""; if [ -n "${CLAUDE_PLUGIN_ROOT:-}" ] && [ -f "${CLAUDE_PLUGIN_ROOT}/scripts/hook-wrapper.sh" ]; then R="${CLAUDE_PLUGIN_ROOT}"; fi; if [ -z "$R" ] && [ -f "${VBW_CACHE_ROOT}/local/scripts/hook-wrapper.sh" ]; then R="${VBW_CACHE_ROOT}/local"; fi; if [ -z "$R" ]; then V=$(find "${VBW_CACHE_ROOT}" -maxdepth 1 -mindepth 1 2>/dev/null | awk -F/ '{print $NF}' | grep -E '^[0-9]+(\.[0-9]+)*$' | sort -t. -k1,1n -k2,2n -k3,3n | tail -1); [ -n "$V" ] && [ -f "${VBW_CACHE_ROOT}/${V}/scripts/hook-wrapper.sh" ] && R="${VBW_CACHE_ROOT}/${V}"; fi; if [ -z "$R" ]; then L=$(find "${VBW_CACHE_ROOT}" -maxdepth 1 -mindepth 1 2>/dev/null | awk -F/ '{print $NF}' | sort | tail -1); [ -n "$L" ] && [ -f "${VBW_CACHE_ROOT}/${L}/scripts/hook-wrapper.sh" ] && R="${VBW_CACHE_ROOT}/${L}"; fi; if [ -z "$R" ] && [ -f "${SESSION_LINK}/scripts/hook-wrapper.sh" ]; then R="${SESSION_LINK}"; fi; if [ -z "$R" ]; then ANY_LINK=$(command find -H /tmp -maxdepth 1 -name '.vbw-plugin-root-link-*' -print 2>/dev/null | LC_ALL=C sort | while IFS= read -r link; do if [ -f "$link/scripts/hook-wrapper.sh" ]; then printf '%s\n' "$link"; break; fi; done || true); [ -n "$ANY_LINK" ] && R="$ANY_LINK"; fi; if [ -z "$R" ]; then D=$(ps axww -o args= 2>/dev/null | grep -v grep | grep -oE -- "--plugin-dir [^ ]+" | head -1); D="${D#--plugin-dir }"; [ -n "$D" ] && [ -f "$D/scripts/hook-wrapper.sh" ] && R="$D"; fi; if [ -z "$R" ] || [ ! -d "$R" ]; then echo "VBW: plugin root resolution failed" >&2; exit 1; fi; LINK="${SESSION_LINK}"; REAL_R=$(cd "$R" 2>/dev/null && pwd -P) || REAL_R="$R"; bash "$REAL_R/scripts/ensure-plugin-root-link.sh" "$LINK" "$REAL_R" >/dev/null 2>&1 || { echo "VBW: plugin root link failed" >&2; exit 1; }; echo "$LINK"`
+!`L="/tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}"; R="$L/scripts/resolve-plugin-root.sh"; [ -f "$R" ] || R="${CLAUDE_PLUGIN_ROOT:-}/scripts/resolve-plugin-root.sh"; [ -f "$R" ] || { echo "VBW: plugin root unavailable. Restart this session to recreate $L." >&2; exit 1; }; bash "$R" >/dev/null || exit 1; echo "$L"`
 ```
 
 Store the plugin root path output above as `{plugin-root}` for use in script invocations below. Replace `{plugin-root}` with the literal `Plugin root` value from Context whenever a step below references a script, template, command, or reference file.
@@ -52,10 +52,10 @@ Skills:
 ## Guard
 
 1. **Already initialized:** If .vbw-planning/config.json exists, STOP: "VBW is already initialized. Use /vbw:config to modify settings or /vbw:vibe to start building."
-2. **jq required:** `command -v jq` via Bash. If missing, STOP: "VBW requires jq. Install: macOS `brew install jq`, Linux `apt install jq`, Manual: https://jqlang.github.io/jq/download/ — then re-run /vbw:init." Do NOT proceed without jq.
+2. **jq required:** `command -v jq` via Bash. If missing, STOP: "VBW requires jq. Install: macOS `brew install jq`, Linux `apt install jq`, Manual: https://jqlang.github.io/jq/download/. Then re-run /vbw:init." Do NOT proceed without jq.
 3. **Brownfield detection:** Check for existing source files (stop at first match):
-   - Git repo: `git ls-files --error-unmatch . 2>/dev/null | head -5` — any output = BROWNFIELD=true
-   - No git: Glob `**/*.*` excluding `.vbw-planning/`, `.claude/`, `node_modules/`, `.git/` — any match = BROWNFIELD=true
+   - Git repo: `git ls-files --error-unmatch . 2>/dev/null | head -5`. Any output means BROWNFIELD=true.
+   - No git: Glob `**/*.*` excluding `.vbw-planning/`, `.claude/`, `node_modules/`, `.git/`. Any match means BROWNFIELD=true.
    - All file types count (shell, config, markdown, C++, Rust, CSS, etc.)
 
 ## Steps
@@ -72,7 +72,7 @@ Skills:
 Read `CLAUDE_DIR/settings.json` (create `{}` if missing).
 
 **0a. Agent Teams:** Check `env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` == `"1"`.
-- Enabled: display "✓ Agent Teams — enabled", go to 0b
+- Enabled: display "✓ Agent Teams: enabled", go to 0b
 - Not enabled: AskUserQuestion: "⚠ Agent Teams is not enabled\n\nVBW uses Agent Teams for parallel builds and codebase mapping.\nEnable it now?"
   - Approved: set to `"1"`. Declined: display "○ Skipped."
 
@@ -80,17 +80,17 @@ Read `CLAUDE_DIR/settings.json` (create `{}` if missing).
 
 | State | Condition | Action |
 |-------|-----------|--------|
-| HAS_VBW | Value contains `vbw-statusline` | Display "✓ Statusline — installed", skip to 0c |
+| HAS_VBW | Value contains `vbw-statusline` | Display "✓ Statusline: installed", skip to 0c |
 | HAS_OTHER | Non-empty, no `vbw-statusline` | AskUserQuestion (mention replacement) |
 | EMPTY | Missing/null/empty | AskUserQuestion |
 
-AskUserQuestion text: "○ VBW includes a custom status line showing phase progress, context usage, cost, duration, and more — updated after every response. Install it?" (If HAS_OTHER, mention existing statusline would be replaced.)
+AskUserQuestion text: "○ VBW includes a custom status line showing phase progress, context usage, cost, duration, and more. It updates after every response. Install it?" (If HAS_OTHER, mention existing statusline would be replaced.)
 
 If approved, set `statusLine` to:
 ```json
-{"type": "command", "command": "bash -c 'for _d in \"${CLAUDE_CONFIG_DIR:-}\" \"$HOME/.config/claude-code\" \"$HOME/.claude\"; do [ -z \"$_d\" ] && continue; f=$(ls -1 \"$_d\"/plugins/cache/vbw-marketplace/vbw/*/scripts/vbw-statusline.sh 2>/dev/null | sort -V | tail -1 || true); [ -f \"$f\" ] && exec bash \"$f\"; done'"}
+{"type": "command", "command": "bash -c 'for _d in \"${CLAUDE_CONFIG_DIR:-}\" \"$HOME/.config/claude-code\" \"$HOME/.claude\"\ndo\n  [ -z \"$_d\" ] && continue\n  f=$(ls -1 \"$_d\"/plugins/cache/vbw-marketplace/vbw/*/scripts/vbw-statusline.sh 2>/dev/null | sort -V | tail -1 || true)\n  [ -f \"$f\" ] && exec bash \"$f\"\ndone'"}
 ```
-Object format with `type`+`command` is **required** — plain string fails silently.
+Object format with `type`+`command` is **required**: plain string fails silently.
 If declined: display "○ Skipped. Run /vbw:config to install it later."
 
 **0c. Write settings.json** if changed (single write). Display summary:
@@ -176,7 +176,7 @@ PG_SCRIPT="/tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}/scripts/plan
 if [ -f "$PG_SCRIPT" ]; then
   bash "$PG_SCRIPT" sync-ignore .vbw-planning/config.json
 else
-  echo "VBW: planning-git.sh unavailable; skipping .gitignore sync" >&2
+  echo "⚠ VBW: planning-git.sh unavailable. Skipping .gitignore sync." >&2
 fi
 ```
 
@@ -184,7 +184,7 @@ This applies any mode-specific root `.gitignore` behavior and keeps `.vbw-planni
 
 ### Step 1.5: Install git hooks
 
-1. `git rev-parse --git-dir` — if not a git repo, display "○ Git hooks skipped (not a git repository)" and skip
+1. `git rev-parse --git-dir`: if not a git repo, display "○ Git hooks skipped (not a git repository)" and skip
 2. Run `bash "{plugin-root}/scripts/install-hooks.sh"`, display based on output:
    - Contains "Installed": `✓ Git hooks installed (pre-push)`
    - Contains "already installed": `✓ Git hooks (already installed)`
@@ -205,6 +205,57 @@ Options: "Enable (Recommended)" / "Skip". If declined: "○ GSD isolation skippe
 
 Set GSD_ISOLATION_ENABLED=true for Step 3.5.
 
+### Step 1.8: Model matrix detection
+
+Discover which models this Claude Code install accepts, then let the user confirm an agent x effort routing matrix. Detection reads the Claude Code binary's own model table (primary, works on subscription setups with no credentials) and merges `${ANTHROPIC_BASE_URL}/v1/models` when endpoint auth env exists (gateways).
+
+```bash
+DM_SCRIPT="/tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}/scripts/detect-models.sh"
+if [ -f "$DM_SCRIPT" ]; then
+  bash "$DM_SCRIPT" --labeled
+else
+  echo "VBW: detect-models.sh unavailable, skipping model detection" >&2
+fi
+```
+
+Each output line is `id<TAB>description`. The id column is authoritative for config writes. The description column identifies the model family and strength (native Claude ids are labeled `Claude (built-in)`).
+
+- **Empty output (rare: binary unreadable and no endpoint auth):** fall back to Claude Code's native model set. No API call is needed: the running session already knows the current Claude models (tier aliases `opus`, `sonnet`, `haiku` and their full ids such as `claude-opus-5`, `claude-sonnet-5`, `claude-haiku-4-5`), and the Task tool `model:` parameter accepts them directly. AskUserQuestion (single select): "No extended model catalog detected. Build the agent x effort matrix from Claude Code's native models?" with options `Keep profile presets (Recommended)` / `Build matrix`. On `Keep`, display `○ Model matrix skipped (profile presets apply)` and skip to Step 2. On `Build matrix`, treat the native Claude model set as the detected list, label every entry `Claude (built-in)`, and continue through the full proposal flow below including the edit loop.
+- **Non-empty output:** build the proposal.
+
+**1.8a. Propose.** Read `{plugin-root}/references/model-profiles.md`. Use its "Task performance" tables to rank the detected ids per role, and its "Choosing models per role" section for the selection rules. Build a `model_matrix` mapping each agent (lead, dev, qa, scout, debugger, architect, docs) x effort level (thorough, balanced, fast, turbo) to a model id or preference array drawn from the detected list.
+
+- Rank each role by measured performance at that role's actual task, not by a generic capability ladder. Assign the highest planning score to lead, architect, and debugger at `thorough`, the highest agentic-coding score to dev, a strong model from a different family than dev to qa when one is detected, the largest-context model to scout, and the cheapest capable model to docs and to every `fast` and `turbo` cell.
+- Never route a haiku-class model to lead, architect, or debugger at any effort. See the planning table in `model-profiles.md` for why.
+- Use the description column to judge family and strength for ids the task tables do not cover.
+- Never invent ids. Every entry must appear verbatim in the id column of the detected output.
+- Prefer preference arrays and end every array with a Claude tier id (for example `["glm52", "claude-sonnet-5"]`) so routing degrades inside the user's own catalog.
+- Present the proposal as a compact table with one row per agent and one column per effort level, followed by a short legend listing each proposed id with its description so the user can judge the picks.
+
+Then build a matching `reasoning_matrix` over the same agents and effort levels, using the "Reasoning effort" section of `model-profiles.md`. Render it beside each model cell. Two hard rules: never propose a value outside the target model's accepted set, and leave the cell empty for any model that rejects the parameter (`claude-haiku-4-5`, and every model whose `reasoning_efforts` is `[]` in `{plugin-root}/config/model-pricing.json`). Prefer stepping effort down over swapping to a weaker model, since effort scales spend on the same engine.
+
+**1.8b. Confirm.** Call AskUserQuestion (single select): "Use this model matrix?" with options `Use matrix (Recommended)` / `Edit` / `Skip (static tiers)`.
+
+**1.8c. Edit loop.** If the user selects `Edit`, or supplies freeform text through the built-in `Other` path, do all of the following in order:
+
+1. Apply the requested changes to the proposed matrix. Reject and report any id that is not in the detected list instead of inventing one.
+2. Re-render the revised matrix table and legend.
+3. Immediately call AskUserQuestion again with the same three options `Use matrix (Recommended)` / `Edit` / `Skip (static tiers)`.
+
+Repeat this cycle for every further `Edit` or freeform reply. Never end this step in plain prose. Every revision round MUST end with a new AskUserQuestion call. The only exits from this step are `Use matrix` and `Skip (static tiers)`.
+
+**1.8d. Accept.** On `Use matrix`, write the confirmed matrix:
+
+```bash
+jq --argjson matrix "$MATRIX_JSON" --argjson reasoning "$REASONING_JSON" --argjson catalog "$CATALOG_JSON" \
+  '.model_matrix = $matrix | .reasoning_matrix = $reasoning | .model_catalog = $catalog | .model_catalog_detected_at = (now | todate)' \
+  .vbw-planning/config.json > .vbw-planning/config.json.tmp && mv .vbw-planning/config.json.tmp .vbw-planning/config.json
+```
+
+`MATRIX_JSON` is the confirmed matrix object. `REASONING_JSON` is the confirmed reasoning matrix, or `{}` when every proposed cell was empty. `CATALOG_JSON` is an id-only JSON array built from the id column alone (`cut -f1` on the detected lines). Never write descriptions into `model_catalog`. Display `✓ Model matrix written (N models detected)`.
+
+**1.8e. Skip.** On `Skip (static tiers)`, display `○ Model matrix skipped (static tiers apply)` and continue to Step 2.
+
 ### Step 2: Brownfield detection + discovery
 
 **2a.** If BROWNFIELD=true:
@@ -218,7 +269,7 @@ Set GSD_ISOLATION_ENABLED=true for Step 3.5.
 
 Run `bash "{plugin-root}/scripts/resolve-lsp.sh"` with the `detected_stack` JSON array from Step 2b and `CLAUDE_DIR/settings.json` path. Capture the JSON output.
 
-If `env_needed=false` AND all plugins have `plugin_enabled=true`: display `✓ LSP — already configured`, skip to 2c.
+If `env_needed=false` AND all plugins have `plugin_enabled=true`: display `✓ LSP: already configured`, skip to 2c.
 
 Otherwise, display detected languages and recommended LSP plugins, then proceed through sub-steps:
 
@@ -230,35 +281,29 @@ Otherwise, display detected languages and recommended LSP plugins, then proceed 
 **2.5b (binary check):** For each plugin where `binary_installed=false`:
 - If `install_cmd` is not null: AskUserQuestion: "Install {description} language server?\nCommand: `{install_cmd}`"
   - Approved: run command via Bash
-  - Declined: display "○ {description} — skipped"
-- If `install_cmd` is null (install_url only): display "○ {description} — manual install: {install_url}"
+  - Declined: display "○ {description}: skipped"
+- If `install_cmd` is null (install_url only): display "○ {description}: manual install: {install_url}"
 
 **2.5c (marketplace catalog):** If any plugins have `plugin_enabled=false`:
 - Check catalog: `unset CLAUDECODE && claude plugin marketplace list 2>&1 | grep -q "{org}"` (using the `org` from the first pending plugin)
 - If catalog missing: AskUserQuestion: "LSP plugins are published on the `{org}` marketplace catalog. Add it?"
   - Approved: run `unset CLAUDECODE && claude plugin marketplace add {org} 2>&1`
-  - Declined or fails: display "○ Marketplace catalog not available — skipping plugin installs" and skip 2.5d
+  - Declined or fails: display "○ Marketplace catalog not available: skipping plugin installs" and skip 2.5d
 
 **2.5d (plugin install):** For plugins where `plugin_enabled=false`:
 - AskUserQuestion: "Install Claude LSP plugins for: {comma-separated descriptions}?"
   - Approved: run `unset CLAUDECODE && claude plugin marketplace update {org} 2>&1` once, then for each: `unset CLAUDECODE && claude plugin install {plugin} 2>&1`
-  - Declined: display "○ LSP plugins — skipped"
+  - Declined: display "○ LSP plugins: skipped"
 
-Display summary: `✓ LSP — {N} language server(s) configured` or `○ LSP — skipped`
+Display summary: `✓ LSP: {N} language server(s) configured` or `○ LSP: skipped`
 If any settings.json changes or plugins installed: display `(restart Claude Code to activate LSP)`
 
 **2c. Codebase mapping (adaptive):**
-- Greenfield (BROWNFIELD=false): skip. Display: `○ Greenfield — skipping codebase mapping`
-- SOURCE_FILE_COUNT < 200: run map **inline** — read `{plugin-root}/commands/map.md` and follow directly
-- SOURCE_FILE_COUNT >= 200: run map **inline** (blocking) — display: `◆ Codebase mapping started ({SOURCE_FILE_COUNT} files)`. **Do NOT run in background.** The map MUST complete before proceeding to Step 3.
+- Greenfield (BROWNFIELD=false): skip. Display: `○ Greenfield: skipping codebase mapping`
+- SOURCE_FILE_COUNT < 200: run map **inline**: read `{plugin-root}/commands/map.md` and follow directly
+- SOURCE_FILE_COUNT >= 200: run map **inline** (blocking): display: `◆ Codebase mapping started ({SOURCE_FILE_COUNT} files)`. **Do NOT run in background.** The map MUST complete before proceeding to Step 3.
 
-**2d. find-skills bootstrap:** Check `find_skills_available` from detect-stack JSON.
-- `true`: display "✓ Skills.sh registry — available"
-- `false`: AskUserQuestion: "○ Skills.sh Registry\n\nVBW can search the Skills.sh registry (~2000 community skills) to find\nskills matching your project. This requires the find-skills meta-skill.\nInstall it now?" Options: "Install (Recommended)" / "Skip"
-  - Approved: `npx skills add vercel-labs/skills --skill find-skills -g -y`
-  - Declined: "○ Skipped. Run /vbw:skills later to search the registry."
-
-### Step 3: Convergence — augment and search
+### Step 3: Convergence: augment and search
 
 **3a.** Verify mapping completed. Display `✓ Codebase mapped ({document-count} documents)`. If skipped (greenfield): proceed immediately.
 
@@ -269,11 +314,11 @@ If any settings.json changes or plugins installed: display `(restart Claude Code
 - Extract conventions per `{plugin-root}/commands/teach.md` (Step R2)
 - Write `.vbw-planning/conventions.json`. Display: `✓ {count} conventions auto-detected from codebase`
 
-If greenfield: write `{"conventions": []}`. Display: `○ Conventions — none yet (add with /vbw:teach)`
+If greenfield: write `{"conventions": []}`. Display: `○ Conventions: none yet (add with /vbw:teach)`
 
-**3c. Parallel registry search** (if find-skills available): run `npx skills find "<stack-item>"` for ALL detected_stack items **in parallel** (multiple concurrent Bash calls). Deduplicate against installed skills. If detected_stack empty, search by project type. Display results with `(registry)` tag.
+**3c. Parallel registry search:** run `npx skills find "<stack-item>"` for ALL detected_stack items **in parallel** (multiple concurrent Bash calls). Deduplicate against installed skills. If detected_stack empty, search by project type. Display results with `(registry)` tag. If the skills CLI is unavailable (npx missing or the command fails), skip the search.
 
-**3d. Unified skill prompt:** Combine curated (from 2b) + registry (from 3c) results into single AskUserQuestion multiSelect. Tag `(curated)` or `(registry)`. Use max 4 visible choices total, including `Skip`; if more than 3 skills are candidates, show the top 3 plus `Skip` and point broader discovery to `/vbw:skills`. Install selected: `npx skills add <skill> -g -y`.
+**3d. Unified skill prompt:** Combine curated (from 2b) + registry (from 3c) results into single AskUserQuestion multiSelect. Tag `(curated)` or `(registry)`. Use max 4 visible choices total, including `Skip`. If more than 3 skills are candidates, show the top 3 plus `Skip` and point broader discovery to `/vbw:skills`. Install selected into the current project: `npx skills add <skill> -y`.
 
 ### Step 3.5: Generate bootstrap CLAUDE.md
 
@@ -295,13 +340,13 @@ Display Phase Banner then file checklist (✓ for each created file).
 
 Then show conditional lines for GSD isolation, statusline, codebase mapping, conventions, skills.
 
-<!-- Auto-bootstrap flow begins here — seamless continuation from infrastructure setup -->
+<!-- Auto-bootstrap flow begins here: seamless continuation from infrastructure setup -->
 
 ### Step 5: Scenario detection
 
 <!-- Scenario detection: uses BROWNFIELD flag (Guard), gsd-archive (Step 0.5), codebase/ (Step 2c) -->
 <!-- Order matters: check GSD_MIGRATION first since GSD projects may also be brownfield -->
-<!-- HYBRID is an edge case fallback — should not occur after Step 2c mapping completes -->
+<!-- HYBRID is an edge case fallback: should not occur after Step 2c mapping completes -->
 
 Display transition message: `◆ Infrastructure complete. Defining project...`
 
@@ -310,7 +355,7 @@ Detect the initialization scenario based on flags set in earlier steps:
 1. **GREENFIELD:** BROWNFIELD=false (set in Guard step). No existing codebase to infer from.
 2. **GSD_MIGRATION:** `.vbw-planning/gsd-archive/` directory exists (created in Step 0.5). Has GSD work history to import.
 3. **BROWNFIELD:** BROWNFIELD=true AND `.vbw-planning/codebase/` directory exists (created in Step 2c mapping). Has codebase context to infer from.
-4. **HYBRID:** BROWNFIELD=true but `.vbw-planning/codebase/` does not exist. Edge case — should not occur after Step 2c, but handle gracefully by treating as GREENFIELD.
+4. **HYBRID:** BROWNFIELD=true but `.vbw-planning/codebase/` does not exist. This should not occur after Step 2c. Handle it as GREENFIELD.
 
 Check conditions in order (GSD_MIGRATION first since a GSD project may also be brownfield):
 
@@ -323,10 +368,10 @@ fi
 ```
 
 Display the detected scenario:
-- GREENFIELD: `○ Scenario: Greenfield — new project`
-- BROWNFIELD: `◆ Scenario: Brownfield — existing codebase detected`
-- GSD_MIGRATION: `◆ Scenario: GSD Migration — importing work history`
-- HYBRID: `○ Scenario: Hybrid — treating as greenfield (no mapping)`
+- GREENFIELD: `○ Scenario: Greenfield (new project)`
+- BROWNFIELD: `◆ Scenario: Brownfield (existing codebase detected)`
+- GSD_MIGRATION: `◆ Scenario: GSD Migration (importing work history)`
+- HYBRID: `○ Scenario: Hybrid (treating as greenfield, no mapping)`
 
 No user interaction in this step. Proceed immediately to Step 6.
 
@@ -335,12 +380,12 @@ No user interaction in this step. Proceed immediately to Step 6.
 <!-- Inference scripts: infer-project-context.sh outputs {name, tech_stack, architecture, purpose, features} -->
 <!-- Each field has {value, source} for attribution. Null value = not detected but still displayed (REQ-03) -->
 <!-- infer-gsd-summary.sh outputs {latest_milestone, recent_phases, key_decisions, current_work} -->
-<!-- Confirmation UX: 3 options prevent NL misinterpretation; field picker for targeted corrections -->
+<!-- Confirmation UX: 3 options prevent NL misinterpretation. A field picker handles targeted corrections. -->
 
 Run inference scripts based on the detected scenario, display results, and confirm with the user. Always show inferred data even if fields are null (REQ-03).
 
 **6a. Greenfield branch** (SCENARIO=GREENFIELD or SCENARIO=HYBRID):
-- Display: `○ Greenfield — no codebase context to infer`
+- Display: `○ Greenfield: no codebase context to infer`
 - Set SKIP_INFERENCE=true
 - Skip to Step 7 (discovery questions will be asked inline)
 
@@ -356,7 +401,7 @@ Run inference scripts based on the detected scenario, display results, and confi
     Purpose:      {purpose.value} (source: {purpose.source})
     Features:     {features.value | join(", ")} (source: {features.source})
   ```
-- For null fields, display: `{field}: (not detected)` — always show every field
+- For null fields, always display: `{field}: (not detected)`
 
 **6c. GSD Migration branch** (SCENARIO=GSD_MIGRATION):
 - Run GSD inference: `bash "{plugin-root}/scripts/infer-gsd-summary.sh" .vbw-planning/gsd-archive/`
@@ -372,7 +417,7 @@ Run inference scripts based on the detected scenario, display results, and confi
     Current work:     {current_work.phase} ({current_work.status})
   ```
 - If codebase inference also ran, display those fields too (same format as 6b)
-- For null fields, display: `{field}: (not detected)` — always show every field
+- For null fields, always display: `{field}: (not detected)`
 
 **6d. Confirmation UX** (all non-greenfield scenarios):
 
@@ -387,7 +432,7 @@ Options:
 
 **6e. Correction flow** (when user picks "Close, but needs adjustments"):
 
-Display all fields as a numbered list. Ask as intentional freeform/no-options input: "Which fields would you like to correct?" Enter comma-separated field numbers (for example, 1,3,5). This is freeform input — do not format the field list as a structured options array.
+Display all fields as a numbered list. Ask as intentional freeform/no-options input: "Which fields would you like to correct?" Enter comma-separated field numbers (for example, 1,3,5). This is freeform input. In this flow, do not format the field list as a structured options array.
 
 For each selected field, use AskUserQuestion to ask the user for the corrected value. Update the inference JSON with corrected values.
 
@@ -397,7 +442,7 @@ Write the final confirmed/corrected data to `.vbw-planning/inference.json` for S
 
 ### Step 7: Bootstrap execution
 
-<!-- Bootstrap scripts expect specific argument formats — see each script's usage header -->
+<!-- Bootstrap scripts expect specific argument formats: see each script's usage header -->
 <!-- bootstrap-project.sh: OUTPUT_PATH NAME DESCRIPTION -->
 <!-- bootstrap-requirements.sh: OUTPUT_PATH DISCOVERY_JSON_PATH (discovery.json: {answered[], inferred[]}) -->
 <!-- bootstrap-roadmap.sh: OUTPUT_PATH PROJECT_NAME PHASES_JSON (phases.json: [{name, goal, requirements[], success_criteria[]}]) -->
@@ -416,7 +461,7 @@ If SKIP_INFERENCE=true (greenfield or user chose "Define from scratch"):
   1. "What is your project name?"
   2. "Describe your project in one sentence."
   3. "What are the key requirements? (one per line)"
-  4. "What phases do you envision? For each, give a name and goal. (e.g., 'Auth - User login and registration')"
+  4. "What phases do you envision? For each, give a name and goal. (e.g., 'Auth: User login and registration')"
 - Store answers for bootstrap script input
 
 If SKIP_INFERENCE=false (confirmed/corrected inference data):
@@ -470,7 +515,7 @@ If SKIP_INFERENCE=false (confirmed/corrected inference data):
   if [ -f "$PG_SCRIPT" ]; then
     bash "$PG_SCRIPT" commit-boundary "bootstrap project files" .vbw-planning/config.json
   else
-    echo "VBW: planning-git.sh unavailable; skipping planning git boundary commit" >&2
+    echo "⚠ VBW: planning-git.sh unavailable. Skipping planning git boundary commit." >&2
   fi
   ```
 - Behavior:
@@ -510,4 +555,6 @@ VBW Initialization Complete
 
 ## Output Format
 
-Follow @${CLAUDE_PLUGIN_ROOT}/references/vbw-brand-essentials.md — Phase Banner (double-line box), File Checklist (✓), ○ for pending, Next Up Block, no ANSI color codes.
+Follow @${CLAUDE_PLUGIN_ROOT}/references/vbw-brand-essentials.md
+
+Use a Phase Banner (double-line box), File Checklist (✓), ○ for pending, Next Up Block, and no ANSI color codes.

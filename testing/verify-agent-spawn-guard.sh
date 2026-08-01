@@ -216,7 +216,7 @@ test_non_vbw_repo_allows() {
   local input
   input=$(jq -n '{tool_name:"Agent",tool_input:{run_in_background:true,name:"dev-01",isolation:"worktree"}}')
 
-  if (cd "$tmpdir" && bash "$GUARD" <<< "$input") >/dev/null 2>&1; then
+  if (cd "$tmpdir" && unset VBW_CONFIG_ROOT VBW_PLANNING_DIR CLAUDE_SESSION_ID; bash "$GUARD" <<< "$input") >/dev/null 2>&1; then
     pass "Non-VBW repo: allow"
   else
     fail "Non-VBW repo: unexpected block"

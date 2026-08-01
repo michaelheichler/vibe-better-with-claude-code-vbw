@@ -41,15 +41,20 @@ derive_slug() {
   local slug=""
 
   if [[ -f "$shipped" ]]; then
+    local shipped_content
+    shipped_content=$(cat "$shipped")
+    shipped_content="${shipped_content//—/-}"
+    shipped_content="${shipped_content//–/-}"
+
     # Try 1: Use milestone name from title (e.g., "# SHIPPED: My Milestone")
     local title_name
-    title_name=$(awk '
+    title_name=$(printf '%s\n' "$shipped_content" | awk '
       tolower($0) ~ /^#[[:space:]]*shipped:[[:space:]]*/ {
         sub(/^#[[:space:]]*[Ss][Hh][Ii][Pp][Pp][Ee][Dd]:[[:space:]]*/, "", $0)
         print
         exit
       }
-    ' "$shipped")
+    ')
     local title_name_lc
     title_name_lc=$(printf '%s\n' "$title_name" | tr '[:upper:]' '[:lower:]')
     if [[ -n "$title_name" && "$title_name_lc" != "default milestone" ]]; then
@@ -57,24 +62,23 @@ derive_slug() {
     fi
 
     # Try 2: Extract phase names from "## Phases" section
-    # Handles both bulleted (- Phase N: Name) and numbered (N. **Name** — desc) formats
     if [[ -z "$slug" ]]; then
       local phases
-      phases=$(awk '
+      phases=$(printf '%s\n' "$shipped_content" | awk '
         tolower($0) ~ /^##[[:space:]]+phases[[:space:]]*$/ { found=1; next }
         found && /^## / { exit }
         found && /^[-*] / {
           sub(/^[-*] +(Phase [0-9]+: )?/, "")
-          sub(/ [—–-] .*/, "")
+          sub(/ - .*/, "")
           if (length > 0) print
         }
         found && /^[0-9]+\. / {
           sub(/^[0-9]+\. +/, "")
           gsub(/\*\*/, "")
-          sub(/ [—–-] .*/, "")
+          sub(/ - .*/, "")
           if (length > 0) print
         }
-      ' "$shipped" | head -2)
+      ' | head -2)
       if [[ -n "$phases" ]]; then
         slug=$(echo "$phases" | tr '\n' ' ' | sed 's/ $//')
         slug=$(normalize_slug "$slug")

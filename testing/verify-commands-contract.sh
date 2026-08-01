@@ -424,17 +424,17 @@ debug_path_b_block="$(awk '
   in_block { print }
 ' "$DEBUG_COMMAND_FILE")"
 
-debug_inline_qa_spawn_line="$(grep -F 'Spawn vbw-qa as subagent via Task tool for debug-session verification' "$DEBUG_COMMAND_FILE" || true)"
+debug_inline_qa_spawn_line="$(grep -F 'Spawn vbw-qa as subagent via Agent tool for debug-session verification' "$DEBUG_COMMAND_FILE" || true)"
 
-if contains_literal "$debug_path_a_block" 'Create team via TeamCreate' \
+if contains_literal "$debug_path_a_block" 'there is no TeamCreate setup step' \
   && contains_literal "$debug_path_a_investigator_block" 'True-team spawn shape' \
-  && contains_literal "$debug_path_a_investigator_block" 'pass the exact TeamCreate `team_name`' \
+  && contains_literal "$debug_path_a_investigator_block" 'accepted but ignored' \
   && contains_literal "$debug_path_a_investigator_block" 'unique per-teammate `name`' \
   && contains_literal "$debug_path_a_investigator_block" 'debug-hypothesis-1' \
   && contains_literal "$debug_path_a_investigator_block" 'Do not pass `isolation`, `cwd`, `working_dir`, `workingDirectory`, or `workdir`'; then
   pass "debug: Path A hypothesis investigators use true-team spawn metadata"
 else
-  fail "debug: Path A hypothesis investigators must pass TeamCreate team_name and per-teammate names"
+  fail "debug: Path A hypothesis investigators must document implicit team formation and per-teammate names"
 fi
 
 if contains_literal "$debug_path_a_investigator_block" 'Non-team spawn shape' \
@@ -446,9 +446,9 @@ fi
 
 if contains_literal "$debug_path_a_implementation_block" "$NON_TEAM_SPAWN_SHAPE_TEXT" \
   && contains_literal "$debug_path_a_implementation_block" "$LABEL_ONLY_NAME_TEXT"; then
-  pass "debug: Path A post-TeamDelete implementation owner remains non-team"
+  pass "debug: Path A post-shutdown implementation owner remains non-team"
 else
-  fail "debug: Path A post-TeamDelete implementation owner must remain non-team"
+  fail "debug: Path A post-shutdown implementation owner must remain non-team"
 fi
 
 if contains_literal "$debug_path_b_block" "$NON_TEAM_SPAWN_SHAPE_TEXT" \
@@ -496,13 +496,13 @@ else
   fail "ask-user-question: missing short-header rule"
 fi
 
-if [ -f "$ASK_USER_QUESTION_REF" ] && grep -Eq '2[-–]4 options' "$ASK_USER_QUESTION_REF"; then
+if [ -f "$ASK_USER_QUESTION_REF" ] && grep -Eq '2-4 options' "$ASK_USER_QUESTION_REF"; then
   pass "ask-user-question: documents 2-4 option sweet spot"
 else
   fail "ask-user-question: missing 2-4 option guidance"
 fi
 
-if [ -f "$ASK_USER_QUESTION_REF" ] && grep -Eq '1[-–]4 questions' "$ASK_USER_QUESTION_REF"; then
+if [ -f "$ASK_USER_QUESTION_REF" ] && grep -Eq '1-4 questions' "$ASK_USER_QUESTION_REF"; then
   pass "ask-user-question: documents 1-4 question guidance"
 else
   fail "ask-user-question: missing 1-4 question guidance"
@@ -580,7 +580,7 @@ else
   fail "vibe: confirmation gate lost vibe-local routing constructs"
 fi
 
-if grep -Eq '2[-–]4 options|1[-–]4 questions|freeform|high-cardinality' <<< "$VIBE_CONFIRMATION_BLOCK" \
+if grep -Eq '2-4 options|1-4 questions|freeform|high-cardinality' <<< "$VIBE_CONFIRMATION_BLOCK" \
   || grep -Fq '`Other` path' <<< "$VIBE_CONFIRMATION_BLOCK" \
   || grep -Fq 'Keep headers short' <<< "$VIBE_CONFIRMATION_BLOCK" \
   || grep -Fq 'dialog obscures' <<< "$VIBE_CONFIRMATION_BLOCK" \
@@ -628,8 +628,8 @@ else
       fail "skills: Step 5 missing structured single-candidate branch"
     fi
 
-    if grep -Eq 'If the combined list has 2[-–]4 candidates: keep it structured' <<< "$skills_step_5" \
-      && grep -Eq 'Use AskUserQuestion with 1 question per skill \(2[-–]4 questions total\)' <<< "$skills_step_5"; then
+    if grep -Eq 'If the combined list has 2-4 candidates: keep it structured' <<< "$skills_step_5" \
+      && grep -Eq 'Use AskUserQuestion with 1 question per skill \(2-4 questions total\)' <<< "$skills_step_5"; then
       pass "skills: Step 5 keeps bounded multi-candidate installs structured"
     else
       fail "skills: Step 5 missing structured 2-4 candidate branch"
@@ -644,15 +644,15 @@ else
       fail "skills: Step 5 missing bounded Other-path numbered/hybrid reply guidance"
     fi
 
-    if grep -Fq 'If none were selected, display `○ No skills selected for installation.` and STOP here. Do not ask Step 5b and do not enter Step 6.' <<< "$skills_step_5"; then
-      pass "skills: Step 5 skips scope selection when bounded structured branch declines everything"
+    if grep -Fq 'If none were selected, display `○ No skills selected for installation.` and STOP here. Do not enter Step 6.' <<< "$skills_step_5"; then
+      pass "skills: Step 5 stops when bounded structured branches decline everything"
     else
-      fail "skills: Step 5 missing no-selection stop before Step 5b"
+      fail "skills: Step 5 missing no-selection stop before installation"
     fi
 
     if grep -Fq 'If the combined list has more than 4 candidates: use intentional high-cardinality freeform input.' <<< "$skills_step_5" \
       && grep -Fq 'do NOT use `options` array' <<< "$skills_step_5" \
-      && grep -Eq 'larger than the 2[-–]4 structured-choice sweet spot' <<< "$skills_step_5"; then
+      && grep -Eq 'larger than the 2-4 structured-choice sweet spot' <<< "$skills_step_5"; then
       pass "skills: Step 5 keeps 5+ candidates on an intentional freeform path"
     else
       fail "skills: Step 5 missing explicit intentional freeform 5+ candidate branch"
@@ -661,41 +661,40 @@ else
 fi
 
 echo ""
-echo "=== skills.md Step 5b Verification ==="
+echo "=== Project-Scoped Skill Install Verification ==="
 
 if [ ! -f "$SKILLS_FILE" ]; then
   fail "skills: command file not found"
 else
-  skills_step_5b="$({
-    awk '
-      /^### Step 5b: Choose installation scope$/ { in_block=1; next }
-      in_block && /^### / { exit }
-      in_block { print }
-    ' "$SKILLS_FILE"
-  } || true)"
-
-  if [ -z "$skills_step_5b" ]; then
-    fail "skills: missing Step 5b block"
+  if grep -Fq '### Step 5b: Choose installation scope' "$SKILLS_FILE" \
+    || grep -Fq -- '- **Global**' "$SKILLS_FILE" \
+    || grep -Fq 'based on SCOPE' "$SKILLS_FILE"; then
+    fail "skills: selectable installation scope remains"
   else
-    if grep -Fq -- '- **Global** — "Installed to `<global_skills_dir>/`, available in all projects."' <<< "$skills_step_5b"; then
-      pass "skills: Step 5b Global option uses <global_skills_dir>/ placeholder"
-    else
-      fail "skills: Step 5b Global option missing <global_skills_dir>/ placeholder"
-    fi
+    pass "skills: selectable installation scope removed"
+  fi
 
-    if grep -Fq 'Use the `global_skills_dir` value from the Stack detection Context JSON as the display path.' <<< "$skills_step_5b"; then
-      pass "skills: Step 5b explains global_skills_dir display source"
-    else
-      fail "skills: Step 5b missing global_skills_dir Stack detection Context JSON guidance"
-    fi
+  if grep -Fq 'Curated suggestions are suppressed only by project-installed skills.' "$SKILLS_FILE"; then
+    pass "skills: global installs are informational for curated suggestions"
+  else
+    fail "skills: missing project-only curated suggestion guidance"
+  fi
 
-    if grep -Fq '~/.agents/skills/' <<< "$skills_step_5b"; then
-      fail "skills: Step 5b still exposes ~/.agents/skills/ display path"
-    else
-      pass "skills: Step 5b does not expose ~/.agents/skills/ display path"
-    fi
+  if grep -Fq 'Run `npx skills add <skill> -y` for each selected skill.' "$SKILLS_FILE"; then
+    pass "skills: install step uses project scope"
+  else
+    fail "skills: project-scoped install command missing"
   fi
 fi
+
+for skill_install_file in "$COMMANDS_DIR/init.md" "$COMMANDS_DIR/skills.md"; do
+  skill_install_name="$(basename "$skill_install_file")"
+  if grep -Eq 'npx[[:space:]]+skills[[:space:]]+add[^`]*[[:space:]](-g|--global)([[:space:]`]|$)' "$skill_install_file"; then
+    fail "$skill_install_name: global skills install flag present"
+  else
+    pass "$skill_install_name: skills installs remain project-scoped"
+  fi
+done
 
 echo ""
 echo "=== Milestone Context Verification ==="
@@ -1593,11 +1592,9 @@ for file in "${TRACKED_COMMAND_MARKDOWN_FILES[@]}"; do
   check_allowed_tool_match "$base" "$ALLOWED" "$file" "Skill" 'Call[[:space:]]+Skill[(]|(^|[^[:alnum:]_])Skill[(]'
   check_allowed_tool_match "$base" "$ALLOWED" "$file" "WebSearch" '(^|[^[:alnum:]_])WebSearch([^[:alnum:]_]|$)' 'do[[:space:]]+not.*WebSearch'
   check_allowed_tool_match "$base" "$ALLOWED" "$file" "Agent" '(via[[:space:]]+Task[[:space:]]+tool|Task[[:space:]]+tool[[:space:]]+invocation|subagent_type:)'
-  check_allowed_tool_match "$base" "$ALLOWED" "$file" "TeamCreate" '(^|[^[:alnum:]_])TeamCreate([^[:alnum:]_]|$)' 'do[[:space:]]+not.*TeamCreate'
   check_allowed_tool_match "$base" "$ALLOWED" "$file" "TaskCreate" '(^|[^[:alnum:]_])TaskCreate([^[:alnum:]_]|$)' 'do[[:space:]]+not.*TaskCreate'
   check_allowed_tool_match "$base" "$ALLOWED" "$file" "TodoWrite" '(^|[^[:alnum:]_])TodoWrite([^[:alnum:]_]|$)' 'do[[:space:]]+not.*TodoWrite|disallow.*TodoWrite|forbid.*TodoWrite'
   check_allowed_tool_match "$base" "$ALLOWED" "$file" "SendMessage" '(^|[^[:alnum:]_])SendMessage([^[:alnum:]_]|$)' 'do[[:space:]]+not.*SendMessage'
-  check_allowed_tool_match "$base" "$ALLOWED" "$file" "TeamDelete" '(^|[^[:alnum:]_])TeamDelete([^[:alnum:]_]|$)' 'do[[:space:]]+not.*TeamDelete'
 done
 
 # Regression guards for prompt-text tool references that previously slipped

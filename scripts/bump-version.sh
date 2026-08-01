@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-REPO_URL="https://raw.githubusercontent.com/yidakee/vibe-better-with-claude-code-vbw/main/VERSION"
+REPO_URL="https://raw.githubusercontent.com/michaelheichler/vibe-better-with-claude-code-vbw/main/VERSION"
 
 FILES=(
   "$ROOT/VERSION"
@@ -11,8 +11,91 @@ FILES=(
   "$ROOT/marketplace.json"
 )
 
+usage() {
+  cat <<'EOF'
+Usage: bump-version.sh [MODE]
+
+Modes:
+  (none)          Auto-increment the patch version (default). Fetches the
+                   authoritative version from GitHub, falls back to the
+                   local VERSION file on failure, then writes NEW to all
+                   4 version files.
+  --offline       Same as the default, but skips the GitHub fetch entirely.
+  --set X.Y.Z     Write an explicit semver (e.g. 2.1.0) to all 4 version
+                   files. No fetch, no auto-increment.
+  --verify        Check that all 4 version files agree without writing
+                   anything. Exits 1 on mismatch.
+  --help, -h      Print this usage summary and exit 0.
+
+Examples:
+  bump-version.sh
+  bump-version.sh --offline
+  bump-version.sh --set 2.0.0
+  bump-version.sh --verify
+EOF
+}
+
+# write_version NEW: write the given version string to all 4 version files
+write_version() {
+  local new="$1"
+
+  printf '%s\n' "$new" > "$ROOT/VERSION"
+
+  jq --arg v "$new" '.version = $v' "$ROOT/.claude-plugin/plugin.json" > "$ROOT/.claude-plugin/plugin.json.tmp" \
+    && mv "$ROOT/.claude-plugin/plugin.json.tmp" "$ROOT/.claude-plugin/plugin.json"
+
+  jq --arg v "$new" '.plugins[0].version = $v' "$ROOT/.claude-plugin/marketplace.json" > "$ROOT/.claude-plugin/marketplace.json.tmp" \
+    && mv "$ROOT/.claude-plugin/marketplace.json.tmp" "$ROOT/.claude-plugin/marketplace.json"
+
+  jq --arg v "$new" '.plugins[0].version = $v' "$ROOT/marketplace.json" > "$ROOT/marketplace.json.tmp" \
+    && mv "$ROOT/marketplace.json.tmp" "$ROOT/marketplace.json"
+
+  echo "Updated 4 files:"
+  for f in "${FILES[@]}"; do
+    echo "  ${f#$ROOT/}"
+  done
+  echo ""
+  echo "Version is now $new"
+}
+
+MODE="${1:-}"
+
+case "$MODE" in
+  ""|--verify|--offline)
+    ;;
+  --help|-h)
+    usage
+    exit 0
+    ;;
+  --set)
+    SET_VERSION="${2:-}"
+    if [[ -z "$SET_VERSION" ]]; then
+      echo "Error: --set requires a version argument (e.g. --set 2.0.0)" >&2
+      echo "" >&2
+      usage >&2
+      exit 1
+    fi
+    if [[ ! "$SET_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+      echo "Error: --set version '$SET_VERSION' is not a valid semver (expected X.Y.Z)" >&2
+      echo "" >&2
+      usage >&2
+      exit 1
+    fi
+    echo "Setting version to: $SET_VERSION"
+    echo ""
+    write_version "$SET_VERSION"
+    exit 0
+    ;;
+  *)
+    echo "Error: unrecognized argument '$MODE'" >&2
+    echo "" >&2
+    usage >&2
+    exit 1
+    ;;
+esac
+
 # --verify: check all 4 version files are in sync without bumping
-if [[ "${1:-}" == "--verify" ]]; then
+if [[ "$MODE" == "--verify" ]]; then
   V_FILE=$(tr -d '[:space:]' < "$ROOT/VERSION")
   V_PLUGIN=$(jq -r '.version' "$ROOT/.claude-plugin/plugin.json")
   V_MKT_PLUGIN=$(jq -r '.plugins[0].version' "$ROOT/.claude-plugin/marketplace.json")
@@ -43,7 +126,7 @@ fi
 LOCAL=$(tr -d '[:space:]' < "$ROOT/VERSION")
 
 # --offline: skip remote fetch entirely (useful in CI or air-gapped environments)
-if [[ "${1:-}" == "--offline" ]]; then
+if [[ "$MODE" == "--offline" ]]; then
   REMOTE="$LOCAL"
   echo "Offline mode: skipping GitHub fetch."
 else
@@ -73,21 +156,4 @@ echo "Local version:   $LOCAL"
 echo "Bumping to:      $NEW"
 echo ""
 
-# Update all files — bail on first failure
-printf '%s\n' "$NEW" > "$ROOT/VERSION"
-
-jq --arg v "$NEW" '.version = $v' "$ROOT/.claude-plugin/plugin.json" > "$ROOT/.claude-plugin/plugin.json.tmp" \
-  && mv "$ROOT/.claude-plugin/plugin.json.tmp" "$ROOT/.claude-plugin/plugin.json"
-
-jq --arg v "$NEW" '.plugins[0].version = $v' "$ROOT/.claude-plugin/marketplace.json" > "$ROOT/.claude-plugin/marketplace.json.tmp" \
-  && mv "$ROOT/.claude-plugin/marketplace.json.tmp" "$ROOT/.claude-plugin/marketplace.json"
-
-jq --arg v "$NEW" '.plugins[0].version = $v' "$ROOT/marketplace.json" > "$ROOT/marketplace.json.tmp" \
-  && mv "$ROOT/marketplace.json.tmp" "$ROOT/marketplace.json"
-
-echo "Updated 4 files:"
-for f in "${FILES[@]}"; do
-  echo "  ${f#$ROOT/}"
-done
-echo ""
-echo "Version is now $NEW"
+write_version "$NEW"

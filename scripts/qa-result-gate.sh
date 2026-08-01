@@ -64,8 +64,10 @@ extract_frontmatter_array_items() {
     function strip_quotes(v, first, last) {
       first = substr(v, 1, 1)
       last = substr(v, length(v), 1)
-      if ((first == "\"" && last == "\"") || (first == squote && last == squote)) {
-        return substr(v, 2, length(v) - 2)
+      if (first == "\"" && last == "\"") return substr(v, 2, length(v) - 2)
+      if (first == squote && last == squote) {
+        v = substr(v, 2, length(v) - 2); gsub(squote squote, squote, v)
+        return v
       }
       return v
     }
@@ -1449,8 +1451,10 @@ extract_frontmatter_scalar_value() {
     function strip_quotes(v, first, last) {
       first = substr(v, 1, 1)
       last = substr(v, length(v), 1)
-      if ((first == "\"" && last == "\"") || (first == squote && last == squote)) {
-        return substr(v, 2, length(v) - 2)
+      if (first == "\"" && last == "\"") return substr(v, 2, length(v) - 2)
+      if (first == squote && last == squote) {
+        v = substr(v, 2, length(v) - 2); gsub(squote squote, squote, v)
+        return v
       }
       return v
     }

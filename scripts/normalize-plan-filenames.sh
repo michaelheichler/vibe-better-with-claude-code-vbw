@@ -154,7 +154,7 @@ if [ -n "$ROUND_PLAN_TOKEN" ]; then
 
   if [ -f "$TARGET" ]; then
     ROUND_PLAN_MTIME_TIE=false
-    for f in "${ROUND_PLAN_CANDIDATES[@]}"; do
+    for f in ${ROUND_PLAN_CANDIDATES[@]+"${ROUND_PLAN_CANDIDATES[@]}"}; do
       if cmp -s "$f" "$TARGET"; then
         continue
       fi
@@ -177,7 +177,7 @@ if [ -n "$ROUND_PLAN_TOKEN" ]; then
     fi
   fi
 
-  for f in "${ROUND_PLAN_CANDIDATES[@]}"; do
+  for f in ${ROUND_PLAN_CANDIDATES[@]+"${ROUND_PLAN_CANDIDATES[@]}"}; do
     BASENAME=$(basename "$f")
     if [ -f "$TARGET" ]; then
       if cmp -s "$f" "$TARGET"; then
