@@ -1,0 +1,94 @@
+scripts/analyze-plan-conflicts.sh
+  s_0e6a41e1e30cd3::t_fdc795c1d0838e 1-186
+scripts/delegated-workflow.sh
+  s_0e6a41e1e30cd3::t_fdc795c1d0838e 169-172,229-236
+references/execute-protocol.md
+  s_0e6a41e1e30cd3::t_fdc795c1d0838e 54,58
+tests/qa-bash-guard.bats
+  s_0e6a41e1e30cd3::t_93c6e5bbd3691a 293-302
+  s_0e6a41e1e30cd3::t_6ff2e99832063c 252
+  s_0e6a41e1e30cd3::t_deccade4d9028e 232,239,242
+  s_0e6a41e1e30cd3::t_dcf5a870e0db60 5-18
+  s_0e6a41e1e30cd3::t_fdc795c1d0838e 303-328
+tests/role-isolation-runtime.bats
+  s_0e6a41e1e30cd3::t_6fbb8935d88686 163
+  s_0e6a41e1e30cd3::t_a801e94a4280bb 123
+  s_0e6a41e1e30cd3::t_a72af3ffeff6c3 76,101,205,214,216,259
+  s_0e6a41e1e30cd3::t_bddd757cc96e4b 74-75
+  s_0e6a41e1e30cd3::t_4173f5db5c5e1e 99-100
+  s_0e6a41e1e30cd3::t_f6695c357bbfb4 257-258
+  s_0e6a41e1e30cd3::t_3cf338b81ff701 40,68,79,86,90,104,110-114,182-187,229,235-236,250,309
+tests/analyze-plan-conflicts.bats
+  s_0e6a41e1e30cd3::t_fdc795c1d0838e 1-108
+tests/file-guard-orchestrator.bats
+  s_0e6a41e1e30cd3::t_fdc795c1d0838e 1-179
+agents/vbw-architect.md
+  s_0e6a41e1e30cd3::t_0bd137bf2ecc5c 4
+agents/vbw-lead.md
+  s_0e6a41e1e30cd3::t_c464c5bf674c8f 69
+  s_0e6a41e1e30cd3::t_f168c2aa2c77d5 4
+  s_0e6a41e1e30cd3::t_f66769ebfaa8ad 17,38,40,44,51-52,91
+templates/PLAN.md
+  s_0e6a41e1e30cd3::t_fdc795c1d0838e 13
+testing/verify-delegation-guard.sh
+  s_0e6a41e1e30cd3::t_fdc795c1d0838e 53,55,70,72,86,88,359,364-365,367-370,372-378,380,382,384-391,393,395-407,409-412,414-418,420-422,424-428,430-436,438,440,444-457,481,483,488-491,493,497,499,501,506-509,512-515,517,521,523,531-532,534,538,540,542,546-555,558,560,564-575,577-587,589,593,632,810,814-815,817
+scripts/bash-guard.sh
+  s_0e6a41e1e30cd3::t_198752b88df470 81,86-94
+  s_0e6a41e1e30cd3::t_05b3f680f1a627 113-114
+  s_0e6a41e1e30cd3::t_d374bc8cf0afd3 84
+  s_0e6a41e1e30cd3::t_2c4eaed3ed210a 78-80
+  s_0e6a41e1e30cd3::t_ee0c1932fed388 82-83
+  s_0e6a41e1e30cd3::t_8ebc350b983cdc 115
+scripts/detect-team-capability.sh
+  s_0e6a41e1e30cd3::t_fdc795c1d0838e 1-43
+testing/list-contract-tests.sh
+  s_0e6a41e1e30cd3::t_fdc795c1d0838e 3,9
+testing/verify-execute-delegation-routing.sh
+  s_0e6a41e1e30cd3::t_251d79b39ac99a 4
+  s_0e6a41e1e30cd3::t_adaf715fcc0ad4 97
+  s_0e6a41e1e30cd3::t_a35c7b1121433f 59,66,85,96,264-323,581,584,593-598
+tests/hooks-bash-classifier.bats
+  s_0e6a41e1e30cd3::t_fdc795c1d0838e 1118,1126,1135,1138,1149,1159,1162,1173,1183,1186,1199,1202,1220,1223,1235-1236,1242,1247-1248,1255,1277,1285,1305,1313,1330,1333,1359
+testing/verify-agent-sendmessage-contract.sh
+  s_0e6a41e1e30cd3::t_fdc795c1d0838e 1-42
+scripts/file-guard.sh
+  s_0e6a41e1e30cd3::t_641665cbbf524d 88,94-102,352-353,405
+  s_0e6a41e1e30cd3::t_4eb4996961a6a0 126
+  s_0e6a41e1e30cd3::t_f2badcbfc0279d 370-375,377
+  s_0e6a41e1e30cd3::t_1f2930c64d855b 92
+  s_0e6a41e1e30cd3::t_fec6b525974b1d 85-87
+  s_0e6a41e1e30cd3::t_9f38ec8c953c5f 89-91
+  s_0e6a41e1e30cd3::t_60e4b86a646370 127
+  s_0e6a41e1e30cd3::t_e339c21165f98f 351
+  s_0e6a41e1e30cd3::t_25408d5a0821f5 402-404
+  s_0e6a41e1e30cd3::t_db4dce8ce70055 406-407
+  s_0e6a41e1e30cd3::t_bcd7f6f70f3d21 104-107,109,169,217,229,236,257-258,260,262,265-270,275-276,298,311-329,332-347,400-401,437,447
+tests/delegated-workflow-session.bats
+  s_0e6a41e1e30cd3::t_fdc795c1d0838e 1-43
+scripts/resolve-execute-delegation-mode.sh
+  s_0e6a41e1e30cd3::t_fdc795c1d0838e 174,189-192,485-541,567-585,654-684,701-703,723-725,780-784,799,801
+  s_0e6a41e1e30cd3::t_a88bd2c56b32fa 685-686
+scripts/state-updater.sh
+  s_0e6a41e1e30cd3::t_fdc795c1d0838e 728,730,743-744
+agents/vbw-docs.md
+  s_0e6a41e1e30cd3::t_8eec8a45d736a8 4
+  s_0e6a41e1e30cd3::t_368ae10c1f1e97 16,98,108
+tests/detect-team-capability.bats
+  s_0e6a41e1e30cd3::t_fdc795c1d0838e 1-107
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "dde46550eb2ac43dc0e8042eb79ade6438e9ab53",
+  "prompts": {},
+  "sessions": {
+    "s_0e6a41e1e30cd3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2f5acbb2-f08e-44f2-bc94-ad94397dd129",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
