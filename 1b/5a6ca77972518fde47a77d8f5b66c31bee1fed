@@ -1,0 +1,30 @@
+commands/vibe.md
+  s_27ea496ab5a93e::t_230a9e05c6fb5a 474-476
+  s_27ea496ab5a93e::t_9bbb069fc1c701 824-826
+  s_27ea496ab5a93e::t_3838350013413f 1043-1045
+  s_27ea496ab5a93e::t_c63803be089d69 442-444
+  s_27ea496ab5a93e::t_2e90b0d42f402e 337-339
+  s_27ea496ab5a93e::t_686d598034534f 399-401
+references/execute-protocol.md
+  s_27ea496ab5a93e::t_fee257b0f11f62 792-794
+  s_27ea496ab5a93e::t_2bb35e5fa5bda1 192-194
+  s_27ea496ab5a93e::t_cf7116e690de4f 768-770
+  s_27ea496ab5a93e::t_bffb8e29e1a34c 801-803
+  s_27ea496ab5a93e::t_a640b5c165e6c6 721-723
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "1b5a6ca77972518fde47a77d8f5b66c31bee1fed",
+  "prompts": {},
+  "sessions": {
+    "s_27ea496ab5a93e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4452c98a-815b-4051-9652-732944fc8275",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
