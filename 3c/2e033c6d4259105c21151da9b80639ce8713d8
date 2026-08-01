@@ -1,0 +1,59 @@
+tests/qa-bash-guard.bats
+  s_cb6db6bc22a2a0::t_a2441b4a107e40 44-53
+tests/role-isolation-runtime.bats
+  s_cb6db6bc22a2a0::t_4b898c4a681924 40
+  s_cb6db6bc22a2a0::t_4d73a4add56f7a 132
+  s_cb6db6bc22a2a0::t_5fb872f16e873b 117,130-131,133-135
+  s_cb6db6bc22a2a0::t_aef66afa388e59 148
+  s_cb6db6bc22a2a0::t_48d7ff92de37eb 86,100,155,177,222
+  s_cb6db6bc22a2a0::t_284d9bfe46813c 68,74-76
+  s_cb6db6bc22a2a0::t_0f76f94f9135e6 169,176,178
+  s_cb6db6bc22a2a0::t_c56731a298f012 90,99,101
+  s_cb6db6bc22a2a0::t_e8e2f29e2f3db8 104,110-114
+  s_cb6db6bc22a2a0::t_d38b565d28cbed 79
+  s_cb6db6bc22a2a0::t_efd8124420e02a 154
+tests/file-guard-orchestrator.bats
+  s_cb6db6bc22a2a0::t_37126fb7ab9159 23,38,88
+  s_cb6db6bc22a2a0::t_b48b7d196f327b 63,78
+  s_cb6db6bc22a2a0::t_42bdde0ac6cd46 100
+  s_cb6db6bc22a2a0::t_d379f92dede26b 51
+  s_cb6db6bc22a2a0::t_cc6fd33fdb61e7 93-99,101-169
+testing/verify-delegation-guard.sh
+  s_cb6db6bc22a2a0::t_4d7760da2adf6a 798,802-803,805
+  s_cb6db6bc22a2a0::t_29562b7c76a4f1 86
+  s_cb6db6bc22a2a0::t_f226dd54b5130f 53,70
+  s_cb6db6bc22a2a0::t_fd5aff536d6caa 363-364,382-385,387,420-421,427-429,432,434,449
+  s_cb6db6bc22a2a0::t_9c1be02f725283 620
+  s_cb6db6bc22a2a0::t_40b62fcfa648f2 353,358-359,361-362,366-372,374,376,378-381,389-401,403-406,408-412,414-416,418-419,422,424-426,430,438-440,442-445,451
+  s_cb6db6bc22a2a0::t_e87537d737cfb6 55,72
+  s_cb6db6bc22a2a0::t_eff58e1d146589 450,469,471,476-479,481,485,487,489,494-497,500-503,505,509,511,519-520,522,526,528,530,534-543,546,548,552-563,565-575,577,581
+  s_cb6db6bc22a2a0::t_1820c70ec9e5e2 441,446-448
+  s_cb6db6bc22a2a0::t_ec888328e90c88 88
+scripts/file-guard.sh
+  s_cb6db6bc22a2a0::t_3ae3ea3cb15c21 93
+  s_cb6db6bc22a2a0::t_dc752419228daa 412
+  s_cb6db6bc22a2a0::t_0c2d992c259431 25-40,42,44,54
+  s_cb6db6bc22a2a0::t_a410d93a14deb3 213
+  s_cb6db6bc22a2a0::t_836848f4e76f37 82-83
+  s_cb6db6bc22a2a0::t_9b72ce0124784e 281
+  s_cb6db6bc22a2a0::t_05a2fd89de1e0a 240-241,243,245,248-253,258-259
+  s_cb6db6bc22a2a0::t_425b940ae82fad 92,94-96
+  s_cb6db6bc22a2a0::t_3f608b95437c87 349
+  s_cb6db6bc22a2a0::t_0e54192b3823d1 372-382
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "3c2e033c6d4259105c21151da9b80639ce8713d8",
+  "prompts": {},
+  "sessions": {
+    "s_cb6db6bc22a2a0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "134661bc-d3bc-43f9-89e4-713aba547780",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
