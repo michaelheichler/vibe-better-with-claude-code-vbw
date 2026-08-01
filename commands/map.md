@@ -127,7 +127,30 @@ Every map writer MUST use the exact level-two headings and entry shapes below fo
 - **{Theme}**: {Description}
 ```
 
-`## Purpose` is the canonical purpose heading for new maps. The other map documents may use headings suited to their domains.
+**META.md:**
+```yaml
+# Codebase Map META
+
+mapped_at: {UTC ISO 8601 timestamp}
+git_hash: {Full git HEAD hash or no-git}
+file_count: {Positive SOURCE_FILE_COUNT integer}
+mode: {full or incremental}
+monorepo: {true or false}
+mapping_tier: {solo, duo, or quad}
+mcp_tools_used: {Comma-separated tool names or none}
+documents:
+  - STACK.md
+  - DEPENDENCIES.md
+  - ARCHITECTURE.md
+  - STRUCTURE.md
+  - CONVENTIONS.md
+  - TESTING.md
+  - CONCERNS.md
+  - INDEX.md
+  - PATTERNS.md
+```
+
+The top-level META keys MUST begin at column one. Do not prefix them with list markers. `## Purpose` is the canonical purpose heading for new maps. The other map documents may use headings suited to their domains.
 
 ### Step 3: Execute mapping (tier-branched)
 
@@ -249,7 +272,7 @@ Read all 7 docs. Follow the Map Document Format contract above when writing INDE
 
 **HARD GATE. Shutdown before presenting results:** Solo: no team, skip. Duo/Quad: send `shutdown_request` to each teammate, wait for `shutdown_response` (approved=true) delivered via SendMessage tool call (NOT plain text). If a teammate responds in plain text instead of calling SendMessage, re-send the `shutdown_request`. If rejected, re-request up to 3 times per teammate. Then proceed. The team config directory is removed automatically when the session exits. There is no TeamDelete call. **Post-shutdown residual cleanup:** `bash "{plugin-root}/scripts/clean-stale-teams.sh" 2>/dev/null || true`. Verify: after shutdown, there must be ZERO active teammates. If teardown stalls, advise the user to run `/vbw:doctor --cleanup`. Only THEN proceed to META.md and user output. Failure to shut down leaves agents running and consuming API credits.
 
-Write META.md: mapped_at, git_hash, file_count, document list, mode, monorepo flag, mapping_tier, mcp_tools_used (tool names or "none").
+Write META.md from the exact META.md template in the Map Document Format contract. Keep every top-level key unbulleted and at column one.
 
 Display per @${CLAUDE_PLUGIN_ROOT}/references/vbw-brand-essentials.md: Phase Banner (Codebase Mapped, Mode, Tier), ✓ per document, Key Findings (◆), Next Up block.
 
