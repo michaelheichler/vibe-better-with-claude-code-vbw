@@ -48,7 +48,7 @@ teardown() {
     bash "$SCRIPTS_DIR/delegated-workflow.sh" set fix balanced subagent
   input=$(jq -n '{session_id:"session-B",tool_name:"Write",tool_input:{file_path:"src/product.js",content:"ok"}}')
 
-  run bash -c 'CLAUDE_SESSION_ID="session-B"; unset CLAUDE_CODE_CHILD_SESSION VBW_AGENT_ROLE VBW_ACTIVE_AGENT; printf "%s\n" "$1" | bash "$2"' _ \
+  run bash -c 'export CLAUDE_SESSION_ID="session-B"; unset CLAUDE_CODE_CHILD_SESSION VBW_AGENT_ROLE VBW_ACTIVE_AGENT; printf "%s\n" "$1" | bash "$2"' _ \
     "$input" "$SCRIPTS_DIR/file-guard.sh"
 
   [ "$status" -eq 0 ]
@@ -60,7 +60,7 @@ teardown() {
     bash "$SCRIPTS_DIR/delegated-workflow.sh" set fix balanced subagent
   input=$(jq -n '{session_id:"session-A",tool_name:"Write",tool_input:{file_path:"src/product.js",content:"blocked"}}')
 
-  run bash -c 'CLAUDE_SESSION_ID="session-A"; unset CLAUDE_CODE_CHILD_SESSION VBW_AGENT_ROLE VBW_ACTIVE_AGENT; printf "%s\n" "$1" | bash "$2"' _ \
+  run bash -c 'export CLAUDE_SESSION_ID="session-A"; unset CLAUDE_CODE_CHILD_SESSION VBW_AGENT_ROLE VBW_ACTIVE_AGENT; printf "%s\n" "$1" | bash "$2"' _ \
     "$input" "$SCRIPTS_DIR/file-guard.sh"
 
   [ "$status" -eq 2 ]
@@ -75,7 +75,7 @@ teardown() {
     bash "$SCRIPTS_DIR/delegated-workflow.sh" set fix balanced subagent
   input=$(jq -n --arg path "$outside_path" '{session_id:"session-A",tool_name:"Write",tool_input:{file_path:$path,content:"ok"}}')
 
-  run bash -c 'CLAUDE_SESSION_ID="session-A"; unset CLAUDE_CODE_CHILD_SESSION VBW_AGENT_ROLE VBW_ACTIVE_AGENT; printf "%s\n" "$1" | bash "$2"' _ \
+  run bash -c 'export CLAUDE_SESSION_ID="session-A"; unset CLAUDE_CODE_CHILD_SESSION VBW_AGENT_ROLE VBW_ACTIVE_AGENT; printf "%s\n" "$1" | bash "$2"' _ \
     "$input" "$SCRIPTS_DIR/file-guard.sh"
 
   [ "$status" -eq 0 ]
@@ -97,7 +97,7 @@ teardown() {
     bash "$SCRIPTS_DIR/delegated-workflow.sh" set fix balanced subagent
   input=$(jq -n '{session_id:"session-A",tool_name:"Write",tool_input:{file_path:"src/product.js",content:"ok"}}')
 
-  run bash -c 'CLAUDE_CODE_CHILD_SESSION=1 CLAUDE_SESSION_ID="session-A"; unset VBW_AGENT_ROLE VBW_ACTIVE_AGENT; printf "%s\n" "$1" | bash "$2"' _ \
+  run bash -c 'export CLAUDE_CODE_CHILD_SESSION=1 CLAUDE_SESSION_ID="session-A"; unset VBW_AGENT_ROLE VBW_ACTIVE_AGENT; printf "%s\n" "$1" | bash "$2"' _ \
     "$input" "$SCRIPTS_DIR/file-guard.sh"
 
   [ "$status" -eq 0 ]
@@ -107,7 +107,7 @@ teardown() {
   local input
   input=$(jq -n '{session_id:"session-A",tool_name:"Write",tool_input:{file_path:"CLAUDE.md",content:"ok"}}')
 
-  run bash -c 'CLAUDE_CODE_CHILD_SESSION=1; unset VBW_AGENT_ROLE VBW_ACTIVE_AGENT; printf "%s\n" "$1" | bash "$2"' _ \
+  run bash -c 'export CLAUDE_CODE_CHILD_SESSION=1; unset VBW_AGENT_ROLE VBW_ACTIVE_AGENT; printf "%s\n" "$1" | bash "$2"' _ \
     "$input" "$SCRIPTS_DIR/file-guard.sh"
 
   [ "$status" -eq 0 ]
@@ -119,7 +119,7 @@ teardown() {
     > "$TEST_TEMP_DIR/.vbw-planning/.execution-state.json"
   input=$(jq -n '{session_id:"session-B",tool_name:"Write",tool_input:{file_path:"src/product.js",content:"ok"}}')
 
-  run bash -c 'CLAUDE_SESSION_ID="session-B"; unset CLAUDE_CODE_CHILD_SESSION VBW_AGENT_ROLE VBW_ACTIVE_AGENT; printf "%s\n" "$1" | bash "$2"' _ \
+  run bash -c 'export CLAUDE_SESSION_ID="session-B"; unset CLAUDE_CODE_CHILD_SESSION VBW_AGENT_ROLE VBW_ACTIVE_AGENT; printf "%s\n" "$1" | bash "$2"' _ \
     "$input" "$SCRIPTS_DIR/file-guard.sh"
 
   [ "$status" -eq 0 ]
@@ -131,7 +131,7 @@ teardown() {
     > "$TEST_TEMP_DIR/.vbw-planning/.execution-state.json"
   input=$(jq -n '{session_id:"session-A",tool_name:"Write",tool_input:{file_path:"src/product.js",content:"blocked"}}')
 
-  run bash -c 'CLAUDE_SESSION_ID="session-A"; unset CLAUDE_CODE_CHILD_SESSION VBW_AGENT_ROLE VBW_ACTIVE_AGENT; printf "%s\n" "$1" | bash "$2"' _ \
+  run bash -c 'export CLAUDE_SESSION_ID="session-A"; unset CLAUDE_CODE_CHILD_SESSION VBW_AGENT_ROLE VBW_ACTIVE_AGENT; printf "%s\n" "$1" | bash "$2"' _ \
     "$input" "$SCRIPTS_DIR/file-guard.sh"
 
   [ "$status" -eq 2 ]
@@ -146,7 +146,7 @@ teardown() {
     bash "$SCRIPTS_DIR/delegated-workflow.sh" set execute balanced team vbw-test
   input=$(jq -n '{session_id:"session-A",tool_name:"Write",tool_input:{file_path:"src/product.js",content:"ok"}}')
 
-  run bash -c 'CLAUDE_SESSION_ID="session-A"; unset CLAUDE_CODE_CHILD_SESSION VBW_AGENT_ROLE VBW_ACTIVE_AGENT; printf "%s\n" "$1" | bash "$2"' _ \
+  run bash -c 'export CLAUDE_SESSION_ID="session-A"; unset CLAUDE_CODE_CHILD_SESSION VBW_AGENT_ROLE VBW_ACTIVE_AGENT; printf "%s\n" "$1" | bash "$2"' _ \
     "$input" "$SCRIPTS_DIR/file-guard.sh"
 
   [ "$status" -eq 0 ]
@@ -162,7 +162,7 @@ teardown() {
     bash "$SCRIPTS_DIR/delegated-workflow.sh" set fix balanced subagent
   input=$(jq -n --arg path "$target" '{session_id:"session-A",tool_name:"Write",tool_input:{file_path:$path,content:"ok"}}')
 
-  run bash -c 'CLAUDE_SESSION_ID="session-A"; unset CLAUDE_CODE_CHILD_SESSION VBW_AGENT_ROLE VBW_ACTIVE_AGENT; printf "%s\n" "$1" | bash "$2"' _ \
+  run bash -c 'export CLAUDE_SESSION_ID="session-A"; unset CLAUDE_CODE_CHILD_SESSION VBW_AGENT_ROLE VBW_ACTIVE_AGENT; printf "%s\n" "$1" | bash "$2"' _ \
     "$input" "$SCRIPTS_DIR/file-guard.sh"
 
   [ "$status" -eq 0 ]
