@@ -1,0 +1,21 @@
+config/schemas/message-schemas.json
+  s_cb6db6bc22a2a0::t_b855fe1bc06aea 29-34
+  s_cb6db6bc22a2a0::t_71085b69582c5a 76
+  s_cb6db6bc22a2a0::t_ab391c4426267b 83,85,87
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "410a0a70eddc8b07501686611658aad272d9f182",
+  "prompts": {},
+  "sessions": {
+    "s_cb6db6bc22a2a0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "134661bc-d3bc-43f9-89e4-713aba547780",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
