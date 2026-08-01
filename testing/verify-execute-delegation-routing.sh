@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# verify-execute-delegation-routing.sh — dependency-aware Execute routing contract
+# Dependency-aware Execute routing contract.
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 HELPER="$ROOT/scripts/resolve-execute-delegation-mode.sh"
@@ -56,12 +56,14 @@ write_plan_inline() {
   local phase="$2"
   local plan="$3"
   local depends="$4"
+  local files_touched="${5:-src/$plan.txt}"
   cat > "$PHASE_DIR/$filename" <<PLAN
 ---
 phase: $phase
 plan: $plan
 title: Plan $plan
 depends_on: $depends
+files_touched: [$files_touched]
 ---
 # Plan $plan
 
@@ -80,6 +82,7 @@ write_plan_block() {
     printf 'phase: %s\n' "$phase"
     printf 'plan: %s\n' "$plan"
     printf 'title: Plan %s\n' "$plan"
+    printf 'files_touched: [src/%s.txt]\n' "$plan"
     printf '%s\n' 'depends_on:'
     local dep
     for dep in "$@"; do
@@ -90,9 +93,8 @@ write_plan_block() {
 }
 
 run_helper() {
-  # Use "$@" (not "${@}"): under `set -u` with zero args, bash 3.2 treats
-  # "${@}" as an unbound variable and aborts, while "$@" is special-cased safe.
-  (cd "$FIXTURE" && "$HELPER" --phase-dir .vbw-planning/phases/01-test "$@")
+  local team_capability="${TEST_TEAM_CAPABILITY:-1}"
+  (cd "$FIXTURE" && CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS="$team_capability" "$HELPER" --phase-dir .vbw-planning/phases/01-test "$@")
 }
 
 json_field() {
@@ -258,6 +260,66 @@ write_plan_inline 01-02-PLAN.md 01 02 '[]'
 out=$(run_helper)
 assert_eq "$(json_field "$out" '.delegation_mode')" "team" "auto + two independent delegate plans -> team"
 assert_eq "$(json_field "$out" '.max_parallel_width')" "2" "independent graph has max_parallel_width=2"
+
+make_fixture shared-file-conflict '"auto"' balanced
+write_state '{"plans":[{"id":"01-01","status":"pending"},{"id":"01-02","status":"pending"}],"effort":"balanced","phase_effort":"balanced"}'
+write_plan_inline 01-01-PLAN.md 01 01 '[]' scripts/shared.sh
+write_plan_inline 01-02-PLAN.md 01 02 '[]' scripts/shared.sh
+out=$(run_helper)
+assert_eq "$(json_field "$out" '.delegation_mode')" "subagent" "shared files demote same-wave plans to subagents"
+assert_eq "$(json_field "$out" '.max_parallel_width')" "1" "shared files reduce max_parallel_width to 1"
+assert_json_array_eq "$(jq -c '.dependency_waves' <<< "$out")" '[["01-01"],["01-02"]]' "shared files serialize the later plan id"
+
+make_fixture short-name-shared-file-conflict '"auto"' balanced
+write_state '{"plans":[{"id":"01-01","status":"pending"},{"id":"01-02","status":"pending"}],"effort":"balanced","phase_effort":"balanced"}'
+write_plan_inline 01-PLAN.md 01 01 '[]' scripts/shared.sh
+write_plan_inline 02-PLAN.md 01 02 '[]' scripts/shared.sh
+out=$(run_helper)
+assert_eq "$(json_field "$out" '.delegation_mode')" "subagent" "short plan filenames with shared files demote to subagents"
+assert_eq "$(json_field "$out" '.max_parallel_width')" "1" "short plan filenames share normalized conflict ids"
+assert_json_array_eq "$(jq -c '.dependency_waves' <<< "$out")" '[["01-01"],["01-02"]]' "short plan filenames serialize the later plan id"
+
+make_fixture missing-analyzer-coverage '"auto"' balanced
+write_state '{"plans":[{"id":"01-01","status":"pending"},{"id":"01-02","status":"pending"}],"effort":"balanced","phase_effort":"balanced"}'
+write_plan_inline 01-01-PLAN.md 01 01 '[]'
+write_plan_inline 01-02-PLAN.md 01 02 '[]'
+mv "$PHASE_DIR/01-02-PLAN.md" "$FIXTURE/01-02-PLAN.md"
+ln -s "$FIXTURE/01-02-PLAN.md" "$PHASE_DIR/01-02-PLAN.md"
+out=$(run_helper)
+assert_eq "$(json_field "$out" '.max_parallel_width')" "1" "missing analyzer coverage serializes same-wave plans"
+assert_json_array_eq "$(jq -c '.dependency_waves' <<< "$out")" '[["01-01"],["01-02"]]' "missing analyzer coverage defers the uncovered plan"
+
+make_fixture missing-files-touched '"auto"' balanced
+write_state '{"plans":[{"id":"01-01","status":"pending"},{"id":"01-02","status":"pending"}],"effort":"balanced","phase_effort":"balanced"}'
+write_plan_inline 01-01-PLAN.md 01 01 '[]'
+cat > "$PHASE_DIR/01-02-PLAN.md" <<'PLAN'
+---
+phase: 1
+plan: 2
+title: Plan 2
+depends_on: []
+---
+PLAN
+out=$(run_helper)
+assert_eq "$(json_field "$out" '.delegation_mode')" "subagent" "missing files_touched demotes same-wave plans"
+assert_eq "$(json_field "$out" '.max_parallel_width')" "1" "missing files_touched is conservative"
+assert_json_array_eq "$(jq -c '.dependency_waves' <<< "$out")" '[["01-01"],["01-02"]]' "missing files_touched serializes the later plan id"
+
+make_fixture teams-disabled '"auto"' balanced
+write_state '{"plans":[{"id":"01-01","status":"pending"},{"id":"01-02","status":"pending"}],"effort":"balanced","phase_effort":"balanced"}'
+write_plan_inline 01-01-PLAN.md 01 01 '[]'
+write_plan_inline 01-02-PLAN.md 01 02 '[]'
+TEST_TEAM_CAPABILITY=0
+out=$(run_helper)
+unset TEST_TEAM_CAPABILITY
+assert_eq "$(json_field "$out" '.requested_mode')" "team" "disabled teams preserve requested team mode"
+assert_eq "$(json_field "$out" '.delegation_mode')" "subagent" "disabled teams downgrade delegation mode"
+assert_eq "$(json_field "$out" '.delegation_blocked_reason')" "teams_disabled:env_disabled" "disabled teams expose the capability reason"
+TEST_TEAM_CAPABILITY=0
+out=$(run_helper --segments)
+unset TEST_TEAM_CAPABILITY
+assert_json_array_eq "$(jq -c '[.segments[].delegation_mode]' <<< "$out")" '["subagent"]' "disabled teams downgrade team segments"
+assert_eq "$(json_field "$out" '.segments[0].delegation_blocked_reason')" "teams_disabled:env_disabled" "disabled team segments expose the capability reason"
 
 # auto + completed prerequisite unlocks two delegate plans -> team
 make_fixture completed-prereq '"auto"' balanced
@@ -516,15 +578,22 @@ status: partial
 ---
 Partial but terminal.
 SUMMARY
-printf '{"tool_input":{"file_path":"%s"}}\n' "$STATE_PHASE/01-01-SUMMARY.md" | (cd "$STATE_FIXTURE" && "$STATE_UPDATER")
+printf '{"tool_input":{"file_path":"%s"}}\n' "$STATE_PHASE/01-01-SUMMARY.md" | (cd "$STATE_FIXTURE" && CLAUDE_SESSION_ID=session-owner "$STATE_UPDATER")
 state_status=$(jq -r '.plans[] | select(.id == "01-01") | .status' "$STATE_FIXTURE/.vbw-planning/.execution-state.json")
 assert_eq "$state_status" "partial" "state-updater writes verified terminal partial status"
+assert_eq "$(jq -r '.session_id' "$STATE_FIXTURE/.vbw-planning/.execution-state.json")" "session-owner" "state-updater records the owning session"
 
 # Protocol text invariants
 if grep -q 'resolve-execute-delegation-mode\.sh' "$EXECUTE_PROTOCOL"; then
   pass "execute-protocol references resolve-execute-delegation-mode.sh"
 else
   fail "execute-protocol references resolve-execute-delegation-mode.sh"
+fi
+
+if grep -Fq 'SESSION_ID=$(printf' "$EXECUTE_PROTOCOL" && grep -Fq '"session_id": "{SESSION_ID}"' "$EXECUTE_PROTOCOL"; then
+  pass "execute-protocol records the owning session in execution state"
+else
+  fail "execute-protocol records the owning session in execution state"
 fi
 
 if grep -Fq "prefer_teams='auto': request team mode only when 2+ uncompleted plans remain" "$EXECUTE_PROTOCOL"; then

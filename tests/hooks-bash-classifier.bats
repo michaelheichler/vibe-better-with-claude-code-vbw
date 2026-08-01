@@ -1115,7 +1115,7 @@ run_scout_bash_guard() {
   [[ "$output" == *"nested shell execution"* ]]
 }
 
-@test "bash-guard: scout role can be detected from active-agent marker in nested cwd" {
+@test "bash-guard: payload-less orchestrator ignores active-agent markers in nested cwd" {
   TEST_PROJECT="$BATS_TEST_TMPDIR/scout-marker"
   mkdir -p "$TEST_PROJECT/.vbw-planning" "$TEST_PROJECT/packages/app"
   echo '{"bash_guard":true}' > "$TEST_PROJECT/.vbw-planning/config.json"
@@ -1123,8 +1123,7 @@ run_scout_bash_guard() {
 
   TEST_INPUT='{"tool_input":{"command":"cat .env"}}'
   run bash -c "cd '$TEST_PROJECT/packages/app' && printf '%s\n' '$TEST_INPUT' | bash '$PROJECT_ROOT/scripts/bash-guard.sh'"
-  [ "$status" -eq 2 ]
-  [[ "$output" == *"sensitive file read"* ]]
+  [ "$status" -eq 0 ]
 
   rm "$TEST_PROJECT/.vbw-planning/.active-agent"
   cat > "$TEST_PROJECT/.vbw-planning/.active-agent-roles" <<'EOF'
@@ -1133,11 +1132,10 @@ dev 1
 EOF
   TEST_INPUT='{"tool_input":{"command":"cat ~/.npmrc"}}'
   run bash -c "cd '$TEST_PROJECT/packages/app' && printf '%s\n' '$TEST_INPUT' | bash '$PROJECT_ROOT/scripts/bash-guard.sh'"
-  [ "$status" -eq 2 ]
-  [[ "$output" == *"sensitive file read"* ]]
+  [ "$status" -eq 0 ]
 }
 
-@test "bash-guard: scout nested shell blocks use active-agent marker" {
+@test "bash-guard: payload-less orchestrator nested shell ignores active-agent markers" {
   TEST_PROJECT="$BATS_TEST_TMPDIR/scout-nested-marker"
   local test_input
 
@@ -1148,8 +1146,7 @@ EOF
   test_input=$(jq -n --arg cmd "if \"/bin/sh\" -c 'touch out.txt'; then :; fi" '{"tool_input":{"command":$cmd}}')
   run bash -c 'cd "$1" && printf "%s\n" "$2" | bash "$3"' _ \
     "$TEST_PROJECT/packages/app" "$test_input" "$PROJECT_ROOT/scripts/bash-guard.sh"
-  [ "$status" -eq 2 ]
-  [[ "$output" == *"nested shell execution"* ]]
+  [ "$status" -eq 0 ]
 
   rm "$TEST_PROJECT/.vbw-planning/.active-agent"
   cat > "$TEST_PROJECT/.vbw-planning/.active-agent-roles" <<'EOF'
@@ -1159,11 +1156,10 @@ EOF
   test_input=$(jq -n --arg cmd "{ \"bash\" -c 'git add src/app.js'; }" '{"tool_input":{"command":$cmd}}')
   run bash -c 'cd "$1" && printf "%s\n" "$2" | bash "$3"' _ \
     "$TEST_PROJECT/packages/app" "$test_input" "$PROJECT_ROOT/scripts/bash-guard.sh"
-  [ "$status" -eq 2 ]
-  [[ "$output" == *"nested shell execution"* ]]
+  [ "$status" -eq 0 ]
 }
 
-@test "bash-guard: scout process substitution blocks use active role markers" {
+@test "bash-guard: payload-less orchestrator process substitution ignores active-agent markers" {
   TEST_PROJECT="$BATS_TEST_TMPDIR/scout-process-substitution-markers"
   local test_input
 
@@ -1174,8 +1170,7 @@ EOF
   test_input=$(jq -n --arg cmd 'cat <(touch /tmp/vbw-scout-proc-subst)' '{"tool_input":{"command":$cmd}}')
   run bash -c 'cd "$1" && printf "%s\n" "$2" | bash "$3"' _ \
     "$TEST_PROJECT/packages/app" "$test_input" "$PROJECT_ROOT/scripts/bash-guard.sh"
-  [ "$status" -eq 2 ]
-  [[ "$output" == *"process substitution"* ]]
+  [ "$status" -eq 0 ]
 
   rm "$TEST_PROJECT/.vbw-planning/.active-agent"
   cat > "$TEST_PROJECT/.vbw-planning/.active-agent-roles" <<'EOF'
@@ -1185,11 +1180,10 @@ EOF
   test_input=$(jq -n --arg cmd 'cat <(git add src/app.js)' '{"tool_input":{"command":$cmd}}')
   run bash -c 'cd "$1" && printf "%s\n" "$2" | bash "$3"' _ \
     "$TEST_PROJECT/packages/app" "$test_input" "$PROJECT_ROOT/scripts/bash-guard.sh"
-  [ "$status" -eq 2 ]
-  [[ "$output" == *"process substitution"* ]]
+  [ "$status" -eq 0 ]
 }
 
-@test "bash-guard: any active scout role set triggers conservative read-only fallback" {
+@test "bash-guard: payload-less orchestrator ignores mixed active role set" {
   TEST_PROJECT="$BATS_TEST_TMPDIR/scout-role-set"
   mkdir -p "$TEST_PROJECT/.vbw-planning"
   echo '{"bash_guard":true}' > "$TEST_PROJECT/.vbw-planning/config.json"
@@ -1202,11 +1196,10 @@ EOF
 
   TEST_INPUT='{"tool_input":{"command":"cat .env"}}'
   run bash -c "cd '$TEST_PROJECT' && printf '%s\n' '$TEST_INPUT' | bash '$PROJECT_ROOT/scripts/bash-guard.sh'"
-  [ "$status" -eq 2 ]
-  [[ "$output" == *"sensitive file read"* ]]
+  [ "$status" -eq 0 ]
 }
 
-@test "bash-guard: Scout active in session A does not block mutating gh command in session B" {
+@test "bash-guard: session-local Scout does not classify payload-less orchestrator" {
   TEST_PROJECT="$BATS_TEST_TMPDIR/scout-session-isolation-gh"
   local cmd input_a input_b
 
@@ -1224,11 +1217,10 @@ EOF
   input_a=$(jq -n --arg sid 'session-A' --arg cmd "$cmd" '{session_id:$sid,tool_input:{command:$cmd}}')
   run bash -c 'cd "$1" && printf "%s\n" "$2" | bash "$3"' _ \
     "$TEST_PROJECT" "$input_a" "$PROJECT_ROOT/scripts/bash-guard.sh"
-  [ "$status" -eq 2 ]
-  [[ "$output" == *"mutating gh command"* ]]
+  [ "$status" -eq 0 ]
 }
 
-@test "bash-guard: session-stop for session B preserves session A Scout protection" {
+@test "bash-guard: session-stop preserves another session's Scout marker without classifying orchestrator" {
   TEST_PROJECT="$BATS_TEST_TMPDIR/scout-session-stop-isolation"
   local cmd input_a
 
@@ -1240,24 +1232,27 @@ EOF
   run bash -c 'cd "$1" && printf "%s\n" "{\"session_id\":\"session-B\"}" | bash "$2"' _ \
     "$TEST_PROJECT" "$PROJECT_ROOT/scripts/session-stop.sh"
   [ "$status" -eq 0 ]
+  [ -d "$TEST_PROJECT/.vbw-planning/.active-agents/session-A" ]
+  [ "$(cat "$TEST_PROJECT/.vbw-planning/.active-agent")" = "scout" ]
 
   cmd='gh issue comment 1403 --repo abhigyanpatwari/GitNexus --body-file /tmp/vbw-body.md'
   input_a=$(jq -n --arg sid 'session-A' --arg cmd "$cmd" '{session_id:$sid,tool_input:{command:$cmd}}')
   run bash -c 'cd "$1" && printf "%s\n" "$2" | bash "$3"' _ \
     "$TEST_PROJECT" "$input_a" "$PROJECT_ROOT/scripts/bash-guard.sh"
-  [ "$status" -eq 2 ]
-  [[ "$output" == *"mutating gh command"* ]]
+  [ "$status" -eq 0 ]
 
   run bash -c 'cd "$1" && printf "%s\n" "{\"session_id\":\"session-A\",\"agent_type\":\"vbw:vbw-scout\",\"pid\":\"10101\"}" | bash "$2"' _ \
     "$TEST_PROJECT" "$PROJECT_ROOT/scripts/agent-stop.sh"
   [ "$status" -eq 0 ]
+  [ ! -d "$TEST_PROJECT/.vbw-planning/.active-agents/session-A" ]
+  [ ! -f "$TEST_PROJECT/.vbw-planning/.active-agent" ]
 
   run bash -c 'cd "$1" && printf "%s\n" "$2" | bash "$3"' _ \
     "$TEST_PROJECT" "$input_a" "$PROJECT_ROOT/scripts/bash-guard.sh"
   [ "$status" -eq 0 ]
 }
 
-@test "bash-guard: no-session session-stop rebuilds root fallback while session A Scout remains active" {
+@test "bash-guard: no-session session-stop rebuilds Scout state without classifying orchestrator" {
   TEST_PROJECT="$BATS_TEST_TMPDIR/scout-no-session-stop-rebuild"
   local cmd input_no_session input_b
 
@@ -1279,8 +1274,7 @@ EOF
   input_no_session=$(jq -n --arg cmd "$cmd" '{tool_input:{command:$cmd}}')
   run bash -c 'cd "$1" && unset CLAUDE_SESSION_ID && printf "%s\n" "$2" | bash "$3"' _ \
     "$TEST_PROJECT" "$input_no_session" "$PROJECT_ROOT/scripts/bash-guard.sh"
-  [ "$status" -eq 2 ]
-  [[ "$output" == *"mutating gh command"* ]]
+  [ "$status" -eq 0 ]
 
   input_b=$(jq -n --arg sid 'session-B' --arg cmd "$cmd" '{session_id:$sid,tool_input:{command:$cmd}}')
   run bash -c 'cd "$1" && printf "%s\n" "$2" | bash "$3"' _ \
@@ -1288,7 +1282,7 @@ EOF
   [ "$status" -eq 0 ]
 }
 
-@test "bash-guard: no-session Scout remains blocked after safe-session agent rebuilds aggregate" {
+@test "bash-guard: aggregate rebuild preserves markers without classifying payload-less orchestrator" {
   TEST_PROJECT="$BATS_TEST_TMPDIR/scout-legacy-plus-safe-aggregate"
   local cmd input_no_session input_b
 
@@ -1308,8 +1302,7 @@ EOF
   input_no_session=$(jq -n --arg cmd "$cmd" '{tool_input:{command:$cmd}}')
   run bash -c 'cd "$1" && unset CLAUDE_SESSION_ID && printf "%s\n" "$2" | bash "$3"' _ \
     "$TEST_PROJECT" "$input_no_session" "$PROJECT_ROOT/scripts/bash-guard.sh"
-  [ "$status" -eq 2 ]
-  [[ "$output" == *"mutating gh command"* ]]
+  [ "$status" -eq 0 ]
 
   input_b=$(jq -n --arg sid 'session-B' --arg cmd "$cmd" '{session_id:$sid,tool_input:{command:$cmd}}')
   run bash -c 'cd "$1" && printf "%s\n" "$2" | bash "$3"' _ \
@@ -1317,7 +1310,7 @@ EOF
   [ "$status" -eq 0 ]
 }
 
-@test "bash-guard: no-session legacy root Scout fallback still blocks mutating gh command" {
+@test "bash-guard: legacy root Scout marker does not classify payload-less orchestrator" {
   TEST_PROJECT="$BATS_TEST_TMPDIR/scout-legacy-gh-fallback"
   local cmd input
 
@@ -1334,11 +1327,10 @@ EOF
   input=$(jq -n --arg cmd "$cmd" '{tool_input:{command:$cmd}}')
   run bash -c 'cd "$1" && unset CLAUDE_SESSION_ID && printf "%s\n" "$2" | bash "$3"' _ \
     "$TEST_PROJECT" "$input" "$PROJECT_ROOT/scripts/bash-guard.sh"
-  [ "$status" -eq 2 ]
-  [[ "$output" == *"mutating gh command"* ]]
+  [ "$status" -eq 0 ]
 }
 
-@test "bash-guard: degraded mixed-role markers do not leave stale Scout fallback" {
+@test "bash-guard: degraded mixed-role markers never classify payload-less orchestrator" {
   TEST_PROJECT="$BATS_TEST_TMPDIR/scout-stale-role-degraded"
   mkdir -p "$TEST_PROJECT/.vbw-planning"
   echo '{"bash_guard":true}' > "$TEST_PROJECT/.vbw-planning/config.json"
@@ -1364,8 +1356,7 @@ scout 1
 dev 1
 EOF
   run bash -c "cd '$TEST_PROJECT' && printf '%s\n' '$TEST_INPUT' | bash '$PROJECT_ROOT/scripts/bash-guard.sh'"
-  [ "$status" -eq 2 ]
-  [[ "$output" == *"sensitive file read"* ]]
+  [ "$status" -eq 0 ]
 }
 
 # Task 5: Integration tests under CC 2.1.47+

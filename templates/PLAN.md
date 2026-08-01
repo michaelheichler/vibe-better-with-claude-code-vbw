@@ -10,6 +10,7 @@ autonomous: {true|false}
 effort_override: {thorough|balanced|fast|turbo}
 skills_used: [{skill}]
 files_modified: [{path}]
+files_touched: [{path}] # repo-relative paths, e.g. [scripts/foo.sh, tests/foo.bats]
 forbidden_commands: []
 must_haves:
   truths: ["{invariant}"]

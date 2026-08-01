@@ -75,12 +75,23 @@ normalize_agent_role() {
   return 1
 }
 
+_BG_PAYLOAD_AGENT_TYPE=$(printf '%s' "$INPUT" | jq -r '.agent_type // ""' 2>/dev/null) || _BG_PAYLOAD_AGENT_TYPE=""
+_BG_PAYLOAD_AGENT_ID=$(printf '%s' "$INPUT" | jq -r '.agent_id // ""' 2>/dev/null) || _BG_PAYLOAD_AGENT_ID=""
+_BG_PAYLOAD_HAS_AGENT=false
+if [ -n "$_BG_PAYLOAD_AGENT_TYPE" ] || [ -n "$_BG_PAYLOAD_AGENT_ID" ]; then
+  _BG_PAYLOAD_HAS_AGENT=true
+fi
+
 detect_payload_agent_role() {
-  local payload_agent_id payload_agent_type
-  payload_agent_id=$(printf '%s' "$INPUT" | jq -r '.agent_id // empty' 2>/dev/null) || payload_agent_id=""
-  payload_agent_type=$(printf '%s' "$INPUT" | jq -r '.agent_type // empty' 2>/dev/null) || payload_agent_type=""
-  [ -n "$payload_agent_id" ] && [ -n "$payload_agent_type" ] || return 1
-  normalize_agent_role "$payload_agent_type"
+  local candidate role
+  for candidate in "$_BG_PAYLOAD_AGENT_TYPE" "$_BG_PAYLOAD_AGENT_ID"; do
+    [ -z "$candidate" ] && continue
+    if role=$(normalize_agent_role "$candidate"); then
+      printf '%s' "$role"
+      return 0
+    fi
+  done
+  return 1
 }
 
 detect_agent_role() {
@@ -98,6 +109,9 @@ detect_agent_role() {
     printf '%s' "$role"
     return 0
   fi
+
+  # Only trust the marker fallback for a payload-identified delegated caller.
+  [ "$_BG_PAYLOAD_HAS_AGENT" = true ] || return 1
 
   if command -v vbw_active_agent_current_scout >/dev/null 2>&1 && vbw_active_agent_current_scout "$PLANNING_DIR" "$INPUT"; then
     printf 'scout'

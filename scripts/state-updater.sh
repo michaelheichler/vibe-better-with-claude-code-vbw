@@ -725,9 +725,9 @@ if is_phase_root_artifact "$FILE_PATH" && echo "$FILE_PATH" | grep -qE 'phases/[
   # Update execution-state as best-effort only (never gates STATE/ROADMAP updates)
   if [ -f "$STATE_FILE" ] && [ -n "$PLAN" ] && [ -n "$STATUS" ]; then
     TEMP_FILE="${STATE_FILE}.tmp.$$.${RANDOM:-0}"
-    jq --arg phase "$PHASE" --arg plan "$PLAN" --arg status "$STATUS" --arg summary_id "$SUMMARY_ID" '
+    jq --arg phase "$PHASE" --arg plan "$PLAN" --arg status "$STATUS" --arg summary_id "$SUMMARY_ID" --arg session_id "${CLAUDE_SESSION_ID:-}" '
       def as_num: (try tonumber catch null);
-      if (.plans | type) == "array" then
+      (if (.plans | type) == "array" then
         .plans |= map(
           if (.id == $summary_id)
              or (.id == $plan)
@@ -740,7 +740,8 @@ if is_phase_root_artifact "$FILE_PATH" && echo "$FILE_PATH" | grep -qE 'phases/[
         .phases[$phase][$plan].status = $status
       else
         .
-      end
+      end)
+      | if $session_id != "" then .session_id = $session_id else . end
     ' "$STATE_FILE" > "$TEMP_FILE" 2>/dev/null && [ -s "$TEMP_FILE" ] && mv "$TEMP_FILE" "$STATE_FILE" 2>/dev/null || rm -f "$TEMP_FILE" 2>/dev/null
   fi
 

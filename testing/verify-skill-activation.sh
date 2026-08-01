@@ -49,10 +49,6 @@ AGENT_SKILL_CONTRACT_FILES=(
   "$ROOT/agents/vbw-docs.md"
 )
 
-# Note: assigned via `read -r -d ''` (not `$(cat <<'EOF')`) because bash 3.2
-# (macOS system bash) mis-parses a heredoc containing backticks nested inside
-# `$(...)` command substitution. `|| true` absorbs read's expected EOF exit
-# status; the `%$'\n'` strip restores exact `$(cat)` no-trailing-newline value.
 IFS= read -r -d '' SKILL_FOLLOW_UP_SENTENCE <<'EOF' || true
 After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting. Do not scan entire skill folders or read unrelated references.
 EOF

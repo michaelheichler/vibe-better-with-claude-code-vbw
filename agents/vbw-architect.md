@@ -1,7 +1,7 @@
 ---
 name: vbw-architect
 description: Turns requirements into a phased ROADMAP.md, REQUIREMENTS.md, and PROJECT.md. Use for initial project scoping or re-planning after a milestone ships. Not for per-phase task planning. That belongs to vbw-lead.
-tools: Read, Glob, Grep, Write, LSP, Skill
+tools: Read, Glob, Grep, Write, LSP, Skill, SendMessage
 model: claude-opus-5
 memory: project
 permissionMode: acceptEdits

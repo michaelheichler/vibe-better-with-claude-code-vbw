@@ -2,6 +2,20 @@
 
 load test_helper
 
+setup() {
+  setup_temp_dir
+  create_test_config
+  mkdir -p "$TEST_TEMP_DIR/.vbw-planning/.active-agents/session-A"
+  printf '1\n' > "$TEST_TEMP_DIR/.vbw-planning/.active-agents/session-A/active-agent-count"
+  printf 'scout 1\n' > "$TEST_TEMP_DIR/.vbw-planning/.active-agents/session-A/active-agent-roles"
+  printf 'scout\n' > "$TEST_TEMP_DIR/.vbw-planning/.active-agents/session-A/active-agent"
+  cd "$TEST_TEMP_DIR"
+}
+
+teardown() {
+  teardown_temp_dir
+}
+
 run_qa_bash_guard() {
   local test_project="$1"
   local command="$2"
@@ -215,18 +229,17 @@ new_test_project() {
   [ "$status" -eq 2 ]
 }
 
-@test "bash-guard: qa role can be detected from active-agent marker when env var is absent" {
+@test "bash-guard: payload-less caller does not inherit active-agent marker as qa" {
   TEST_PROJECT=$(new_test_project qa-marker)
   echo qa > "$TEST_PROJECT/.vbw-planning/.active-agent"
 
   TEST_INPUT='{"tool_input":{"command":"cat .env"}}'
   run env -u CLAUDE_SESSION_ID -u CLAUDE_CODE_SESSION_ID \
     bash -c "cd '$TEST_PROJECT' && printf '%s\n' '$TEST_INPUT' | bash '$PROJECT_ROOT/scripts/bash-guard.sh'"
-  [ "$status" -eq 2 ]
-  [[ "$output" == *"sensitive file read"* ]]
+  [ "$status" -eq 0 ]
 }
 
-@test "bash-guard: qa role can be detected from active-agent-roles file when env var is absent" {
+@test "bash-guard: payload-less caller does not inherit active-agent-roles file as qa" {
   TEST_PROJECT=$(new_test_project qa-roles-file)
   cat > "$TEST_PROJECT/.vbw-planning/.active-agent-roles" <<'EOF'
 qa 1
@@ -236,8 +249,7 @@ EOF
   TEST_INPUT='{"tool_input":{"command":"rm -rf build/"}}'
   run env -u CLAUDE_SESSION_ID -u CLAUDE_CODE_SESSION_ID \
     bash -c "cd '$TEST_PROJECT' && printf '%s\n' '$TEST_INPUT' | bash '$PROJECT_ROOT/scripts/bash-guard.sh'"
-  [ "$status" -eq 2 ]
-  [[ "$output" == *"filesystem mutation command"* ]]
+  [ "$status" -eq 0 ]
 }
 
 @test "bash-guard: payload role wins over shared session qa state for concurrent subagents" {
@@ -277,4 +289,40 @@ EOF
     "$TEST_PROJECT" "$test_input" "$PROJECT_ROOT/scripts/bash-guard.sh"
   [ "$status" -eq 2 ]
   [[ "$output" == *"shell file write/redirection"* ]]
+}
+
+@test "bash-guard treats payload without agent fields as orchestrator" {
+  local input
+  input=$(jq -n '{session_id:"session-A",tool_input:{command:"gh issue comment 1 --body ok"}}')
+
+  run bash -c 'unset VBW_AGENT_ROLE VBW_ACTIVE_AGENT; printf "%s\n" "$1" | bash "$2"' _ "$input" "$SCRIPTS_DIR/bash-guard.sh"
+
+  [ "$status" -eq 0 ]
+}
+
+@test "bash-guard classifies explicit Scout payload" {
+  local field identity input
+  rm -rf "$TEST_TEMP_DIR/.vbw-planning/.active-agents"
+
+  for field in agent_type agent_id; do
+    identity="vbw:vbw-scout"
+    [ "$field" = "agent_id" ] && identity="scout-01"
+    input=$(jq -n --arg field "$field" --arg identity "$identity" \
+      '{session_id:"session-A",tool_input:{command:"gh issue comment 1 --body blocked"}} + {($field):$identity}')
+
+    run bash -c 'unset VBW_AGENT_ROLE VBW_ACTIVE_AGENT; printf "%s\n" "$1" | bash "$2"' _ "$input" "$SCRIPTS_DIR/bash-guard.sh"
+
+    [ "$status" -eq 2 ]
+    [[ "$output" == *"mutating gh command"* ]]
+  done
+}
+
+@test "bash-guard child caller does not inherit stale Scout marker" {
+  local input
+  input=$(jq -n '{session_id:"session-A",tool_input:{command:"gh issue comment 1 --body ok"}}')
+
+  run bash -c 'CLAUDE_CODE_CHILD_SESSION=1; unset VBW_AGENT_ROLE VBW_ACTIVE_AGENT; printf "%s\n" "$1" | bash "$2"' _ \
+    "$input" "$SCRIPTS_DIR/bash-guard.sh"
+
+  [ "$status" -eq 0 ]
 }
