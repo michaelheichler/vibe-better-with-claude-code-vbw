@@ -1,0 +1,44 @@
+tests/shutdown-protocol.bats
+  s_27ea496ab5a93e::t_6c76fbc95f0aa5 577,580-581
+  s_27ea496ab5a93e::t_c30db38ddd7fa5 782-784
+testing/verify-uat-remediation-orchestration.sh
+  s_27ea496ab5a93e::t_3cb2455d9c8eaa 12-14
+  s_27ea496ab5a93e::t_9eb90983bdfbb2 238,240,242
+  s_27ea496ab5a93e::t_f2af49287e70c3 213
+  s_27ea496ab5a93e::t_351190e24bad12 174
+  s_27ea496ab5a93e::t_2ebc73c57f636f 202-205
+testing/verify-execute-delegation-routing.sh
+  s_27ea496ab5a93e::t_7fd7943bf0db06 629-631,634
+  s_27ea496ab5a93e::t_f17d502654b80a 734-736,738,761-765,767,772-774,778-781
+  s_27ea496ab5a93e::t_98b89baf6465b8 685,687,689
+  s_27ea496ab5a93e::t_527cace8593692 725
+  s_27ea496ab5a93e::t_3da5d57da80c27 11-12
+testing/verify-commands-contract.sh
+  s_27ea496ab5a93e::t_43e9563567b3b8 1346,1348-1349,1351
+  s_27ea496ab5a93e::t_a28e6422ce5a0f 1450-1455,1461-1462,1466-1469
+  s_27ea496ab5a93e::t_f9a6c25e008060 427-431
+  s_27ea496ab5a93e::t_4713f10aa5faf7 400-401
+  s_27ea496ab5a93e::t_89b48ea2924abf 1330-1331,1333
+  s_27ea496ab5a93e::t_c4aa0b63f8e895 1373,1375,1378
+  s_27ea496ab5a93e::t_85ed88f114c2b7 1418
+  s_27ea496ab5a93e::t_7a7cb37be5f459 1401
+  s_27ea496ab5a93e::t_30caefae6b69d9 445,451,457,460,463,466
+testing/verify-debug-session-contract.sh
+  s_27ea496ab5a93e::t_2048d136b9730e 374
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "260d0560d449987951c2557e32e9257bc7dcb907",
+  "prompts": {},
+  "sessions": {
+    "s_27ea496ab5a93e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4452c98a-815b-4051-9652-732944fc8275",
+        "model": "claude-fable-5"
+      },
+      "human_author": null
+    }
+  }
+}
