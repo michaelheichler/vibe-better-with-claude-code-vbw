@@ -139,7 +139,7 @@ for ((i = 0; i < ${#plan_ids[@]}; i++)); do
     left="${plan_ids[$i]}"
     right="${plan_ids[$j]}"
     if plans_conflict "$left" "$right"; then
-      pair="$left:$right"
+      [[ "$left" < "$right" ]] && pair="$left:$right" || pair="$right:$left"
       conflict_pairs+=("$pair")
       conflicts["$pair"]=1
     fi
