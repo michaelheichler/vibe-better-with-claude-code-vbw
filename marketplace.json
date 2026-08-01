@@ -15,7 +15,7 @@
         "repo": "michaelheichler/vibe-better-with-claude-code-vbw"
       },
       "description": "Development lifecycle plugin: 26 commands, 8 agents, continuous verification",
-      "version": "1.38.8",
+      "version": "1.38.9",
       "license": "MIT",
       "keywords": [
         "vibe-coding",

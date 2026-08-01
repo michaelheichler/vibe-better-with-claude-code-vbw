@@ -43,12 +43,12 @@ We would rather tell you how to catch us lying than just ask you to trust the nu
 | Hook event types (11) / handlers (30) | Computed | `jq -r '.hooks \| keys[]' hooks/hooks.json` and `jq '[.hooks[][] .hooks[]] \| length' hooks/hooks.json` |
 | Shell scripts (235, repo-wide) | Computed | `find . -path ./.git -prune -o -name "*.sh" -print \| wc -l` |
 | BATS files (154) / test cases (3,749) | Computed | `find . -name "*.bats" \| wc -l` and `grep -rh "^@test" --include="*.bats" . \| wc -l` |
-| VERSION (1.38.8) | Computed | `cat VERSION`, cross-checked with `bash scripts/bump-version.sh --verify` |
+| VERSION (1.38.9) | Computed | `cat VERSION`, cross-checked with `bash scripts/bump-version.sh --verify` |
 | Token-efficiency figures in `docs/*token-analysis*.md` | Estimated | Line-count heuristic against an older stock-agent-teams baseline, not a measured API benchmark. See the caveat at the top of [Token efficiency by design](#token-efficiency-by-design). |
 | Cost Optimization relative percentages | Computed | Derived from list prices in `config/model-pricing.json` (collected 2026-07-31) at an assumed 1:3 input:output ratio, not from logged billing data. Treat as directional. |
 | Benchmark tables in `references/model-profiles.md` | Sourced | Collected 2026-07-31 from Vals AI, tbench.ai, arcprize.org, LMArena, steel.dev, and llm-stats.com. Each row names its source. Re-verify after roughly six months. |
 
-Component counts above were last verified against `VERSION` 1.38.8. Reading this against a newer release? Re-run the commands in the table. Most take under a second and need only `find`, `grep`, and `jq`, all already required by this project.
+Component counts above were last verified against `VERSION` 1.38.9. Reading this against a newer release? Re-run the commands in the table. Most take under a second and need only `find`, `grep`, and `jq`, all already required by this project.
 
 Any claim in this README that is not in the table above and is not visibly marked as an estimate should be treated as unverified. Open an issue or PR to either cite a command for it or add the estimate caveat.
 
