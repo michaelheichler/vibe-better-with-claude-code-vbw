@@ -1,0 +1,60 @@
+references/execute-protocol.md
+  s_cb6db6bc22a2a0::t_c87867c88471ad 89,93
+tests/delegated-workflow-session.bats
+  s_cb6db6bc22a2a0::t_794471ba322aec 17-26
+scripts/state-updater.sh
+  s_cb6db6bc22a2a0::t_1207db2d28a939 743-744
+  s_cb6db6bc22a2a0::t_0cae93db7103f7 728,730
+scripts/detect-team-capability.sh
+  s_cb6db6bc22a2a0::t_7ccbd2eb242a7a 19-26
+tests/file-guard-orchestrator.bats
+  s_cb6db6bc22a2a0::t_7b64eebe6a4a64 94-103
+  s_cb6db6bc22a2a0::t_e8579eefda5550 138,140
+scripts/resolve-execute-delegation-mode.sh
+  s_cb6db6bc22a2a0::t_ea6a51b5d23543 174
+  s_cb6db6bc22a2a0::t_1ed1432facb788 494,496,498-507,509
+  s_cb6db6bc22a2a0::t_4092d08a175f53 189-192
+  s_cb6db6bc22a2a0::t_42d65335ebf9e7 514-524,530-532
+tests/detect-team-capability.bats
+  s_cb6db6bc22a2a0::t_8683ef91c0fdc7 88-98
+scripts/delegated-workflow.sh
+  s_cb6db6bc22a2a0::t_7834e3010ca0b6 229-236
+testing/list-contract-tests.sh
+  s_cb6db6bc22a2a0::t_91eb4e8144da44 3
+scripts/file-guard.sh
+  s_cb6db6bc22a2a0::t_eb571e43b02446 156
+  s_cb6db6bc22a2a0::t_4491a64e8c855c 376-377
+  s_cb6db6bc22a2a0::t_b1702d56bf6ec7 98
+  s_cb6db6bc22a2a0::t_e876c022414315 93
+  s_cb6db6bc22a2a0::t_245d91dc170d6f 299-316,319-334,338-340
+  s_cb6db6bc22a2a0::t_fa5e0880059697 204
+  s_cb6db6bc22a2a0::t_72b083728fb451 223
+  s_cb6db6bc22a2a0::t_5a3f2f41336a7f 298
+scripts/analyze-plan-conflicts.sh
+  s_cb6db6bc22a2a0::t_5d7574f620e2c4 186
+  s_cb6db6bc22a2a0::t_b2750c895b83fa 104
+  s_cb6db6bc22a2a0::t_a6a4bee6f298e1 11-35
+tests/analyze-plan-conflicts.bats
+  s_cb6db6bc22a2a0::t_ff87a81942df88 46
+testing/verify-execute-delegation-routing.sh
+  s_cb6db6bc22a2a0::t_d06fce020e3a66 273-281
+  s_cb6db6bc22a2a0::t_a1c0bd629d0e2d 593-598
+  s_cb6db6bc22a2a0::t_53ad5ff518b308 581,584
+  s_cb6db6bc22a2a0::t_8cfd744859832c 282-291
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "c7c1a7fe67769633364c9c6ea79d0b4f433aefbd",
+  "prompts": {},
+  "sessions": {
+    "s_cb6db6bc22a2a0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "134661bc-d3bc-43f9-89e4-713aba547780",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
