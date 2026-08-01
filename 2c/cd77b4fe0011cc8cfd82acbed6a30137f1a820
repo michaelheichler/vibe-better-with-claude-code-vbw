@@ -1,0 +1,21 @@
+docs/wiki/plugin-root-resolution.md
+  s_1d0ef8928b5be8::t_7c95c20356a0d7 59
+  s_1d0ef8928b5be8::t_4cb74ba1bb42fe 67-68
+  s_1d0ef8928b5be8::t_54224c13241cb9 45
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "2ccd77b4fe0011cc8cfd82acbed6a30137f1a820",
+  "prompts": {},
+  "sessions": {
+    "s_1d0ef8928b5be8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d98ead94-2633-4e93-bfad-c8ee6f966aaa",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
