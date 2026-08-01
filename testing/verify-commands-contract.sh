@@ -1511,7 +1511,7 @@ else
   fail "execute-protocol: missing faux-team Agent prohibition"
 fi
 
-if grep -q '⚠ Agent Teams not enabled — using non-team mode' "$ROOT/references/execute-protocol.md"; then
+if grep -Eq 'Agent Teams not enabled.{1,3}using non-team mode' "$ROOT/references/execute-protocol.md"; then
   pass "execute-protocol: pins explicit non-team fallback warning text"
 else
   fail "execute-protocol: missing explicit non-team fallback warning text"
