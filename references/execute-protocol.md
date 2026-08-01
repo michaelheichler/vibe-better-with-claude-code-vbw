@@ -189,7 +189,9 @@ You are the team LEAD. NEVER implement tasks yourself.
 - NEVER Write/Edit files in a plan's `files_modified` — only state files: STATE.md, ROADMAP.md, .execution-state.json, SUMMARY.md
 - If Dev fails: guidance via SendMessage, not takeover. If all Devs unavailable: create new Dev.
 - **Subagent return handling (non-team model):** When a Dev subagent Task returns, inspect the result immediately:
-  1. **platform/tool provisioning failure:** If the returned text explicitly says tools, shell/Bash, filesystem, edits, or API-session access are unavailable, optionally paired with visible zero tool-use metadata when you can see it, stop immediately and surface a platform/tool provisioning blocker. Do not consume the normal retry budget and do not re-spawn the same prompt shape; the child cannot fix missing tools by receiving the same instructions again.
+  1. **platform/tool provisioning failure:** Follow the no-tool circuit breaker in `references/subagent-contracts.md`. Stop immediately, surface the provisioning blocker, and do not consume the normal retry budget.
+
+No-tool invariant: treat unavailable tools as a provisioning failure, do not advance state, and do not retry the same prompt.
   2. **blocker_report received:** Read the blocker details. If the blocker is a tool precondition error (e.g., "File has not been read yet"), amend the task description with explicit "Read {file} first, then edit" and re-spawn once. If the blocker is a validation contradiction or empty-result failure, do NOT blindly re-spawn — the same subagent prompt will hit the same wall. Instead: (a) verify the validation target yourself (run the bash/curl command Lead can execute), (b) if the data truly contradicts expectations, update the plan task to reflect reality, (c) re-spawn with the corrected task.
   3. **Task returned without SUMMARY.md or with incomplete work:** Check what the Dev actually accomplished (git log, file changes). If partial progress was made, spawn a new Dev with "Continue from where the previous Dev stopped — files X, Y already modified, remaining work is Z." If zero progress, check whether the task description was ambiguous or missing context and re-spawn with clarification.
   4. **Max retry: 2 re-spawns per plan.** After 2 failed Dev spawns for the same plan, stop and surface the blocker to the user: "Dev agent failed {N} times on plan {plan_id}. Last blocker: {details}. Manual intervention needed."
@@ -716,7 +718,9 @@ Non-team invariant: omit `team_name`, `run_in_background`, `isolation`, and all 
 Use remediation metadata paths in prompts; VBW worktree targeting is task prompt/state metadata, not a spawn isolation or cwd handoff.
   </qa_remediation_spawn_contract>
   <qa_remediation_no_tool_circuit_breaker>
-  After any QA remediation Lead, Dev, or QA subagent returns, inspect returned text before artifact validation, deterministic gates, or state advancement. If it says tools, shell/Bash, filesystem, edits, or API-session access are unavailable, treat that as a platform/tool provisioning failure: STOP without advancing `.qa-remediation-stage`, report the failed role and stage/task, and do not retry the same prompt.
+  After any QA remediation Lead, Dev, or QA subagent returns, follow the no-tool circuit breaker in `references/subagent-contracts.md` before artifact validation, deterministic gates, or state advancement. If it triggers, STOP without advancing `.qa-remediation-stage` and report the failed role and stage or task.
+
+No-tool invariant: treat unavailable tools as a provisioning failure, do not advance state, and do not retry the same prompt.
   </qa_remediation_no_tool_circuit_breaker>
 
 2. **Loop (until PROCEED_TO_UAT or user intervention):**
@@ -761,7 +765,9 @@ Non-team invariant: omit `team_name`, `run_in_background`, `isolation`, and all 
 
 If `LEAD_REASONING` is non-empty, also pass `effort: "${LEAD_REASONING}"`. If `LEAD_REASONING` is empty, do NOT include effort (the resolved model rejects the parameter).
   - Lead prompt MUST include the authoritative `round_dir`, `source_verification_path`, `known_issues_path`, and output path `{round_dir}/R{RR}-PLAN.md`; the failed-check and known-issue inputs above; the deviation-classification and known-issue-resolution requirements above; and `Read the remediation plan template at /tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}/templates/REMEDIATION-PLAN.md and follow its structure exactly.`
-  - After Lead returns, apply the QA remediation no-tool circuit breaker before normalizing plan filenames, validating the generated plan, or advancing state. If Lead reports unavailable tools, shell/Bash, filesystem, edits, or API-session access, STOP without advancing `.qa-remediation-stage` and do not retry that same Lead prompt.
+  - After Lead returns, apply the no-tool circuit breaker in `references/subagent-contracts.md` before normalizing plan filenames, validating the generated plan, or advancing state. If it triggers, STOP without advancing `.qa-remediation-stage`.
+
+No-tool invariant: treat unavailable tools as a provisioning failure, do not advance state, and do not retry the same prompt.
   - Normalize plan filenames before validation:
     ```bash
     NORM_SCRIPT="${VBW_PLUGIN_ROOT}/scripts/normalize-plan-filenames.sh"
@@ -783,14 +789,18 @@ If `LEAD_REASONING` is non-empty, also pass `effort: "${LEAD_REASONING}"`. If `L
      - The remediation summary frontmatter MUST include aggregated `commit_hashes`, `files_modified`, and `deviations`
      - `files_modified` is required even for documentation-only rounds so `qa-result-gate.sh` can deterministically distinguish metadata-only remediation from real code changes
      - When `input_mode=known-issues` or `input_mode=both`, the remediation summary frontmatter MUST also include `known_issue_outcomes` with one `{test,file,error,disposition,rationale}` JSON object string per carried known issue. Keys and `disposition` values must match `R{RR}-PLAN.md` `known_issue_resolutions`; do not silently drop accepted non-blocking issues.
-    - After Dev returns, apply the QA remediation no-tool circuit breaker before checking the summary or advancing state. If Dev reports unavailable tools, shell/Bash, filesystem, edits, or API-session access, STOP without advancing `.qa-remediation-stage` and do not retry that same Dev prompt.
+    - After Dev returns, apply the no-tool circuit breaker in `references/subagent-contracts.md` before checking the summary or advancing state. If it triggers, STOP without advancing `.qa-remediation-stage`.
+
+No-tool invariant: treat unavailable tools as a provisioning failure, do not advance state, and do not retry the same prompt.
     - After Dev completes without a no-tool provisioning failure, advance state: `bash "${VBW_PLUGIN_ROOT}/scripts/qa-remediation-state.sh" advance "{phase-dir}"`
 
    **stage=verify:** Re-run QA:
    - Run `compile-verify-context.sh --remediation-only {phase-dir}` to get compounded verification history plus the current round's plan/summary context only
    - Spawn QA agent as subagent — writes to `{verification_path}` (from `qa-remediation-state.sh` metadata)
      - Output path: `{round_dir}/R{RR}-VERIFICATION.md` — phase-level VERIFICATION.md stays frozen
-    - After QA returns, apply the QA remediation no-tool circuit breaker before syncing known issues or running the deterministic gate. If QA reports unavailable tools, shell/Bash, filesystem, edits, or API-session access, STOP without advancing `.qa-remediation-stage` and do not retry that same QA prompt.
+    - After QA returns, apply the no-tool circuit breaker in `references/subagent-contracts.md` before syncing known issues or running the deterministic gate. If it triggers, STOP without advancing `.qa-remediation-stage`.
+
+No-tool invariant: treat unavailable tools as a provisioning failure, do not advance state, and do not retry the same prompt.
      - After QA persists `{verification_path}`, immediately sync tracked known issues from that round artifact:
        ```bash
        bash "${VBW_PLUGIN_ROOT}/scripts/track-known-issues.sh" sync-verification "{phase-dir}" "{verification_path}" 2>/dev/null || true

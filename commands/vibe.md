@@ -334,7 +334,9 @@ Non-team invariant: omit `team_name`, `run_in_background`, `isolation`, and all 
 Use the remediation metadata paths above instead of forcing Claude worktree isolation or spawn cwd handoffs.
   </qa_remediation_spawn_contract>
   <qa_remediation_no_tool_circuit_breaker>
-  After any QA remediation Lead, Dev, or QA subagent returns, inspect returned text before artifact validation, deterministic gates, or state advancement. If it says tools, shell/Bash, filesystem, edits, or API-session access are unavailable, treat that as a platform/tool provisioning failure: STOP without advancing `.qa-remediation-stage`, report the failed role and stage/task, and do not retry the same prompt. Repeating a no-tool spawn cannot fix tool provisioning and wastes tokens.
+  After any QA remediation Lead, Dev, or QA subagent returns, follow the no-tool circuit breaker in `references/subagent-contracts.md` before artifact validation, deterministic gates, or state advancement. If it triggers, STOP without advancing `.qa-remediation-stage` and report the failed role and stage or task.
+
+No-tool invariant: treat unavailable tools as a provisioning failure, do not advance state, and do not retry the same prompt.
   </qa_remediation_no_tool_circuit_breaker>
 2. Read remediation inputs.
 - Round 01: phase-level VERIFICATION (`{NN}-VERIFICATION.md` or brownfield `VERIFICATION.md`)
@@ -394,7 +396,9 @@ Non-team invariant: omit `team_name`, `run_in_background`, `isolation`, and all 
 
 If `LEAD_REASONING` is non-empty, also pass `effort: "${LEAD_REASONING}"`. If `LEAD_REASONING` is empty, do NOT include effort (the resolved model rejects the parameter).
   - Lead prompt MUST include the authoritative `round_dir`, `source_verification_path`, `known_issues_path`, and output path `{round_dir}/R{RR}-PLAN.md`; the failed-check and known-issue inputs above; the deviation-classification and known-issue-resolution requirements above; and `Read the remediation plan template at /tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}/templates/REMEDIATION-PLAN.md and follow its structure exactly.`
-  - After Lead returns, apply the QA remediation no-tool circuit breaker before normalization, plan validation, or state advancement. If Lead reports unavailable tools, shell/Bash, filesystem, edits, or API-session access, STOP without advancing `.qa-remediation-stage` and do not retry that same Lead prompt.
+  - After Lead returns, apply the no-tool circuit breaker in `references/subagent-contracts.md` before normalization, plan validation, or state advancement. If it triggers, STOP without advancing `.qa-remediation-stage`.
+
+No-tool invariant: treat unavailable tools as a provisioning failure, do not advance state, and do not retry the same prompt.
   - Normalize plan filenames before validation:
     ```bash
     NORM_SCRIPT="/tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}/scripts/normalize-plan-filenames.sh"
@@ -435,7 +439,9 @@ If `LEAD_REASONING` is non-empty, also pass `effort: "${LEAD_REASONING}"`. If `L
     - The remediation summary frontmatter MUST include aggregated `commit_hashes`, `files_modified`, and `deviations`
     - `files_modified` is required even for documentation-only rounds so `qa-result-gate.sh` can deterministically distinguish metadata-only remediation from real code changes
     - When `input_mode=known-issues` or `input_mode=both`, the remediation summary frontmatter MUST also include `known_issue_outcomes` with one `{test,file,error,disposition,rationale}` JSON object string per carried known issue. Keys and `disposition` values must match `R{RR}-PLAN.md` `known_issue_resolutions`; do not silently drop accepted non-blocking issues.
-  - After Dev returns, apply the QA remediation no-tool circuit breaker before checking the summary or advancing state. If Dev reports unavailable tools, shell/Bash, filesystem, edits, or API-session access, STOP without advancing `.qa-remediation-stage` and do not retry that same Dev prompt.
+  - After Dev returns, apply the no-tool circuit breaker in `references/subagent-contracts.md` before checking the summary or advancing state. If it triggers, STOP without advancing `.qa-remediation-stage`.
+
+No-tool invariant: treat unavailable tools as a provisioning failure, do not advance state, and do not retry the same prompt.
   - After Dev completes without a no-tool provisioning failure, advance state: `bash {plugin-root}/scripts/qa-remediation-state.sh advance {phase-dir}`
 
 - **stage=verify:** Re-run QA:
@@ -465,7 +471,9 @@ If `LEAD_REASONING` is non-empty, also pass `effort: "${LEAD_REASONING}"`. If `L
     - The output path is `{round_dir}/R{RR}-VERIFICATION.md` — NOT the phase-level file
     - Phase-level VERIFICATION.md stays frozen as the original QA FAIL result
     - Include the compiled verify context output in QA's task description
-    - After QA returns, apply the QA remediation no-tool circuit breaker before syncing known issues or running the deterministic gate. If QA reports unavailable tools, shell/Bash, filesystem, edits, or API-session access, STOP without advancing `.qa-remediation-stage` and do not retry that same QA prompt.
+    - After QA returns, apply the no-tool circuit breaker in `references/subagent-contracts.md` before syncing known issues or running the deterministic gate. If it triggers, STOP without advancing `.qa-remediation-stage`.
+
+No-tool invariant: treat unavailable tools as a provisioning failure, do not advance state, and do not retry the same prompt.
     - After QA persists `{verification_path}`, immediately sync tracked known issues:
       ```bash
       bash "${VBW_PLUGIN_ROOT}/scripts/track-known-issues.sh" sync-verification "{phase-dir}" "{verification_path}" 2>/dev/null || true
@@ -813,7 +821,9 @@ Claude Code worktree isolation and spawn cwd handoffs are not reliable for this 
 Execute the current stage based on `STAGE`:
 **File read rule:** Do NOT re-read the active `{phase}-UAT.md` artifact unless step 5 requires earlier archived rounds for recurrence enrichment. Use the single step-2 UAT read as the active-round source of truth, and if step 5 scans archived rounds, exclude that active artifact from the scan. Do NOT read `{phase}-CONTEXT.md` — step 4 already emitted the remediation context when needed.
 **Round metadata prohibition:** Do NOT glob `*-PLAN.md`, search for `*-RESEARCH.md`, or infer summary locations — use the pre-computed `round`, `round_dir`, `research_path`, `plan_path`, and `summary_path` values from step 4. If a subagent reports success but the deterministic validator below fails, treat the stage as incomplete and STOP without advancing state.
-**Subagent no-tool circuit breaker (NON-NEGOTIABLE):** At every UAT remediation Scout, Lead, or Dev subagent return site below, inspect returned text before artifact validation, summary finalization, or `.uat-remediation-stage` advancement. If it says tools, shell/Bash, filesystem, edits, or API-session access are unavailable, treat that as a platform/tool provisioning failure. STOP without advancing `.uat-remediation-stage`, report the failed subagent role and task, and do not retry the same prompt. Repeating a no-tool spawn cannot fix tool provisioning and wastes tokens.
+**Subagent no-tool circuit breaker (NON-NEGOTIABLE):** At every UAT remediation Scout, Lead, or Dev subagent return site below, follow the no-tool circuit breaker in `references/subagent-contracts.md` before artifact validation, summary finalization, or `.uat-remediation-stage` advancement. If it triggers, STOP without advancing `.uat-remediation-stage` and report the failed subagent role and task.
+
+No-tool invariant: treat unavailable tools as a provisioning failure, do not advance state, and do not retry the same prompt.
 
 #### research
 
@@ -1030,7 +1040,9 @@ Non-team invariant: omit `team_name`, `run_in_background`, `isolation`, and all 
 
 Route to a quick-fix implementation path for the same phase using the normalized issue list from step 3 (with step-5 recurrence annotations when available) as task input (equivalent to `/vbw:fix`, but without requiring the user to invoke it manually). After changes, advance:
 
-If the quick-fix Dev return reports that tools, shell/Bash, filesystem, edits, or API-session access are unavailable, apply the Subagent no-tool circuit breaker before the advance below: STOP without advancing `.uat-remediation-stage`, report the failed Dev quick-fix task, do not retry the same prompt, and do not enter re-verification.
+Apply the no-tool circuit breaker in `references/subagent-contracts.md` to the quick-fix Dev return before the advance below. If it triggers, STOP without advancing `.uat-remediation-stage`, report the failed Dev quick-fix task, and do not enter re-verification.
+
+No-tool invariant: treat unavailable tools as a provisioning failure, do not advance state, and do not retry the same prompt.
 
 ```bash
 bash /tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}/scripts/uat-remediation-state.sh advance "$PHASE_DIR"
