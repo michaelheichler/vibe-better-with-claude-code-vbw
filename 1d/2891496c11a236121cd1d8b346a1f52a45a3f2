@@ -1,0 +1,366 @@
+scripts/bash-guard.sh
+  s_cb6db6bc22a2a0::t_11e76f038f148e 61-63,67-69,72-77,619,623
+  s_cb6db6bc22a2a0::t_130bb666fee473 99,104,108
+  s_cb6db6bc22a2a0::t_957f821cf9fcea 3
+  s_cb6db6bc22a2a0::t_59ccc7d0007ad9 285,287-289,292,294,299-301,306,308,311-312,316,319,323,327,330,334,337
+  s_cb6db6bc22a2a0::t_4e965e85ba0a52 363,365-367,370,372,377,380,382,387,389,392,394,398,415,419
+  s_cb6db6bc22a2a0::t_7519e067ab80d8 184,186-188,192,197-198,202,217-218,225
+  s_cb6db6bc22a2a0::t_79ce801a7ad463 34,39-46
+  s_cb6db6bc22a2a0::t_2d36b52337d992 129,131-133,137,142-143,148,150,153,157,171-172,176
+  s_cb6db6bc22a2a0::t_163af817d14d1a 233,235-237,241,246-247,252,254,257,261,272-273,277
+  s_cb6db6bc22a2a0::t_4945e35acf1058 616-618
+  s_cb6db6bc22a2a0::t_f72dcf1e8c4c91 620-622
+  s_cb6db6bc22a2a0::t_adc8fe1b8bc688 624-626
+  s_759666d517e59a::t_69a51e043622cf 112,114-123,609-615,627-629,635,639,643,647,651,655,659,663,667,671,675,679,683,687,691,695,699,703,707,711,715,719,722-725,727-731
+testing/verify-execute-delegation-routing.sh
+  s_cb6db6bc22a2a0::t_ea9b8146c8a7f8 634
+  s_cb6db6bc22a2a0::t_ef3a847e751152 96,664,705
+marketplace.json
+  s_cb6db6bc22a2a0::t_d875f412aff988 31
+  s_759666d517e59a::t_a3722d8dcb5c71 13-16,18
+references/model-profiles.md
+  s_cb6db6bc22a2a0::t_62440cb788da7e 3
+  s_3d44b6eba98280::t_73a4f735a07342 5-129,131-138,140,142,144-233,236-242,246,248,250,252,254-256,258,260-281,283,285,287
+scripts/file-guard.sh
+  s_cb6db6bc22a2a0::t_2bc67ddd3b833b 91,96,101-103,107-109,112-119
+  s_cb6db6bc22a2a0::t_8fb8f615be62fb 45,155,158,185,196,249,252,344-357,362
+  s_cb6db6bc22a2a0::t_5aa71f57c2566b 206-214
+  s_cb6db6bc22a2a0::t_1a6d3803091147 237-239
+  s_cb6db6bc22a2a0::t_433c03a9bdeb71 90
+  s_759666d517e59a::t_af9d0ffc19b2a1 453-482
+tests/role-isolation-runtime.bats
+  s_cb6db6bc22a2a0::t_346e4e7c14490d 118-120,127,130-132,138,141-143,150-151,154-155,167,190-208,210-216,222,225-231,236,327-328,333,336-340,350,353-357,363,366-367,375
+  s_cb6db6bc22a2a0::t_24e9cafe2fa3e1 117
+  s_cb6db6bc22a2a0::t_5ab055e1eff130 121-126
+  s_cb6db6bc22a2a0::t_92c98220c16cd7 128-129
+  s_cb6db6bc22a2a0::t_3f9b2b48efc453 133-137
+  s_cb6db6bc22a2a0::t_db50d8dfa53115 139-140
+  s_cb6db6bc22a2a0::t_8b2a229538fb6c 144-149
+  s_cb6db6bc22a2a0::t_3325aa04d4941b 152-153
+  s_cb6db6bc22a2a0::t_1ad99d751dfbf0 156-158,164-166
+  s_cb6db6bc22a2a0::t_8bd9eee007cdd4 168-169
+  s_cb6db6bc22a2a0::t_a8a4ba09a62a6d 209
+  s_cb6db6bc22a2a0::t_b14c196989775a 217-221
+  s_cb6db6bc22a2a0::t_91837f76edccca 223-224
+  s_cb6db6bc22a2a0::t_d965f3f9283f3d 232-235
+  s_cb6db6bc22a2a0::t_e8934be3d6ffe8 237
+  s_cb6db6bc22a2a0::t_22996b07e1ecb3 325-326
+  s_cb6db6bc22a2a0::t_ad93e6ae662882 329-332
+  s_cb6db6bc22a2a0::t_49f7014e72dfd6 334-335
+  s_cb6db6bc22a2a0::t_fe9925a15f4a92 341-343,347-349
+  s_cb6db6bc22a2a0::t_cd11977cb610f3 351-352
+  s_cb6db6bc22a2a0::t_76403efcccb1e1 358-362
+  s_cb6db6bc22a2a0::t_632f49b86ccddc 364-365
+  s_cb6db6bc22a2a0::t_feb0efc2aa78a8 368-370,372-374
+  s_759666d517e59a::t_07737e18b03d6d 159-163,296,344-346,371
+.claude-plugin/marketplace.json
+  s_cb6db6bc22a2a0::t_3ab8133c08c2fa 14-15,18
+.claude-plugin/plugin.json
+  s_cb6db6bc22a2a0::t_5739239f2c2f7a 3
+.gitignore
+  s_cb6db6bc22a2a0::t_275dfe52bbd103 22-27
+.serena/project.yml
+  s_cb6db6bc22a2a0::t_36b6013480bb2c 1,25-26,31-37,106,109-110,115-175
+.vbw-planning/phases/02-structural-resolution-consolidation/02-01-PLAN.md
+  s_cb6db6bc22a2a0::t_26c7723ee62aeb 1-118
+.vbw-planning/phases/02-structural-resolution-consolidation/02-03-PLAN.md
+  s_cb6db6bc22a2a0::t_1e84ee641faa7d 1-156
+.vbw-planning/phases/02-structural-resolution-consolidation/02-03-SMOKE.md
+  s_cb6db6bc22a2a0::t_2ff0e3d9acc629 1-38
+.vbw-planning/phases/02-structural-resolution-consolidation/02-04-CLOSEOUT.md
+  s_cb6db6bc22a2a0::t_9aeeb1bcde6ebc 1,3-4,6,8,10,12-30,33-37,39-44,46,48,51,54,56,59-71,74,76-84,86-88,91-92,95,97,99,102,105,107-110,112,114,116-119
+.vbw-planning/phases/02-structural-resolution-consolidation/02-04-PLAN.md
+  s_cb6db6bc22a2a0::t_522e5426841093 1-99
+.vbw-planning/phases/02-structural-resolution-consolidation/02-04-SUMMARY.md
+  s_cb6db6bc22a2a0::t_4a1e912d5baf57 1-65
+.vbw-planning/phases/02-structural-resolution-consolidation/remediation/qa/round-03/R03-PLAN.md
+  s_cb6db6bc22a2a0::t_b5dccf4f3697e5 1-111
+.vbw-planning/phases/03-map-and-inference-remediation/03-04-PLAN.md
+  s_cb6db6bc22a2a0::t_4ea53dc5395598 1-132
+AGENTS.md
+  s_cb6db6bc22a2a0::t_723f68fb9d5272 3,13,53,118,122,128,134-135,153,158-162,164,175,181,185,195,199,203,233-237,245,279,297,299,303-304,306-308,312,314-315
+CONTRIBUTING.md
+  s_cb6db6bc22a2a0::t_3c4d4c326b18e9 7,185
+LICENSE
+  s_cb6db6bc22a2a0::t_9cf26c4d4b19be 4
+README.md
+  s_cb6db6bc22a2a0::t_67e69abdf2ddd0 3,5,7,9,11-13,16-17,22-26,28,30,34,36-53,57,61,63,65,67,71-73,75,77,79,81,85,95,106,108,110,114,116,118,124,128,132,136-141,168,176,204,254,282,295,329,333,335,337,352,367,371,405,409,412,414-415,417,472-473,506-510,537,565,609,671,721,723,773,777,782-783,799,813,816,833,903-904,917,920,924-926,930-936,938,940,942,944-948,1033,1062-1064,1071,1073,1075,1083-1087,1091,1093
+VERSION
+  s_cb6db6bc22a2a0::t_1f7374b955d4fe 1
+agents/vbw-architect.md
+  s_cb6db6bc22a2a0::t_1176b4b8be3471 3-5,12,16,22,30,32,36-40,45-47,49,59-63,66
+agents/vbw-debugger.md
+  s_cb6db6bc22a2a0::t_f2483f9ab925f6 3-6,17,23,27,31,35,39-40,42-43,46,54,73,80,93,96,99,104,107,117,119,122
+agents/vbw-dev.md
+  s_cb6db6bc22a2a0::t_fd7c9986eabda7 3-5,13,17,23,29,33,36,41,43-45,48,50,53,60-61,66-76,97-100,103,111,116,121,149,152-153,155-157,159,167
+agents/vbw-qa.md
+  s_cb6db6bc22a2a0::t_701f7db9914ea3 3-5,21,38,44-54,82,128-140,143,145,177,180,196
+agents/vbw-scout.md
+  s_cb6db6bc22a2a0::t_a7787e0f9170c7 3-4,6-7,17,23,29,33,38,40,45,47-49,52,54,56-60,64,66,88,92,95,99,114
+commands/config.md
+  s_cb6db6bc22a2a0::t_a308a3c79c8747 16,170,177-194,198-201,237-240,253-254,348,382-399,402-409,498-503
+commands/debug.md
+  s_cb6db6bc22a2a0::t_4b49b7b48d1a7f 7,19,213,216-218,226,236,246,251-254,266,269,278,288,297,375,459,462,464,474,485,664
+commands/discuss.md
+  s_cb6db6bc22a2a0::t_b88c7517c739da 20,32-39,41-42,99
+commands/doctor.md
+  s_cb6db6bc22a2a0::t_7ea797571c2b14 19
+commands/fix.md
+  s_cb6db6bc22a2a0::t_33e210b5c7de0d 19,70,73,84,93,104
+commands/help.md
+  s_cb6db6bc22a2a0::t_3337696f324e4c 16
+commands/init.md
+  s_cb6db6bc22a2a0::t_6a34e07c072cbd 31,55,57-58,75,83,87,91,93,179,187,208-258,272,284-285,291,296,298,302-304,306,317,319,321,343,349,358,371-374,383,388,404,420,435,445,464,518,558-560
+commands/map.md
+  s_cb6db6bc22a2a0::t_2f1607756874ca 7,20,49,89-154,157,168,178,189,195,205,215,218,224-228,230,238,248,267,273,275,281-282
+commands/qa.md
+  s_cb6db6bc22a2a0::t_d620ea455e25cc 20,44-51,53-54,150,153,155,165,176,265,302,312,323,330
+commands/report.md
+  s_cb6db6bc22a2a0::t_bab46b53c6b7b9 19
+commands/research.md
+  s_cb6db6bc22a2a0::t_70d9cc2f8bb65f 20,76,79,83,89,112
+commands/resume.md
+  s_cb6db6bc22a2a0::t_62142b9b9322d6 20,30-37,39-40
+commands/rtk.md
+  s_cb6db6bc22a2a0::t_9c2d52086f53f7 16,21,31,46,88,94,132
+commands/skills.md
+  s_cb6db6bc22a2a0::t_bb8c8108a51b07 20,42,49,53-54,65,69,71-72,74,78,81,86-88,90,102,106,110-112
+commands/status.md
+  s_cb6db6bc22a2a0::t_78a7891aa48a17 20,47-54,56-57
+commands/todo.md
+  s_cb6db6bc22a2a0::t_77d780e565ec97 58
+commands/update.md
+  s_cb6db6bc22a2a0::t_7639bc9ee90985 16,42
+commands/verify.md
+  s_cb6db6bc22a2a0::t_85dc270ed04c80 21,45-52,54-55,82-84,89-91,93,95-97,99,108-115,117-118,163,178,329,331-335,340,342,344,346-349,360-388,392,399,401,424,780
+commands/vibe.md
+  s_cb6db6bc22a2a0::t_7e8c2124bae67c 6,24,45-52,54,208,328,383,385,403,411,421,433,441,451,567,571,579,589,592-593,632,665,687,709,750-751,808,818,828,854,865,867,875,885,888,919,931,933,941,951,954,993-994,1028-1121,1141,1210,1213,1216,1224,1234,1246,1266,1277,1287,1290-1291,1323,1374-1460,1462,1533,1536-1537,1545,1555,1571,1590,1598,1608,1619,1647,1712,1730
+commands/whats-new.md
+  s_cb6db6bc22a2a0::t_0fff640c6c43af 16
+config/defaults.json
+  s_cb6db6bc22a2a0::t_6621987a95c19d 23-27,36-38
+config/model-pricing.json
+  s_cb6db6bc22a2a0::t_edf3bf2c1b573d 1-265
+config/model-profiles.json
+  s_cb6db6bc22a2a0::t_f6759478b579fe 23-24,27
+config/reasoning-profiles.json
+  s_cb6db6bc22a2a0::t_a293511984b131 1-29
+config/stack-mappings.json
+  s_cb6db6bc22a2a0::t_e99d50e4776740 10-14
+docs/migration-gsd-to-vbw.md
+  s_cb6db6bc22a2a0::t_ef8c946fd1c5aa 261
+docs/wiki/agent-roles.md
+  s_cb6db6bc22a2a0::t_67a89da3bd324c 1-112
+docs/wiki/command-lifecycle.md
+  s_cb6db6bc22a2a0::t_2659d3b27255db 1-134
+docs/wiki/configuration.md
+  s_cb6db6bc22a2a0::t_a4a2aeaf1ccc0f 1-142
+docs/wiki/home.md
+  s_cb6db6bc22a2a0::t_62e025eb9bfa7e 1,3,5,7,9,11,13,15,17,19,21-23,26,28,30,32-34,36-38,41,43,45,47-50,52,54,56-60,62,64,66,68-73,75,77
+docs/wiki/hooks-and-state.md
+  s_cb6db6bc22a2a0::t_3d959631cb13c1 1-90
+docs/wiki/plugin-root-resolution.md
+  s_cb6db6bc22a2a0::t_82363d87251476 1-128
+docs/wiki/troubleshooting-and-debugging.md
+  s_cb6db6bc22a2a0::t_067b84a5979404 1,3-26,30-31,35-129
+references/ask-user-question.md
+  s_cb6db6bc22a2a0::t_6e7e5a2c2b789c 4,10-11,17-25,68
+references/dijkstra/DISCIPLINE.md
+  s_cb6db6bc22a2a0::t_fbce9f2baac1fe 1-75
+references/dijkstra/d01-executional-abstraction-and-languages.md
+  s_cb6db6bc22a2a0::t_a32814165ef75a 1-93
+references/dijkstra/d02-states-and-semantic-characterization.md
+  s_cb6db6bc22a2a0::t_730d83d37c12d3 1-110
+references/dijkstra/d03-wp-semantics-of-the-language.md
+  s_cb6db6bc22a2a0::t_6c8aa357127c49 1-130
+references/dijkstra/d04-termination-and-euclid.md
+  s_cb6db6bc22a2a0::t_1e1f9f8a6946e9 1-129
+references/dijkstra/d05-formal-treatment-of-small-examples.md
+  s_cb6db6bc22a2a0::t_9ee817f86ceb6a 2-10,13,15,17,19-26,28,30-34,36,38,40,42,44,47,50,52,54,56-58,60,62,64,66,68,70,72,74,76,78,80,82,84,86,88-91,93,95,97,99,101,103-109,111,113-120,122,124-130,132,134-139,141,143-147
+references/dijkstra/d06-nondeterminacy-and-scope.md
+  s_cb6db6bc22a2a0::t_c355c66b93c97e 1-135
+references/dijkstra/d07-array-variables.md
+  s_cb6db6bc22a2a0::t_38cc24798333ed 1-137
+references/dijkstra/d08-search-permutation-flag-file-merging.md
+  s_cb6db6bc22a2a0::t_32b363e697c6a8 1-117
+references/dijkstra/d09-hamming-pattern-matching-two-squares.md
+  s_cb6db6bc22a2a0::t_8f8f7ce0d1993a 1-130
+references/dijkstra/d10-prime-factor-villages-spanning-tree.md
+  s_cb6db6bc22a2a0::t_6ff4295d31f3af 1-121
+references/dijkstra/d11-rem-equivalence-convex-hull.md
+  s_cb6db6bc22a2a0::t_622975740f3b1f 1-115
+references/dijkstra/d12-strong-components-manuals-retrospect.md
+  s_cb6db6bc22a2a0::t_a1b8089a51f0e9 1-110
+references/dijkstra/s13-notes-on-structured-programming-i.md
+  s_cb6db6bc22a2a0::t_69286716d6561d 1-134
+references/dijkstra/s14-notes-on-structured-programming-ii.md
+  s_cb6db6bc22a2a0::t_d8310306a82294 1-124
+references/dijkstra/s15-notes-on-data-structuring-i.md
+  s_cb6db6bc22a2a0::t_7ff12a711faf2e 1-98
+references/dijkstra/s16-notes-on-data-structuring-ii.md
+  s_cb6db6bc22a2a0::t_05833ce77cbe70 1-120
+references/dijkstra/s17-hierarchical-program-structures.md
+  s_cb6db6bc22a2a0::t_7279ceaad00dda 1-109
+references/execute-protocol.md
+  s_cb6db6bc22a2a0::t_f909537ec7503c 11-17,20,134-135,144,148-149,158,175,244-245,319,682-683,761,763,1002,1023
+references/scout-live-validation-policy.md
+  s_cb6db6bc22a2a0::t_73c24922afba02 1,3,5,7-11,13,15-19,21,23-27
+scripts/agent-spawn-guard.sh
+  s_cb6db6bc22a2a0::t_6ec7ceb603795c 45
+scripts/bootstrap/bootstrap-requirements.sh
+  s_cb6db6bc22a2a0::t_bc86624ec84e58 32-33,43-67,79
+scripts/bump-version.sh
+  s_cb6db6bc22a2a0::t_73af49a0de72b3 5,14-96,98,129,159
+scripts/clean-stale-teams.sh
+  s_cb6db6bc22a2a0::t_5b28ba60632c40 54-55
+scripts/derive-milestone-slug.sh
+  s_cb6db6bc22a2a0::t_2161a0cc5eb518 37-41,44,51,65,69,73,86,89,93
+scripts/detect-models.sh
+  s_cb6db6bc22a2a0::t_839b075d42e50f 1-117
+scripts/detect-stack.sh
+  s_cb6db6bc22a2a0::t_83ad480d1c6341 3,55-97,101-102,104,154,157
+scripts/dev-setup.sh
+  s_cb6db6bc22a2a0::t_45aaeb00d1dc0f 265
+scripts/hook-wrapper.sh
+  s_cb6db6bc22a2a0::t_0628aa49096082 34-38
+scripts/infer-project-context.sh
+  s_cb6db6bc22a2a0::t_54f4466f6ddde9 147-154,156-163,165-180
+scripts/lib/active-agent-state.sh
+  s_cb6db6bc22a2a0::t_7003b809bfbb50 843,846,849-850,859,865,873-880
+scripts/map-staleness.sh
+  s_cb6db6bc22a2a0::t_ecea230da617d0 31-33,35
+scripts/map-verify-response.sh
+  s_cb6db6bc22a2a0::t_f66a9e8b602e96 19-29
+scripts/normalize-plan-filenames.sh
+  s_cb6db6bc22a2a0::t_e36487d7ae822e 157,180
+scripts/qa-result-gate.sh
+  s_cb6db6bc22a2a0::t_d7c82e693e798e 67-70,1454-1457
+scripts/rename-default-milestone.sh
+  s_cb6db6bc22a2a0::t_b7ccdffff9df47 44-48,51,57,67,72,78,81
+scripts/resolve-agent-model.sh
+  s_cb6db6bc22a2a0::t_3311b06494fb22 4-13,20,31-34,48-50,84-110,116-117,120-123,127-137,139-142,144-173,175-178,181-184,186-197
+scripts/resolve-agent-reasoning.sh
+  s_cb6db6bc22a2a0::t_c1ad47cff1f608 1-122
+scripts/resolve-agent-settings.sh
+  s_cb6db6bc22a2a0::t_8f929bf6836431 13,18-19,112-120,125
+scripts/resolve-plugin-root.sh
+  s_cb6db6bc22a2a0::t_3792d2449378ee 1-157
+scripts/rtk-manager.sh
+  s_cb6db6bc22a2a0::t_e08c9798a40784 855
+scripts/session-start.sh
+  s_cb6db6bc22a2a0::t_5421101079e23d 261,457,513-537
+scripts/session-stop.sh
+  s_cb6db6bc22a2a0::t_902f8c1ab88a57 24-32,71,83-84,86-91
+scripts/vbw-statusline.sh
+  s_cb6db6bc22a2a0::t_d172bfb1b34d18 854
+scripts/verify-init-todo.sh
+  s_cb6db6bc22a2a0::t_7bfaaf9d9ec8fe 67
+testing/debug-path-a-isolation-smoke.md
+  s_cb6db6bc22a2a0::t_9a367e3af95538 22,30,137,154
+testing/list-contract-tests.sh
+  s_cb6db6bc22a2a0::t_22a40e476f93c6 36
+testing/verify-agent-spawn-guard.sh
+  s_cb6db6bc22a2a0::t_5060c95c079827 219
+testing/verify-askuserquestion-contract.sh
+  s_cb6db6bc22a2a0::t_2f67187ab3e4af 418-419,429-432,463,701-702,735-736,742
+testing/verify-codex-agent-assets-contract.sh
+  s_cb6db6bc22a2a0::t_a9dc32144a6203 95-130
+testing/verify-commands-contract.sh
+  s_cb6db6bc22a2a0::t_cf2a290fd24a6b 427,429,431,437,449,451,499,505,583,631-632,647-648,650,655,664,669-672,674-675,677-681,683-686,690-698
+testing/verify-debug-session-contract.sh
+  s_cb6db6bc22a2a0::t_b1c6f7a3c36165 375,452,544
+testing/verify-delegation-guard.sh
+  s_cb6db6bc22a2a0::t_85e2c3e99fdfa4 168,460
+testing/verify-dijkstra-discipline.sh
+  s_cb6db6bc22a2a0::t_6b42c354b1568b 1-2,5,7-8,10-13,15-191
+testing/verify-ghost-team-cleanup.sh
+  s_cb6db6bc22a2a0::t_f01e6f050502ab 227-228,230,235-236,238,274,276,281-282,284,289-290,292,316,319,321,327-329,331,333,339-340,342,344,357-358,360,365-366,368
+testing/verify-github-fix-workflow-contract.sh
+  s_cb6db6bc22a2a0::t_bf586c0c987bcb 130-133,159-162,198-201,213-216
+testing/verify-live-validation-policy.sh
+  s_cb6db6bc22a2a0::t_e462da532531a9 16,67,73,108
+testing/verify-permission-mode-contract.sh
+  s_cb6db6bc22a2a0::t_df6c476f6b5bff 167,188
+testing/verify-plugin-root-resolution.sh
+  s_cb6db6bc22a2a0::t_a747e1fb7170c9 6-8,14-15,19-20,23-29,31,38-42,44-47,49,52,55-56,58,62-68,70,72,74-77,79-98,100-105,107,111-114,116,118-119,121,124-127,129-130,133-135,137,140-152,154,156,159-162,164-165,167,171-178,180,183-186,188-207,209-230,233-249,251,254-270,272,274,276-280,282,284-287,289-291,297
+testing/verify-skill-activation.sh
+  s_cb6db6bc22a2a0::t_47affa2e32eefe 331,504,1637,1654,1682-1685,1693
+testing/verify-vbw-review-contributor-pr-review-submission.sh
+  s_cb6db6bc22a2a0::t_628ba629b81d41 7-10,46-51,53-63,65-96,98
+tests/agent-shutdown-integration.bats
+  s_cb6db6bc22a2a0::t_93276c3dc31edc 353-377
+tests/auto-uat.bats
+  s_cb6db6bc22a2a0::t_47d3ff155cb122 933-936,958-960
+tests/bump-version.bats
+  s_cb6db6bc22a2a0::t_654b3e3d40fc67 1-105
+tests/config-migration.bats
+  s_cb6db6bc22a2a0::t_2d57adbd43cba2 69,72,122,125,442-443,445
+tests/detect-models.bats
+  s_cb6db6bc22a2a0::t_2b9cb08806f3f1 1-154
+tests/detect-stack.bats
+  s_cb6db6bc22a2a0::t_18777bd2f1dd00 1-63
+tests/discovery-research.bats
+  s_cb6db6bc22a2a0::t_8826452032651a 43,69-70,73,75,78-80,82-87,89-91,96,99,101-106
+tests/hooks-bash-classifier.bats
+  s_cb6db6bc22a2a0::t_3aaf808cc9f4b7 43-44
+tests/hooks-isolation-lifecycle.bats
+  s_cb6db6bc22a2a0::t_50a01f1284b79c 166
+tests/infer-project-context.bats
+  s_cb6db6bc22a2a0::t_4341b2c037cb9b 1-105
+tests/map-staleness.bats
+  s_cb6db6bc22a2a0::t_7a9f92acceceb1 1-63
+tests/qa-bash-guard.bats
+  s_cb6db6bc22a2a0::t_ac1319ea32a523 19-293
+tests/qa-result-gate.bats
+  s_cb6db6bc22a2a0::t_eabe454ee1b422 4811-4846
+tests/resolve-agent-model.bats
+  s_cb6db6bc22a2a0::t_34a3df98c322c2 55,75,130-244
+tests/resolve-agent-reasoning.bats
+  s_cb6db6bc22a2a0::t_7b7ca8ebd3d0a2 1-174
+tests/resolve-claude-dir.bats
+  s_cb6db6bc22a2a0::t_d46acd4f9e88f6 138,145,149
+tests/resolve-plugin-root.bats
+  s_cb6db6bc22a2a0::t_e225b38ea22f41 1-247
+tests/rtk-manager.bats
+  s_cb6db6bc22a2a0::t_03e1c98e3dc2b0 2063-2077
+tests/template-nesting.bats
+  s_cb6db6bc22a2a0::t_713854bdee61ee 153-159,357,391,511,513-515,517-518,522,529-532,535-541,545-548
+tests/test_helper.bash
+  s_cb6db6bc22a2a0::t_715a00712e57ce 63-69,74-78,134-138,149,155,157,161-170,282-286
+agents/vbw-docs.md
+  s_759666d517e59a::t_1cdeeee48d16ce 3,5-6,26-33,47-48,50,71-72,81,85-94,114-115
+agents/vbw-lead.md
+  s_759666d517e59a::t_c232789f981f8c 3,5-6,27-30,57-64,69,76,94,105-112
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "1d2891496c11a236121cd1d8b346a1f52a45a3f2",
+  "prompts": {},
+  "sessions": {
+    "s_3d44b6eba98280": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "659eceac-d255-4000-ac3d-5cb79ae4269c",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    },
+    "s_759666d517e59a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-adev-merge-3e052f30ab6bf5b9",
+        "model": "unknown"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    },
+    "s_cb6db6bc22a2a0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "134661bc-d3bc-43f9-89e4-713aba547780",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
