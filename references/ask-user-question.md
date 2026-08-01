@@ -51,7 +51,7 @@ Beyond the core header, question, and options shape, the current AskUserQuestion
 
 ## Examples
 
-### Example — structured single-select
+### Example: structured single-select
 
 Header: Confirm
 Question: Continue with phase 03 now?
@@ -60,7 +60,7 @@ Options:
 - Review plans first
 - Not now
 
-### Example — intentional freeform
+### Example: intentional freeform
 
 Prompt: Tell me which todo to act on. Use the todo number or describe the item in your own words.
 
@@ -69,7 +69,7 @@ Why this stays freeform:
 - the correct answer may be a number, a phrase, or a new clarification
 - pretending this is a fixed menu creates fake structure and worse UX
 
-### Example — decision gate
+### Example: decision gate
 
 Header: Next step
 Question: Ready to proceed with implementation?

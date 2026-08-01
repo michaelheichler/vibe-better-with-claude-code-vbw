@@ -1,23 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# verify-askuserquestion-contract.sh — Contract checks for AskUserQuestion usage
-#
-# The Claude Code AskUserQuestion tool has a maxItems:4 constraint on its
-# `options` array. Commands that need more than 4 choices must use a
-# numbered-list-in-question-text workaround with explicit guard language.
-#
-# This verifier also protects the shared VBW interactive prompt pattern:
-# centralized AskUserQuestion guidance, local-vs-shared `/vbw:vibe`
-# boundaries, intentional freeform/plain-text handoffs, and stable
-# structured-vs-freeform command boundaries.
-#
-# Checks:
-# 1. No option lists with >4 items in AskUserQuestion context (pipe-delimited
-#    or JSON array format)
-# 2. Numbered-list AskUserQuestion workarounds include guard language
-# 3. Shared interactive prompt reference has stable semantic anchors
-# 4. Command consumers preserve their structured/freeform boundaries
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 COMMANDS_DIR="$ROOT/commands"
@@ -59,7 +42,6 @@ fail() {
   FAIL=$((FAIL + 1))
 }
 
-# Extract body after YAML frontmatter (everything after second ---)
 extract_body() {
   local file="$1"
   awk '
@@ -296,15 +278,6 @@ require_backticked_labels() {
 
 echo "=== AskUserQuestion Contract Verification ==="
 
-# --------------------------------------------------------------------------
-# Check 1: No pipe-delimited option lists exceeding 4 items
-#
-# Scans for lines matching: "something" | "something" | ... (quoted strings
-# separated by pipes). If a single line has >4 pipe-separated quoted items,
-# it violates the maxItems:4 constraint.
-#
-# Exclusions: fenced code blocks, markdown table rows (lines starting with |)
-# --------------------------------------------------------------------------
 
 echo ""
 echo "--- Check 1: No >4 option lists ---"
@@ -312,16 +285,12 @@ echo "--- Check 1: No >4 option lists ---"
 for file in "${TRACKED_COMMAND_MARKDOWN_FILES[@]}"; do
   base="$(basename "$file" .md)"
 
-  # Count lines with >4 options in either format (outside code fences):
-  # - Pipe-delimited: "a" | "b" | "c" | "d" | "e"
-  # - JSON array:     Options: ["a", "b", "c", "d", "e"]
   violations=$(extract_body "$file" | awk '
     /^```/ { in_fence = !in_fence; next }
     in_fence { next }
     /^\|/ { next }  # skip markdown table rows
 
     {
-      # Check 1a: pipe-separated quoted segments: "..." | "..."
       n = split($0, parts, /\|/)
       quoted_count = 0
       for (i = 1; i <= n; i++) {
@@ -334,13 +303,10 @@ for file in "${TRACKED_COMMAND_MARKDOWN_FILES[@]}"; do
         next
       }
 
-      # Check 1b: JSON array options: Options: ["...", "...", ...]
       if ($0 ~ /Options:[[:space:]]*\[/) {
-        # Extract content between [ and ]
         arr = $0
         sub(/.*Options:[[:space:]]*\[/, "", arr)
         sub(/\].*/, "", arr)
-        # Count comma-separated quoted items
         m = split(arr, items, /,/)
         arr_count = 0
         for (j = 1; j <= m; j++) {
@@ -364,17 +330,6 @@ for file in "${TRACKED_COMMAND_MARKDOWN_FILES[@]}"; do
   fi
 done
 
-# --------------------------------------------------------------------------
-# Check 2: Numbered-list AskUserQuestion workarounds include guard language
-#
-# When a command instructs the LLM to "present ... as a numbered list in the
-# AskUserQuestion text", it should also include guard language like:
-# "do NOT use `options` array" or "no `options` array"
-#
-# This prevents future editors from removing the guard while keeping the
-# numbered-list pattern, which could lead to the LLM using an options array
-# with >4 items.
-# --------------------------------------------------------------------------
 
 echo ""
 echo "--- Check 2: Numbered-list workarounds include guard language ---"
@@ -384,18 +339,14 @@ for file in "${TRACKED_COMMAND_MARKDOWN_FILES[@]}"; do
 
   body=$(extract_body "$file")
 
-  # Check if the command uses the numbered-list AskUserQuestion workaround pattern
   has_numbered_list_pattern=false
   if grep -Eqi 'numbered list.*AskUserQuestion|AskUserQuestion.*numbered list' <<< "$body"; then
-    # Only trigger on lines that say to present choices as a numbered list
-    # in the AskUserQuestion text (the workaround pattern)
     if grep -Eqi 'present.*(as a |as )numbered list.*(in|for).*AskUserQuestion|numbered list in the (AskUserQuestion|question) text' <<< "$body"; then
       has_numbered_list_pattern=true
     fi
   fi
 
   if [ "$has_numbered_list_pattern" = true ]; then
-    # Verify guard language exists somewhere in the body
     if grep -Eqi 'do NOT use.*options.*array|no.*options.*array' <<< "$body"; then
       pass "$base: numbered-list workaround has guard language"
     else
@@ -404,9 +355,6 @@ for file in "${TRACKED_COMMAND_MARKDOWN_FILES[@]}"; do
   fi
 done
 
-# --------------------------------------------------------------------------
-# Check 3: Shared reference semantic anchors
-# --------------------------------------------------------------------------
 
 echo ""
 echo "--- Check 3: Shared AskUserQuestion reference anchors ---"
@@ -423,18 +371,15 @@ require_file_literal "ask-user-question: documents intentional freeform boundary
 require_file_literal "ask-user-question: documents freeform handoff heading" "### Freeform handoff" "$ASK_USER_QUESTION_REF"
 require_file_literal "ask-user-question: documents freeform handoff behavior" "stop using AskUserQuestion" "$ASK_USER_QUESTION_REF"
 require_file_literal "ask-user-question: documents fake bounded menu anti-pattern" "Fake bounded menus" "$ASK_USER_QUESTION_REF"
-require_file_literal "ask-user-question: includes structured example" "### Example — structured single-select" "$ASK_USER_QUESTION_REF"
-require_file_literal "ask-user-question: includes intentional-freeform example" "### Example — intentional freeform" "$ASK_USER_QUESTION_REF"
-require_file_literal "ask-user-question: includes decision-gate example" "### Example — decision gate" "$ASK_USER_QUESTION_REF"
+require_file_literal "ask-user-question: includes structured example" "### Example: structured single-select" "$ASK_USER_QUESTION_REF"
+require_file_literal "ask-user-question: includes intentional-freeform example" "### Example: intentional freeform" "$ASK_USER_QUESTION_REF"
+require_file_literal "ask-user-question: includes decision-gate example" "### Example: decision gate" "$ASK_USER_QUESTION_REF"
 require_file_literal "ask-user-question: documents multiSelect schema field" '`multiSelect`' "$ASK_USER_QUESTION_REF"
 require_file_literal "ask-user-question: documents preview schema field" '`preview`' "$ASK_USER_QUESTION_REF"
 require_file_literal "ask-user-question: documents annotations schema field" '`annotations`' "$ASK_USER_QUESTION_REF"
 require_file_literal "ask-user-question: documents metadata.source schema field" '`metadata.source`' "$ASK_USER_QUESTION_REF"
 forbid_file_regex "ask-user-question: no volatile upstream issue links" 'github\.com/.*issues|fixes #[0-9]+|see #[0-9]+|issue #[0-9]+|parent.*#[0-9]+' "$ASK_USER_QUESTION_REF"
 
-# --------------------------------------------------------------------------
-# Check 4: /vbw:vibe local-vs-shared confirmation boundary
-# --------------------------------------------------------------------------
 
 echo ""
 echo "--- Check 4: /vbw:vibe confirmation boundary ---"
@@ -471,9 +416,6 @@ else
   pass "vibe: confirmation gate does not duplicate generic AskUserQuestion guidance"
 fi
 
-# --------------------------------------------------------------------------
-# Check 4b: Summary-deviation UAT prompts are self-contained in AskUserQuestion
-# --------------------------------------------------------------------------
 
 echo ""
 echo "--- Check 4b: Summary-deviation UAT prompt context ---"
@@ -567,9 +509,6 @@ done
 
 require_text_literal "execute-protocol: DNN todo intent rejects smart-apostrophe contraction blocker" "can’t continue, track this" "$EXECUTE_RESPONSE_MAPPING_BLOCK"
 
-# --------------------------------------------------------------------------
-# Check 4c: Normal product UAT prompts are self-contained in AskUserQuestion
-# --------------------------------------------------------------------------
 
 echo ""
 echo "--- Check 4c: Product UAT prompt context ---"
@@ -606,9 +545,6 @@ require_file_literal "vibe: passes resumed product UAT expected field" 'uat_resu
 require_file_literal "vibe: extractor failure uses error sentinel" '|| echo "uat_resume=error"' "$VIBE_COMMAND_FILE"
 require_file_literal "vibe: extractor unavailable uses unavailable sentinel" 'echo "uat_resume=unavailable"' "$VIBE_COMMAND_FILE"
 
-# --------------------------------------------------------------------------
-# Check 5: /vbw:list-todos intentional plain-text/freeform handoff
-# --------------------------------------------------------------------------
 
 echo ""
 echo "--- Check 5: /vbw:list-todos freeform boundary ---"
@@ -641,9 +577,6 @@ require_text_regex "list-todos: filtered hints preserve remove N" '(^|[[:space:]
 require_text_regex "list-todos: filtered hints preserve delete N" '(^|[[:space:]])delete N([[:space:]]|$)' "$LIST_TODOS_FILTERED_HINTS"
 require_text_literal "list-todos: filtered hints preserve rerun-unfiltered guard" "rerun unfiltered /vbw:list-todos before using /vbw:vibe N, /vbw:fix N, /vbw:debug N, or /vbw:research N" "$LIST_TODOS_FILTERED_HINTS"
 
-# --------------------------------------------------------------------------
-# Check 6: /vbw:config bounded structured flow
-# --------------------------------------------------------------------------
 
 echo ""
 echo "--- Check 6: /vbw:config structured boundary ---"
@@ -662,10 +595,10 @@ require_text_literal "config: bounded branches acknowledge built-in Other path" 
 require_text_literal "config: bounded branches do not add visible Other option" 'do NOT add an extra visible `Other` option' "$CONFIG_NO_ARGS_BLOCK"
 
 if grep -Fq 'Which core setting do you want to change?' <<< "$CONFIG_NO_ARGS_BLOCK" \
-  && grep -Fq '`Effort` — current:' <<< "$CONFIG_NO_ARGS_BLOCK" \
-  && grep -Fq '`Autonomy` — current:' <<< "$CONFIG_NO_ARGS_BLOCK" \
-  && grep -Fq '`Planning tracking` — current:' <<< "$CONFIG_NO_ARGS_BLOCK" \
-  && grep -Fq '`Auto push` — current:' <<< "$CONFIG_NO_ARGS_BLOCK"; then
+  && grep -Eq '`Effort`[^[:alnum:]]+current:' <<< "$CONFIG_NO_ARGS_BLOCK" \
+  && grep -Eq '`Autonomy`[^[:alnum:]]+current:' <<< "$CONFIG_NO_ARGS_BLOCK" \
+  && grep -Eq '`Planning tracking`[^[:alnum:]]+current:' <<< "$CONFIG_NO_ARGS_BLOCK" \
+  && grep -Eq '`Auto push`[^[:alnum:]]+current:' <<< "$CONFIG_NO_ARGS_BLOCK"; then
   pass "config: core setting selection remains bounded"
 else
   fail "config: core setting selection remains bounded"
@@ -678,8 +611,8 @@ require_backticked_labels "config: core values remain 3-4 option bounded choices
   never after_phase always
 
 if grep -Fq 'How do you want to configure model behavior?' <<< "$CONFIG_NO_ARGS_BLOCK" \
-  && grep -Fq '`Use preset profile` — quality, balanced, or budget' <<< "$CONFIG_NO_ARGS_BLOCK" \
-  && grep -Fq '`Configure each agent individually` — 6 per-agent model questions' <<< "$CONFIG_NO_ARGS_BLOCK"; then
+  && grep -Eq '`Use preset profile`[^[:alnum:]]+quality, balanced, or budget' <<< "$CONFIG_NO_ARGS_BLOCK" \
+  && grep -Eq '`Configure each agent individually`[^[:alnum:]]+6 per-agent model questions' <<< "$CONFIG_NO_ARGS_BLOCK"; then
   pass "config: model profile method remains a 2-option branch"
 else
   fail "config: model profile method remains a 2-option branch"
@@ -690,9 +623,6 @@ require_text_literal "config: per-agent overrides keep 4-question first round" "
 require_text_literal "config: per-agent overrides keep 2-question second round" "AskUserQuestion with 2 questions:" "$CONFIG_NO_ARGS_BLOCK"
 forbid_text_regex "config: no-args flow avoids numeric pseudo-menu language" 'enter numbers|comma-separated|numbered list' "$CONFIG_NO_ARGS_BLOCK"
 
-# --------------------------------------------------------------------------
-# Check 7: /vbw:skills structured-vs-freeform boundary
-# --------------------------------------------------------------------------
 
 echo ""
 echo "--- Check 7: /vbw:skills structured/freeform boundary ---"
@@ -747,9 +677,6 @@ require_text_literal "skills: 5+ candidate parser accepts comma-separated digits
 require_text_literal "skills: 5+ candidate parser accepts skip" 'Accept the word `skip`' "$SKILLS_HIGH_CARDINALITY_BRANCH"
 require_text_literal "skills: 5+ candidate parser rejects invalid numeric/freeform input" "Reject out-of-range numbers" "$SKILLS_HIGH_CARDINALITY_BRANCH"
 
-# --------------------------------------------------------------------------
-# Check 8: /vbw:init shared interaction contract boundary
-# --------------------------------------------------------------------------
 
 echo ""
 echo "--- Check 8: /vbw:init shared interaction boundary ---"

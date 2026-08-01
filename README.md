@@ -402,14 +402,15 @@ VBW can optionally manage [RTK](https://github.com/rtk-ai/rtk) setup through `/v
 
 ## The Agents
 
-VBW uses 7 specialized agents, each with native tool permissions enforced via YAML frontmatter. Three layers of control (`tools` for what they can use, `disallowedTools` for what's platform-denied, and `permissionMode` for how they interact with the session) mean they can't do what they shouldn't, which is more than can be said for most interns.
+VBW uses 8 specialized agents, each with native tool permissions enforced via YAML frontmatter. Three layers of control (`tools` for what they can use, `disallowedTools` for what's platform-denied, and `permissionMode` for how they interact with the session) mean they can't do what they shouldn't, which is more than can be said for most interns.
 
 | Agent | Role | Tools | Denied / Omitted | Mode |
 | :--- | :--- | :--- | :--- | :--- |
 | **Scout** | Research and information gathering. The responsible one. | Inherited (all except denied) + MCP. Bash is read-only live-validation only | Edit, NotebookEdit, Task, TaskCreate, Agent | `plan` |
 | **Architect** | Creates roadmaps and phase structure. Writes plans, not code. | Read, Glob, Grep, Write | Edit, WebFetch, Bash | `acceptEdits` |
 | **Lead** | Merges research + planning + self-review. The one who actually makes decisions. | Read, Glob, Grep, Write, Bash, WebFetch | Edit | `acceptEdits` |
-| **Dev** | Writes code, makes commits, builds things. Handle with care. | Inherited (all except denied) + MCP | Task, TaskCreate, Agent, AskUserQuestion | `acceptEdits` |
+| **Dev** | Writes code, makes commits, builds things. Handle with care. | Inherited (all except denied) + MCP | Task, TaskCreate, Agent, TeamCreate, TeamDelete, AskUserQuestion | `acceptEdits` |
+| **QA Author** | Writes and commits failing tests for the opt-in TDD red stage. | Inherited (all except denied) + MCP | Task, TaskCreate, Agent, TeamCreate, TeamDelete, AskUserQuestion, NotebookEdit | `acceptEdits` |
 | **QA** | Goal-backward verification. Trusts nothing. Persists VERIFICATION.md via write-verification.sh. Write/Edit tools disallowed. | Read, Grep, Glob, Bash | Write, Edit, NotebookEdit | `plan` |
 | **Debugger** | Scientific method bug investigation. One issue, one session. | Full access | none | `acceptEdits` |
 | **Docs** | Documentation specialist. READMEs, changelogs, API docs, guides. | Read, Grep, Glob, Bash, Write, Edit | none | `acceptEdits` |
@@ -497,6 +498,7 @@ Quick reference for every key in `config/defaults.json`, in order. Click the sec
 | `visual_format` | `"unicode"` | [Display](#display) |
 | `max_tasks_per_plan` | `5` | [Agent behavior](#agent-behavior) |
 | `prefer_teams` | `"auto"` | [Concurrency controls](#concurrency-controls) |
+| `pipeline_research` | `false` | [Execution model](#execution-model) |
 | `branch_per_milestone` | `false` | [Display](#display) |
 | `plain_summary` | `true` | [Agent behavior](#agent-behavior) |
 | `active_profile` | `"default"` | [Model routing and cost](#model-routing-and-cost) |
@@ -720,7 +722,7 @@ Controls when VBW creates an Agent Team (multiple color-coded Dev agents) vs usi
 
 If `prefer_teams` requests team mode but the live tool set cannot express real team semantics, VBW now emits `⚠ Agent Teams not enabled: using non-team mode` and falls back to explicit non-team execution. It does **not** substitute plain background agents without `team_name` and pretend a team was created.
 
-This setting determines whether true team execution is allowed for delegate-eligible Execute work. With a single delegate plan or a real dependency chain, `auto` chooses serialized subagents because there is no useful parallelism. For `/vbw:debug`, `auto` is stricter: it uses **Competing Hypotheses** team mode only when the bug is both on the `thorough-effort` profile and ambiguous: think intermittent/flaky/random behavior, generic or missing error text, multiple plausible root-cause areas, or `--competing` / `--parallel`, which force the bug to count as ambiguous for routing. A clear exact-repro issue stays `Standard (single debugger)` unless those `auto` conditions are met. `--serial` forces non-ambiguous routing under `auto`. `prefer_teams=always` still uses team mode for all debug runs, and `prefer_teams=never` still disables team mode regardless of the flags. Note: Planning always uses sequential subagents (Scout → Lead), not teams. `prefer_teams` only affects Execute and debug/map modes.
+This setting determines whether true team execution is allowed for delegate-eligible Execute work. With a single delegate plan or a real dependency chain, `auto` chooses serialized subagents because there is no useful parallelism. For `/vbw:debug`, `auto` is stricter: it uses **Competing Hypotheses** team mode only when the bug is both on the `thorough-effort` profile and ambiguous: think intermittent/flaky/random behavior, generic or missing error text, multiple plausible root-cause areas, or `--competing` / `--parallel`, which force the bug to count as ambiguous for routing. A clear exact-repro issue stays `Standard (single debugger)` unless those `auto` conditions are met. `--serial` forces non-ambiguous routing under `auto`. `prefer_teams=always` still uses team mode for all debug runs, and `prefer_teams=never` still disables team mode regardless of the flags. In Plan mode, `prefer_teams` can enable parallel Scout research fan-out, but the Lead remains a single sequential subagent. Execute, debug, and map modes apply their own team routing rules.
 
 #### `worktree_isolation`: Filesystem Isolation
 
