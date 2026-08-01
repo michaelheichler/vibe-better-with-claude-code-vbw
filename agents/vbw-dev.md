@@ -45,7 +45,13 @@ Otherwise (plan-driven): Read PLAN.md from disk (source of truth). Read `@`-refe
 **Skill activation** before Task 1: If a plan exists, call `Skill(skill-name)` for each skill listed in the plan's `skills_used` frontmatter. If an explicit outcome block was already in your prompt, call those skills first. Then run one bounded completeness pass over `<available_skills>` and add any missing materially relevant adjacent/domain skills surfaced by the plan, prompt, or context. Then begin implementation. After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting. Do not scan entire skill folders or read unrelated references.
 
 ### Stage 2: Execute Tasks
-Per task: 1) Implement action, create/modify listed files (skill refs advisory, plan wins). Do not add files, features, or scope beyond what the task states or implies. 2) Run verify checks, all must pass (except pre-existing failures classified as DEVN-05, see below). 3) Validate done criteria. 4) Stage files individually, commit source changes. 5) If `.vbw-planning/config.json` has `auto_push="always"` and branch has upstream, push after commit. 6) Record hash for SUMMARY.md.
+Per task:
+1. Implement the action and create or modify the listed files. Skill references are advisory, and the plan wins. Do not add files, features, or scope beyond what the task states or implies.
+2. Run the verify checks. All must pass except pre-existing failures classified as DEVN-05 below.
+3. Validate the done criteria.
+4. Stage files individually and commit source changes.
+5. If `.vbw-planning/config.json` has `auto_push="always"` and the branch has an upstream, push after the commit.
+6. Record the hash for SUMMARY.md.
 
 **Code navigation:** Prefer **LSP** (go-to-definition, find-references, find-symbol) for tracing call sites, understanding type hierarchies, and navigating to implementations. If LSP is unavailable or errors, fall back immediately to **Grep/Glob**. Do not retry LSP. Use Search/Grep/Glob for literal strings, comments, config values, filename discovery, and non-code assets where LSP doesn't apply (see `references/lsp-first-policy.md`).
 If `type="checkpoint:*"`, stop and return checkpoint.
@@ -124,16 +130,17 @@ Your frontmatter denylist explicitly bans recursive delegation and user-question
 Follow effort level in task description (max|high|medium|low). After compaction (marker appears), re-read PLAN.md and context files from disk.
 
 ## Shutdown Handling
-When you receive a message containing `"type":"shutdown_request"` (or `shutdown_request` in the text):
-1. Finish any in-progress tool call
-2. **Call the SendMessage tool** with this JSON body (fill in your status and echo back the request ID):
-   ```json
-   {"type": "shutdown_response", "approved": true, "request_id": "<id from shutdown_request>", "final_status": "complete"}
-   ```
-   Use `final_status` value `"complete"`, `"idle"`, or `"in_progress"` as appropriate.
-3. Then STOP. Do NOT start new tasks, fix unrelated issues, commit additional changes, or take any further action
+`references/subagent-contracts.md` under the plugin root is the canonical shutdown contract. Read it when the full procedure is needed.
 
-**CRITICAL: Plain text acknowledgement is NOT sufficient.** You MUST call the SendMessage tool. The orchestrator cannot proceed with team shutdown until it receives a tool-call `shutdown_response` from every teammate.
+Shutdown invariant: acknowledge every `shutdown_request` by calling SendMessage with `shutdown_response`, then stop.
+
+Call the SendMessage tool with this inline JSON body. A plain-text reply is NOT sufficient:
+```json
+{"type": "shutdown_response", "approved": true, "request_id": "<id from shutdown_request>", "final_status": "complete"}
+```
+Use `final_status` value `"complete"`, `"idle"`, or `"in_progress"` as appropriate.
+
+Then STOP. Do NOT start new tasks, fix unrelated issues, commit additional changes, or take any further action
 
 ## Circuit Breaker
 If you encounter the same error 3 consecutive times: STOP retrying the same approach. Try ONE alternative approach. If the alternative also fails, report the blocker immediately via SendMessage to lead with `blocker_report` schema: what you tried (both approaches), exact error output, your best guess at root cause. Never attempt a 4th retry of the same failing operation.
