@@ -373,6 +373,10 @@ When `tdd_pipeline=true`, run these stages for each runnable delegate plan:
 
 In true team mode, launch the current wave's QA Author teammates with `team_name: "$TEAM_NAME"` and `name: "qa-author-{MM}"`. Launch all red teammates first, then launch each matching Dev after that plan's `tests_ready` message arrives. In explicit non-team mode and team-tooling-unavailable fallback, use plain sequential subagents for each plan: spawn QA Author and wait for its returned `tests_ready` payload, then spawn Dev and wait for completion before starting the next plan. Give both stages the same plan worktree target. All spawn-shape and prepared-worktree rules above still apply.
 
+**Opt-in cross-phase research pipeline (true team mode, first wave only):** After wave 1 Dev work is dispatched, read `pipeline_research` from config with `.pipeline_research // false`. The key defaults to `false` when absent. Spawn exactly one additional `vbw:vbw-scout` teammate only when the value is `true`, phase N+1 exists in ROADMAP.md, the Plan mode Step 3 research-exists check finds no phase research in that phase directory, and team capability is available. On any gate failure, skip silently with no banner.
+
+Research phase N+1's ROADMAP goal and include `<output_path>{phase-N+1-dir}/${NEXT_RESEARCH_NAME}</output_path>` in the prompt, using `resolve-artifact-path.sh phase-research` to resolve `NEXT_RESEARCH_NAME`. Spawn it in the current team with `team_name: "$TEAM_NAME"` and `name: "scout-phase-{N+1}"`. Apply the Scout model resolution and skill-outcome block rules from Plan mode research in `commands/vibe.md` Step 3 rather than duplicating them here. The Scout writes only into the phase N+1 planning directory, so it cannot conflict with wave Dev work. Plan mode consumes the resulting file through its existing research-exists check in `commands/vibe.md` Step 3 when phase N+1 is planned.
+
 **Validation Gates (REQ-13, REQ-14):** If `validation_gates=true` in config:
 - **Per plan:** Assess risk and resolve gate policy:
   ```bash
