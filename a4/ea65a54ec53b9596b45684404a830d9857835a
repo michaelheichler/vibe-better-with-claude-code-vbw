@@ -1,0 +1,67 @@
+commands/config.md
+  s_cb6db6bc22a2a0::t_4feea4f17fd52c 493
+  s_cb6db6bc22a2a0::t_9c7d59f480a366 89-91,100,111-114,130-133,139-142,148-150,156-158,168-169,316,535,537,539,541,573-575,597
+scripts/session-start.sh
+  s_cb6db6bc22a2a0::t_62002278050ad5 261
+tests/test_helper.bash
+  s_cb6db6bc22a2a0::t_46ee0da6cbd639 30
+  s_cb6db6bc22a2a0::t_d3bada54f1084a 39
+  s_cb6db6bc22a2a0::t_c8df3e8aa19e27 100,102-107,110,113,116
+  s_cb6db6bc22a2a0::t_124107a4f54d75 27
+  s_cb6db6bc22a2a0::t_94c9189879e5b5 8-17,20,33,44
+  s_cb6db6bc22a2a0::t_dd0e50b6a58ad1 141
+  s_cb6db6bc22a2a0::t_5fba45f0b9ac7d 7
+  s_cb6db6bc22a2a0::t_7079e894981be0 18-19
+  s_cb6db6bc22a2a0::t_75b911bfe001c8 21-26
+  s_cb6db6bc22a2a0::t_1177b82050bd6d 28-29
+  s_cb6db6bc22a2a0::t_2fd619e23b7907 31-32
+  s_cb6db6bc22a2a0::t_40f2ee1939418d 34-38
+  s_cb6db6bc22a2a0::t_f615e476c39a49 40-43
+  s_759666d517e59a::t_fb37e08a6d3eb1 53-56,58,82-85,96,182
+testing/verify-askuserquestion-contract.sh
+  s_cb6db6bc22a2a0::t_851a54cd003205 614-615
+  s_cb6db6bc22a2a0::t_45a73aaaa01282 598-601
+  s_cb6db6bc22a2a0::t_af611067701dfc 374-376
+testing/verify-ghost-team-cleanup.sh
+  s_cb6db6bc22a2a0::t_80a4d9de4e7b47 242-245,247,251,258-261,263
+  s_cb6db6bc22a2a0::t_fd9da93e8d6de5 466-467
+  s_cb6db6bc22a2a0::t_c94295cf1354bd 227
+README.md
+  s_cb6db6bc22a2a0::t_d2ff57bd0bbb9e 725
+  s_cb6db6bc22a2a0::t_bf222b00fb749c 501
+  s_759666d517e59a::t_d035436e3e56de 405,412-413
+testing/verify-commands-contract.sh
+  s_cb6db6bc22a2a0::t_fe43fa9790af47 534
+  s_cb6db6bc22a2a0::t_a832f3bfb48eea 513-514
+  s_cb6db6bc22a2a0::t_5bd91fa57ca2d7 699,719,738,1182,1630
+references/ask-user-question.md
+  s_cb6db6bc22a2a0::t_fc28d763aa1e3b 54,63,72
+tests/config-migration.bats
+  s_cb6db6bc22a2a0::t_fd39a1fc20d842 69,72,122,125,443,445
+tests/flag-consistency.bats
+  s_cb6db6bc22a2a0::t_2e1429e08b1fb6 43,91,93
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "a4ea65a54ec53b9596b45684404a830d9857835a",
+  "prompts": {},
+  "sessions": {
+    "s_759666d517e59a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-adev-merge-3e052f30ab6bf5b9",
+        "model": "unknown"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    },
+    "s_cb6db6bc22a2a0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "134661bc-d3bc-43f9-89e4-713aba547780",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
