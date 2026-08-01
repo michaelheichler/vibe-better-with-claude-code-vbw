@@ -39,7 +39,7 @@ Stack detection:
 
 ### Step 2: Display current state
 
-From Context JSON: display installed skills (`installed.global[]` + `installed.project[]`) in single-line box. Display detected stack. If `--list`: STOP here.
+From Context JSON: display project-installed skills from `installed.project[]` in a single-line box. Display `installed.global[]` separately as informational only. Curated suggestions are suppressed only by project-installed skills. Display detected stack. If `--list`: STOP here.
 
 ### Step 3: Curated suggestions
 
@@ -62,20 +62,20 @@ Combine curated + registry, deduplicate, rank (curated first).
 - If the combined list has exactly 1 candidate: keep it structured.
   - AskUserQuestion with a single bounded question.
   - Keep the header short.
-  - Question text should show `{skill-name} — {brief description}`.
+  - Question text should show `{skill-name}: {brief description}`.
   - Options:
     - `Install {skill-name}` (Recommended)
     - `Skip for now`
-  - Declined → display `○ No skills selected for installation.` and STOP here. Do not ask Step 5b and do not enter Step 6.
+  - Declined → display `○ No skills selected for installation.` and STOP here. Do not enter Step 6.
 
 - If the combined list has 2-4 candidates: keep it structured because this stays within the AskUserQuestion sweet spot.
   - Use AskUserQuestion with 1 question per skill (2-4 questions total), in ranked order.
   - Keep each header short. Use the skill name as the header.
-  - Each question should show `{skill-name} — {brief description}` with two options:
+  - Each question should show `{skill-name}: {brief description}` with two options:
     - `Install`
     - `Skip`
   - Collect every selected skill in ranked order.
-  - If none were selected, display `○ No skills selected for installation.` and STOP here. Do not ask Step 5b and do not enter Step 6.
+  - If none were selected, display `○ No skills selected for installation.` and STOP here. Do not enter Step 6.
 
 - If the combined list has more than 4 candidates: use intentional high-cardinality freeform input.
   - Present it as a numbered list in the AskUserQuestion text (do NOT use `options` array: this list is larger than the 2-4 structured-choice sweet spot, so numeric/freeform input is intentional here rather than a faux bounded chooser).
@@ -83,9 +83,9 @@ Combine curated + registry, deduplicate, rank (curated first).
 Question text:
 ```
 Available skills for installation:
-1. {skill-name} — {brief description}
-2. {skill-name} — {brief description}
-...N. {skill-name} — {brief description}
+1. {skill-name}: {brief description}
+2. {skill-name}: {brief description}
+...N. {skill-name}: {brief description}
 
 This list is larger than the 2-4 structured-choice sweet spot, so use numeric/freeform selection here.
 Type numbers to install (comma-separated), or 'skip' to continue:
@@ -99,20 +99,14 @@ Parse the user's freeform response using these rules:
 - If invalid, show `Invalid selection. Type numbers (comma-separated) to install, or 'skip' to continue.` and AskUserQuestion again with the same question text.
 - Repeat until a valid selection or `skip` is obtained.
 
-If the user typed `skip`, STOP here after displaying `○ No skills selected for installation.` Do not ask Step 5b and do not enter Step 6.
-
-### Step 5b: Choose installation scope
-
-AskUserQuestion (single select) — "Where should these skills be installed?":
-- **Project (Recommended)** — "Installed to `./.claude/skills/`, scoped to this project only."
-- **Global** — "Installed to `<global_skills_dir>/`, available in all projects." (Use the `global_skills_dir` value from the Stack detection Context JSON as the display path.)
-
-Store the choice as SCOPE. If the user typed `skip` in Step 5: skip this step.
+If the user typed `skip`, STOP here after displaying `○ No skills selected for installation.` Do not enter Step 6.
 
 ### Step 6: Install selected
 
-`npx skills add <skill> -y` (project scope) or `npx skills add <skill> -g -y` (global scope) per selection, based on SCOPE from Step 5b. This step runs only when one or more skills were selected in Step 5. Display ✓ or ✗ per skill. "➜ Changes in existing watched skill directories are detected in-session. Creating a top-level skills directory that did not exist at session start requires a restart."
+Run `npx skills add <skill> -y` for each selected skill. This installs into `./.claude/skills/` for the current project. This step runs only when one or more skills were selected in Step 5. Display ✓ or ✗ per skill. "➜ Changes in existing watched skill directories are detected in-session. Creating a top-level skills directory that did not exist at session start requires a restart."
 
 ## Output Format
 
-Follow @${CLAUDE_PLUGIN_ROOT}/references/vbw-brand-essentials.md — single-line box, ✓ installed, ○ suggested, ✗ failed, ⚠ warning, no ANSI.
+Follow @${CLAUDE_PLUGIN_ROOT}/references/vbw-brand-essentials.md
+
+Use a single-line box, ✓ installed, ○ suggested, ✗ failed, ⚠ warning, and no ANSI.
