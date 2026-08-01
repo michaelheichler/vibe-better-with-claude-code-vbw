@@ -1,0 +1,33 @@
+tests/qa-bash-guard.bats
+  s_cb6db6bc22a2a0::t_95236218ba4581 30
+  s_cb6db6bc22a2a0::t_b6338a9cafec0a 1-29,31-37
+  s_cb6db6bc22a2a0::t_59f67a1539d4df 38-43
+tests/file-guard-orchestrator.bats
+  s_cb6db6bc22a2a0::t_eb7e6239e3ac67 1-29,31-37
+  s_cb6db6bc22a2a0::t_b3f306a2e5402c 30
+  s_cb6db6bc22a2a0::t_99d3a12e1b1011 38-92
+scripts/bash-guard.sh
+  s_cb6db6bc22a2a0::t_e68b21826e0d47 78-84,96-104
+scripts/delegated-workflow.sh
+  s_cb6db6bc22a2a0::t_9a33096e891304 169-172
+scripts/file-guard.sh
+  s_cb6db6bc22a2a0::t_809dcf7d3fda29 138-144,156-164,446-451,453,524
+tests/delegated-workflow-session.bats
+  s_cb6db6bc22a2a0::t_f5a8d43295dd99 1-33
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "455bd16b0fe22b5fdce99d66c7305afb6ce3eee1",
+  "prompts": {},
+  "sessions": {
+    "s_cb6db6bc22a2a0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "134661bc-d3bc-43f9-89e4-713aba547780",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
