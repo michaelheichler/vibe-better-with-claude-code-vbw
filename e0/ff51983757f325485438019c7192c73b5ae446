@@ -1,0 +1,36 @@
+tests/hooks-bash-classifier.bats
+  s_cb6db6bc22a2a0::t_9abd73d10ac368 1213,1216
+  s_cb6db6bc22a2a0::t_f6941408734139 1278
+  s_cb6db6bc22a2a0::t_2ab58e61295738 1240-1241
+  s_cb6db6bc22a2a0::t_e83b3007f2d346 1270,1298
+  s_cb6db6bc22a2a0::t_78d3c35645496c 1306
+  s_cb6db6bc22a2a0::t_8ff9d535fa0119 1192,1195
+  s_cb6db6bc22a2a0::t_8f9c00bec446dd 1166,1176,1179
+  s_cb6db6bc22a2a0::t_3b86369b4ec47a 1248
+  s_cb6db6bc22a2a0::t_3bd9812834fc0e 1142,1152,1155
+  s_cb6db6bc22a2a0::t_5c5749e364d7d1 1323,1326
+  s_cb6db6bc22a2a0::t_5120e4e55dac52 1228-1229,1235
+  s_cb6db6bc22a2a0::t_a538194160f7eb 1352
+  s_cb6db6bc22a2a0::t_575c013a272bb6 1111,1119,1128,1131
+tests/file-guard-orchestrator.bats
+  s_cb6db6bc22a2a0::t_42d5d4f1112186 63,78,134,149,165
+  s_cb6db6bc22a2a0::t_ed92154c2c7d73 110
+  s_cb6db6bc22a2a0::t_ebe154a3635bc0 51,122
+  s_cb6db6bc22a2a0::t_8aa41dd910d0fb 100
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "e0ff51983757f325485438019c7192c73b5ae446",
+  "prompts": {},
+  "sessions": {
+    "s_cb6db6bc22a2a0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "134661bc-d3bc-43f9-89e4-713aba547780",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
