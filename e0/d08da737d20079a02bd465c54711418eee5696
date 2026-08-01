@@ -1,0 +1,26 @@
+commands/rtk.md
+  s_1d0ef8928b5be8::t_c30548dfd84433 21
+  s_1d0ef8928b5be8::t_35ed7d6af9010d 94
+  s_1d0ef8928b5be8::t_0b9ad524de5e26 88
+  s_1d0ef8928b5be8::t_9dad10f7de6c59 132
+  s_1d0ef8928b5be8::t_bea20a1b1b9a65 31
+  s_1d0ef8928b5be8::t_f75073fe19f5e4 46
+testing/verify-plugin-root-resolution.sh
+  s_1d0ef8928b5be8::t_e7bbe625d733c7 170-177,179
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "e0d08da737d20079a02bd465c54711418eee5696",
+  "prompts": {},
+  "sessions": {
+    "s_1d0ef8928b5be8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d98ead94-2633-4e93-bfad-c8ee6f966aaa",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
