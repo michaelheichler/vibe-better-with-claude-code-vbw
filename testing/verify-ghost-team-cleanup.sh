@@ -224,7 +224,7 @@ test_doctor_scan_skips_non_vbw_orphan() {
 }
 
 test_exec_protocol_post_teamdelete_cleanup() {
-  if grep -Eq 'Post-(TeamDelete|shutdown) residual cleanup' "$ROOT/references/execute-protocol.md"; then
+  if grep -q 'Post-shutdown residual cleanup' "$ROOT/references/execute-protocol.md"; then
     pass "execute-protocol.md has post-shutdown residual cleanup"
   else
     fail "execute-protocol.md missing post-shutdown residual cleanup"
@@ -255,12 +255,13 @@ test_vibe_plan_research_cleanup() {
     fail "Could not extract Plan mode section from vibe.md (heading format may have changed)"
     return
   fi
-  if grep -q 'Before TeamCreate' <<<"$plan_section" \
+  if grep -q 'The team forms when the first teammate is spawned via the Agent tool' <<<"$plan_section" \
+    && grep -q 'There is no TeamCreate setup step' <<<"$plan_section" \
     && grep -q 'Send `shutdown_request` to every teammate' <<<"$plan_section" \
-    && grep -q 'call TeamDelete' <<<"$plan_section"; then
-    pass "vibe.md brackets Plan research teams with cleanup"
+    && grep -q 'There is no TeamDelete call' <<<"$plan_section"; then
+    pass "vibe.md brackets implicit Plan research teams with automatic cleanup"
   else
-    fail "vibe.md Plan research fan-out lacks creation or cleanup guidance"
+    fail "vibe.md Plan research fan-out lacks implicit formation or automatic cleanup guidance"
   fi
 }
 

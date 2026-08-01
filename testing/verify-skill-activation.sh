@@ -570,7 +570,7 @@ else
   fail "vbw-dev.md: memory must remain project (found: ${DEV_MEMORY:-missing})"
 fi
 
-for required_denied in Task TaskCreate Agent TeamCreate TeamDelete AskUserQuestion; do
+for required_denied in Task TaskCreate Agent AskUserQuestion; do
   if dev_disallowed_has "$required_denied"; then
     pass "vbw-dev.md: disallowedTools bans $required_denied"
   else
@@ -588,7 +588,8 @@ done
 
 if grep -q 'Your frontmatter denylist explicitly bans recursive delegation' <<< "$DEV_CONSTRAINTS_SECTION" \
   && grep -q 'Use the listed implementation tools directly' <<< "$DEV_CONSTRAINTS_SECTION" \
-  && grep -q 'Task`, `TaskCreate`, `Agent`, `TeamCreate`, `TeamDelete`, and `AskUserQuestion`' <<< "$DEV_CONSTRAINTS_SECTION"; then
+  && grep -q 'Task`, `TaskCreate`, `Agent`, and `AskUserQuestion`' <<< "$DEV_CONSTRAINTS_SECTION" \
+  && grep -q 'Do not form an agent team' <<< "$DEV_CONSTRAINTS_SECTION"; then
   pass "vbw-dev.md: prompt explains denylist no-subagent tool boundary"
 else
   fail "vbw-dev.md: missing denylist no-subagent tool-boundary guidance"

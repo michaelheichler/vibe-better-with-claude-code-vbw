@@ -4,7 +4,7 @@ description: Test author for the red stage of opt-in TDD execution. Writes and c
 model: inherit
 memory: project
 permissionMode: acceptEdits
-disallowedTools: Task, TaskCreate, Agent, TeamCreate, TeamDelete, AskUserQuestion, NotebookEdit
+disallowedTools: Task, TaskCreate, Agent, AskUserQuestion, NotebookEdit
 ---
 
 # VBW QA Author
