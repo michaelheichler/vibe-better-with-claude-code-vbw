@@ -16,7 +16,14 @@ if [ -n "${CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS:-}" ]; then
   exit 0
 fi
 
-. "$SCRIPT_DIR/resolve-claude-dir.sh"
+if [ ! -r "$SCRIPT_DIR/resolve-claude-dir.sh" ]; then
+  emit_result unavailable probe_internal
+  exit 0
+fi
+if ! . "$SCRIPT_DIR/resolve-claude-dir.sh"; then
+  emit_result unavailable probe_internal
+  exit 0
+fi
 settings_path="$CLAUDE_DIR/settings.json"
 
 if [ ! -f "$settings_path" ]; then

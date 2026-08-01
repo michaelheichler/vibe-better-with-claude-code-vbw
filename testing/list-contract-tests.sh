@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+# Keep this registry complete because run-all.sh discovers no contract checks elsewhere.
 printf '%s\t%s\n' \
   init-todo                    scripts/verify-init-todo.sh \
   claude-bootstrap             scripts/verify-claude-bootstrap.sh \

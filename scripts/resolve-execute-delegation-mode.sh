@@ -171,7 +171,7 @@ pad_number() {
 
 normalize_plan_ref() {
   local raw="$1"
-  local value ph pl
+  local value phase_part plan_part
   value=$(strip_quotes "$raw")
   value="${value%,}"
   value=$(strip_quotes "$value")
@@ -186,10 +186,10 @@ normalize_plan_ref() {
   esac
   case "$value" in
     *-*)
-      ph="${value%%-*}"
-      pl="${value#*-}"
-      if [ -n "$ph" ] && [ -n "$pl" ] && [[ "$ph" =~ ^[0-9]+$ ]] && [[ "$pl" =~ ^[0-9]+$ ]]; then
-        printf '%s-%s\n' "$(pad_number "$ph")" "$(pad_number "$pl")"
+      phase_part="${value%%-*}"
+      plan_part="${value#*-}"
+      if [ -n "$phase_part" ] && [ -n "$plan_part" ] && [[ "$phase_part" =~ ^[0-9]+$ ]] && [[ "$plan_part" =~ ^[0-9]+$ ]]; then
+        printf '%s-%s\n' "$(pad_number "$phase_part")" "$(pad_number "$plan_part")"
       else
         printf '%s\n' "$value"
       fi
@@ -491,24 +491,45 @@ if ! conflict_analysis=$(bash "$SCRIPT_DIR/analyze-plan-conflicts.sh" "$PHASE_DI
   exit 2
 fi
 conflict_pairs_csv=""
+analyzed_plan_ids_csv=""
 conflict_pairs_found=false
+analyzed_plan_ids_found=false
 while IFS='=' read -r conflict_key conflict_value; do
-  if [ "$conflict_key" = "conflict_pairs" ]; then
-    conflict_pairs_csv="$conflict_value"
-    conflict_pairs_found=true
-    break
-  fi
+  case "$conflict_key" in
+    conflict_pairs)
+      conflict_pairs_csv="$conflict_value"
+      conflict_pairs_found=true
+      ;;
+    analyzed_plan_ids)
+      analyzed_plan_ids_csv="$conflict_value"
+      analyzed_plan_ids_found=true
+      ;;
+  esac
 done <<< "$conflict_analysis"
-if [ "$conflict_pairs_found" = false ]; then
+if [ "$conflict_pairs_found" = false ] || [ "$analyzed_plan_ids_found" = false ]; then
   fail_json "invalid_dependency_graph" "plan conflict analysis returned invalid output"
   exit 2
 fi
+
+analyzer_covers_plan() {
+  local target="$1"
+  local analyzed_id
+  local -a analyzed_plan_ids_array=()
+  IFS=',' read -r -a analyzed_plan_ids_array <<< "$analyzed_plan_ids_csv"
+  for analyzed_id in "${analyzed_plan_ids_array[@]}"; do
+    [ "$analyzed_id" = "$target" ] && return 0
+  done
+  return 1
+}
 
 plan_pair_conflicts() {
   local left="$1"
   local right="$2"
   local pair
   local -a conflict_pairs_array=()
+  if ! analyzer_covers_plan "$left" || ! analyzer_covers_plan "$right"; then
+    return 0
+  fi
   IFS=',' read -r -a conflict_pairs_array <<< "$conflict_pairs_csv"
   for pair in "${conflict_pairs_array[@]}"; do
     if [ "$pair" = "$left:$right" ] || [ "$pair" = "$right:$left" ]; then

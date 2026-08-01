@@ -86,10 +86,11 @@ All runtime script invocations below assume `VBW_PLUGIN_ROOT` is set.
    - Otherwise generate fresh:
      `CORRELATION_ID=$(uuidgen 2>/dev/null | tr '[:upper:]' '[:lower:]' || echo "$(date -u +%s)-${RANDOM}${RANDOM}")`
 
-7. **Write execution state** to `.vbw-planning/.execution-state.json`:
+7. **Write execution state** to `.vbw-planning/.execution-state.json`. First resolve `SESSION_ID=$(printf '%s' "${CLAUDE_SESSION_ID:-}")`, then record that exact value:
 ```json
 {
   "phase": N, "phase_name": "{slug}", "status": "running",
+  "session_id": "{SESSION_ID}",
   "started_at": "{ISO 8601}", "wave": 1, "total_waves": N,
   "correlation_id": "{UUID}",
   "effort": "{effective effort}", "phase_effort": "{configured phase effort}",

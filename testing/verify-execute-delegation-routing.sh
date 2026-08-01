@@ -270,6 +270,25 @@ assert_eq "$(json_field "$out" '.delegation_mode')" "subagent" "shared files dem
 assert_eq "$(json_field "$out" '.max_parallel_width')" "1" "shared files reduce max_parallel_width to 1"
 assert_json_array_eq "$(jq -c '.dependency_waves' <<< "$out")" '[["01-01"],["01-02"]]' "shared files serialize the later plan id"
 
+make_fixture short-name-shared-file-conflict '"auto"' balanced
+write_state '{"plans":[{"id":"01-01","status":"pending"},{"id":"01-02","status":"pending"}],"effort":"balanced","phase_effort":"balanced"}'
+write_plan_inline 01-PLAN.md 01 01 '[]' scripts/shared.sh
+write_plan_inline 02-PLAN.md 01 02 '[]' scripts/shared.sh
+out=$(run_helper)
+assert_eq "$(json_field "$out" '.delegation_mode')" "subagent" "short plan filenames with shared files demote to subagents"
+assert_eq "$(json_field "$out" '.max_parallel_width')" "1" "short plan filenames share normalized conflict ids"
+assert_json_array_eq "$(jq -c '.dependency_waves' <<< "$out")" '[["01-01"],["01-02"]]' "short plan filenames serialize the later plan id"
+
+make_fixture missing-analyzer-coverage '"auto"' balanced
+write_state '{"plans":[{"id":"01-01","status":"pending"},{"id":"01-02","status":"pending"}],"effort":"balanced","phase_effort":"balanced"}'
+write_plan_inline 01-01-PLAN.md 01 01 '[]'
+write_plan_inline 01-02-PLAN.md 01 02 '[]'
+mv "$PHASE_DIR/01-02-PLAN.md" "$FIXTURE/01-02-PLAN.md"
+ln -s "$FIXTURE/01-02-PLAN.md" "$PHASE_DIR/01-02-PLAN.md"
+out=$(run_helper)
+assert_eq "$(json_field "$out" '.max_parallel_width')" "1" "missing analyzer coverage serializes same-wave plans"
+assert_json_array_eq "$(jq -c '.dependency_waves' <<< "$out")" '[["01-01"],["01-02"]]' "missing analyzer coverage defers the uncovered plan"
+
 make_fixture missing-files-touched '"auto"' balanced
 write_state '{"plans":[{"id":"01-01","status":"pending"},{"id":"01-02","status":"pending"}],"effort":"balanced","phase_effort":"balanced"}'
 write_plan_inline 01-01-PLAN.md 01 01 '[]'
@@ -559,15 +578,22 @@ status: partial
 ---
 Partial but terminal.
 SUMMARY
-printf '{"tool_input":{"file_path":"%s"}}\n' "$STATE_PHASE/01-01-SUMMARY.md" | (cd "$STATE_FIXTURE" && "$STATE_UPDATER")
+printf '{"tool_input":{"file_path":"%s"}}\n' "$STATE_PHASE/01-01-SUMMARY.md" | (cd "$STATE_FIXTURE" && CLAUDE_SESSION_ID=session-owner "$STATE_UPDATER")
 state_status=$(jq -r '.plans[] | select(.id == "01-01") | .status' "$STATE_FIXTURE/.vbw-planning/.execution-state.json")
 assert_eq "$state_status" "partial" "state-updater writes verified terminal partial status"
+assert_eq "$(jq -r '.session_id' "$STATE_FIXTURE/.vbw-planning/.execution-state.json")" "session-owner" "state-updater records the owning session"
 
 # Protocol text invariants
 if grep -q 'resolve-execute-delegation-mode\.sh' "$EXECUTE_PROTOCOL"; then
   pass "execute-protocol references resolve-execute-delegation-mode.sh"
 else
   fail "execute-protocol references resolve-execute-delegation-mode.sh"
+fi
+
+if grep -Fq 'SESSION_ID=$(printf' "$EXECUTE_PROTOCOL" && grep -Fq '"session_id": "{SESSION_ID}"' "$EXECUTE_PROTOCOL"; then
+  pass "execute-protocol records the owning session in execution state"
+else
+  fail "execute-protocol records the owning session in execution state"
 fi
 
 if grep -Fq "prefer_teams='auto': request team mode only when 2+ uncompleted plans remain" "$EXECUTE_PROTOCOL"; then

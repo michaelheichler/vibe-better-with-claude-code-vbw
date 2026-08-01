@@ -1,14 +1,37 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Output: conflict_pairs=A:B,...; disjoint_groups=A|B;C,... (greedy pairwise-disjoint groups); plans_missing_files_touched=A,...
-
 PHASE_DIR="${1:-}"
 
 if [ -z "$PHASE_DIR" ] || [ ! -d "$PHASE_DIR" ] || [ ! -r "$PHASE_DIR" ]; then
   printf 'error=unreadable_phase_dir:%s\n' "$PHASE_DIR" >&2
   exit 1
 fi
+
+phase_prefix=$(basename "${PHASE_DIR%/}" | sed -n 's/^\([0-9][0-9]*\).*/\1/p')
+if [ -z "$phase_prefix" ]; then
+  printf 'error=invalid_phase_dir:%s\n' "$PHASE_DIR" >&2
+  exit 1
+fi
+phase_id=$(printf '%02d' "$((10#$phase_prefix))")
+
+normalize_analyzer_plan_id() {
+  local raw="$1"
+  local raw_phase raw_plan
+  case "$raw" in
+    *-*)
+      raw_phase="${raw%%-*}"
+      raw_plan="${raw#*-}"
+      if [[ "$raw_phase" =~ ^[0-9]+$ ]] && [[ "$raw_plan" =~ ^[0-9]+$ ]]; then
+        printf '%02d-%02d\n' "$((10#$raw_phase))" "$((10#$raw_plan))"
+      else
+        printf '%s\n' "$raw"
+      fi
+      ;;
+    *[!0-9]*) printf '%s\n' "$raw" ;;
+    *) printf '%s-%02d\n' "$phase_id" "$((10#$raw))" ;;
+  esac
+}
 
 FILES_TOUCHED_AWK=$(cat <<'AWK'
 function trim(value) {
@@ -78,7 +101,7 @@ declare -A missing=()
 declare -A conflicts=()
 
 while IFS= read -r plan_file; do
-  plan_id=$(basename "$plan_file" -PLAN.md)
+  plan_id=$(normalize_analyzer_plan_id "$(basename "$plan_file" -PLAN.md)")
   plan_ids+=("$plan_id")
   mapfile -t parsed < <(awk "$FILES_TOUCHED_AWK" "$plan_file")
   if [ "${parsed[0]:-}" != "__declared__" ]; then
@@ -160,3 +183,4 @@ done
 printf 'conflict_pairs=%s\n' "$(join_by , "${conflict_pairs[@]}")"
 printf 'disjoint_groups=%s\n' "$(join_by ';' "${groups[@]}")"
 printf 'plans_missing_files_touched=%s\n' "$(join_by , "${missing_ids[@]}")"
+printf 'analyzed_plan_ids=%s\n' "$(join_by , "${plan_ids[@]}")"

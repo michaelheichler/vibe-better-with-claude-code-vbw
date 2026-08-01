@@ -85,6 +85,17 @@ teardown() {
   [ "$output" = $'team_capability=unavailable\nteam_capability_reason=not_configured' ]
 }
 
+@test "missing config resolver fails safe" {
+  local probe_dir="$TEST_TEMP_DIR/probe"
+  mkdir -p "$probe_dir"
+  cp "$SCRIPTS_DIR/detect-team-capability.sh" "$probe_dir/detect-team-capability.sh"
+
+  run bash "$probe_dir/detect-team-capability.sh"
+
+  [ "$status" -eq 0 ]
+  [ "$output" = $'team_capability=unavailable\nteam_capability_reason=probe_internal' ]
+}
+
 @test "enabled environment overrides disabled settings" {
   printf '%s\n' '{"env":{"CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS":"0"}}' > "$CLAUDE_CONFIG_DIR/settings.json"
   export CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1

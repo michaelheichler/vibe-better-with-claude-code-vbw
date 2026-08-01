@@ -43,6 +43,7 @@ PLAN
   [ "${lines[0]}" = "conflict_pairs=01-01:01-02" ]
   [ "${lines[1]}" = "disjoint_groups=01-01|01-03;01-02" ]
   [ "${lines[2]}" = "plans_missing_files_touched=" ]
+  [ "${lines[3]}" = "analyzed_plan_ids=01-01,01-02,01-03" ]
 }
 
 @test "treats a missing files_touched field as conflicting with every plan" {

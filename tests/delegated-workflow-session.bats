@@ -14,6 +14,16 @@ teardown() {
   teardown_temp_dir
 }
 
+@test "set records the owning session in existing execution state" {
+  printf '%s\n' '{"status":"running","effort":"balanced","plans":[]}' > "$TEST_TEMP_DIR/.vbw-planning/.execution-state.json"
+
+  run env CLAUDE_SESSION_ID="session-B" VBW_PLANNING_DIR="$TEST_TEMP_DIR/.vbw-planning" \
+    bash "$SCRIPTS_DIR/delegated-workflow.sh" set execute balanced subagent
+
+  [ "$status" -eq 0 ]
+  [ "$(jq -r '.session_id' "$TEST_TEMP_DIR/.vbw-planning/.execution-state.json")" = "session-B" ]
+}
+
 @test "status-json ignores marker from another session" {
   run bash -c 'CLAUDE_SESSION_ID="session-B" VBW_PLANNING_DIR="$1" bash "$2" status-json' _ \
     "$TEST_TEMP_DIR/.vbw-planning" "$SCRIPTS_DIR/delegated-workflow.sh"

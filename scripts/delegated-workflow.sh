@@ -226,6 +226,14 @@ case "$ACTION" in
     if command -v jq >/dev/null 2>&1 && [ -f "$EXEC_STATE_FILE" ]; then
       CORRELATION_ID=$(jq -r '.correlation_id // ""' "$EXEC_STATE_FILE" 2>/dev/null || printf '\n')
       [ "$CORRELATION_ID" = "null" ] && CORRELATION_ID=""
+      if [ -n "$SESSION_ID" ]; then
+        EXEC_STATE_TMP="${EXEC_STATE_FILE}.tmp.$$.${RANDOM:-0}"
+        if jq --arg session_id "$SESSION_ID" '.session_id = $session_id' "$EXEC_STATE_FILE" > "$EXEC_STATE_TMP" 2>/dev/null && [ -s "$EXEC_STATE_TMP" ]; then
+          mv "$EXEC_STATE_TMP" "$EXEC_STATE_FILE" 2>/dev/null || rm -f "$EXEC_STATE_TMP" 2>/dev/null
+        else
+          rm -f "$EXEC_STATE_TMP" 2>/dev/null
+        fi
+      fi
     fi
     if command -v jq >/dev/null 2>&1; then
       jq -n \

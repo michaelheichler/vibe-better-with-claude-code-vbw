@@ -90,11 +90,12 @@ if [ -n "$_FG_PAYLOAD_AGENT_TYPE" ] || [ -n "$_FG_PAYLOAD_AGENT_ID" ]; then
   _FG_PAYLOAD_HAS_AGENT=true
 fi
 _FG_CALLER_IS_DELEGATED="$_FG_PAYLOAD_HAS_AGENT"
-# Trust the undocumented CLAUDE_CODE_CHILD_SESSION flag because live teammate payloads omit agent identity fields.
+# Advisory only: env hints and the undocumented child flag are caller-controlled, so this is not a security boundary.
 if [ "${CLAUDE_CODE_CHILD_SESSION:-}" = "1" ]; then
   _FG_CALLER_IS_DELEGATED=true
 fi
 
+# Keep env role precedence over payload role because VBW spawns rely on exported role hints, then classify child callers before orchestrators.
 detect_agent_role() {
   local candidate role planning_dir
 
@@ -152,6 +153,7 @@ case "$FILE_PATH_LC" in
     ;;
 esac
 
+# Reject sidechain targets before planning exemptions because VBW never merges writes from Claude internal worktrees.
 if [ -n "${VBW_CLAUDE_SIDECHAIN_ROOT:-}" ] && [ -n "${VBW_CLAUDE_SIDECHAIN_HOST_ROOT:-}" ]; then
   _FG_SIDECHAIN_BLOCK=false
   _FG_BLOCKED_TARGET="$FILE_PATH"
@@ -199,6 +201,7 @@ fi
 
 case "$FILE_PATH" in
   *.vbw-planning/milestones/*/phases/*)
+    # Other milestone root files must fall through because archival writes SHIPPED.md and moves STATE.md and ROADMAP.md.
     echo "Blocked: writes to archived milestone phases are not allowed ($FILE_PATH)" >&2
     exit 2
     ;;
@@ -217,6 +220,7 @@ case "$FILE_PATH" in
           ;;
       esac
     fi
+    # Unparseable summary status must fail open because Edit payloads may omit full content.
     exit 0
     ;;
   *.vbw-planning/*|*SUMMARY.md|*VERIFICATION.md|*STATE.md|*CLAUDE.md|*.execution-state.json)
@@ -291,52 +295,49 @@ if [ "$WORKTREE_ISOLATION" != "off" ] && [ -n "${VBW_AGENT_ROLE:-}" ]; then
   esac
 fi
 
-
-if true; then
-  CONTRACT_DIR="$PROJECT_ROOT/.vbw-planning/.contracts"
-  if [ -d "$CONTRACT_DIR" ]; then
-    for PLAN_FILE in "$PHASES_DIR"/*/*-PLAN.md; do
-      [ ! -f "$PLAN_FILE" ] && continue
-      SUMMARY_FILE="${PLAN_FILE%-PLAN.md}-SUMMARY.md"
-      if ! is_plan_finalized "$SUMMARY_FILE"; then
-        BASENAME=$(basename "$PLAN_FILE")
-        PHASE_NUM=$(echo "$BASENAME" | sed 's/^\([0-9]*\)-.*/\1/')
-        PLAN_NUM=$(echo "$BASENAME" | sed 's/^[0-9]*-\([0-9]*\)-.*/\1/')
-        CONTRACT_FILE="${CONTRACT_DIR}/${PHASE_NUM}-${PLAN_NUM}.json"
-        if [ -f "$CONTRACT_FILE" ]; then
-          FORBIDDEN=$(jq -r '.forbidden_paths[]' "$CONTRACT_FILE" 2>/dev/null) || FORBIDDEN=""
-          if [ -n "$FORBIDDEN" ]; then
-            while IFS= read -r forbidden; do
-              [ -z "$forbidden" ] && continue
-              NORM_FORBIDDEN="${forbidden#./}"
-              NORM_FORBIDDEN="${NORM_FORBIDDEN%/}"
-              if [ "$NORM_TARGET" = "$NORM_FORBIDDEN" ] || [[ "$NORM_TARGET" == "$NORM_FORBIDDEN"/* ]]; then
-                echo "Blocked: $NORM_TARGET is a forbidden path in contract (${CONTRACT_FILE})" >&2
-                exit 2
-              fi
-            done <<< "$FORBIDDEN"
-          fi
-          ALLOWED=$(jq -r '.allowed_paths[]' "$CONTRACT_FILE" 2>/dev/null) || ALLOWED=""
-          if [ -n "$ALLOWED" ]; then
-            IN_SCOPE=false
-            while IFS= read -r allowed; do
-              [ -z "$allowed" ] && continue
-              NORM_ALLOWED="${allowed#./}"
-              if [ "$NORM_TARGET" = "$NORM_ALLOWED" ]; then
-                IN_SCOPE=true
-                break
-              fi
-            done <<< "$ALLOWED"
-            if [ "$IN_SCOPE" = "false" ]; then
-              echo "Blocked: $NORM_TARGET not in contract allowed_paths (${CONTRACT_FILE})" >&2
+CONTRACT_DIR="$PROJECT_ROOT/.vbw-planning/.contracts"
+if [ -d "$CONTRACT_DIR" ]; then
+  for PLAN_FILE in "$PHASES_DIR"/*/*-PLAN.md; do
+    [ ! -f "$PLAN_FILE" ] && continue
+    SUMMARY_FILE="${PLAN_FILE%-PLAN.md}-SUMMARY.md"
+    if ! is_plan_finalized "$SUMMARY_FILE"; then
+      BASENAME=$(basename "$PLAN_FILE")
+      PHASE_NUM=$(echo "$BASENAME" | sed 's/^\([0-9]*\)-.*/\1/')
+      PLAN_NUM=$(echo "$BASENAME" | sed 's/^[0-9]*-\([0-9]*\)-.*/\1/')
+      CONTRACT_FILE="${CONTRACT_DIR}/${PHASE_NUM}-${PLAN_NUM}.json"
+      if [ -f "$CONTRACT_FILE" ]; then
+        FORBIDDEN=$(jq -r '.forbidden_paths[]' "$CONTRACT_FILE" 2>/dev/null) || FORBIDDEN=""
+        if [ -n "$FORBIDDEN" ]; then
+          while IFS= read -r forbidden; do
+            [ -z "$forbidden" ] && continue
+            NORM_FORBIDDEN="${forbidden#./}"
+            NORM_FORBIDDEN="${NORM_FORBIDDEN%/}"
+            if [ "$NORM_TARGET" = "$NORM_FORBIDDEN" ] || [[ "$NORM_TARGET" == "$NORM_FORBIDDEN"/* ]]; then
+              echo "Blocked: $NORM_TARGET is a forbidden path in contract (${CONTRACT_FILE})" >&2
               exit 2
             fi
+          done <<< "$FORBIDDEN"
+        fi
+        ALLOWED=$(jq -r '.allowed_paths[]' "$CONTRACT_FILE" 2>/dev/null) || ALLOWED=""
+        if [ -n "$ALLOWED" ]; then
+          IN_SCOPE=false
+          while IFS= read -r allowed; do
+            [ -z "$allowed" ] && continue
+            NORM_ALLOWED="${allowed#./}"
+            if [ "$NORM_TARGET" = "$NORM_ALLOWED" ]; then
+              IN_SCOPE=true
+              break
+            fi
+          done <<< "$ALLOWED"
+          if [ "$IN_SCOPE" = "false" ]; then
+            echo "Blocked: $NORM_TARGET not in contract allowed_paths (${CONTRACT_FILE})" >&2
+            exit 2
           fi
         fi
-        break
       fi
-    done
-  fi
+      break
+    fi
+  done
 fi
 
 _DG_PROJECT_ABS=$(to_abs_path "$PROJECT_ROOT")
@@ -371,12 +372,9 @@ if [ "$_DG_TARGET_IN_PROJECT" = true ] && [ -z "${VBW_AGENT_ROLE:-}" ] && [ -z "
   _EXEC_STATE_FILE="$PROJECT_ROOT/.vbw-planning/.execution-state.json"
   _EXEC_APPLICABLE=true
   if [ -f "$_EXEC_STATE_FILE" ] && [ -n "${CLAUDE_SESSION_ID:-}" ]; then
-    _EXEC_APPLICABLE=false
     _EXEC_SESSION_ID=$(jq -r '.session_id // ""' "$_EXEC_STATE_FILE" 2>/dev/null) || _EXEC_SESSION_ID=""
-    if [ -n "$_EXEC_SESSION_ID" ] && [ "$_EXEC_SESSION_ID" = "${CLAUDE_SESSION_ID:-}" ]; then
-      _EXEC_APPLICABLE=true
-    elif [ "$_DG_MARKER_LIVE" = "true" ] && [ "$_DG_MARKER_MODE" = "execute" ]; then
-      _EXEC_APPLICABLE=true
+    if [ -n "$_EXEC_SESSION_ID" ] && [ "$_EXEC_SESSION_ID" != "${CLAUDE_SESSION_ID:-}" ]; then
+      _EXEC_APPLICABLE=false
     fi
   fi
   if [ -f "$_EXEC_STATE_FILE" ] && [ "$_EXEC_APPLICABLE" = true ]; then

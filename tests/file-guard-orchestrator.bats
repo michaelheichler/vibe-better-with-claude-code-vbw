@@ -91,6 +91,16 @@ teardown() {
   [[ "$output" == *"role 'qa' cannot write outside .vbw-planning/"* ]]
 }
 
+@test "file-guard env role takes precedence over payload role" {
+  local input
+  input=$(jq -n '{session_id:"session-A",agent_type:"vbw:vbw-qa",tool_name:"Write",tool_input:{file_path:"src/product.js",content:"ok"}}')
+
+  run bash -c 'unset CLAUDE_CODE_CHILD_SESSION VBW_ACTIVE_AGENT; printf "%s\n" "$1" | VBW_AGENT_ROLE=dev bash "$2"' _ \
+    "$input" "$SCRIPTS_DIR/file-guard.sh"
+
+  [ "$status" -eq 0 ]
+}
+
 @test "file-guard allows payload-less child caller during delegated workflow" {
   local input
   CLAUDE_SESSION_ID="session-A" VBW_PLANNING_DIR="$TEST_TEMP_DIR/.vbw-planning" \
@@ -125,9 +135,9 @@ teardown() {
   [ "$status" -eq 0 ]
 }
 
-@test "file-guard applies running execution state to its owning session" {
+@test "file-guard applies ownerless running execution state conservatively" {
   local input
-  jq -n '{status:"running",session_id:"session-A",effort:"balanced",plans:[]}' \
+  jq -n '{status:"running",effort:"balanced",plans:[]}' \
     > "$TEST_TEMP_DIR/.vbw-planning/.execution-state.json"
   input=$(jq -n '{session_id:"session-A",tool_name:"Write",tool_input:{file_path:"src/product.js",content:"blocked"}}')
 
