@@ -22,6 +22,8 @@ Plugin root:
 
 Store the plugin root path output above as `{plugin-root}` for use in script invocations below. Replace `{plugin-root}` with the literal `Plugin root` value from Context whenever a step below references a script or reference file.
 
+@${CLAUDE_PLUGIN_ROOT}/references/subagent-contracts.md
+
 Existing mapping:
 ```text
 !`ls .vbw-planning/codebase/ 2>/dev/null || echo "No codebase mapping found"`

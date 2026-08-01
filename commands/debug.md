@@ -26,6 +26,8 @@ Recent commits:
 
 Store the plugin root path output above as `{plugin-root}` for use in script invocations below. Replace `{plugin-root}` with the literal `Plugin root` value from Context whenever a step below references a script or reference file.
 
+@${CLAUDE_PLUGIN_ROOT}/references/subagent-contracts.md
+
 ## Guard
 - Not initialized (no .vbw-planning/ dir): STOP "Run /vbw:init first."
 - No $ARGUMENTS and no `--resume` flag and no `--session` flag: STOP "Usage: `/vbw:debug \"description of the bug or error message\" [--competing|--parallel|--serial]` | `/vbw:debug <todo-number> [--competing|--parallel|--serial]` | `/vbw:debug --resume` | `/vbw:debug --session <id>`"

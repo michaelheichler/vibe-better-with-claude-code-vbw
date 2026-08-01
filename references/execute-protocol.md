@@ -22,6 +22,8 @@ VBW_PLUGIN_ROOT=$(bash "$RESOLVER") || exit 1
 
 All runtime script invocations below assume `VBW_PLUGIN_ROOT` is set.
 
+Before spawning any subagent, read `${VBW_PLUGIN_ROOT}/references/subagent-contracts.md` for the canonical subagent contracts.
+
 ### Step 2: Load plans and detect resume state
 
 **Orchestrator read-scope boundary:** You may ONLY read planning/state artifacts: `*-PLAN.md`, `*-SUMMARY.md`, `*-RESEARCH.md`, `STATE.md`, `ROADMAP.md`, `REQUIREMENTS.md`, `.execution-state.json`, `.context-*.md`, `config.json`, and `.vbw-planning/` metadata. Do NOT read product source files (application code, tests, configs outside `.vbw-planning/`). If you need to understand product code to make a routing or sequencing decision, that understanding must come from Dev — delegate it via a task.

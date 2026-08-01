@@ -13,6 +13,8 @@ disable-model-invocation: true
 
 @${CLAUDE_PLUGIN_ROOT}/references/ask-user-question.md
 
+@${CLAUDE_PLUGIN_ROOT}/references/subagent-contracts.md
+
 ## Context
 
 Working directory:
