@@ -6,6 +6,7 @@ printf '%s\t%s\n' \
   claude-bootstrap             scripts/verify-claude-bootstrap.sh \
   bash-scripts-contract        testing/verify-bash-scripts-contract.sh \
   commands-contract            testing/verify-commands-contract.sh \
+  shared-contracts             testing/verify-shared-contracts.sh \
   agent-sendmessage-contract   testing/verify-agent-sendmessage-contract.sh \
   pipefail-safety              testing/verify-pipefail-safety.sh \
   no-inline-exec-spans         testing/verify-no-inline-exec-spans.sh \
