@@ -3,7 +3,7 @@
 **Purpose:** Control AI model selection for VBW agents to optimize cost vs quality tradeoff.
 
 ## Overview
-VBW spawns 7 specialized agents (Lead, Dev, QA, Scout, Debugger, Architect, Docs) via the Task tool. Model profiles determine which Claude model each agent uses. Three preset profiles cover common use cases, with per-agent overrides for advanced customization.
+VBW spawns 8 specialized agents (Lead, Dev, QA, QA Author, Scout, Debugger, Architect, Docs) via the Task tool. Model profiles determine which model each agent uses. QA Author follows the QA route. Three preset profiles cover common use cases, with per-agent overrides for advanced customization.
 
 ## Preset Profiles
 
@@ -74,6 +74,22 @@ Sets Dev to Opus while keeping other agents at profile defaults.
 **Clearing overrides:**
 Switch to a different profile and back, or manually edit .vbw-planning/config.json.
 
+### TDD routing
+
+When `tdd_pipeline=true`, use a stronger QA route for both verification and QA Author's red-stage test design. Dev-scale implementation can use a faster model. For example:
+
+```json
+{
+  "model_overrides": {
+    "scout": "claude-sonnet-5",
+    "dev": "sol",
+    "qa": "claude-opus-5"
+  }
+}
+```
+
+The `qa` override applies to both `vbw-qa` and `vbw-qa-author`. This is guidance only and does not change profile defaults.
+
 ## Cost Comparison
 
 | Profile | Lead | Dev | QA | Scout | Docs | Est. Cost/Phase | vs Quality |
@@ -103,8 +119,8 @@ Displays before/after cost impact estimate.
 
 ## Implementation Notes
 - Model resolution: `scripts/resolve-agent-model.sh` reads config, applies profile preset, merges overrides
-- Turn-budget resolution: `scripts/resolve-agent-max-turns.sh` reads config `agent_max_turns` and scales by effort. Set a value to `false` or `0` to give that agent unlimited turns — the resolver emits an empty string, and the orchestrator omits the `maxTurns` parameter from the Task tool call
-- Task tool integration: All agent-spawning commands pass explicit `model` and `maxTurns` parameters. When the resolver emits a non-empty value (positive integer), `maxTurns` is included; when the resolver emits an empty value (unlimited), `maxTurns` is omitted entirely
+- Turn-budget resolution: `scripts/resolve-agent-max-turns.sh` reads config `agent_max_turns` and scales by effort. Set a value to `false` or `0` to give that agent unlimited turns. The resolver emits an empty string, and the orchestrator omits the `maxTurns` parameter from the Task tool call
+- Task tool integration: All agent-spawning commands pass explicit `model` and `maxTurns` parameters. When the resolver emits a non-empty value (positive integer), `maxTurns` is included. When the resolver emits an empty value (unlimited), `maxTurns` is omitted entirely
 - Turbo effort bypasses model logic (no agents spawned, direct execution)
 - Model names: `opus` = Claude Opus 4.6, `sonnet` = Claude Sonnet 4.5, `haiku` = Claude Haiku 3.5
 
