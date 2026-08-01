@@ -1,0 +1,22 @@
+tests/discovery-research.bats
+  s_0e6a41e1e30cd3::t_b0b4f39f1695b3 43
+  s_0e6a41e1e30cd3::t_67ec442e16ea03 69-70,73,75,78-80,82-87,89
+  s_0e6a41e1e30cd3::t_6983aff57d39bb 91,96,99,101-106
+  s_0e6a41e1e30cd3::t_c74e84feec6c63 90
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "93f88c66f70180b6a0acc0397b219291b100ff7c",
+  "prompts": {},
+  "sessions": {
+    "s_0e6a41e1e30cd3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2f5acbb2-f08e-44f2-bc94-ad94397dd129",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
