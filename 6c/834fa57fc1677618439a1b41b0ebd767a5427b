@@ -1,0 +1,59 @@
+agents/vbw-qa-author.md
+  s_cb6db6bc22a2a0::t_8bcf5b42370661 22-25
+  s_cb6db6bc22a2a0::t_94f2de9048dcc0 16-18
+  s_cb6db6bc22a2a0::t_2c76f5b86207d6 7
+  s_cb6db6bc22a2a0::t_47cce78413a0e8 1-6,8-15,19-21,26-73
+references/model-profiles.md
+  s_cb6db6bc22a2a0::t_1e2f9aa146843d 6
+  s_cb6db6bc22a2a0::t_8ae6bbfcb03e22 77-92
+  s_cb6db6bc22a2a0::t_e514b67f9b1383 122-123
+references/execute-protocol.md
+  s_cb6db6bc22a2a0::t_cdf4b18065d05d 365-369,371-373
+  s_cb6db6bc22a2a0::t_367039ee4e9eaa 370
+  s_cb6db6bc22a2a0::t_047d9d38d079eb 633
+  s_cb6db6bc22a2a0::t_c50ea204261c3c 55,63,66,69,101,103,115,120,145,148,165,177,202,210,223,226-228,230,275,278,282,294,310,327,337,341,428,453,462,515,528,531,533-534,536,677,688,712,714,737-740,744,752,755,765,770,776,796-797,814,819,825-826,838-839,844,847-848,850,888-889,896,900,905-907,925,931,935-936,944,960,986,994,996-997,1000,1011,1015-1016,1018,1021,1026,1045,1047,1051,1062,1065,1088,1090,1098,1111,1134,1141,1145,1149
+  s_cb6db6bc22a2a0::t_3508a824b1eb5a 34
+  s_cb6db6bc22a2a0::t_69dbc8ad614712 374
+  s_cb6db6bc22a2a0::t_b721468e7b4a4c 33
+  s_cb6db6bc22a2a0::t_613d82e923df73 276
+  s_cb6db6bc22a2a0::t_d5b1b19b69dccb 632
+  s_5e0f4a55d7aab5::t_3c8d7b3dcab7c2 331,349,361,438,565-566
+references/handoff-schemas.md
+  s_cb6db6bc22a2a0::t_16e4c8242cdc83 362
+  s_cb6db6bc22a2a0::t_b2dce32d109b50 10,13
+  s_cb6db6bc22a2a0::t_dbf427390f1cee 354
+  s_cb6db6bc22a2a0::t_ce23e8c934d11d 115
+  s_cb6db6bc22a2a0::t_d50b98292326be 143
+  s_cb6db6bc22a2a0::t_f8af2b8b4406d4 203
+  s_cb6db6bc22a2a0::t_fed690d9ccd0e6 34-35
+  s_cb6db6bc22a2a0::t_88fd148f7c3dc0 26,29
+  s_cb6db6bc22a2a0::t_00d59cfbd54234 356
+  s_cb6db6bc22a2a0::t_fb3aa50bf56e82 153-174
+  s_cb6db6bc22a2a0::t_4464126b4e9078 178
+  s_cb6db6bc22a2a0::t_00fc193c7b7cc1 364
+  s_cb6db6bc22a2a0::t_92e22b284728ca 175
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "6c834fa57fc1677618439a1b41b0ebd767a5427b",
+  "prompts": {},
+  "sessions": {
+    "s_5e0f4a55d7aab5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-adev-tdd-c85d7f299f1213fb",
+        "model": "unknown"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    },
+    "s_cb6db6bc22a2a0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "134661bc-d3bc-43f9-89e4-713aba547780",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
