@@ -1,0 +1,23 @@
+commands/vibe.md
+  s_cb6db6bc22a2a0::t_a9afb7e7f0f593 1378-1379
+  s_cb6db6bc22a2a0::t_472f638a42387d 1428
+  s_cb6db6bc22a2a0::t_35dcaad268ed4b 1373,1375-1377
+  s_cb6db6bc22a2a0::t_289b334e6a1de0 1374
+  s_cb6db6bc22a2a0::t_5b017ac2e512f6 1357-1363
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "3b6fbd9809147936b4da91314f0a958144bc7c1f",
+  "prompts": {},
+  "sessions": {
+    "s_cb6db6bc22a2a0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "134661bc-d3bc-43f9-89e4-713aba547780",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
