@@ -84,7 +84,7 @@ session_id_fallback='${CLAUDE_SESSION_ID:-default}'
 root_fallback='${CLAUDE_PLUGIN_ROOT:-}/scripts/resolve-plugin-root.sh'
 resolver_path='scripts/resolve-plugin-root.sh'
 helper_execution='bash "$R"'
-unreachable_helper_message='VBW: plugin root resolution failed. Run /vbw:doctor for diagnostics.'
+unreachable_helper_message='VBW: plugin root unavailable. Restart this session to recreate '
 
 has_semantic_trampoline() {
   local preamble="$1"
@@ -93,7 +93,8 @@ has_semantic_trampoline() {
     grep -Fq "$root_fallback" <<< "$preamble" &&
     grep -Fq "$resolver_path" <<< "$preamble" &&
     grep -Fq "$helper_execution" <<< "$preamble" &&
-    grep -Fq "$unreachable_helper_message" <<< "$preamble"
+    grep -Fq "$unreachable_helper_message" <<< "$preamble" &&
+    grep -Fq '$L.' <<< "$preamble"
 }
 
 # Invariant: every processed target has one semantic-contract result. Variant: unvisited target files.
@@ -108,7 +109,7 @@ for file in "${TARGET_FILES[@]}"; do
 done
 
 bare_error_preamble='!`L="/tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}"; R="$L/scripts/resolve-plugin-root.sh"; R="${CLAUDE_PLUGIN_ROOT:-}/scripts/resolve-plugin-root.sh"; bash "$R"; echo "VBW: plugin root resolution failed"`'
-missing_fallback_preamble='!`L="/tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}"; R="$L/scripts/resolve-plugin-root.sh"; bash "$R"; echo "VBW: plugin root resolution failed. Run /vbw:doctor for diagnostics."`'
+missing_fallback_preamble='!`L="/tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}"; R="$L/scripts/resolve-plugin-root.sh"; bash "$R"; echo "VBW: plugin root unavailable. Restart this session to recreate $L."`'
 if has_semantic_trampoline "$bare_error_preamble"; then
   fail "semantic contract accepts the legacy bare error"
 else
@@ -256,14 +257,16 @@ fi
 empty_config="$TEST_DIR/config-empty"
 empty_cache="$TEST_DIR/cache-empty"
 empty_tmp="$TEST_DIR/tmp-empty"
+failure_session_id="contract-failure-$$"
+failure_session_link="$empty_tmp/.vbw-plugin-root-link-$failure_session_id"
 mkdir -p "$empty_config" "$empty_cache" "$empty_tmp"
 if output=$(CLAUDE_PLUGIN_ROOT="" CLAUDE_CONFIG_DIR="$empty_config" \
-  VBW_CACHE_ROOT="$empty_cache" VBW_TMP_ROOT="$empty_tmp" CLAUDE_SESSION_ID="contract-failure-$$" \
+  VBW_CACHE_ROOT="$empty_cache" VBW_TMP_ROOT="$empty_tmp" CLAUDE_SESSION_ID="$failure_session_id" \
   PATH="$TEST_DIR/bin:$PATH" bash "$RESOLVER" 2>&1); then
   fail "fatal resolver unexpectedly succeeded: $output"
 else
   status=$?
-  if [ "$status" -eq 1 ] && [ "$output" = "VBW: plugin root resolution failed. Run /vbw:doctor for diagnostics." ]; then
+  if [ "$status" -eq 1 ] && [ "$output" = "VBW: plugin root unavailable. Restart this session to recreate $failure_session_link." ]; then
     pass "fatal resolution failure preserves exit 1 and diagnostic"
   else
     fail "fatal resolution failure returned status $status and output: $output"

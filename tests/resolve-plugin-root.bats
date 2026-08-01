@@ -146,7 +146,7 @@ assert_resolved() {
   run bash "$RESOLVER"
 
   [ "$status" -eq 1 ]
-  [ "$output" = "VBW: plugin root resolution failed. Run /vbw:doctor for diagnostics." ]
+  [ "$output" = "VBW: plugin root unavailable. Restart this session to recreate $SESSION_LINK." ]
   [ ! -e "$SESSION_LINK" ]
 }
 
@@ -160,7 +160,7 @@ assert_resolved() {
   run bash "$RESOLVER"
 
   [ "$status" -eq 1 ]
-  [ "$output" = "VBW: plugin root link failed. Run /vbw:doctor for diagnostics." ]
+  [ "$output" = "VBW: plugin root link unavailable. Restart this session to recreate $SESSION_LINK." ]
   [ ! -e "$SESSION_LINK" ]
 }
 
@@ -195,7 +195,7 @@ assert_resolved() {
   run bash "$RESOLVER" --require-script phase-detect.sh
 
   [ "$status" -eq 1 ]
-  [ "$output" = "VBW: plugin root resolution failed. Run /vbw:doctor for diagnostics." ]
+  [ "$output" = "VBW: plugin root unavailable. Restart this session to recreate $SESSION_LINK." ]
   [ ! -e "$SESSION_LINK" ]
 }
 

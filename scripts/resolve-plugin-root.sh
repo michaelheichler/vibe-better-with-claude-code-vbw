@@ -38,22 +38,6 @@ case "$required_script" in
     ;;
 esac
 
-fail_resolution() {
-  if [ "$nonfatal" = true ]; then
-    exit 0
-  fi
-  echo "VBW: plugin root resolution failed. Run /vbw:doctor for diagnostics." >&2
-  exit 1
-}
-
-fail_link() {
-  if [ "$nonfatal" = true ]; then
-    exit 0
-  fi
-  echo "VBW: plugin root link failed. Run /vbw:doctor for diagnostics." >&2
-  exit 1
-}
-
 valid_root() {
   local candidate="${1:-}"
   [ -n "$candidate" ] &&
@@ -67,6 +51,23 @@ marketplaces_root="$CLAUDE_DIR/plugins/marketplaces"
 tmp_root="${VBW_TMP_ROOT:-/tmp}"
 session_key="${CLAUDE_SESSION_ID:-default}"
 session_link="$tmp_root/.vbw-plugin-root-link-${session_key}"
+
+fail_resolution() {
+  if [ "$nonfatal" = true ]; then
+    exit 0
+  fi
+  echo "VBW: plugin root unavailable. Restart this session to recreate $session_link." >&2
+  exit 1
+}
+
+fail_link() {
+  if [ "$nonfatal" = true ]; then
+    exit 0
+  fi
+  echo "VBW: plugin root link unavailable. Restart this session to recreate $session_link." >&2
+  exit 1
+}
+
 resolved_root=""
 
 if valid_root "${CLAUDE_PLUGIN_ROOT:-}"; then
