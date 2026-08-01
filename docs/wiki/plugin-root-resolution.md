@@ -42,7 +42,7 @@ Source: `scripts/resolve-plugin-root.sh`. The nine-step command cascade is imple
 6. Exact-session symlink: `/tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}`
 7. Generic `/tmp` symlink glob: `$tmp_root/.vbw-plugin-root-link-*`, first match with a valid `scripts/${required_script}`
 8. `ps axww -o args=` piped through `grep -oE -- "--plugin-dir [^ ]+"` to recover the directory passed to a local-dev `--plugin-dir` launch
-9. Fail guard: if nothing resolved, print `"VBW: plugin root resolution failed. Run /vbw:doctor for diagnostics."` to stderr and `exit 1`
+9. Fail guard: if nothing resolved, print `"VBW: plugin root unavailable. Restart this session to recreate $session_link."` to stderr and `exit 1`
 
 After resolution the helper canonicalizes the path with `cd "$resolved_root" && pwd -P`, so it survives the cache symlink being deleted mid-session, then calls `scripts/ensure-plugin-root-link.sh` to repair the exact per-session link before printing the canonical root on stdout. A failure to repair the link is itself a fatal `exit 1` in command mode.
 
@@ -56,13 +56,15 @@ RESOLVER="${SESSION_LINK}/scripts/resolve-plugin-root.sh"
 if [ ! -f "$RESOLVER" ]; then
   if [ -n "${CLAUDE_PLUGIN_ROOT:-}" ] && [ -f "${CLAUDE_PLUGIN_ROOT}/scripts/resolve-plugin-root.sh" ]; then
     RESOLVER="${CLAUDE_PLUGIN_ROOT}/scripts/resolve-plugin-root.sh"
-  else echo "VBW: plugin root resolution failed. Run /vbw:doctor for diagnostics." >&2; exit 1; fi
+  else echo "VBW: plugin root unavailable. Restart this session to recreate $SESSION_LINK." >&2; exit 1; fi
 fi
 bash "$RESOLVER" >/dev/null || exit 1
 echo "$SESSION_LINK"
 ```
 
 The trampoline reaches the helper through the deterministic session link (`$SESSION_LINK`), and falls back to `CLAUDE_PLUGIN_ROOT` only when that link is not yet a file. Because SessionStart creates the link before the first command runs (see "SessionStart bootstrap" below), the `$CLAUDE_PLUGIN_ROOT` branch is a defensive fallback for a fresh session whose SessionStart bootstrap lost the race, not the load-bearing path.
+
+Both fatal bootstrap messages print the exact session link (`/tmp/.vbw-plugin-root-link-<session-id>`) so the agent can inspect or recreate it. Restarting the session runs SessionStart again, which recreates the link before the next command.
 
 The five phase-detect preambles (`discuss.md`, `qa.md`, `resume.md`, `status.md`, `verify.md`) and `vibe.md` invoke the same helper, then run only their own phase-detect cache write, lock, and retry logic outside the helper. Their nested `_refresh_phase_detect_link` refresh blocks call the helper with `--require-script phase-detect.sh` rather than reproducing the fallback ordering themselves.
 
