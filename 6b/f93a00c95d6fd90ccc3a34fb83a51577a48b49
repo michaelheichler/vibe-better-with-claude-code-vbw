@@ -1,0 +1,27 @@
+tests/detect-team-capability.bats
+  s_cb6db6bc22a2a0::t_099d92a040d9b9 1-2,96
+  s_cb6db6bc22a2a0::t_9121f2cb8f7284 3-34,45-71,81-87,91-94
+  s_cb6db6bc22a2a0::t_101943a98b470a 88-90,95
+  s_cb6db6bc22a2a0::t_88452abf542dd9 72-80
+  s_cb6db6bc22a2a0::t_cceaa0f39f521d 35-44
+scripts/detect-team-capability.sh
+  s_cb6db6bc22a2a0::t_215ed6e5a7ad49 24
+  s_cb6db6bc22a2a0::t_d2ccb2e30296e2 1-9,11-23,25-36
+  s_cb6db6bc22a2a0::t_3272a43abed54d 10
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "6bf93a00c95d6fd90ccc3a34fb83a51577a48b49",
+  "prompts": {},
+  "sessions": {
+    "s_cb6db6bc22a2a0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "134661bc-d3bc-43f9-89e4-713aba547780",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
