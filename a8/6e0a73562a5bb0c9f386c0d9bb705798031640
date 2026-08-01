@@ -1,0 +1,74 @@
+tests/resolve-plugin-root.bats
+  s_1d0ef8928b5be8::t_3db2b4e9e0e812 149,198
+  s_1d0ef8928b5be8::t_7e114498a6f2b2 163
+scripts/resolve-plugin-root.sh
+  s_1d0ef8928b5be8::t_80496fa3d58228 54,59,67
+  s_1d0ef8928b5be8::t_5cf44078c8cb3d 51-53
+  s_60d481927a3c28::t_d4e551820224a4 41-50
+testing/verify-plugin-root-resolution.sh
+  s_1d0ef8928b5be8::t_cf0285450f0657 112
+  s_1d0ef8928b5be8::t_400c0bbc1462b6 260-261,264,269
+  s_1d0ef8928b5be8::t_1964d032ac0633 87,96-97
+commands/config.md
+  s_60d481927a3c28::t_e641bf27956268 16
+commands/debug.md
+  s_60d481927a3c28::t_4c42efad52ac3b 19
+commands/discuss.md
+  s_60d481927a3c28::t_d499a9311c6b5c 20
+commands/doctor.md
+  s_60d481927a3c28::t_6297370c3ac4de 19
+commands/fix.md
+  s_60d481927a3c28::t_697d02737df5c8 19
+commands/help.md
+  s_60d481927a3c28::t_046064137955cd 16
+commands/init.md
+  s_60d481927a3c28::t_f6f0496baa572b 31
+commands/map.md
+  s_60d481927a3c28::t_a8eb239a22df69 20
+commands/qa.md
+  s_60d481927a3c28::t_7532245de336b8 20
+commands/report.md
+  s_60d481927a3c28::t_b4c42662d9f37b 19
+commands/research.md
+  s_60d481927a3c28::t_4f3641b3e37672 20
+commands/resume.md
+  s_60d481927a3c28::t_38af72dd5a7985 20
+commands/rtk.md
+  s_60d481927a3c28::t_b1cddaf4c44dac 16
+commands/skills.md
+  s_60d481927a3c28::t_d0756c070f739f 20
+commands/status.md
+  s_60d481927a3c28::t_3f7b7e67c8c3b0 20
+commands/update.md
+  s_60d481927a3c28::t_0ca9cdd5f4a271 16
+commands/verify.md
+  s_60d481927a3c28::t_377b15846e5270 21
+commands/vibe.md
+  s_60d481927a3c28::t_44df319663b2d9 24
+commands/whats-new.md
+  s_60d481927a3c28::t_66c59c068e789a 16
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "a86e0a73562a5bb0c9f386c0d9bb705798031640",
+  "prompts": {},
+  "sessions": {
+    "s_1d0ef8928b5be8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d98ead94-2633-4e93-bfad-c8ee6f966aaa",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    },
+    "s_60d481927a3c28": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a071aedd147a602db",
+        "model": "unknown"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
