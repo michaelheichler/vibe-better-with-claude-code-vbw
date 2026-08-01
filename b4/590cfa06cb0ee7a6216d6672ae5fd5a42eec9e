@@ -1,0 +1,20 @@
+commands/map.md
+  s_0e6a41e1e30cd3::t_0500bd16f6c85d 130-153
+  s_0e6a41e1e30cd3::t_25529070bb5970 275
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "b4590cfa06cb0ee7a6216d6672ae5fd5a42eec9e",
+  "prompts": {},
+  "sessions": {
+    "s_0e6a41e1e30cd3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2f5acbb2-f08e-44f2-bc94-ad94397dd129",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
