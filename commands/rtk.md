@@ -18,7 +18,7 @@ Plugin root:
 
 RTK state:
 ```json
-!`SESSION_KEY="${CLAUDE_SESSION_ID:-default}"; SESSION_LINK="/tmp/.vbw-plugin-root-link-${SESSION_KEY}"; RESOLVER="${SESSION_LINK}/scripts/resolve-plugin-root.sh"; if [ ! -f "$RESOLVER" ] && [ -n "${CLAUDE_PLUGIN_ROOT:-}" ] && [ -f "${CLAUDE_PLUGIN_ROOT}/scripts/resolve-plugin-root.sh" ]; then RESOLVER="${CLAUDE_PLUGIN_ROOT}/scripts/resolve-plugin-root.sh"; fi; ROOT=""; if [ -f "$RESOLVER" ]; then ROOT=$(bash "$RESOLVER" --nonfatal 2>/dev/null); fi; if [ -n "$ROOT" ] && bash "$ROOT/scripts/rtk-manager.sh" status --json 2>/dev/null; then exit 0; fi; echo '{"status_unavailable":true,"summary":"RTK status unavailable","next_action":"install","compatibility":"unknown"}'`
+!`R="/tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}/scripts/resolve-plugin-root.sh"; [ -f "$R" ] || R="${CLAUDE_PLUGIN_ROOT:-}/scripts/resolve-plugin-root.sh"; ROOT=""; if [ -f "$R" ]; then ROOT=$(bash "$R" --nonfatal 2>/dev/null); fi; if [ -n "$ROOT" ] && bash "$ROOT/scripts/rtk-manager.sh" status --json 2>/dev/null; then exit 0; fi; echo '{"status_unavailable":true,"summary":"RTK status unavailable","next_action":"install","compatibility":"unknown"}'`
 ```
 
 AskUserQuestion reference: @${CLAUDE_PLUGIN_ROOT}/references/ask-user-question.md
@@ -28,7 +28,7 @@ AskUserQuestion reference: @${CLAUDE_PLUGIN_ROOT}/references/ask-user-question.m
 - Store the Plugin root output above as `{plugin-root}`.
 - Do not run RTK install, update, hook activation, or uninstall unless the user explicitly invoked the matching RTK subcommand or confirmed the no-args menu.
 - `/vbw:rtk install` and no-args install/repair selections are explicit consent for complete setup: binary install, RTK config bootstrap, Claude Code hook activation, and hook verification/fallback.
-- `/vbw:rtk init` is explicit consent for setup/repair of Claude Code RTK integration for an RTK binary already on PATH; it does not install or update the binary, but may validate the RTK CLI and bootstrap RTK config when missing.
+- `/vbw:rtk init` is explicit consent for setup/repair of Claude Code RTK integration for an RTK binary already on PATH. It does not install or update the binary, but may validate the RTK CLI and bootstrap RTK config when missing.
 - Keep separate confirmation for destructive or ambiguous manage flows such as update and uninstall.
 - Default `status` is read-only and offline. Only `status --check-updates`, `install`, or `update` may query GitHub release metadata.
 - Managed setup must not use `sudo`, edit shell profiles, or pipe downloaded scripts into `sh`.
@@ -43,7 +43,7 @@ If no subcommand is provided, use the RTK state JSON to present one bounded AskU
 
 - header: `RTK setup`
 - question: `What do you want to do?`
-- options: choose 2–4 relevant visible options only:
+- options: choose 2-4 relevant visible options only:
   - `Install or repair RTK setup` first when `status_unavailable=true`
   - `Install RTK and enable Claude hook` first when `rtk_present=false`
   - `Verify RTK/VBW coexistence` second when `status_unavailable=true` or `rtk_present=false`
@@ -85,13 +85,13 @@ For `/vbw:rtk install` or a no-args install/repair selection, first run the dry-
 bash "{plugin-root}/scripts/rtk-manager.sh" install --dry-run
 ```
 
-The install preflight must show compact lines for `Method`, `Will run`, `Writes`, `Fallback`, `Restart`, `Risk`, and `Next step`. State once that the explicit subcommand or selected install/repair option is consent for binary install plus hook setup. Then run exactly one mutating helper command; do not ask a second install question:
+The install preflight must show compact lines for `Method`, `Will run`, `Writes`, `Fallback`, `Restart`, `Risk`, and `Next step`. State once that the explicit subcommand or selected install/repair option is consent for binary install plus hook setup. Then run exactly one mutating helper command and do not ask a second install question:
 
 ```bash
 bash "{plugin-root}/scripts/rtk-manager.sh" install --yes
 ```
 
-If the helper prints a PATH note, show it as optional guidance for future manual `rtk` shell usage. Do not treat off-`PATH` as a setup blocker; the helper must complete setup with the selected binary path or fail clearly.
+If the helper prints a PATH note, show it as optional guidance for future manual `rtk` shell usage. Do not treat off-`PATH` as a setup blocker. The helper must complete setup with the selected binary path or fail clearly.
 
 For `/vbw:rtk update`, first run the dry-run preflight and show it verbatim:
 
@@ -129,7 +129,7 @@ First inspect deterministic helper state:
 bash "{plugin-root}/scripts/rtk-manager.sh" verify --json
 ```
 
-If `compatibility="verified"` and `proof_source` is concrete, run the human-readable verifier and report the runtime proof. Keep any `diagnostic_caveat` or `upstream_issue` as diagnostic detail only; a valid proof quiets normal warning noise for this local setup.
+If `compatibility="verified"` and `proof_source` is concrete, run the human-readable verifier and report the runtime proof. Keep any `diagnostic_caveat` or `upstream_issue` as diagnostic detail only. A valid proof quiets normal warning noise for this local setup.
 
 ```bash
 bash "{plugin-root}/scripts/rtk-manager.sh" verify

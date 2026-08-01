@@ -167,11 +167,16 @@ do
   fi
 done
 
-if grep -Fq -- '--nonfatal' "$COMMANDS_DIR/rtk.md" &&
-  grep -Fq '"status_unavailable":true' "$COMMANDS_DIR/rtk.md"; then
-  pass "rtk.md preserves nonfatal status_unavailable behavior"
+rtk_state=$(grep -A2 -m1 '^RTK state:$' "$COMMANDS_DIR/rtk.md" || true)
+if grep -Fq "$session_link_path" <<< "$rtk_state" &&
+  grep -Fq "$session_id_fallback" <<< "$rtk_state" &&
+  grep -Fq "$root_fallback" <<< "$rtk_state" &&
+  grep -Fq 'if [ -f "$R" ]; then ROOT=$(bash "$R" --nonfatal 2>/dev/null); fi' <<< "$rtk_state" &&
+  grep -Fq '"status_unavailable":true' <<< "$rtk_state" &&
+  ! grep -Fq "$unreachable_helper_message" <<< "$rtk_state"; then
+  pass "rtk.md preserves compact nonfatal status_unavailable behavior"
 else
-  fail "rtk.md is missing --nonfatal or status_unavailable"
+  fail "rtk.md is missing its guarded nonfatal locator or status_unavailable fallback"
 fi
 
 legacy_temp_matches=$(grep -nE 'cat /tmp/\.vbw-plugin-root([^-/]|$)|printf.*> /tmp/\.vbw-plugin-root([^-/]|$)' \
