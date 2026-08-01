@@ -1,0 +1,22 @@
+tests/infer-project-context.bats
+  s_0e6a41e1e30cd3::t_f8ce79a2f831cc 40-53
+  s_0e6a41e1e30cd3::t_ee73feea99f875 18-36
+  s_0e6a41e1e30cd3::t_98e90272e84fc9 1-17,37-39,54-56,64-105
+  s_0e6a41e1e30cd3::t_3f67bfdd9e1467 57-63
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "b652a8b4a2044ebc225b887bdbc7be56d56cc245",
+  "prompts": {},
+  "sessions": {
+    "s_0e6a41e1e30cd3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2f5acbb2-f08e-44f2-bc94-ad94397dd129",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
