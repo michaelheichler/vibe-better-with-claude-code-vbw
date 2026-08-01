@@ -79,20 +79,46 @@ else
   fail "command classification count mismatch: $tracked_count tracked, $classified_count classified"
 fi
 
-trampoline_prefix='SESSION_KEY="${CLAUDE_SESSION_ID:-default}"; SESSION_LINK="/tmp/.vbw-plugin-root-link-${SESSION_KEY}"; RESOLVER="${SESSION_LINK}/scripts/resolve-plugin-root.sh"'
-fallback_guard='[ -n "${CLAUDE_PLUGIN_ROOT:-}" ] && [ -f "${CLAUDE_PLUGIN_ROOT}/scripts/resolve-plugin-root.sh" ]'
+session_link_path='/tmp/.vbw-plugin-root-link-'
+session_id_fallback='${CLAUDE_SESSION_ID:-default}'
+root_fallback='${CLAUDE_PLUGIN_ROOT:-}/scripts/resolve-plugin-root.sh'
+resolver_path='scripts/resolve-plugin-root.sh'
+helper_execution='bash "$R"'
+unreachable_helper_message='VBW: plugin root resolution failed. Run /vbw:doctor for diagnostics.'
 
-# Invariant: every visited target has the shared trampoline. Variant: unvisited target files.
+has_semantic_trampoline() {
+  local preamble="$1"
+  grep -Fq "$session_link_path" <<< "$preamble" &&
+    grep -Fq "$session_id_fallback" <<< "$preamble" &&
+    grep -Fq "$root_fallback" <<< "$preamble" &&
+    grep -Fq "$resolver_path" <<< "$preamble" &&
+    grep -Fq "$helper_execution" <<< "$preamble" &&
+    grep -Fq "$unreachable_helper_message" <<< "$preamble"
+}
+
+# Invariant: every processed target has one semantic-contract result. Variant: unvisited target files.
 for file in "${TARGET_FILES[@]}"; do
   base=$(basename "$file")
-  if grep -Fq "$trampoline_prefix" "$file" &&
-    grep -Fq "$fallback_guard" "$file" &&
-    grep -Fq 'bash "$RESOLVER"' "$file"; then
+  preamble=$(grep -A2 -m1 '^Plugin root:$' "$file" || true)
+  if has_semantic_trampoline "$preamble"; then
     pass "$base: delegates its preamble to resolve-plugin-root.sh"
   else
     fail "$base: missing the shared resolver trampoline contract"
   fi
 done
+
+bare_error_preamble='!`L="/tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}"; R="$L/scripts/resolve-plugin-root.sh"; R="${CLAUDE_PLUGIN_ROOT:-}/scripts/resolve-plugin-root.sh"; bash "$R"; echo "VBW: plugin root resolution failed"`'
+missing_fallback_preamble='!`L="/tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}"; R="$L/scripts/resolve-plugin-root.sh"; bash "$R"; echo "VBW: plugin root resolution failed. Run /vbw:doctor for diagnostics."`'
+if has_semantic_trampoline "$bare_error_preamble"; then
+  fail "semantic contract accepts the legacy bare error"
+else
+  pass "semantic contract rejects the legacy bare error"
+fi
+if has_semantic_trampoline "$missing_fallback_preamble"; then
+  fail "semantic contract accepts a missing CLAUDE_PLUGIN_ROOT fallback"
+else
+  pass "semantic contract rejects a missing CLAUDE_PLUGIN_ROOT fallback"
+fi
 
 legacy_matches=$(grep -nE 'plugins/marketplaces|ps axww|VBW_CACHE_ROOT=|sort -t\.|grep -oE -- "--plugin-dir' \
   "${TARGET_FILES[@]}" "$EXECUTE_PROTOCOL" 2>/dev/null || true)
