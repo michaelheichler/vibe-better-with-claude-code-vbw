@@ -11,7 +11,6 @@ teardown() {
 }
 
 @test "domain-research.md has 4 required sections" {
-  # Simulate Scout writing research file
   cat > "$TEST_DIR/.vbw-planning/domain-research.md" <<EOF
 ## Table Stakes
 - Feature 1
@@ -27,7 +26,6 @@ teardown() {
 - Competitor 1: feature
 EOF
 
-  # Verify structure
   run grep -c "^## Table Stakes" "$TEST_DIR/.vbw-planning/domain-research.md"
   [ "$status" -eq 0 ]
   [ "$output" -eq 1 ]
@@ -42,13 +40,11 @@ EOF
   [ "$output" -eq 1 ]
 }
 
-@test "bootstrap-requirements.sh accepts optional research file" {
-  # Create discovery.json
+@test "bootstrap-requirements.sh renders object-shaped answered requirement with research" {
   cat > "$TEST_DIR/.vbw-planning/discovery.json" <<EOF
 {"answered":[{"question":"Test","answer":"Answer","category":"scope","phase":"bootstrap","date":"2026-02-13"}],"inferred":[]}
 EOF
 
-  # Create research file
   cat > "$TEST_DIR/.vbw-planning/domain-research.md" <<EOF
 ## Table Stakes
 - Authentication
@@ -63,7 +59,6 @@ EOF
 - Competitor A: feature X
 EOF
 
-  # Run with research file
   run bash "$CLAUDE_PLUGIN_ROOT/scripts/bootstrap/bootstrap-requirements.sh" \
     "$TEST_DIR/.vbw-planning/REQUIREMENTS.md" \
     "$TEST_DIR/.vbw-planning/discovery.json" \
@@ -71,41 +66,44 @@ EOF
 
   [ "$status" -eq 0 ]
   [ -f "$TEST_DIR/.vbw-planning/REQUIREMENTS.md" ]
+  run grep -F "### REQ-01: Answer" "$TEST_DIR/.vbw-planning/REQUIREMENTS.md"
+  [ "$status" -eq 0 ]
 }
 
-@test "bootstrap-requirements.sh integrates research findings into requirements" {
-  # Setup same as previous test
+@test "bootstrap-requirements.sh renders answered string without inferred requirements" {
   cat > "$TEST_DIR/.vbw-planning/discovery.json" <<EOF
-{"answered":[{"question":"What features?","answer":"User accounts","category":"scope","phase":"bootstrap","date":"2026-02-13"}],"inferred":[{"text":"User authentication","priority":"Must-have"}]}
-EOF
-
-  cat > "$TEST_DIR/.vbw-planning/domain-research.md" <<EOF
-## Table Stakes
-- User authentication (every app has this)
-
-## Common Pitfalls
-- Not handling offline mode
-
-## Architecture Patterns
-- Token-based auth
-
-## Competitor Landscape
-- App A: OAuth login
+{"answered":["Export CSV reports"],"inferred":[]}
 EOF
 
   run bash "$CLAUDE_PLUGIN_ROOT/scripts/bootstrap/bootstrap-requirements.sh" \
     "$TEST_DIR/.vbw-planning/REQUIREMENTS.md" \
-    "$TEST_DIR/.vbw-planning/discovery.json" \
-    "$TEST_DIR/.vbw-planning/domain-research.md"
+    "$TEST_DIR/.vbw-planning/discovery.json"
 
   [ "$status" -eq 0 ]
-
-  # Verify requirements were generated from inferred data
-  run grep "REQ-01: User authentication" "$TEST_DIR/.vbw-planning/REQUIREMENTS.md"
+  run grep -F "### REQ-01: Export CSV reports" "$TEST_DIR/.vbw-planning/REQUIREMENTS.md"
   [ "$status" -eq 0 ]
+  run grep -F "_(No requirements defined yet)_" "$TEST_DIR/.vbw-planning/REQUIREMENTS.md"
+  [ "$status" -eq 1 ]
+}
 
-  # Verify script consumed research file without error (annotation logic tested separately)
-  [ -f "$TEST_DIR/.vbw-planning/REQUIREMENTS.md" ]
+@test "bootstrap-requirements.sh renders mixed requirements with contiguous ids" {
+  cat > "$TEST_DIR/.vbw-planning/discovery.json" <<EOF
+{"answered":["Export CSV reports","Schedule weekly reports"],"inferred":[{"text":"Filter reports by date","priority":"Should-have"}]}
+EOF
+
+  run bash "$CLAUDE_PLUGIN_ROOT/scripts/bootstrap/bootstrap-requirements.sh" \
+    "$TEST_DIR/.vbw-planning/REQUIREMENTS.md" \
+    "$TEST_DIR/.vbw-planning/discovery.json"
+
+  [ "$status" -eq 0 ]
+  run grep -F "### REQ-01: Export CSV reports" "$TEST_DIR/.vbw-planning/REQUIREMENTS.md"
+  [ "$status" -eq 0 ]
+  run grep -F "### REQ-02: Schedule weekly reports" "$TEST_DIR/.vbw-planning/REQUIREMENTS.md"
+  [ "$status" -eq 0 ]
+  run grep -F "### REQ-03: Filter reports by date" "$TEST_DIR/.vbw-planning/REQUIREMENTS.md"
+  [ "$status" -eq 0 ]
+  run grep -c "^### REQ-" "$TEST_DIR/.vbw-planning/REQUIREMENTS.md"
+  [ "$output" -eq 3 ]
 }
 
 @test "discovery.json includes research_summary field" {
