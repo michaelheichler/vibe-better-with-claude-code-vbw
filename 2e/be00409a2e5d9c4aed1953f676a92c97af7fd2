@@ -1,0 +1,42 @@
+testing/list-contract-tests.sh
+  s_cb6db6bc22a2a0::t_7e775f3dd08ffd 8
+agents/vbw-docs.md
+  s_cb6db6bc22a2a0::t_3bee4a07b2ee67 4
+  s_cb6db6bc22a2a0::t_7188e3230c0f31 40
+  s_cb6db6bc22a2a0::t_2ccfc918fdffa6 37
+  s_cb6db6bc22a2a0::t_6bab9547c9ee6a 81
+  s_cb6db6bc22a2a0::t_74c28ed792c187 91
+  s_cb6db6bc22a2a0::t_b94213fe850ec0 16
+  s_cb6db6bc22a2a0::t_c6541c11f8d3cb 22,31
+agents/vbw-lead.md
+  s_cb6db6bc22a2a0::t_8f8e07605a3cbd 22,37
+  s_cb6db6bc22a2a0::t_62859e66da42ab 35
+  s_cb6db6bc22a2a0::t_ca64529e7af84c 4
+  s_cb6db6bc22a2a0::t_3de6c470b439c3 57
+  s_cb6db6bc22a2a0::t_4ebc36879ccafa 46
+  s_cb6db6bc22a2a0::t_a6488cc9352785 33
+  s_cb6db6bc22a2a0::t_8499aca3a33952 68
+  s_cb6db6bc22a2a0::t_cf2e95f142e8c8 83
+  s_cb6db6bc22a2a0::t_63281eb4c30f93 47
+  s_cb6db6bc22a2a0::t_7d820f0559924b 16
+  s_cb6db6bc22a2a0::t_81f946434d75d5 39
+testing/verify-agent-sendmessage-contract.sh
+  s_cb6db6bc22a2a0::t_4c4a7d4e312e8b 4-42
+  s_cb6db6bc22a2a0::t_c86dc393325390 1-3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "2ebe00409a2e5d9c4aed1953f676a92c97af7fd2",
+  "prompts": {},
+  "sessions": {
+    "s_cb6db6bc22a2a0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "134661bc-d3bc-43f9-89e4-713aba547780",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
