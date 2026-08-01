@@ -1,0 +1,23 @@
+commands/skills.md
+  s_0e6a41e1e30cd3::t_739b417179364a 65,74,86-88
+  s_0e6a41e1e30cd3::t_c7317cc6fb13ae 69,78,102
+  s_0e6a41e1e30cd3::t_77a903e116b6dd 42
+  s_0e6a41e1e30cd3::t_027c332fb15ab3 110-112
+  s_0e6a41e1e30cd3::t_5c486a1967e856 106
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "0f4e5aff4c2043a12f1c9fb770d4472cbe097dbb",
+  "prompts": {},
+  "sessions": {
+    "s_0e6a41e1e30cd3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2f5acbb2-f08e-44f2-bc94-ad94397dd129",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
