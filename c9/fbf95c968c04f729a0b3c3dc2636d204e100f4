@@ -1,0 +1,27 @@
+scripts/resolve-plugin-root.sh
+  s_1d0ef8928b5be8::t_e78ea8fc126dfc 53
+  s_1d0ef8928b5be8::t_c567c702715ca4 45
+docs/wiki/plugin-root-resolution.md
+  s_1d0ef8928b5be8::t_2a465d027f5f29 45,59
+testing/verify-plugin-root-resolution.sh
+  s_1d0ef8928b5be8::t_be2136dc6ba258 235
+tests/resolve-plugin-root.bats
+  s_1d0ef8928b5be8::t_77caa6c4d5c4d9 145,149-163
+  s_1d0ef8928b5be8::t_83fb2fcf38355b 198
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.18",
+  "base_commit_sha": "c9fbf95c968c04f729a0b3c3dc2636d204e100f4",
+  "prompts": {},
+  "sessions": {
+    "s_1d0ef8928b5be8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d98ead94-2633-4e93-bfad-c8ee6f966aaa",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
