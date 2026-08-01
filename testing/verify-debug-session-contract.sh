@@ -371,7 +371,7 @@ else
   fail "debug.md Path A missing fresh vbw-debugger implementation-owner contract"
 fi
 
-patha_teardown_line=$(first_matching_line_number "$DEBUG_PATH_A_BLOCK" '**Teardown phase — HARD GATE before any implementation:**')
+patha_teardown_line=$(first_matching_line_number "$DEBUG_PATH_A_BLOCK" '**Teardown phase, HARD GATE before any implementation:**')
 patha_zero_line=$(first_matching_line_number "$DEBUG_PATH_A_BLOCK" 'Verify: after shutdown, there must be ZERO active teammates.')
 patha_impl_line=$(first_matching_line_number "$DEBUG_PATH_A_BLOCK" 'If `RESOLUTION_OBSERVATION=needs_change`: spawn ONE fresh post-synthesis implementation owner')
 

@@ -9,6 +9,9 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 VIBE_FILE="$ROOT/commands/vibe.md"
 VALIDATOR="$ROOT/scripts/validate-uat-remediation-artifact.sh"
+SHARED_CONTRACTS="$ROOT/references/subagent-contracts.md"
+NON_TEAM_INVARIANT_TEXT='Non-team invariant: omit `team_name`, `run_in_background`, `isolation`, and all worktree cwd fields.'
+NO_TOOL_INVARIANT_TEXT='No-tool invariant: treat unavailable tools as a provisioning failure, do not advance state, and do not retry the same prompt.'
 
 PASS=0
 FAIL=0
@@ -168,8 +171,7 @@ SPAWN_ARG_BACKGROUND_RE='(^|[^[:alnum:]_])"?run_in_background"?([[:space:]]*[:=]
 SPAWN_ARG_TEAM_NAME_RE='(^|[^[:alnum:]_])"?team_name"?([[:space:]]*[:=]|[[:space:]]+"?[A-Za-z0-9_.-]+)([^[:alnum:]_.-]|$)'
 SPAWN_ARG_NAME_RE='(^|[^[:alnum:]_])"?name"?([[:space:]]*[:=]|[[:space:]]+"?[A-Za-z0-9_.-]+)([^[:alnum:]_.-]|$)'
 SPAWN_ARG_CWD_RE='(^|[^[:alnum:]_])"?(cwd|working_dir|workingDirectory|workdir)"?([[:space:]]*[:=][[:space:]]*"?([^"[:space:]]+|\{[A-Za-z0-9_:-]+\}|\$[A-Za-z_][A-Za-z0-9_]*|\$\{[A-Za-z_][A-Za-z0-9_]*\})"?|[[:space:]]+"?([./~][^"[:space:]]*|[[:alnum:]_-]+/[^"[:space:]]*|\{[A-Za-z0-9_:-]+\}|\$[A-Za-z_][A-Za-z0-9_]*|\$\{[A-Za-z_][A-Za-z0-9_]*\})"?)'
-NON_TEAM_SPAWN_SHAPE_TEXT='Non-team spawn shape: omit `team_name`, `run_in_background`, `isolation`, and worktree cwd fields (`cwd`, `working_dir`, `workingDirectory`, `workdir`)'
-LABEL_ONLY_NAME_TEXT='`name` is optional label-only metadata; never use it for routing, lifecycle state, or team semantics'
+SHARED_CONTRACTS_TEXT="$(<"$SHARED_CONTRACTS")"
 
 if [ -z "$UAT_BLOCK" ]; then
   fail "vibe.md exposes a UAT Remediation block"
@@ -197,12 +199,10 @@ check_contains "artifact contract validates legacy metadata paths directly" "$UA
 check_contains "spawn contract uses TodoWrite as sole stage progress tracker" "$UAT_BLOCK" 'TodoWrite is the only progress tracker for these stages'
 check_contains "spawn contract distinguishes work-unit delegation from stage tracking" "$UAT_BLOCK" 'TaskCreate/Agent is allowed only for real Scout/Lead/Dev work-unit delegation inside the current stage'
 check_contains "spawn contract requires plain sequential subagent calls" "$UAT_BLOCK" 'UAT remediation spawns are plain sequential subagent calls'
-check_contains "spawn contract omits team/background/isolation/cwd fields" "$UAT_BLOCK" "$NON_TEAM_SPAWN_SHAPE_TEXT"
-check_contains "spawn contract treats name as label-only metadata" "$UAT_BLOCK" "$LABEL_ONLY_NAME_TEXT"
-check_contains "plan spawn contract omits team/background/isolation/cwd fields" "$UAT_PLAN_BLOCK" "$NON_TEAM_SPAWN_SHAPE_TEXT"
-check_contains "plan spawn contract treats name as label-only metadata" "$UAT_PLAN_BLOCK" "$LABEL_ONLY_NAME_TEXT"
-check_contains "execute spawn contract omits team/background/isolation/cwd fields" "$UAT_EXECUTE_BLOCK" "$NON_TEAM_SPAWN_SHAPE_TEXT"
-check_contains "execute spawn contract treats name as label-only metadata" "$UAT_EXECUTE_BLOCK" "$LABEL_ONLY_NAME_TEXT"
+check_contains "spawn contract uses canonical non-team invariant" "$UAT_BLOCK" "$NON_TEAM_INVARIANT_TEXT"
+check_contains "plan spawn contract uses canonical non-team invariant" "$UAT_PLAN_BLOCK" "$NON_TEAM_INVARIANT_TEXT"
+check_contains "execute spawn contract uses canonical non-team invariant" "$UAT_EXECUTE_BLOCK" "$NON_TEAM_INVARIANT_TEXT"
+check_contains "shared non-team contract treats name as label-only metadata" "$SHARED_CONTRACTS_TEXT" 'The `name` field is optional label-only metadata. Never use it for routing, lifecycle state, or team semantics.'
 check_not_contains "spawn contract rejects stale no team/name ban" "$UAT_BLOCK" 'no `team_name`, `name`'
 check_not_contains "spawn contract rejects stale omit team/name ban" "$UAT_BLOCK" 'omit `team_name`, `name`'
 check_contains "spawn contract explains unreliable worktree isolation" "$UAT_BLOCK" 'Claude Code worktree isolation and spawn cwd handoffs are not reliable for this path'
@@ -210,7 +210,7 @@ check_contains "spawn contract explains unreliable cwd handoffs" "$UAT_BLOCK" 's
 check_contains "round metadata prohibition includes summary_path" "$UAT_BLOCK" 'round_dir`, `research_path`, `plan_path`, and `summary_path`'
 check_contains "failed artifact validation blocks state advance" "$UAT_BLOCK" 'STOP without advancing state'
 check_contains "UAT no-tool circuit breaker is documented" "$UAT_BLOCK" 'Subagent no-tool circuit breaker'
-check_contains "UAT no-tool breaker names unavailable tool signals" "$UAT_BLOCK" 'tools, shell/Bash, filesystem, edits, or API-session access are unavailable'
+check_contains "UAT no-tool breaker uses canonical invariant" "$UAT_BLOCK" "$NO_TOOL_INVARIANT_TEXT"
 check_not_contains "UAT no-tool breaker avoids Bash-only wording" "$UAT_BLOCK" 'tools, Bash, filesystem, edits, or API-session access are unavailable'
 check_contains "UAT no-tool breaker stops without advancing stage" "$UAT_BLOCK" 'STOP without advancing `.uat-remediation-stage`'
 check_contains "UAT no-tool breaker avoids same-prompt retry" "$UAT_BLOCK" 'do not retry the same prompt'
@@ -235,11 +235,11 @@ check_before "UAT plan no-tool guard appears before state advance" "$UAT_PLAN_BL
 check_before "UAT execute no-tool guard appears before frontmatter finalization" "$UAT_EXECUTE_BLOCK" 'If Dev returns a no-tool/tool-provisioning failure for the task' '**Frontmatter finalization:**'
 check_literal_before_regex "UAT execute no-tool guard appears before summary validation" "$UAT_EXECUTE_BLOCK" 'If Dev returns a no-tool/tool-provisioning failure for the task' 'validate-uat-remediation-artifact\.sh summary'
 check_before "UAT execute no-tool guard appears before state advance" "$UAT_EXECUTE_BLOCK" 'If Dev returns a no-tool/tool-provisioning failure for the task' 'uat-remediation-state.sh advance "$PHASE_DIR"'
-check_contains "UAT fix site applies no-tool breaker" "$FIX_BLOCK" 'If the quick-fix Dev return reports that tools, shell/Bash, filesystem, edits, or API-session access are unavailable'
+check_contains "UAT fix site applies no-tool breaker" "$FIX_BLOCK" 'Apply the no-tool circuit breaker in `references/subagent-contracts.md` to the quick-fix Dev return'
 check_contains "UAT fix no-tool breaker stops without advancing stage" "$FIX_BLOCK" 'STOP without advancing `.uat-remediation-stage`'
-check_contains "UAT fix no-tool breaker avoids same-prompt retry" "$FIX_BLOCK" 'do not retry the same prompt'
+check_contains "UAT fix no-tool breaker avoids same-prompt retry" "$FIX_BLOCK" "$NO_TOOL_INVARIANT_TEXT"
 check_contains "UAT fix no-tool breaker blocks re-verification" "$FIX_BLOCK" 'do not enter re-verification'
-check_before "UAT fix no-tool guard appears before state advance" "$FIX_BLOCK" 'If the quick-fix Dev return reports that tools, shell/Bash, filesystem, edits, or API-session access are unavailable' 'uat-remediation-state.sh advance "$PHASE_DIR"'
+check_before "UAT fix no-tool guard appears before state advance" "$FIX_BLOCK" 'Apply the no-tool circuit breaker in `references/subagent-contracts.md` to the quick-fix Dev return' 'uat-remediation-state.sh advance "$PHASE_DIR"'
 check_regex "research stage validates exact artifact" "$UAT_BLOCK" 'validate-uat-remediation-artifact\.sh research "\{round_dir\}/R\{RR\}-RESEARCH\.md"'
 check_regex "plan stage validates existing plan_path" "$UAT_BLOCK" 'validate-uat-remediation-artifact\.sh plan "\{plan_path\}"'
 check_regex "plan stage validates exact generated plan" "$UAT_BLOCK" 'validate-uat-remediation-artifact\.sh plan "\{round_dir\}/R\{RR\}-PLAN\.md"'

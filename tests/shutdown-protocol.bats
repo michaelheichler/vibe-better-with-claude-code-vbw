@@ -574,10 +574,11 @@ teardown() {
   grep -q 'Delivery format' "$PROJECT_ROOT/references/handoff-schemas.md"
 }
 
-@test "handoff-schemas.md delivery note warns about plain text" {
+@test "handoff-schemas.md delivery note points to canonical plain-text warning" {
   local section
   section=$(sed -n '/### Delivery format/,/^## /p' "$PROJECT_ROOT/references/handoff-schemas.md")
-  echo "$section" | grep -qi 'NOT satisfy\|NOT sufficient\|not plain text'
+  echo "$section" | grep -Fq 'Follow the team-shutdown contract in `references/subagent-contracts.md`.'
+  grep -Fq 'Plain text acknowledgement is NOT sufficient.' "$PROJECT_ROOT/references/subagent-contracts.md"
 }
 
 @test "compaction-instructions.sh injects shutdown protocol reminder for team agents" {
@@ -776,15 +777,11 @@ teardown() {
 }
 
 @test "shutdown recovery guidance present in all team-producing commands" {
-  # All commands that create teams must mention plain text retry, doctor cleanup,
-  # and zero-teammate verification.
-  # Note: vibe.md delegates team creation to execute-protocol.md (Plan mode uses
-  # subagents only, not teams). Only commands with inline TeamCreate need this.
   for cmd in debug.md map.md; do
     local content
-    content=$(cat "$PROJECT_ROOT/commands/$cmd")
-    echo "$content" | grep -q 'plain text' || {
-      echo "FAIL: $cmd missing plain text retry guidance"
+    content=$(<"$PROJECT_ROOT/commands/$cmd")
+    echo "$content" | grep -Fq 'Shutdown invariant: acknowledge every `shutdown_request` by calling SendMessage with `shutdown_response`, then stop.' || {
+      echo "FAIL: $cmd missing canonical shutdown invariant"
       return 1
     }
     echo "$content" | grep -q 'doctor' || {

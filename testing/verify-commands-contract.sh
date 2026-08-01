@@ -397,8 +397,8 @@ if [ "$stale_non_team_name_found" = false ]; then
 fi
 
 DEBUG_COMMAND_FILE="$COMMANDS_DIR/debug.md"
-NON_TEAM_SPAWN_SHAPE_TEXT='Non-team spawn shape: omit `team_name`, `run_in_background`, `isolation`, and worktree cwd fields (`cwd`, `working_dir`, `workingDirectory`, `workdir`)'
-LABEL_ONLY_NAME_TEXT='`name` is optional label-only metadata; never use it for routing, lifecycle state, or team semantics'
+NON_TEAM_INVARIANT_TEXT='Non-team invariant: omit `team_name`, `run_in_background`, `isolation`, and all worktree cwd fields.'
+NO_TOOL_INVARIANT_TEXT='No-tool invariant: treat unavailable tools as a provisioning failure, do not advance state, and do not retry the same prompt.'
 
 debug_path_a_block="$(awk '
   /\*\*Path A: Competing Hypotheses\*\*/ { in_block = 1 }
@@ -424,7 +424,11 @@ debug_path_b_block="$(awk '
   in_block { print }
 ' "$DEBUG_COMMAND_FILE")"
 
-debug_inline_qa_spawn_line="$(grep -F 'Spawn vbw-qa as subagent via Agent tool for debug-session verification' "$DEBUG_COMMAND_FILE" || true)"
+debug_inline_qa_spawn_block="$(awk '
+  /Spawn vbw-qa as subagent via Agent tool for debug-session verification/ { in_block = 1 }
+  in_block && /Use this payload prefix as the FIRST lines of the debug-session QA prompt/ { exit }
+  in_block { print }
+' "$DEBUG_COMMAND_FILE")"
 
 if contains_literal "$debug_path_a_block" 'there is no TeamCreate setup step' \
   && contains_literal "$debug_path_a_investigator_block" 'True-team spawn shape' \
@@ -438,31 +442,28 @@ else
 fi
 
 if contains_literal "$debug_path_a_investigator_block" 'Non-team spawn shape' \
-  || contains_literal "$debug_path_a_investigator_block" "$LABEL_ONLY_NAME_TEXT"; then
+  || contains_literal "$debug_path_a_investigator_block" "$NON_TEAM_INVARIANT_TEXT"; then
   fail "debug: Path A hypothesis investigators must not use non-team label wording"
 else
   pass "debug: Path A hypothesis investigators avoid non-team label wording"
 fi
 
-if contains_literal "$debug_path_a_implementation_block" "$NON_TEAM_SPAWN_SHAPE_TEXT" \
-  && contains_literal "$debug_path_a_implementation_block" "$LABEL_ONLY_NAME_TEXT"; then
+if contains_literal "$debug_path_a_implementation_block" "$NON_TEAM_INVARIANT_TEXT"; then
   pass "debug: Path A post-shutdown implementation owner remains non-team"
 else
   fail "debug: Path A post-shutdown implementation owner must remain non-team"
 fi
 
-if contains_literal "$debug_path_b_block" "$NON_TEAM_SPAWN_SHAPE_TEXT" \
-  && contains_literal "$debug_path_b_block" "$LABEL_ONLY_NAME_TEXT"; then
+if contains_literal "$debug_path_b_block" "$NON_TEAM_INVARIANT_TEXT"; then
   pass "debug: Path B debugger remains non-team"
 else
-  fail "debug: Path B debugger must retain non-team label wording"
+  fail "debug: Path B debugger must retain the canonical non-team invariant"
 fi
 
-if contains_literal "$debug_inline_qa_spawn_line" "$NON_TEAM_SPAWN_SHAPE_TEXT" \
-  && contains_literal "$debug_inline_qa_spawn_line" "$LABEL_ONLY_NAME_TEXT"; then
+if contains_literal "$debug_inline_qa_spawn_block" "$NON_TEAM_INVARIANT_TEXT"; then
   pass "debug: inline QA spawn remains non-team"
 else
-  fail "debug: inline QA spawn must retain non-team label wording"
+  fail "debug: inline QA spawn must retain the canonical non-team invariant"
 fi
 
 echo ""
@@ -1326,11 +1327,10 @@ fi
 
 if grep -Fq '<qa_remediation_spawn_contract>' <<< "$qa_remediation_block" \
   && grep -Fq 'QA remediation spawns are plain sequential subagent calls' <<< "$qa_remediation_block" \
-  && grep -Fq 'Non-team spawn shape: omit `team_name`, `run_in_background`, `isolation`, and worktree cwd fields (`cwd`, `working_dir`, `workingDirectory`, `workdir`)' <<< "$qa_remediation_block" \
-  && grep -Fq '`name` is optional label-only metadata; never use it for routing, lifecycle state, or team semantics' <<< "$qa_remediation_block"; then
-  pass "vibe: QA remediation has non-team spawn-shape contract"
+  && grep -Fq "$NON_TEAM_INVARIANT_TEXT" <<< "$qa_remediation_block"; then
+  pass "vibe: QA remediation has canonical non-team spawn invariant"
 else
-  fail "vibe: QA remediation missing non-team spawn-shape contract"
+  fail "vibe: QA remediation missing canonical non-team spawn invariant"
 fi
 
 if grep -Fq 'future section explicitly prepares VBW worktree targeting' <<< "$qa_remediation_block" \
@@ -1343,12 +1343,12 @@ fi
 
 if grep -Fq '<qa_remediation_no_tool_circuit_breaker>' <<< "$qa_remediation_block" \
   && grep -Fq 'After any QA remediation Lead, Dev, or QA subagent returns' <<< "$qa_remediation_block" \
-  && grep -Fq 'tools, shell/Bash, filesystem, edits, or API-session access are unavailable' <<< "$qa_remediation_block" \
+  && grep -Fq 'follow the no-tool circuit breaker in `references/subagent-contracts.md`' <<< "$qa_remediation_block" \
   && grep -Fq 'STOP without advancing `.qa-remediation-stage`' <<< "$qa_remediation_block" \
-  && grep -Fq 'do not retry the same prompt' <<< "$qa_remediation_block"; then
-  pass "vibe: QA remediation has no-tool circuit breaker"
+  && grep -Fq "$NO_TOOL_INVARIANT_TEXT" <<< "$qa_remediation_block"; then
+  pass "vibe: QA remediation has canonical no-tool circuit breaker"
 else
-  fail "vibe: QA remediation missing no-tool circuit breaker"
+  fail "vibe: QA remediation missing canonical no-tool circuit breaker"
 fi
 
 if grep -Fq 'tools, Bash, filesystem, edits, or API-session access are unavailable' <<< "$qa_remediation_block"; then
@@ -1370,12 +1370,12 @@ else
 fi
 
 if grep -Fq 'After any QA remediation Lead, Dev, or QA subagent returns' <<< "$execute_protocol_qa_remediation_block" \
-  && grep -Fq 'tools, shell/Bash, filesystem, edits, or API-session access are unavailable' <<< "$execute_protocol_qa_remediation_block" \
+  && grep -Fq 'follow the no-tool circuit breaker in `references/subagent-contracts.md`' <<< "$execute_protocol_qa_remediation_block" \
   && grep -Fq 'STOP without advancing `.qa-remediation-stage`' <<< "$execute_protocol_qa_remediation_block" \
-  && grep -Fq 'do not retry the same prompt' <<< "$execute_protocol_qa_remediation_block"; then
+  && grep -Fq "$NO_TOOL_INVARIANT_TEXT" <<< "$execute_protocol_qa_remediation_block"; then
   pass "execute-protocol: QA remediation shared no-tool breaker includes Lead"
 else
-  fail "execute-protocol: QA remediation shared no-tool breaker missing Lead or stop/no-retry wording"
+  fail "execute-protocol: QA remediation shared no-tool breaker missing Lead or canonical invariant"
 fi
 
 check_literal_before_regex "vibe: QA no-tool breaker appears before remediation state advance" "$qa_remediation_block" '<qa_remediation_no_tool_circuit_breaker>' 'qa-remediation-state\.sh.*advance'
@@ -1398,8 +1398,7 @@ if grep -Fq 'spawns exactly one Lead subagent to write `{round_dir}/R{RR}-PLAN.m
   && grep -Fq 'model: "${LEAD_MODEL}"' <<< "$qa_remediation_plan_block" \
   && grep -Fq 'maxTurns: ${LEAD_MAX_TURNS}' <<< "$qa_remediation_plan_block" \
   && grep -Fq 'omit `maxTurns` because the resolved profile is unlimited' <<< "$qa_remediation_plan_block" \
-  && grep -Fq 'Non-team spawn shape: omit `team_name`, `run_in_background`, `isolation`, and worktree cwd fields (`cwd`, `working_dir`, `workingDirectory`, `workdir`)' <<< "$qa_remediation_plan_block" \
-  && grep -Fq '`name` is optional label-only metadata; never use it for routing, lifecycle state, or team semantics' <<< "$qa_remediation_plan_block" \
+  && grep -Fq "$NON_TEAM_INVARIANT_TEXT" <<< "$qa_remediation_plan_block" \
   && grep -Fq 'Read the remediation plan template at /tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}/templates/REMEDIATION-PLAN.md' <<< "$qa_remediation_plan_block"; then
   pass "vibe: QA remediation plan stage resolves Lead settings and spawns with safe shape"
 else
@@ -1416,7 +1415,7 @@ else
 fi
 check_literal_before_literal "vibe: QA existing-plan recovery normalizes before canonical probe" "$qa_remediation_plan_block" 'normalize-plan-filenames.sh' 'If the canonical `{round_dir}/R{RR}-PLAN.md` exists after normalization'
 check_literal_before_literal "vibe: QA existing-plan recovery appears before Lead spawn" "$qa_remediation_plan_block" 'Existing-plan recovery before spawning Lead' 'spawns exactly one Lead subagent to write `{round_dir}/R{RR}-PLAN.md`'
-check_literal_before_literal "vibe: QA plan Lead spawn appears before Lead return breaker" "$qa_remediation_plan_block" 'spawns exactly one Lead subagent to write `{round_dir}/R{RR}-PLAN.md`' 'After Lead returns, apply the QA remediation no-tool circuit breaker'
+check_literal_before_literal "vibe: QA plan Lead spawn appears before Lead return breaker" "$qa_remediation_plan_block" 'spawns exactly one Lead subagent to write `{round_dir}/R{RR}-PLAN.md`' 'After Lead returns, apply the no-tool circuit breaker in `references/subagent-contracts.md`'
 
 if grep -Fq 'Normalize plan filenames before validation' <<< "$qa_remediation_plan_block" \
   && grep -Fq 'normalize-plan-filenames.sh' <<< "$qa_remediation_plan_block" \
@@ -1448,26 +1447,26 @@ else
   fail "execute-protocol: QA remediation plan may omit validator-required known-issue arrays"
 fi
 
-if grep -Fq 'After Lead returns, apply the QA remediation no-tool circuit breaker' <<< "$qa_remediation_plan_block" \
-  && grep -Fq 'If Lead reports unavailable tools, shell/Bash, filesystem, edits, or API-session access' <<< "$qa_remediation_plan_block" \
-  && grep -Fq 'After Dev returns, apply the QA remediation no-tool circuit breaker' <<< "$qa_remediation_block" \
-  && grep -Fq 'If Dev reports unavailable tools, shell/Bash, filesystem, edits, or API-session access' <<< "$qa_remediation_execute_block" \
-  && grep -Fq 'After QA returns, apply the QA remediation no-tool circuit breaker' <<< "$qa_remediation_block" \
-  && grep -Fq 'If QA reports unavailable tools, shell/Bash, filesystem, edits, or API-session access' <<< "$qa_remediation_verify_block"; then
+if grep -Fq 'After Lead returns, apply the no-tool circuit breaker in `references/subagent-contracts.md`' <<< "$qa_remediation_plan_block" \
+  && grep -Fq "$NO_TOOL_INVARIANT_TEXT" <<< "$qa_remediation_plan_block" \
+  && grep -Fq 'After Dev returns, apply the no-tool circuit breaker in `references/subagent-contracts.md`' <<< "$qa_remediation_execute_block" \
+  && grep -Fq "$NO_TOOL_INVARIANT_TEXT" <<< "$qa_remediation_execute_block" \
+  && grep -Fq 'After QA returns, apply the no-tool circuit breaker in `references/subagent-contracts.md`' <<< "$qa_remediation_verify_block" \
+  && grep -Fq "$NO_TOOL_INVARIANT_TEXT" <<< "$qa_remediation_verify_block"; then
   pass "vibe: QA remediation applies no-tool breaker at Lead, Dev, and QA return sites"
 else
   fail "vibe: QA remediation missing no-tool breaker at Lead, Dev, or QA return site"
 fi
 
-check_literal_before_regex "vibe: QA plan Lead breaker appears before plan-stage state advance" "$qa_remediation_plan_block" 'After Lead returns, apply the QA remediation no-tool circuit breaker' 'qa-remediation-state\.sh.*advance'
-check_literal_before_literal "vibe: QA plan Lead breaker appears before plan normalization" "$qa_remediation_plan_block" 'After Lead returns, apply the QA remediation no-tool circuit breaker' 'Normalize plan filenames before validation'
+check_literal_before_regex "vibe: QA plan Lead breaker appears before plan-stage state advance" "$qa_remediation_plan_block" 'After Lead returns, apply the no-tool circuit breaker in `references/subagent-contracts.md`' 'qa-remediation-state\.sh.*advance'
+check_literal_before_literal "vibe: QA plan Lead breaker appears before plan normalization" "$qa_remediation_plan_block" 'After Lead returns, apply the no-tool circuit breaker in `references/subagent-contracts.md`' 'Normalize plan filenames before validation'
 check_literal_before_literal "vibe: QA plan normalization appears before plan validation" "$qa_remediation_plan_block" 'Normalize plan filenames before validation' 'Validate the exact QA remediation plan artifact before advancing'
 check_literal_before_regex "vibe: QA plan validation appears before plan-stage state advance" "$qa_remediation_plan_block" 'validate-uat-remediation-artifact.sh plan "{round_dir}/R{RR}-PLAN.md"' 'qa-remediation-state\.sh.*advance'
 check_literal_before_literal "vibe: QA plan validation passes before state advance wording" "$qa_remediation_plan_block" 'Validate the exact QA remediation plan artifact before advancing' 'After plan validation passes, advance state'
-check_literal_before_regex "vibe: QA execute Dev breaker appears before execute-stage state advance" "$qa_remediation_execute_block" 'After Dev returns, apply the QA remediation no-tool circuit breaker' 'qa-remediation-state\.sh.*advance'
-check_literal_before_literal "vibe: QA verify breaker appears before known-issue sync" "$qa_remediation_verify_block" 'After QA returns, apply the QA remediation no-tool circuit breaker' 'track-known-issues.sh" sync-verification'
-check_literal_before_literal "vibe: QA verify breaker appears before known-issue promotion" "$qa_remediation_verify_block" 'After QA returns, apply the QA remediation no-tool circuit breaker' 'track-known-issues.sh" promote-todos'
-check_literal_before_literal "vibe: QA verify breaker appears before deterministic gate" "$qa_remediation_verify_block" 'After QA returns, apply the QA remediation no-tool circuit breaker' 'qa-result-gate.sh'
+check_literal_before_regex "vibe: QA execute Dev breaker appears before execute-stage state advance" "$qa_remediation_execute_block" 'After Dev returns, apply the no-tool circuit breaker in `references/subagent-contracts.md`' 'qa-remediation-state\.sh.*advance'
+check_literal_before_literal "vibe: QA verify breaker appears before known-issue sync" "$qa_remediation_verify_block" 'After QA returns, apply the no-tool circuit breaker in `references/subagent-contracts.md`' 'track-known-issues.sh" sync-verification'
+check_literal_before_literal "vibe: QA verify breaker appears before known-issue promotion" "$qa_remediation_verify_block" 'After QA returns, apply the no-tool circuit breaker in `references/subagent-contracts.md`' 'track-known-issues.sh" promote-todos'
+check_literal_before_literal "vibe: QA verify breaker appears before deterministic gate" "$qa_remediation_verify_block" 'After QA returns, apply the no-tool circuit breaker in `references/subagent-contracts.md`' 'qa-result-gate.sh'
 
 if grep -q 'Determine verification scope from `VERIF_PATH`' "$QA_FILE"; then
   pass "qa: standalone QA scope is tied to resolved VERIF_PATH"

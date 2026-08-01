@@ -8,6 +8,8 @@ HELPER="$ROOT/scripts/resolve-execute-delegation-mode.sh"
 GENERATE_CONTRACT="$ROOT/scripts/generate-contract.sh"
 STATE_UPDATER="$ROOT/scripts/state-updater.sh"
 EXECUTE_PROTOCOL="$ROOT/references/execute-protocol.md"
+NON_TEAM_INVARIANT_TEXT='Non-team invariant: omit `team_name`, `run_in_background`, `isolation`, and all worktree cwd fields.'
+NO_TOOL_INVARIANT_TEXT='No-tool invariant: treat unavailable tools as a provisioning failure, do not advance state, and do not retry the same prompt.'
 
 PASS=0
 FAIL=0
@@ -624,11 +626,12 @@ else
 fi
 
 if grep -Fq 'platform/tool provisioning failure' "$EXECUTE_PROTOCOL" \
-  && grep -Fq 'tools, shell/Bash, filesystem, edits, or API-session access are unavailable' "$EXECUTE_PROTOCOL" \
-  && grep -Fq 'Do not consume the normal retry budget' "$EXECUTE_PROTOCOL"; then
+  && grep -Fq 'Follow the no-tool circuit breaker in `references/subagent-contracts.md`' "$EXECUTE_PROTOCOL" \
+  && grep -Fq "$NO_TOOL_INVARIANT_TEXT" "$EXECUTE_PROTOCOL" \
+  && grep -Fq 'do not consume the normal retry budget' "$EXECUTE_PROTOCOL"; then
   pass "execute-protocol fails fast on no-tool Dev subagent returns"
 else
-  fail "execute-protocol missing no-tool Dev fail-fast return handling"
+  fail "execute-protocol missing canonical no-tool Dev fail-fast return handling"
 fi
 
 if grep -Fq 'tools, Bash, filesystem, edits, or API-session access are unavailable' "$EXECUTE_PROTOCOL"; then
@@ -679,12 +682,11 @@ fi
 
 if grep -Fq '<qa_remediation_spawn_contract>' "$EXECUTE_PROTOCOL" \
   && grep -Fq 'QA remediation uses plain sequential subagent calls' "$EXECUTE_PROTOCOL" \
-  && grep -Fq 'Non-team spawn shape: omit `team_name`, `run_in_background`, `isolation`, and worktree cwd fields (`cwd`, `working_dir`, `workingDirectory`, `workdir`)' "$EXECUTE_PROTOCOL" \
-  && grep -Fq '`name` is optional label-only metadata; never use it for routing, lifecycle state, or team semantics' "$EXECUTE_PROTOCOL" \
+  && grep -Fq "$NON_TEAM_INVARIANT_TEXT" "$EXECUTE_PROTOCOL" \
   && grep -Fq 'VBW worktree targeting is task prompt/state metadata, not a spawn isolation or cwd handoff' "$EXECUTE_PROTOCOL"; then
-  pass "execute-protocol documents QA remediation non-team spawn shape"
+  pass "execute-protocol documents QA remediation canonical non-team invariant"
 else
-  fail "execute-protocol missing QA remediation non-team spawn shape contract"
+  fail "execute-protocol missing QA remediation canonical non-team invariant"
 fi
 
 if grep -Fq 'future section explicitly prepares VBW worktree targeting' <<< "$QA_REMEDIATION_BLOCK" \
@@ -720,8 +722,7 @@ if grep -Fq 'spawns exactly one Lead subagent to write `{round_dir}/R{RR}-PLAN.m
   && grep -Fq 'model: "${LEAD_MODEL}"' <<< "$QA_REMEDIATION_PLAN_BLOCK" \
   && grep -Fq 'maxTurns: ${LEAD_MAX_TURNS}' <<< "$QA_REMEDIATION_PLAN_BLOCK" \
   && grep -Fq 'omit `maxTurns` because the resolved profile is unlimited' <<< "$QA_REMEDIATION_PLAN_BLOCK" \
-  && grep -Fq 'Non-team spawn shape: omit `team_name`, `run_in_background`, `isolation`, and worktree cwd fields (`cwd`, `working_dir`, `workingDirectory`, `workdir`)' <<< "$QA_REMEDIATION_PLAN_BLOCK" \
-  && grep -Fq '`name` is optional label-only metadata; never use it for routing, lifecycle state, or team semantics' <<< "$QA_REMEDIATION_PLAN_BLOCK" \
+  && grep -Fq "$NON_TEAM_INVARIANT_TEXT" <<< "$QA_REMEDIATION_PLAN_BLOCK" \
   && grep -Fq 'Read the remediation plan template at /tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}/templates/REMEDIATION-PLAN.md' <<< "$QA_REMEDIATION_PLAN_BLOCK"; then
   pass "execute-protocol QA remediation plan stage resolves Lead settings and spawns with safe shape"
 else
@@ -730,11 +731,11 @@ fi
 
 check_literal_before_literal "execute-protocol QA plan resolves Lead settings before using Lead model" "$QA_REMEDIATION_PLAN_BLOCK" 'resolve-agent-settings.sh" lead' 'model: "${LEAD_MODEL}"'
 
-if grep -Fq 'After Lead returns, apply the QA remediation no-tool circuit breaker' <<< "$QA_REMEDIATION_PLAN_BLOCK" \
-  && grep -Fq 'If Lead reports unavailable tools, shell/Bash, filesystem, edits, or API-session access' <<< "$QA_REMEDIATION_PLAN_BLOCK"; then
-  pass "execute-protocol QA remediation applies shell/Bash no-tool handling at Lead return site"
+if grep -Fq 'After Lead returns, apply the no-tool circuit breaker in `references/subagent-contracts.md`' <<< "$QA_REMEDIATION_PLAN_BLOCK" \
+  && grep -Fq "$NO_TOOL_INVARIANT_TEXT" <<< "$QA_REMEDIATION_PLAN_BLOCK"; then
+  pass "execute-protocol QA remediation applies canonical no-tool handling at Lead return site"
 else
-  fail "execute-protocol QA remediation Lead return site missing shell/Bash no-tool handling"
+  fail "execute-protocol QA remediation Lead return site missing canonical no-tool handling"
 fi
 
 if grep -Fq 'Normalize plan filenames before validation' <<< "$QA_REMEDIATION_PLAN_BLOCK" \
@@ -757,25 +758,27 @@ else
   fail "execute-protocol QA remediation plan may omit validator-required known-issue arrays"
 fi
 
-if grep -Fq 'If Dev reports unavailable tools, shell/Bash, filesystem, edits, or API-session access' <<< "$QA_REMEDIATION_EXECUTE_BLOCK" \
-  && grep -Fq 'If QA reports unavailable tools, shell/Bash, filesystem, edits, or API-session access' <<< "$QA_REMEDIATION_VERIFY_BLOCK"; then
-  pass "execute-protocol QA remediation applies shell/Bash no-tool handling at Dev and QA return sites"
+if grep -Fq 'After Dev returns, apply the no-tool circuit breaker in `references/subagent-contracts.md`' <<< "$QA_REMEDIATION_EXECUTE_BLOCK" \
+  && grep -Fq "$NO_TOOL_INVARIANT_TEXT" <<< "$QA_REMEDIATION_EXECUTE_BLOCK" \
+  && grep -Fq 'After QA returns, apply the no-tool circuit breaker in `references/subagent-contracts.md`' <<< "$QA_REMEDIATION_VERIFY_BLOCK" \
+  && grep -Fq "$NO_TOOL_INVARIANT_TEXT" <<< "$QA_REMEDIATION_VERIFY_BLOCK"; then
+  pass "execute-protocol QA remediation applies canonical no-tool handling at Dev and QA return sites"
 else
-  fail "execute-protocol QA remediation return sites missing shell/Bash no-tool handling"
+  fail "execute-protocol QA remediation return sites missing canonical no-tool handling"
 fi
 
 check_literal_before_regex "execute-protocol QA no-tool breaker appears before remediation state advance" "$QA_REMEDIATION_BLOCK" '<qa_remediation_no_tool_circuit_breaker>' 'qa-remediation-state\.sh.*advance'
 check_literal_before_literal "execute-protocol QA no-tool breaker appears before deterministic gate" "$QA_REMEDIATION_BLOCK" '<qa_remediation_no_tool_circuit_breaker>' 'qa-result-gate.sh'
-check_literal_before_literal "execute-protocol QA plan Lead spawn appears before Lead return breaker" "$QA_REMEDIATION_PLAN_BLOCK" 'spawns exactly one Lead subagent to write `{round_dir}/R{RR}-PLAN.md`' 'After Lead returns, apply the QA remediation no-tool circuit breaker'
-check_literal_before_regex "execute-protocol QA plan Lead breaker appears before plan-stage state advance" "$QA_REMEDIATION_PLAN_BLOCK" 'After Lead returns, apply the QA remediation no-tool circuit breaker' 'qa-remediation-state\.sh.*advance'
-check_literal_before_literal "execute-protocol QA plan Lead breaker appears before plan normalization" "$QA_REMEDIATION_PLAN_BLOCK" 'After Lead returns, apply the QA remediation no-tool circuit breaker' 'Normalize plan filenames before validation'
+check_literal_before_literal "execute-protocol QA plan Lead spawn appears before Lead return breaker" "$QA_REMEDIATION_PLAN_BLOCK" 'spawns exactly one Lead subagent to write `{round_dir}/R{RR}-PLAN.md`' 'After Lead returns, apply the no-tool circuit breaker in `references/subagent-contracts.md`'
+check_literal_before_regex "execute-protocol QA plan Lead breaker appears before plan-stage state advance" "$QA_REMEDIATION_PLAN_BLOCK" 'After Lead returns, apply the no-tool circuit breaker in `references/subagent-contracts.md`' 'qa-remediation-state\.sh.*advance'
+check_literal_before_literal "execute-protocol QA plan Lead breaker appears before plan normalization" "$QA_REMEDIATION_PLAN_BLOCK" 'After Lead returns, apply the no-tool circuit breaker in `references/subagent-contracts.md`' 'Normalize plan filenames before validation'
 check_literal_before_literal "execute-protocol QA plan normalization appears before plan validation" "$QA_REMEDIATION_PLAN_BLOCK" 'Normalize plan filenames before validation' 'Validate the exact QA remediation plan artifact before advancing'
 check_literal_before_regex "execute-protocol QA plan validation appears before plan-stage state advance" "$QA_REMEDIATION_PLAN_BLOCK" 'validate-uat-remediation-artifact.sh" plan "{round_dir}/R{RR}-PLAN.md"' 'qa-remediation-state\.sh.*advance'
 check_literal_before_literal "execute-protocol QA plan validation passes before state advance wording" "$QA_REMEDIATION_PLAN_BLOCK" 'Validate the exact QA remediation plan artifact before advancing' 'After plan validation passes, advance state'
-check_literal_before_regex "execute-protocol QA execute Dev breaker appears before execute-stage state advance" "$QA_REMEDIATION_EXECUTE_BLOCK" 'After Dev returns, apply the QA remediation no-tool circuit breaker' 'qa-remediation-state\.sh.*advance'
-check_literal_before_literal "execute-protocol QA verify breaker appears before known-issue sync" "$QA_REMEDIATION_VERIFY_BLOCK" 'After QA returns, apply the QA remediation no-tool circuit breaker' 'track-known-issues.sh" sync-verification'
-check_literal_before_literal "execute-protocol QA verify breaker appears before known-issue promotion" "$QA_REMEDIATION_VERIFY_BLOCK" 'After QA returns, apply the QA remediation no-tool circuit breaker' 'track-known-issues.sh" promote-todos'
-check_literal_before_literal "execute-protocol QA verify breaker appears before deterministic gate" "$QA_REMEDIATION_VERIFY_BLOCK" 'After QA returns, apply the QA remediation no-tool circuit breaker' 'qa-result-gate.sh'
+check_literal_before_regex "execute-protocol QA execute Dev breaker appears before execute-stage state advance" "$QA_REMEDIATION_EXECUTE_BLOCK" 'After Dev returns, apply the no-tool circuit breaker in `references/subagent-contracts.md`' 'qa-remediation-state\.sh.*advance'
+check_literal_before_literal "execute-protocol QA verify breaker appears before known-issue sync" "$QA_REMEDIATION_VERIFY_BLOCK" 'After QA returns, apply the no-tool circuit breaker in `references/subagent-contracts.md`' 'track-known-issues.sh" sync-verification'
+check_literal_before_literal "execute-protocol QA verify breaker appears before known-issue promotion" "$QA_REMEDIATION_VERIFY_BLOCK" 'After QA returns, apply the no-tool circuit breaker in `references/subagent-contracts.md`' 'track-known-issues.sh" promote-todos'
+check_literal_before_literal "execute-protocol QA verify breaker appears before deterministic gate" "$QA_REMEDIATION_VERIFY_BLOCK" 'After QA returns, apply the no-tool circuit breaker in `references/subagent-contracts.md`' 'qa-result-gate.sh'
 
 if grep -Fq 'When true team mode is active, pass `team_name: "vbw-phase-{NN}"` and `name: "dev-{MM}"`' "$EXECUTE_PROTOCOL" \
   && grep -Fq 'When true team mode is active, pass `team_name: "vbw-phase-{NN}"` and `name: "qa"`' "$EXECUTE_PROTOCOL"; then
