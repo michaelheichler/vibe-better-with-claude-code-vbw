@@ -1,0 +1,38 @@
+agents/vbw-qa.md
+  s_27ea496ab5a93e::t_25c073a724d415 147,149
+  s_27ea496ab5a93e::t_fb6a36a7a28749 104
+  s_27ea496ab5a93e::t_1c365c2f47b883 187-197
+  s_27ea496ab5a93e::t_141515b349d27d 15,27,39-41,75,84,88,97-99,101,116-124,143,157
+agents/vbw-dev.md
+  s_27ea496ab5a93e::t_96679913223371 48-54
+  s_27ea496ab5a93e::t_e8554a2a6b4893 133-143
+agents/vbw-docs.md
+  s_27ea496ab5a93e::t_2fb4f52780a7c5 117-127
+agents/vbw-lead.md
+  s_27ea496ab5a93e::t_ba8b7ebaa14808 126-136
+  s_27ea496ab5a93e::t_be8e892a194668 73-81
+  s_27ea496ab5a93e::t_08263002b3cb2d 50-52,54-64
+agents/vbw-debugger.md
+  s_27ea496ab5a93e::t_4d7e1561433239 53
+  s_27ea496ab5a93e::t_720ea31825d754 114-124
+  s_27ea496ab5a93e::t_015e296bbac80e 69-70,74-77,80-81
+  s_27ea496ab5a93e::t_0e8d188222ccfb 97
+agents/vbw-scout.md
+  s_27ea496ab5a93e::t_1485553e2b4db3 105-115
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "235dae0ab0322b1c29ec4d2ee857cf738cd910a6",
+  "prompts": {},
+  "sessions": {
+    "s_27ea496ab5a93e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4452c98a-815b-4051-9652-732944fc8275",
+        "model": "claude-fable-5"
+      },
+      "human_author": null
+    }
+  }
+}
