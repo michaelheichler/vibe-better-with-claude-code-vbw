@@ -135,6 +135,13 @@ normalize_agent_role() {
   return 1
 }
 
+_FG_PAYLOAD_AGENT_TYPE=$(printf '%s' "$INPUT" | jq -r '.agent_type // ""' 2>/dev/null) || _FG_PAYLOAD_AGENT_TYPE=""
+_FG_PAYLOAD_AGENT_ID=$(printf '%s' "$INPUT" | jq -r '.agent_id // ""' 2>/dev/null) || _FG_PAYLOAD_AGENT_ID=""
+_FG_PAYLOAD_HAS_AGENT=false
+if [ -n "$_FG_PAYLOAD_AGENT_TYPE" ] || [ -n "$_FG_PAYLOAD_AGENT_ID" ]; then
+  _FG_PAYLOAD_HAS_AGENT=true
+fi
+
 detect_agent_role() {
   local candidate role planning_dir
 
@@ -146,6 +153,15 @@ detect_agent_role() {
     fi
   done
 
+  for candidate in "$_FG_PAYLOAD_AGENT_TYPE" "$_FG_PAYLOAD_AGENT_ID"; do
+    [ -z "$candidate" ] && continue
+    if role=$(normalize_agent_role "$candidate"); then
+      printf '%s' "$role"
+      return 0
+    fi
+  done
+
+  [ "$_FG_PAYLOAD_HAS_AGENT" = true ] || return 1
   if [ -n "$PROJECT_ROOT" ]; then
     planning_dir="$PROJECT_ROOT/.vbw-planning"
     if command -v vbw_active_agent_current_scout >/dev/null 2>&1 && vbw_active_agent_current_scout "$planning_dir" "$INPUT"; then
@@ -422,31 +438,19 @@ fi
 #
 # Fail-open: missing/malformed/stale state files skip the guard.
 #
-# NOTE: VBW_AGENT_ROLE is NOT set by the Claude Code runtime for PreToolUse hooks.
-# Subagent detection uses .active-agent-count (written by agent-start.sh, decremented
-# by agent-stop.sh). If count > 0, at least one VBW subagent is running and this
-# hook invocation is from that subagent context — skip the orchestrator block.
-#
 # Execute team-mode bypass: teammate sessions may not trigger SubagentStart
 # hooks, so `.active-agent-count` alone is insufficient to detect them. VBW
 # therefore records the actual delegated workflow mode in the transient
 # `.delegated-workflow.json` marker. Only an active execute marker with
 # `delegation_mode="team"` gets the team-style bypass.
-if [ -z "${VBW_AGENT_ROLE:-}" ]; then
-  # Check active-agent count: if a VBW subagent is active in the current safe
-  # session, this write is from a subagent context. Other sessions' aggregate
-  # root counts are not an authority when a safe session id exists.
-  _DG_AGENT_COUNT=0
-  if command -v vbw_active_agent_current_count >/dev/null 2>&1; then
-    _DG_AGENT_COUNT=$(vbw_active_agent_current_count "$PROJECT_ROOT/.vbw-planning" "$INPUT")
-  elif [ -f "$PROJECT_ROOT/.vbw-planning/.active-agent-count" ]; then
-    _DG_AGENT_COUNT=$(cat "$PROJECT_ROOT/.vbw-planning/.active-agent-count" 2>/dev/null | tr -d '[:space:]')
-  fi
-  if echo "$_DG_AGENT_COUNT" | grep -Eq '^[0-9]+$' && [ "$_DG_AGENT_COUNT" -gt 0 ]; then
-    # VBW subagent is active in this session — allow the write
-    exit 0
-  fi
+_DG_PROJECT_ABS=$(to_abs_path "$PROJECT_ROOT")
+_DG_TARGET_ABS=$(to_abs_path "$FILE_PATH")
+_DG_TARGET_IN_PROJECT=false
+case "$_DG_TARGET_ABS" in
+  "$_DG_PROJECT_ABS"|"$_DG_PROJECT_ABS"/*) _DG_TARGET_IN_PROJECT=true ;;
+esac
 
+if [ "$_DG_TARGET_IN_PROJECT" = true ] && [ -z "${VBW_AGENT_ROLE:-}" ] && [ -z "${VBW_ACTIVE_AGENT:-}" ] && [ "$_FG_PAYLOAD_HAS_AGENT" = false ]; then
   _DELEG_FILE="$PROJECT_ROOT/.vbw-planning/.delegated-workflow.json"
   _DG_MARKER_STATUS=""
   _DG_MARKER_LIVE="false"
@@ -517,7 +521,7 @@ fi
 
 # --- V2 role isolation: check agent role against path rules ---
 # v2_role_isolation is now always enabled (graduated)
-AGENT_ROLE="${VBW_AGENT_ROLE:-}"
+AGENT_ROLE="$ACTIVE_AGENT_ROLE"
 if [ -n "$AGENT_ROLE" ]; then
   case "$AGENT_ROLE" in
     lead|architect|qa)

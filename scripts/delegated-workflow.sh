@@ -166,6 +166,10 @@ print_status_json() {
       fi
     fi
   fi
+  if [ "$live" = true ] && [ -n "${CLAUDE_SESSION_ID:-}" ] && [ "$session_id" != "${CLAUDE_SESSION_ID:-}" ]; then
+    live=false
+    reason="session_mismatch"
+  fi
 
   if command -v jq >/dev/null 2>&1; then
     jq -n \
