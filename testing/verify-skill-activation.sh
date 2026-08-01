@@ -49,10 +49,9 @@ AGENT_SKILL_CONTRACT_FILES=(
   "$ROOT/agents/vbw-docs.md"
 )
 
-SKILL_FOLLOW_UP_SENTENCE=$(cat <<'EOF'
-After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting — do not scan entire skill folders or read unrelated references.
-EOF
-)
+SKILL_FOLLOW_UP_PREFIX="After calling \`Skill(...)\`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting"
+SKILL_FOLLOW_UP_SUFFIX="do not scan entire skill folders or read unrelated references."
+SKILL_FOLLOW_UP_SENTENCE="$SKILL_FOLLOW_UP_PREFIX $(printf '\342\200\224') $SKILL_FOLLOW_UP_SUFFIX"
 
 SKILL_FOLLOW_UP_BLOCK_OPEN='<skill_follow_up_files>'
 
@@ -1662,7 +1661,7 @@ done
 # All 7 agent files have the nudge in the top-level Skill Activation section
 for agent_file in "${AGENT_SKILL_CONTRACT_FILES[@]}"; do
   agent_name=$(basename "$agent_file")
-  if grep -q 'do not scan entire skill folders or read unrelated references' "$agent_file"; then
+  if grep -qi 'do not scan entire skill folders or read unrelated references' "$agent_file"; then
     pass "$agent_name: has skill follow-up read nudge (top-level)"
   else
     fail "$agent_name: missing skill follow-up read nudge (top-level)"
@@ -1684,7 +1683,7 @@ done
 # at least twice.
 for agent_file in "${AGENT_SKILL_CONTRACT_FILES[@]}"; do
   agent_name=$(basename "$agent_file")
-  if [ "$(grep -Fc "$SKILL_FOLLOW_UP_SENTENCE" "$agent_file")" -ge 2 ]; then
+  if [ "$(grep -F "$SKILL_FOLLOW_UP_PREFIX" "$agent_file" | grep -Fic "$SKILL_FOLLOW_UP_SUFFIX")" -ge 2 ]; then
     pass "$agent_name: has runtime-local follow-up read nudge"
   else
     fail "$agent_name: missing runtime-local follow-up read nudge"
