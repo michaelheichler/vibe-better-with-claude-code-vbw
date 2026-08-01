@@ -76,7 +76,7 @@ INFERRED_COUNT=$(jq '[.inferred[]? | select((.text? // .) | type == "string" and
 } > "$OUTPUT_PATH"
 
 if [ "$RESEARCH_AVAILABLE" = true ]; then
-  DOMAIN=$(jq -r '.answered[] | select(.category=="scope") | .answer' "$DISCOVERY_JSON" | head -1 | awk '{print $1}')
+  DOMAIN=$(jq -r 'first(.answered[]? | if type == "object" then select(has("category") and has("answer") and .category == "scope" and (.answer | type == "string")) | .answer elif type == "string" then . else empty end | select(length > 0)) // ""' "$DISCOVERY_JSON" | awk '{print $1}')
   DATE=$(date +%Y-%m-%d)
   jq --arg domain "$DOMAIN" --arg date "$DATE" \
      '.research_summary = {available: true, domain: $domain, date: $date, key_findings: []}' \
