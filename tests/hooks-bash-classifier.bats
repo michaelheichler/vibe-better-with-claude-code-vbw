@@ -40,11 +40,6 @@ load test_helper
 # - notification-log.sh (Notification)
 
 setup() {
-  # This suite does not use setup_temp_dir's session isolation, but still
-  # shells out to bash-guard.sh via `bash -c`, which inherits a live
-  # Claude Code session's CLAUDE_SESSION_ID. Tests that simulate "no
-  # session id" legacy-marker scenarios need it clear; tests needing a
-  # session id set CLAUDE_SESSION_ID explicitly inline.
   unset CLAUDE_SESSION_ID 2>/dev/null || true
 
   EXPECTED_HOOK_COUNT=$(grep -c '"command":' "$PROJECT_ROOT/hooks/hooks.json")

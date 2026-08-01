@@ -40,7 +40,7 @@ teardown() {
   managed_flags=$(jq -r '.stages[].flags[]' "$CONFIG_DIR/rollout-stages.json" | sort -u)
   # Flags that are boolean but intentionally NOT rollout-managed
   # (they have no phased rollout — they're always user-configurable)
-  local unmanaged_allowlist="auto_commit auto_install_skills auto_uat branch_per_milestone caveman_commit caveman_review context_compiler debug_logging discovery_questions plain_summary require_phase_discussion skill_suggestions statusline_collapse_agent_in_tmux statusline_hide_agent_in_tmux statusline_hide_limits statusline_hide_limits_for_api_key worktree_isolation max_uat_remediation_rounds"
+  local unmanaged_allowlist="auto_commit auto_install_skills auto_uat branch_per_milestone caveman_commit caveman_review context_compiler debug_logging discovery_questions plain_summary require_phase_discussion skill_suggestions statusline_collapse_agent_in_tmux statusline_hide_agent_in_tmux statusline_hide_limits statusline_hide_limits_for_api_key worktree_isolation max_uat_remediation_rounds pipeline_research"
   for flag in $boolean_flags; do
     echo "$managed_flags" | grep -qx "$flag" && continue
     echo "$unmanaged_allowlist" | tr ' ' '\n' | grep -qx "$flag" && continue
@@ -86,13 +86,11 @@ teardown() {
 # ---------------------------------------------------------------------------
 
 @test "create_test_config includes all boolean flags from defaults.json" {
-  # Extract boolean flag names from defaults.json
   local expected_flags
   expected_flags=$(jq -r 'to_entries[] | select(.value == true or .value == false) | .key' "$CONFIG_DIR/defaults.json" | sort)
-  # Check that create_test_config's JSON block references each one
-  local helper_file="$BATS_TEST_DIRNAME/test_helper.bash"
+  create_test_config
   for flag in $expected_flags; do
-    grep -q "\"${flag}\"" "$helper_file" || {
+    jq -e --arg flag "$flag" 'has($flag)' "$TEST_TEMP_DIR/.vbw-planning/config.json" >/dev/null || {
       echo "FAIL: boolean flag '$flag' from defaults.json not in create_test_config()"
       return 1
     }

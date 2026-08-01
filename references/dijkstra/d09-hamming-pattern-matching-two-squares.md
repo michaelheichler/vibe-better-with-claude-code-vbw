@@ -87,7 +87,7 @@ x, y := 0, 0
 do x*x + y*y < r -> x, y := x + 1, y + 1 od   {now 2*x*x >= r, x = y}
 xv, yv := empty, empty
 do x*x <= r ->
-   do x*x + y*y > r -> y := y - 1 od
+   do x*x + y*y > r -> y := y-1 od
    if x*x + y*y = r -> append (x, y); x := x + 1
    [] x*x + y*y < r -> x := x + 1
    fi

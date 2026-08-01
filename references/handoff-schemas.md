@@ -7,10 +7,10 @@ V2 inter-agent messages use strict JSON schemas. Every message includes a mandat
 ```json
 {
   "id": "uuid-v4",
-  "type": "scout_findings|plan_contract|execution_update|blocker_report|qa_verdict|approval_request|approval_response|shutdown_request|shutdown_response",
+  "type": "scout_findings|plan_contract|execution_update|blocker_report|tests_ready|qa_verdict|approval_request|approval_response|shutdown_request|shutdown_response",
   "phase": 1,
   "task": "1-1-T3",
-  "author_role": "lead|dev|qa|scout|debugger|architect|docs",
+  "author_role": "lead|dev|qa|qa-author|scout|debugger|architect|docs",
   "timestamp": "2026-02-12T10:00:00Z",
   "schema_version": "2.0",
   "payload": {},
@@ -23,15 +23,16 @@ V2 inter-agent messages use strict JSON schemas. Every message includes a mandat
 | Message Type | Allowed Senders | Typical Receivers |
 |---|---|---|
 | scout_findings | scout | lead, architect |
-| plan_contract | lead, architect | dev, qa, scout |
+| plan_contract | lead, architect | dev, qa, qa-author, scout |
 | execution_update | dev, docs | lead |
 | blocker_report | dev, docs | lead |
+| tests_ready | qa-author | lead, dev |
 | debugger_report | debugger | lead |
 | qa_verdict | qa | lead |
 | approval_request | dev, lead | lead, architect |
 | approval_response | lead, architect | dev, lead |
-| shutdown_request | lead (orchestrator) | dev, qa, scout, lead, debugger, docs |
-| shutdown_response | dev, qa, scout, lead, debugger, docs | lead (orchestrator) |
+| shutdown_request | lead (orchestrator) | dev, qa, qa-author, scout, lead, debugger, docs |
+| shutdown_response | dev, qa, qa-author, scout, lead, debugger, docs | lead (orchestrator) |
 
 Unauthorized sender -> message rejected.
 
@@ -111,7 +112,7 @@ Task progress or completion update from Dev or Docs.
     "status": "complete|partial|failed",
     "commit": "abc1234",
     "files_modified": ["src/feature.js"],
-    "concerns": ["Interface changed — downstream plans may need update"],
+    "concerns": ["Interface changed. Downstream plans may need update"],
     "evidence": "All tests pass",
     "pre_existing_issues": [
       {"test": "testName", "file": "path/to/file", "error": "failure message"}
@@ -139,7 +140,7 @@ Escalation when agent is blocked and cannot proceed.
     "task_id": "1-2-T1",
     "blocker": "Dependency module from plan 1-1 not yet committed",
     "needs": "Plan 1-1 to complete first",
-    "attempted": ["Checked git log for 1-1 commits — none found"],
+    "attempted": ["Checked git log for 1-1 commits. None found"],
     "severity": "blocking|degraded|informational",
     "pre_existing_issues": [
       {"test": "testName", "file": "path/to/file", "error": "failure message"}
@@ -149,9 +150,32 @@ Escalation when agent is blocked and cannot proceed.
 ```
 If no pre-existing issues were found, omit the field or pass an empty array.
 
+## `tests_ready` (QA Author -> Lead/Dev)
+
+Failing tests committed for a plan's TDD red stage.
+
+```json
+{
+  "id": "tests-234",
+  "type": "tests_ready",
+  "phase": 1,
+  "task": "1-2",
+  "author_role": "qa-author",
+  "timestamp": "2026-02-12T10:12:00Z",
+  "schema_version": "2.0",
+  "confidence": "high",
+  "payload": {
+    "plan_id": "1-2",
+    "test_files": ["tests/feature.test.js"],
+    "failing_test_count": 2,
+    "test_command": "npx jest tests/feature.test.js"
+  }
+}
+```
+
 ## `debugger_report` (Debugger -> Lead)
 
-Diagnostic investigation report from the Debugger agent. Used in Teammate Mode when the Debugger is assigned a single hypothesis to investigate. Distinct from `blocker_report` — the Debugger's payload uses diagnostic fields, not escalation fields.
+Diagnostic investigation report from the Debugger agent. Used in Teammate Mode when the Debugger is assigned a single hypothesis to investigate. Unlike `blocker_report`, the Debugger payload uses diagnostic fields, not escalation fields.
 
 ```json
 {
@@ -176,7 +200,7 @@ Diagnostic investigation report from the Debugger agent. Used in Teammate Mode w
   }
 }
 ```
-`resolution_observation` is analysis-scoped and must be one of `already_fixed`, `needs_change`, or `inconclusive`. Use `already_fixed` only when evidence shows the current branch already contains the fix and no new code change is needed. Use `needs_change` when a code change was required or would still be required. Use `inconclusive` when the diagnosis is not yet strong enough. This field informs the orchestrator's synthesis; it does not let the Debugger own final session state.
+`resolution_observation` is analysis-scoped and must be one of `already_fixed`, `needs_change`, or `inconclusive`. Use `already_fixed` only when evidence shows the current branch already contains the fix and no new code change is needed. Use `needs_change` when a code change was required or would still be required. Use `inconclusive` when the diagnosis is not yet strong enough. This field informs the orchestrator's synthesis. It does not let the Debugger own final session state.
 For `pre_existing_issues`, if no pre-existing issues were found, omit the field or pass an empty array.
 
 ## `qa_verdict` (QA -> Lead)
@@ -327,17 +351,17 @@ Acknowledgment from a teammate that it will terminate.
 
 ### Delivery format
 
-Claude Code delivers `shutdown_request` as JSON text in the SendMessage inbox. The delivered message may not include the full V2 envelope — it may arrive as a simpler JSON object with just `type`, `id`, `from` (corresponds to `author_role` in the V2 envelope), `reason`, and `timestamp`. Agents MUST recognize `"type":"shutdown_request"` in the received message text regardless of envelope structure, and respond by **calling the SendMessage tool** with a `shutdown_response` (not plain text).
+Claude Code delivers `shutdown_request` as JSON text in the SendMessage inbox. The delivered message may not include the full V2 envelope. It may arrive as a simpler JSON object with just `type`, `id`, `from` (corresponds to `author_role` in the V2 envelope), `reason`, and `timestamp`. Agents MUST recognize `"type":"shutdown_request"` in the received message text regardless of envelope structure, and respond by **calling the SendMessage tool** with a `shutdown_response` (not plain text).
 
-On receiving `shutdown_request`: finish any in-progress tool call, **call the SendMessage tool** with `shutdown_response` (`request_id` echoed from the request, `approved: true`, `final_status`), then STOP all further work. Do NOT start new tasks, fix additional issues, or take any action after responding. After collecting all responses the team config directory is removed automatically when the session exits; there is no TeamDelete call. **Plain text acknowledgement does NOT satisfy the shutdown protocol — you MUST call the SendMessage tool.**
+On receiving `shutdown_request`: finish any in-progress tool call, **call the SendMessage tool** with `shutdown_response` (`request_id` echoed from the request, `approved: true`, `final_status`), then STOP all further work. Do NOT start new tasks, fix additional issues, or take any action after responding. After collecting all responses, the team config directory is removed automatically when the session exits. There is no TeamDelete call. **Plain text acknowledgement does NOT satisfy the shutdown protocol. You MUST call the SendMessage tool.**
 
 > **Conditional refusal:** The schema allows `approved: false` with `pending_work` describing what remains. Currently all agents are instructed to always approve. The orchestrator retries up to 3 times on rejection before proceeding. If a future agent needs to delay shutdown (e.g., mid-write to disk), update its Shutdown Handling section to allow conditional refusal with `approved: false`.
 
 ## Backward Compatibility
 
-The `v2_typed_protocol` flag is a graduated feature flag — it has been always-on since v1.20 and is stripped from configs by `migrate-config.sh`. `validate-message.sh` always validates messages against the V2 schema; there is no fail-open bypass.
+The `v2_typed_protocol` flag has been graduated and always-on since v1.20. `migrate-config.sh` strips it from configs. `validate-message.sh` always validates messages against the V2 schema. There is no fail-open bypass.
 
-Flat shutdown messages (without the full V2 envelope) are handled via **normalization**: `validate-message.sh` detects flat `shutdown_request`/`shutdown_response` messages (no `payload` key) and wraps them into V2 envelope shape before validation. This means simplified inbox delivery works — agents do not need to construct a full envelope.
+Flat shutdown messages (without the full V2 envelope) are handled via **normalization**: `validate-message.sh` detects flat `shutdown_request`/`shutdown_response` messages (no `payload` key) and wraps them into V2 envelope shape before validation. This lets agents accept simplified inbox delivery without constructing a full envelope.
 
 When receiving messages, agents should:
 1. Try to parse as V2 typed message (full envelope)

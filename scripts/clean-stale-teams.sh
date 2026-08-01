@@ -53,7 +53,6 @@ NOW=$(date +%s)
 # Pass 1: Immediately clean configless team directories (orphaned/corrupted).
 # These are definitively dead — no config.json means the platform's automatic
 # team-directory removal (on session exit) left residuals, or the orchestrator
-# rm'd config before shutdown completed. No time threshold needed.
 for team_dir in "$TEAMS_DIR"/*; do
   [ ! -d "$team_dir" ] && continue
 

@@ -100,6 +100,29 @@ PLAN
   [ "${lines[2]}" = "plans_missing_files_touched=" ]
 }
 
+@test "separates conflicts when filename and normalized id orders differ" {
+  cat > "$PHASE_DIR/9-PLAN.md" <<'PLAN'
+---
+phase: 1
+plan: 9
+files_touched: [scripts/shared.sh]
+---
+PLAN
+  cat > "$PHASE_DIR/10-PLAN.md" <<'PLAN'
+---
+phase: 1
+plan: 10
+files_touched: [scripts/shared.sh]
+---
+PLAN
+
+  run bash "$SCRIPTS_DIR/analyze-plan-conflicts.sh" "$PHASE_DIR"
+
+  [ "$status" -eq 0 ]
+  [ "${lines[0]}" = "conflict_pairs=01-09:01-10" ]
+  [ "${lines[1]}" = "disjoint_groups=01-10;01-09" ]
+}
+
 @test "fails for an unreadable phase directory" {
   run bash "$SCRIPTS_DIR/analyze-plan-conflicts.sh" "$TEST_TEMP_DIR/missing"
 

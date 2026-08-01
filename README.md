@@ -23,7 +23,7 @@
 
 ## Token efficiency by design
 
-Most of VBW is not a prompt. It is 232 shell scripts that run as plain bash subprocesses at zero model-token cost, plus per-role context that gets compiled and loaded lazily instead of dumped whole into every agent. Every phase, task, and hook is a script decision first and a model decision only when a script cannot make the call. The stack is validated by 147 bats files (3,700 test cases) alongside the contract and lint suites.
+Most of VBW is not a prompt. It is 235 shell scripts that run as plain bash subprocesses at zero model-token cost, plus per-role context that gets compiled and loaded lazily instead of dumped whole into every agent. Every phase, task, and hook is a script decision first and a model decision only when a script cannot make the call. The stack is validated by 154 BATS files (3,749 test cases) alongside the contract and lint suites.
 
 The `docs/*token-analysis*.md` reports estimate the resulting overhead with a line-count heuristic (roughly 15 tokens per markdown line). They are design estimates, not measured API benchmarks, and the stock-agent-teams baseline they compare against was measured on an older release. Treat the figures as directional, not as a guaranteed bill.
 
@@ -39,16 +39,16 @@ We would rather tell you how to catch us lying than just ask you to trust the nu
 | Claim | Category | Re-verify with |
 | :--- | :--- | :--- |
 | Slash commands (26) | Computed | `find commands -maxdepth 1 -name "*.md" \| wc -l` |
-| Agents (7) | Computed | `find agents -maxdepth 1 -name "vbw-*.md" \| wc -l` |
+| Agents (8) | Computed | `find agents -maxdepth 1 -name "vbw-*.md" \| wc -l` |
 | Hook event types (11) / handlers (30) | Computed | `jq -r '.hooks \| keys[]' hooks/hooks.json` and `jq '[.hooks[][] .hooks[]] \| length' hooks/hooks.json` |
-| Shell scripts (232, repo-wide) | Computed | `find . -path ./.git -prune -o -name "*.sh" -print \| wc -l` |
-| BATS files (147) / test cases (3,700) | Computed | `find . -name "*.bats" \| wc -l` and `grep -rh "^@test" --include="*.bats" . \| wc -l` |
-| VERSION (1.38.6) | Computed | `cat VERSION`, cross-checked with `bash scripts/bump-version.sh --verify` |
+| Shell scripts (235, repo-wide) | Computed | `find . -path ./.git -prune -o -name "*.sh" -print \| wc -l` |
+| BATS files (154) / test cases (3,749) | Computed | `find . -name "*.bats" \| wc -l` and `grep -rh "^@test" --include="*.bats" . \| wc -l` |
+| VERSION (1.38.9) | Computed | `cat VERSION`, cross-checked with `bash scripts/bump-version.sh --verify` |
 | Token-efficiency figures in `docs/*token-analysis*.md` | Estimated | Line-count heuristic against an older stock-agent-teams baseline, not a measured API benchmark. See the caveat at the top of [Token efficiency by design](#token-efficiency-by-design). |
 | Cost Optimization relative percentages | Computed | Derived from list prices in `config/model-pricing.json` (collected 2026-07-31) at an assumed 1:3 input:output ratio, not from logged billing data. Treat as directional. |
 | Benchmark tables in `references/model-profiles.md` | Sourced | Collected 2026-07-31 from Vals AI, tbench.ai, arcprize.org, LMArena, steel.dev, and llm-stats.com. Each row names its source. Re-verify after roughly six months. |
 
-Component counts above were last verified against `VERSION` 1.38.6. Reading this against a newer release? Re-run the commands in the table. Most take under a second and need only `find`, `grep`, and `jq`, all already required by this project.
+Component counts above were last verified against `VERSION` 1.38.9. Reading this against a newer release? Re-run the commands in the table. Most take under a second and need only `find`, `grep`, and `jq`, all already required by this project.
 
 Any claim in this README that is not in the table above and is not visibly marked as an estimate should be treated as unverified. Open an issue or PR to either cite a command for it or add the estimate caveat.
 
@@ -107,15 +107,15 @@ Think of it as project management for a team where the entire engineering depart
 
 Most Claude Code plugins were built for the subagent era: one main session spawning helper agents that report back and die. Much like the codebases they produce. VBW is designed from the ground up for the platform features that changed the game, and it is built to get the most out of Sonnet 5, Opus 5, and Fable:
 
-- **Agent Teams for real parallelism.** `/vbw:vibe` uses dependency-aware routing: true Dev teams are created when plans have real parallel delegate work, while linear dependency chains use serialized Dev subagents to avoid fake coordination overhead. `/vbw:map` runs 4 Scout teammates in parallel to analyze your codebase. When teams are used, this isn't "spawn a subagent and wait", it is coordinated teamwork with a shared task list and direct inter-agent communication. Agent health monitoring tracks lifecycle events, detects orphaned teammates, and recovers stuck agents via circuit breakers.
+- **Agent Teams for real parallelism.** `/vbw:vibe` uses dependency-aware routing. It creates true Dev teams when plans have real parallel delegate work, while linear dependency chains use serialized Dev subagents to avoid fake coordination overhead. A deterministic capability probe checks the current environment and Claude settings before routing. If Agent Teams are unavailable, VBW uses explicit non-team execution and records a visible `teams_disabled:<reason>` result. `/vbw:map` runs 4 Scout teammates in parallel to analyze your codebase when team support is available. Agent health monitoring tracks lifecycle events, detects orphaned teammates, and recovers stuck agents via circuit breakers.
 
 - **Native hooks for continuous verification.** 30 hooks across 11 event types run automatically: validating SUMMARY.md structure, checking commit format, validating frontmatter descriptions, gating task completion, blocking sensitive file access, enforcing plan file boundaries, managing session lifecycle, tracking agent health and cost attribution, tracking session metrics, pre-flight prompt validation, and post-compaction context verification. No more spawning a QA agent after every task. The platform enforces it, not the prompt.
 
-- **Platform-enforced tool permissions.** Each agent has `tools`/`disallowedTools` in YAML frontmatter. Dev uses a `disallowedTools` denylist that explicitly bans recursive subagent and user-question tools (`Task`, `TaskCreate`, `Agent`, `AskUserQuestion`) while leaving every other built-in and MCP tool available. Banning `Agent` is what prevents Dev from spawning teammates, so no separate team-teardown tool is needed. Scout can write research files to `.vbw-planning/` and run read-only Bash for live validation, but cannot edit existing code or spawn subagents (Edit, NotebookEdit, Task, TaskCreate, Agent are platform-denied). QA is read-only via `permissionMode: plan` and can only persist VERIFICATION.md through the deterministic `write-verification.sh` script via Bash. Sensitive file access (`.env`, credentials) is intercepted by the `security-filter` hook. Claude Code enforces these frontmatter permissions directly, not through instructions an agent might ignore during compaction.
+- **Platform-enforced tool permissions.** Each agent has `tools`/`disallowedTools` in YAML frontmatter. Dev uses a `disallowedTools` denylist that explicitly bans recursive subagent and user-question tools (`Task`, `TaskCreate`, `Agent`, `AskUserQuestion`) while leaving every other built-in and MCP tool available. Banning `Agent` prevents Dev from spawning teammates, so no separate team-teardown tool is needed. Scout can write research files to `.vbw-planning/` and run read-only Bash for live validation, but cannot edit existing code or spawn subagents or teams. QA Author writes only red-stage tests for the opt-in TDD pipeline. QA is read-only via `permissionMode: plan` and can only persist VERIFICATION.md through the deterministic `write-verification.sh` script via Bash. Sensitive file access (`.env`, credentials) is intercepted by the `security-filter` hook. Claude Code enforces these frontmatter permissions directly.
 
-- **Database safety guard.** A PreToolUse hook (`bash-guard.sh`) intercepts every Bash command before it reaches the shell and blocks known destructive patterns: `migrate:fresh`, `db:drop`, `TRUNCATE TABLE`, `FLUSHALL`, and 40+ patterns across Laravel, Rails, Django, Prisma, Knex, Sequelize, TypeORM, Drizzle, Diesel, SQLx, Ecto, raw SQL clients, Redis, MongoDB, and Docker volumes. All Bash-capable agents (Dev, QA, Lead, Debugger, Docs, and Scout) are filtered. Scout also gets read-only command-shape blocks for obvious shell writes, shell evaluation containers (`eval`, static shell `-c` forms including quoted/absolute interpreters and simple control/grouping wrappers, command/process substitution), git/API mutations, and sensitive-file reads when its role is detectable. If per-call identity is missing but VBW knows Scout is active, ambiguous calls use the same Scout-safe fallback. Impossible lifecycle role totals are degraded by discarding unreliable role markers instead of preserving stale Scout claims. `VBW_ALLOW_DESTRUCTIVE=1` and `bash_guard=false` override only the generic destructive-command classifier, not Scout-specific read-only blocks. Extend with `.vbw-planning/destructive-commands.local.txt` for project-specific patterns. See **[Database Safety Guard](docs/database-safety-guard.md)** for the full design, flowchart, and pattern list.
+- **Database safety guard.** A PreToolUse hook (`bash-guard.sh`) intercepts every Bash command before it reaches the shell and blocks known destructive patterns across supported stacks. All Bash-capable agents (Dev, QA Author, QA, Lead, Debugger, Docs, and Scout) are filtered. Scout and QA also get read-only command-shape blocks for obvious shell writes, shell evaluation containers, git and API mutations, sensitive-file reads, and raw database mutations when their role is detectable. Payload identity takes precedence over session markers, so concurrent agents do not inherit another role's restrictions. `VBW_ALLOW_DESTRUCTIVE=1` and `bash_guard=false` override only the generic destructive-command classifier, not role-specific read-only blocks. Extend with `.vbw-planning/destructive-commands.local.txt` for project-specific patterns. See **[Database Safety Guard](docs/database-safety-guard.md)** for the full design.
 
-- **Structured handoff schemas.** Agents communicate via JSON-structured SendMessage with typed schemas (`scout_findings`, `dev_progress`, `dev_blocker`, `qa_result`, `debugger_report`). No more hoping the receiving agent can parse free-form markdown. Schema definitions live in a single reference document with backward-compatible fallback to plain text.
+- **Structured handoff schemas.** Agents communicate via JSON-structured SendMessage with typed schemas (`scout_findings`, `plan_contract`, `execution_update`, `blocker_report`, `tests_ready`, `qa_verdict`, `debugger_report`). Schema definitions live in a single reference document with backward-compatible fallback to plain text.
 
 ### Solves Agent Teams limitations out of the box
 
@@ -125,9 +125,9 @@ Agent Teams are [experimental with known limitations](https://code.claude.com/do
 
 - **Task status lag.** Teammates sometimes forget to mark tasks complete. VBW's `TaskCompleted` hook treats commit matching as an advisory signal for execute-protocol tasks instead of a universal blocking gate, so manual or non-code tasks do not get stranded at `in_progress` when no commit exists or the wording diverges. The `TeammateIdle` hook runs a tiered SUMMARY.md gate: all summaries present passes immediately, conventional commit format only grants a 1-plan grace period, and 2+ missing summaries block regardless.
 
-- **Shutdown coordination.** VBW defines `shutdown_request`/`shutdown_response` schemas in the typed communication protocol. After a true team run completes, the orchestrator sends `shutdown_request` to every teammate and waits for acknowledgment. Teammate cleanup is then automatic once every teammate has stopped, so no explicit teardown tool call is required. Serialized subagent, turbo, and internal direct runs skip team shutdown because no team was created. All 6 team-participating agents (Dev, QA, Scout, Lead, Debugger, Docs) have explicit shutdown handlers with mechanical SendMessage tool-call instructions. Architect is planning-only and excluded from the shutdown protocol. If shutdown stalls or agents linger, `/vbw:doctor --cleanup` detects and cleans stale teams, orphan processes, and dangling PIDs.
+- **Shutdown coordination.** VBW defines `shutdown_request` and `shutdown_response` schemas in the typed communication protocol. After a true team run completes, the orchestrator sends `shutdown_request` to every teammate and waits for acknowledgment. The team config directory is removed automatically when the session exits, so no explicit teardown tool call is required. Serialized subagent, turbo, and internal direct runs skip team shutdown because no team was created. All 7 team-participating agents (Dev, QA Author, QA, Scout, Lead, Debugger, Docs) have explicit shutdown handlers. Architect is planning-only and excluded from the shutdown protocol. If shutdown stalls or agents linger, `/vbw:doctor --cleanup` detects and cleans stale teams, orphan processes, and dangling PIDs.
 
-- **File conflicts.** Plans decompose work into tasks with explicit file ownership. Dev teammates operate on disjoint file sets by design, enforced at runtime by the `file-guard.sh` hook that blocks writes to files not declared in the active plan.
+- **File conflicts.** Every plan declares repo-relative `files_touched` frontmatter. Before execution, `analyze-plan-conflicts.sh` compares same-wave plans. Only plans with disjoint file sets remain parallel. Overlaps and missing declarations are conservatively demoted into serialized waves. During execution, `file-guard.sh` still blocks writes outside the active plan.
 
 - **Worktree isolation.** Each Dev plan can get its own git worktree (physical filesystem isolation, not just file-list enforcement), whether execution is true-team parallel or serialized by dependencies. Six scripts handle the full lifecycle: create, merge, cleanup, status, targeting, and agent mapping. Off by default. Set `worktree_isolation` to `"on"` in config to enable. VBW uses its own `.vbw-worktrees` git worktrees through task prompt/state metadata and blocks teammate spawns that try to force Claude-side `isolation:"worktree"`, unmanaged `.claude/worktrees/agent-*` sidechain CWDs, or `.vbw-worktrees/...` spawn CWD aliases. See [Execution Model](#execution-model) for how this interacts with dependency routing and lease locks.
 
@@ -137,7 +137,7 @@ Agent Teams ship with seven known limitations. VBW addresses all of them. The ei
 
 VBW does not hardcode a model list and hope Anthropic never ships anything new. `scripts/detect-models.sh` reads the available model catalog straight out of the Claude Code binary itself, the same table the CLI uses internally, so detection is credential-free and works fully offline. It falls back to `${ANTHROPIC_BASE_URL}/v1/models` only as a last resort, when the binary yields nothing and an API key is present. The catalog is cached for an hour, keyed on the binary's path, mtime, and size, so a freshly updated Claude Code binary is picked up on the next run, not after a manual cache-bust.
 
-On top of that catalog, `scripts/resolve-agent-model.sh` resolves a model per agent per effort level: `model_overrides` beats `model_matrix` beats the `model_profile` preset (`quality`/`balanced`/`budget`). Overrides and matrix entries can be a single model id or a preference list, where the first entry present in your detected catalog wins. A parallel `reasoning_matrix`/`reasoning_overrides` axis controls per-agent reasoning effort independently of model choice, reconciled against each model's actual accepted effort values so an unsupported value never becomes a hard API error. Today that resolves to Sonnet 5, Opus 5, Fable, and Haiku 4.5 across VBW's 7 agents. When Anthropic ships the next generation, detection sees it immediately. Wiring a new model into a profile's default tier is a one-line change to `config/model-pricing.json`, not a rewrite of VBW's model-selection logic.
+On top of that catalog, `scripts/resolve-agent-model.sh` resolves a model per agent per effort level: `model_overrides` beats `model_matrix` beats the `model_profile` preset (`quality`/`balanced`/`budget`). Overrides and matrix entries can be a single model id or a preference list, where the first entry present in your detected catalog wins. A parallel `reasoning_matrix`/`reasoning_overrides` axis controls per-agent reasoning effort independently of model choice, reconciled against each model's actual accepted effort values so an unsupported value never becomes a hard API error. Today that resolves to Sonnet 5, Opus 5, Fable, and Haiku 4.5 across VBW's 8 agents. When Anthropic ships the next generation, detection sees it immediately. Wiring a new model into a profile's default tier is a one-line change to `config/model-pricing.json`, not a rewrite of VBW's model-selection logic.
 
 ### Skills.sh integration
 
@@ -236,6 +236,10 @@ Milestone (your project goal)
 - **Plans** within a phase can potentially run in parallel (see below).
 - **Tasks** within a plan always execute sequentially: one task, one commit, in order.
 
+### How Agents Plan Work
+
+Plan mode researches before the Lead writes plans. A single-faceted phase uses one Scout. When a phase has 2-4 genuinely distinct research facets, Agent Teams are available, and `prefer_teams` is not `never`, VBW runs one Scout per facet in parallel. It preserves each facet report, synthesizes a canonical phase research file, and starts one Lead only after all research is complete. Lead planning remains single-agent so plan ownership stays clear.
+
 ### How Agents Execute Work
 
 When you run `/vbw:vibe` and it enters Execute mode, the **Lead** agent orchestrates everything. It never writes code itself. It routes runnable plans to **Dev** agents. Dependency-aware routing chooses true Agent Teams only for real parallel delegate work. Otherwise it uses serialized Dev subagents.
@@ -249,15 +253,19 @@ When you run `/vbw:vibe` and it enters Execute mode, the **Lead** agent orchestr
 
 Each Dev agent reads its assigned PLAN.md and works through the tasks in order: implement → verify → commit → next task. One atomic commit per task. When all tasks are done, the Dev writes a SUMMARY.md and reports completion.
 
-**Whether plans actually run in parallel depends on their dependencies.** Each plan can declare `depends_on` in its YAML frontmatter. If Plan 02 depends on Plan 01, Dev-02 waits until Dev-01 finishes. Plans with no dependencies start immediately. In practice, the Architect often chains plans sequentially (Plan 01 → 02 → 03), which means they execute one at a time even though the mechanism supports parallelism.
+With `tdd_pipeline=true`, delegate plans use a red, green, verify sequence. QA Author writes and commits the smallest tests that fail for the expected missing behavior, then sends a `tests_ready` payload with the test paths and rerun command. Dev implements until that command passes. Normal QA keeps its standard timing and verification flow. Turbo and direct segments keep the standard execution path.
+
+With `pipeline_research=true`, a true-team run can start one Scout for phase N+1 after the first Dev wave is dispatched. This happens only when the next phase exists and has no phase research. The setting defaults to `false`.
+
+**Whether plans actually run in parallel depends on their dependencies and file sets.** Each plan declares `depends_on` and `files_touched` in YAML frontmatter. A dependency waits for its prerequisite. A same-wave file overlap, or a missing `files_touched` declaration, is demoted to a later serialized wave. Only dependency-independent plans with disjoint file sets remain parallel.
 
 After all Devs finish, the Lead runs QA (if not skipped). It shuts down a team only if the run actually used true team mode. Serialized subagent, turbo, and internal direct runs clear delegation state without a SendMessage shutdown handshake.
 
 ### Concurrency and File Conflicts
 
-File conflicts can only happen when two Dev agents work simultaneously on overlapping files, which requires two or more plans in the same phase with no `depends_on` between them that happen to modify the same files. If your plans are chained via `depends_on` (the common case), there's no concurrency and no conflict risk.
+Parallel execution requires both dependency independence and disjoint declared file sets. `analyze-plan-conflicts.sh` compares `files_touched` before agents start and splits conflicts into serialized waves. Runtime controls then enforce the selected plan boundaries.
 
-VBW provides three mechanisms to handle this: team creation (`prefer_teams`), filesystem isolation (`worktree_isolation`), and file-level locking (`lease_locks`). See [Concurrency controls](#concurrency-controls) in Configuration for full details on each mechanism and when to use them.
+VBW provides three additional concurrency controls: team creation (`prefer_teams`), filesystem isolation (`worktree_isolation`), and file-level locking (`lease_locks`). See [Concurrency controls](#concurrency-controls) in Configuration for full details on each mechanism and when to use them.
 
 ---
 
@@ -394,7 +402,7 @@ VBW can optionally manage [RTK](https://github.com/rtk-ai/rtk) setup through `/v
 
 ## The Agents
 
-VBW uses 7 specialized agents, each with native tool permissions enforced via YAML frontmatter. Three layers of control (`tools` for what they can use, `disallowedTools` for what's platform-denied, and `permissionMode` for how they interact with the session) mean they can't do what they shouldn't, which is more than can be said for most interns.
+VBW uses 8 specialized agents, each with native tool permissions enforced via YAML frontmatter. Three layers of control (`tools` for what they can use, `disallowedTools` for what's platform-denied, and `permissionMode` for how they interact with the session) mean they can't do what they shouldn't, which is more than can be said for most interns.
 
 | Agent | Role | Tools | Denied / Omitted | Mode |
 | :--- | :--- | :--- | :--- | :--- |
@@ -402,6 +410,7 @@ VBW uses 7 specialized agents, each with native tool permissions enforced via YA
 | **Architect** | Creates roadmaps and phase structure. Writes plans, not code. | Read, Glob, Grep, Write | Edit, WebFetch, Bash | `acceptEdits` |
 | **Lead** | Merges research + planning + self-review. The one who actually makes decisions. | Read, Glob, Grep, Write, Bash, WebFetch | Edit | `acceptEdits` |
 | **Dev** | Writes code, makes commits, builds things. Handle with care. | Inherited (all except denied) + MCP | Task, TaskCreate, Agent, AskUserQuestion | `acceptEdits` |
+| **QA Author** | Writes and commits failing tests for the opt-in TDD red stage. | Inherited (all except denied) + MCP | Task, TaskCreate, Agent, AskUserQuestion, NotebookEdit | `acceptEdits` |
 | **QA** | Goal-backward verification. Trusts nothing. Persists VERIFICATION.md via write-verification.sh. Write/Edit tools disallowed. | Read, Grep, Glob, Bash | Write, Edit, NotebookEdit | `plan` |
 | **Debugger** | Scientific method bug investigation. One issue, one session. | Full access | none | `acceptEdits` |
 | **Docs** | Documentation specialist. READMEs, changelogs, API docs, guides. | Read, Grep, Glob, Bash, Write, Edit | none | `acceptEdits` |
@@ -489,6 +498,7 @@ Quick reference for every key in `config/defaults.json`, in order. Click the sec
 | `visual_format` | `"unicode"` | [Display](#display) |
 | `max_tasks_per_plan` | `5` | [Agent behavior](#agent-behavior) |
 | `prefer_teams` | `"auto"` | [Concurrency controls](#concurrency-controls) |
+| `pipeline_research` | `false` | [Execution model](#execution-model) |
 | `branch_per_milestone` | `false` | [Display](#display) |
 | `plain_summary` | `true` | [Agent behavior](#agent-behavior) |
 | `active_profile` | `"default"` | [Model routing and cost](#model-routing-and-cost) |
@@ -712,7 +722,7 @@ Controls when VBW creates an Agent Team (multiple color-coded Dev agents) vs usi
 
 If `prefer_teams` requests team mode but the live tool set cannot express real team semantics, VBW now emits `⚠ Agent Teams not enabled: using non-team mode` and falls back to explicit non-team execution. It does **not** substitute plain background agents without `team_name` and pretend a team was created.
 
-This setting determines whether true team execution is allowed for delegate-eligible Execute work. With a single delegate plan or a real dependency chain, `auto` chooses serialized subagents because there is no useful parallelism. For `/vbw:debug`, `auto` is stricter: it uses **Competing Hypotheses** team mode only when the bug is both on the `thorough-effort` profile and ambiguous: think intermittent/flaky/random behavior, generic or missing error text, multiple plausible root-cause areas, or `--competing` / `--parallel`, which force the bug to count as ambiguous for routing. A clear exact-repro issue stays `Standard (single debugger)` unless those `auto` conditions are met. `--serial` forces non-ambiguous routing under `auto`. `prefer_teams=always` still uses team mode for all debug runs, and `prefer_teams=never` still disables team mode regardless of the flags. Note: Planning always uses sequential subagents (Scout → Lead), not teams. `prefer_teams` only affects Execute and debug/map modes.
+This setting determines whether true team execution is allowed for delegate-eligible Execute work. With a single delegate plan or a real dependency chain, `auto` chooses serialized subagents because there is no useful parallelism. For `/vbw:debug`, `auto` is stricter: it uses **Competing Hypotheses** team mode only when the bug is both on the `thorough-effort` profile and ambiguous: think intermittent/flaky/random behavior, generic or missing error text, multiple plausible root-cause areas, or `--competing` / `--parallel`, which force the bug to count as ambiguous for routing. A clear exact-repro issue stays `Standard (single debugger)` unless those `auto` conditions are met. `--serial` forces non-ambiguous routing under `auto`. `prefer_teams=always` still uses team mode for all debug runs, and `prefer_teams=never` still disables team mode regardless of the flags. In Plan mode, `prefer_teams` can enable parallel Scout research fan-out, but the Lead remains a single sequential subagent. Execute, debug, and map modes apply their own team routing rules.
 
 #### `worktree_isolation`: Filesystem Isolation
 

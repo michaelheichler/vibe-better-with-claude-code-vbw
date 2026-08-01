@@ -28,8 +28,10 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-# shellcheck source=lib/vbw-cache-key.sh
-. "$SCRIPT_DIR/lib/vbw-cache-key.sh"
+CACHE_KEY_LIB="$SCRIPT_DIR/lib/vbw-cache-key.sh"
+hash_path() {
+  bash -c '. "$1"; vbw_hash_path "$2"' _ "$CACHE_KEY_LIB" "$1"
+}
 
 file_content_fingerprint() {
   local file_path="$1"
@@ -43,9 +45,7 @@ file_content_fingerprint() {
   fi
 }
 
-# Model ids must be a single clean token because they land in a `model:` Task
-# param: letters, digits, dot, underscore, colon, slash, hyphen, brackets
-# (gateway ids like `provider:model-x[1m]` are valid).
+# Task model parameters accept one token, including gateway id punctuation.
 MODEL_SHAPE='^[][A-Za-z0-9._:/-]+$'
 
 # Argument parsing
@@ -81,9 +81,7 @@ if [ ! -f "$PROFILES_PATH" ]; then
   exit 1
 fi
 
-# Locate the detected-catalog cache so its fingerprint can scope the
-# resolution cache: a catalog refresh must invalidate cached resolutions.
-# Source identity mirrors detect-models.sh; no probing happens here.
+# Catalog fingerprints prevent stale model resolutions after refresh.
 _MODELS_BASE="${ANTHROPIC_BASE_URL:-https://api.anthropic.com}"
 _MODELS_BASE="${_MODELS_BASE%/}"
 _MODELS_AUTH=""
@@ -96,10 +94,9 @@ _MODELS_STAMP="0:0"
 if [ -n "$_MODELS_BIN" ]; then
   _MODELS_STAMP="$(stat -f '%m:%z' "$_MODELS_BIN" 2>/dev/null || stat -c '%Y:%s' "$_MODELS_BIN" 2>/dev/null || echo 0:0)"
 fi
-_MODELS_CACHE="/tmp/vbw-models-$(vbw_hash_path "bin:${_MODELS_BIN:-none}:${_MODELS_STAMP}|${_MODELS_AUTH:+$_MODELS_BASE}")"
+_MODELS_CACHE="/tmp/vbw-models-$(hash_path "bin:${_MODELS_BIN:-none}:${_MODELS_STAMP}|${_MODELS_AUTH:+$_MODELS_BASE}")"
 if [ -n "${VBW_MODEL_CATALOG_FILE:-}" ]; then
-  # Test hook set: it fully overrides the live cache (detect-models.sh serves
-  # it unconditionally), so fingerprint it, or "none" when it does not exist.
+  # Test catalogs override live detection, so their content must scope the cache.
   if [ -f "$VBW_MODEL_CATALOG_FILE" ]; then
     MODELS_HASH=$(file_content_fingerprint "$VBW_MODEL_CATALOG_FILE")
   else
@@ -116,7 +113,7 @@ fi
 # using different temp repos cannot collide.
 CONFIG_HASH=$(file_content_fingerprint "$CONFIG_PATH")
 PROFILES_HASH=$(file_content_fingerprint "$PROFILES_PATH")
-PATH_HASH=$(vbw_hash_path "${CONFIG_PATH}|${PROFILES_PATH}")
+PATH_HASH=$(hash_path "${CONFIG_PATH}|${PROFILES_PATH}")
 CACHE_FILE="/tmp/vbw-model-${AGENT}-${PATH_HASH}-${CONFIG_HASH}-${PROFILES_HASH}-${MODELS_HASH}"
 if [ -f "$CACHE_FILE" ]; then
   _cached=$(cat "$CACHE_FILE")
@@ -140,14 +137,12 @@ load_catalog() {
 }
 
 candidates_from() {
-  # $1 = jq filter over config.json; prints one candidate per line
+  # The jq filter emits one candidate per line.
   jq -r "($1) // empty | if type == \"array\" then .[] else . end" "$CONFIG_PATH" 2>/dev/null || true
 }
 
 pick_model() {
-  # stdin = candidate lines. Echoes the chosen model, or nothing.
-  # Arrays prefer the first entry present in the detected catalog; a single
-  # candidate (or an empty/unavailable catalog) is trusted as-is.
+  # Preference arrays require catalog matching, while single candidates are trusted.
   local first="" count=0 c chosen=""
   local all=""
   while IFS= read -r c; do
@@ -177,15 +172,12 @@ pick_model() {
 
 EFFORT=$(jq -r '.effort // "balanced"' "$CONFIG_PATH")
 
-# 1. Per-agent override
 MODEL=$(candidates_from ".model_overrides[\"$AGENT\"]" | pick_model)
 
-# 2. Agent x effort matrix (written at init from the detected catalog)
 if [ -z "$MODEL" ]; then
   MODEL=$(candidates_from ".model_matrix[\"$AGENT\"][\"$EFFORT\"]" | pick_model)
 fi
 
-# 3. Legacy profile preset
 if [ -z "$MODEL" ]; then
   PROFILE=$(jq -r '.model_profile // "quality"' "$CONFIG_PATH")
   if ! jq -e ".$PROFILE" "$PROFILES_PATH" >/dev/null 2>&1; then
@@ -195,7 +187,6 @@ if [ -z "$MODEL" ]; then
   MODEL=$(jq -r ".$PROFILE.$AGENT" "$PROFILES_PATH")
 fi
 
-# Validate final model shape
 if [[ "$MODEL" =~ $MODEL_SHAPE ]]; then
   echo "$MODEL"
   # Cache result for session reuse

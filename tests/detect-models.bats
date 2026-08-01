@@ -5,7 +5,6 @@ load test_helper
 setup() {
   setup_temp_dir
   export ANTHROPIC_BASE_URL="http://detect-models-test.invalid"
-  # Pinned so the host claude install cannot leak into assertions.
   export CLAUDE_CODE_EXECPATH="$TEST_TEMP_DIR/no-such-binary"
   unset ANTHROPIC_API_KEY ANTHROPIC_AUTH_TOKEN VBW_MODEL_CATALOG_FILE 2>/dev/null || true
   dm_cache_path
@@ -42,7 +41,6 @@ make_fake_binary() {
 
 make_fake_curl() {
   mkdir -p "$TEST_TEMP_DIR/bin"
-  # The marker file lets tests assert whether the endpoint was probed at all.
   if [ "$1" = "ok" ]; then
     cat > "$TEST_TEMP_DIR/bin/curl" <<FAKE
 #!/usr/bin/env bash
