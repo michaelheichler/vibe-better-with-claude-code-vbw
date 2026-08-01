@@ -1,0 +1,22 @@
+scripts/detect-stack.sh
+  s_0e6a41e1e30cd3::t_ac3edd1708e272 70-74,76-79,83-97,101-102,104
+  s_0e6a41e1e30cd3::t_6bb4535a49d0a8 3
+  s_0e6a41e1e30cd3::t_566d59d44a9033 154,157
+  s_0e6a41e1e30cd3::t_956bee492fb485 55-69,75,80-82
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "226a3cf1dc06b21ab2d183bc68bb73990163394f",
+  "prompts": {},
+  "sessions": {
+    "s_0e6a41e1e30cd3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2f5acbb2-f08e-44f2-bc94-ad94397dd129",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
