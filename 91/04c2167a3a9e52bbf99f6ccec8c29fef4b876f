@@ -1,0 +1,23 @@
+references/execute-protocol.md
+  s_cb6db6bc22a2a0::t_34a6a19c6fa85f 376
+  s_cb6db6bc22a2a0::t_056eccbf2a225d 377,379
+  s_cb6db6bc22a2a0::t_78a3b076b6c002 378
+config/defaults.json
+  s_cb6db6bc22a2a0::t_f26b270279a375 16
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "9104c2167a3a9e52bbf99f6ccec8c29fef4b876f",
+  "prompts": {},
+  "sessions": {
+    "s_cb6db6bc22a2a0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "134661bc-d3bc-43f9-89e4-713aba547780",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
