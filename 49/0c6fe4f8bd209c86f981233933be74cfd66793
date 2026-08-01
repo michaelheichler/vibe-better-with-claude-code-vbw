@@ -1,0 +1,24 @@
+testing/verify-skill-activation.sh
+  s_cb6db6bc22a2a0::t_8077219e78dc49 54
+  s_cb6db6bc22a2a0::t_b69a4d395e2836 1703-1706
+  s_cb6db6bc22a2a0::t_0d5b2a65dccafb 331
+  s_cb6db6bc22a2a0::t_fe0a85493f50e0 1686
+testing/verify-commands-contract.sh
+  s_cb6db6bc22a2a0::t_f3fa71989614f9 1514
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "490c6fe4f8bd209c86f981233933be74cfd66793",
+  "prompts": {},
+  "sessions": {
+    "s_cb6db6bc22a2a0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "134661bc-d3bc-43f9-89e4-713aba547780",
+        "model": "claude-fable-5"
+      },
+      "human_author": null
+    }
+  }
+}
