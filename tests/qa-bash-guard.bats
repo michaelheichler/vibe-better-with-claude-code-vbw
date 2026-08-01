@@ -41,3 +41,13 @@ teardown() {
     [[ "$output" == *"mutating gh command"* ]]
   done
 }
+
+@test "bash-guard child caller does not inherit stale Scout marker" {
+  local input
+  input=$(jq -n '{session_id:"session-A",tool_input:{command:"gh issue comment 1 --body ok"}}')
+
+  run bash -c 'CLAUDE_CODE_CHILD_SESSION=1; unset VBW_AGENT_ROLE VBW_ACTIVE_AGENT; printf "%s\n" "$1" | bash "$2"' _ \
+    "$input" "$SCRIPTS_DIR/bash-guard.sh"
+
+  [ "$status" -eq 0 ]
+}

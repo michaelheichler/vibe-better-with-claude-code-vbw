@@ -1,13 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# verify-delegation-guard.sh — Tests for orchestrator delegation guard in file-guard.sh
-#
-# Verifies that the guard:
-# - Blocks orchestrator product-file writes during delegated workflows
-# - Allows subagent writes, planning artifact writes, and turbo-mode writes
-# - Fails open on missing/malformed/stale state
-# - Does not affect non-VBW repos or repos without active delegation
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 FILE_GUARD="$ROOT/scripts/file-guard.sh"
@@ -32,10 +25,7 @@ setup_project() {
   TMPDIR_BASE=$(mktemp -d)
   PROJECT="$TMPDIR_BASE/project"
   mkdir -p "$PROJECT/.vbw-planning/phases/01-test"
-  # Minimal config — use prefer_teams=never so delegation guard stays active
-  # (tests for the subagent model; teams bypass tested separately below)
   echo '{"effort":"balanced","prefer_teams":"never"}' > "$PROJECT/.vbw-planning/config.json"
-  # Minimal PLAN so file-guard doesn't exit at the "no active plan" check
   cat > "$PROJECT/.vbw-planning/phases/01-test/01-01-PLAN.md" <<'EOF'
 ---
 title: Test Plan
@@ -43,7 +33,6 @@ files_modified:
   - src/app.js
   - src/utils.js
 ---
-# Test Plan
 EOF
 }
 
@@ -52,7 +41,6 @@ cleanup() {
 }
 trap cleanup EXIT
 
-# Helper: run file-guard with given env and input
 run_guard() {
   local project_dir="$1"
   local file_path="$2"
@@ -61,12 +49,10 @@ run_guard() {
   local input
   input=$(jq -n --arg fp "$file_path" '{"tool_input":{"file_path":$fp}}')
 
-  # Run from project dir so find_project_root works
-  # Use env to set VBW_AGENT_ROLE only when non-empty; otherwise unset it
   if [ -n "$agent_role" ]; then
-    (cd "$project_dir" && unset CLAUDE_SESSION_ID; VBW_AGENT_ROLE="$agent_role" bash "$FILE_GUARD" <<< "$input") 2>&1
+    (cd "$project_dir" && unset CLAUDE_CODE_CHILD_SESSION CLAUDE_SESSION_ID; VBW_AGENT_ROLE="$agent_role" bash "$FILE_GUARD" <<< "$input") 2>&1
   else
-    (cd "$project_dir" && unset VBW_AGENT_ROLE CLAUDE_SESSION_ID; bash "$FILE_GUARD" <<< "$input") 2>&1
+    (cd "$project_dir" && unset CLAUDE_CODE_CHILD_SESSION VBW_AGENT_ROLE CLAUDE_SESSION_ID; bash "$FILE_GUARD" <<< "$input") 2>&1
   fi
   return ${PIPESTATUS[0]}
 }
@@ -81,9 +67,9 @@ run_guard_with_session() {
   input=$(jq -n --arg sid "$session_id" --arg fp "$file_path" '{session_id:$sid,tool_input:{file_path:$fp}}')
 
   if [ -n "$agent_role" ]; then
-    (cd "$project_dir" && unset CLAUDE_SESSION_ID; VBW_AGENT_ROLE="$agent_role" bash "$FILE_GUARD" <<< "$input") 2>&1
+    (cd "$project_dir" && unset CLAUDE_CODE_CHILD_SESSION CLAUDE_SESSION_ID; VBW_AGENT_ROLE="$agent_role" bash "$FILE_GUARD" <<< "$input") 2>&1
   else
-    (cd "$project_dir" && unset VBW_AGENT_ROLE CLAUDE_SESSION_ID; bash "$FILE_GUARD" <<< "$input") 2>&1
+    (cd "$project_dir" && unset CLAUDE_CODE_CHILD_SESSION VBW_AGENT_ROLE CLAUDE_SESSION_ID; bash "$FILE_GUARD" <<< "$input") 2>&1
   fi
   return ${PIPESTATUS[0]}
 }
@@ -97,9 +83,9 @@ run_guard_from() {
   input=$(jq -n --arg fp "$file_path" '{"tool_input":{"file_path":$fp}}')
 
   if [ -n "$agent_role" ]; then
-    (cd "$working_dir" && unset VBW_CONFIG_ROOT VBW_PLANNING_DIR CLAUDE_SESSION_ID; VBW_AGENT_ROLE="$agent_role" bash "$FILE_GUARD" <<< "$input") 2>&1
+    (cd "$working_dir" && unset CLAUDE_CODE_CHILD_SESSION VBW_CONFIG_ROOT VBW_PLANNING_DIR CLAUDE_SESSION_ID; VBW_AGENT_ROLE="$agent_role" bash "$FILE_GUARD" <<< "$input") 2>&1
   else
-    (cd "$working_dir" && unset VBW_AGENT_ROLE VBW_CONFIG_ROOT VBW_PLANNING_DIR CLAUDE_SESSION_ID; bash "$FILE_GUARD" <<< "$input") 2>&1
+    (cd "$working_dir" && unset CLAUDE_CODE_CHILD_SESSION VBW_AGENT_ROLE VBW_CONFIG_ROOT VBW_PLANNING_DIR CLAUDE_SESSION_ID; bash "$FILE_GUARD" <<< "$input") 2>&1
   fi
   return ${PIPESTATUS[0]}
 }
@@ -172,7 +158,6 @@ assert_sidechain_target_message() {
 
 echo "=== Delegation Guard Tests ==="
 
-# --- Test 1: Non-VBW repo (no .vbw-planning) → no block ---
 test_non_vbw_repo() {
   local tmpdir
   tmpdir=$(mktemp -d)
@@ -189,7 +174,6 @@ test_non_vbw_repo() {
 }
 test_non_vbw_repo
 
-# --- Test 2: VBW repo, no active delegated state → no block ---
 test_no_active_state() {
   setup_project
 
@@ -202,10 +186,8 @@ test_no_active_state() {
 }
 test_no_active_state
 
-# --- Test 3: Execute path active (status: running), non-turbo, no role, product write → blocked ---
 test_execute_running_blocks() {
   setup_project
-  # Write execution state with status=running and non-turbo effort
   jq -n '{status:"running", phase:1, effort:"balanced", started_at:"2026-03-03T00:00:00Z", plans:[]}' \
     > "$PROJECT/.vbw-planning/.execution-state.json"
 
@@ -224,7 +206,6 @@ test_execute_running_blocks() {
 }
 test_execute_running_blocks
 
-# --- Test 4: Fix/debug delegated marker active, non-turbo, no role, product write → blocked ---
 test_delegated_marker_blocks() {
   setup_project
   jq -n '{mode:"fix", active:true, effort:"balanced", started_at:"2026-03-03T00:00:00Z"}' \
@@ -245,13 +226,11 @@ test_delegated_marker_blocks() {
 }
 test_delegated_marker_blocks
 
-# --- Test 5: Active delegated state, writing planning artifacts → allowed ---
 test_planning_artifacts_allowed() {
   setup_project
   jq -n '{status:"running", phase:1, effort:"balanced", started_at:"2026-03-03T00:00:00Z", plans:[]}' \
     > "$PROJECT/.vbw-planning/.execution-state.json"
 
-  # Planning artifacts are exempted early (line 58) before the guard runs
   local rc=0
   run_guard "$PROJECT" "$PROJECT/.vbw-planning/STATE.md" "" >/dev/null 2>&1 || rc=$?
   if [ "$rc" -eq 0 ]; then
@@ -263,7 +242,6 @@ test_planning_artifacts_allowed() {
 }
 test_planning_artifacts_allowed
 
-# --- Test 6: Active delegated state with turbo effort → allowed ---
 test_turbo_allowed() {
   setup_project
   echo '{"effort":"turbo","prefer_teams":"never"}' > "$PROJECT/.vbw-planning/config.json"
@@ -279,14 +257,11 @@ test_turbo_allowed() {
 }
 test_turbo_allowed
 
-# --- Test 7: Active delegated state with VBW_AGENT_ROLE=dev → allowed ---
 test_subagent_allowed() {
   setup_project
   jq -n '{status:"running", phase:1, effort:"balanced", started_at:"2026-03-03T00:00:00Z", plans:[]}' \
     > "$PROJECT/.vbw-planning/.execution-state.json"
 
-  # Subagent with role=dev — guard only fires when role is empty.
-  # The subagent will be handled by the role isolation section (dev is allowed).
   if run_guard "$PROJECT" "src/app.js" "dev" >/dev/null 2>&1; then
     pass "Active delegated state, VBW_AGENT_ROLE=dev: allowed"
   else
@@ -296,10 +271,8 @@ test_subagent_allowed() {
 }
 test_subagent_allowed
 
-# --- Test 8: Malformed/stale state files → fail-open ---
 test_malformed_state_failopen() {
   setup_project
-  # Write garbage to execution state
   echo "not json" > "$PROJECT/.vbw-planning/.execution-state.json"
 
   if run_guard "$PROJECT" "src/app.js" "" >/dev/null 2>&1; then
@@ -311,12 +284,10 @@ test_malformed_state_failopen() {
 }
 test_malformed_state_failopen
 
-# --- Test 9: Stale state file (very old mtime) → fail-open ---
 test_stale_state_failopen() {
   setup_project
   jq -n '{status:"running", phase:1, effort:"balanced", started_at:"2024-01-01T00:00:00Z", plans:[]}' \
     > "$PROJECT/.vbw-planning/.execution-state.json"
-  # Set mtime to 5 hours ago (well past 4h threshold)
   touch -t "202501010000" "$PROJECT/.vbw-planning/.execution-state.json" 2>/dev/null || true
 
   if run_guard "$PROJECT" "src/app.js" "" >/dev/null 2>&1; then
@@ -328,7 +299,6 @@ test_stale_state_failopen() {
 }
 test_stale_state_failopen
 
-# --- Test 10: Direct effort in delegated marker → allowed ---
 test_direct_effort_allowed() {
   setup_project
   jq -n '{mode:"fix", active:true, effort:"direct", started_at:"2026-03-03T00:00:00Z"}' \
@@ -343,7 +313,6 @@ test_direct_effort_allowed() {
 }
 test_direct_effort_allowed
 
-# --- Test 10b: Execute direct marker is live and allowed through effort exemption ---
 test_execute_direct_marker_allowed() {
   setup_project
   jq -n '{phase:1,status:"running",effort:"direct",correlation_id:"corr-direct",plans:[{id:"01-01",status:"pending"}]}' \
@@ -367,7 +336,6 @@ test_execute_direct_marker_allowed() {
 }
 test_execute_direct_marker_allowed
 
-# --- Test 11: Execution running with complete status → no block ---
 test_complete_status_no_block() {
   setup_project
   jq -n '{status:"complete", phase:1, effort:"balanced", started_at:"2026-03-03T00:00:00Z", plans:[]}' \
@@ -382,104 +350,109 @@ test_complete_status_no_block() {
 }
 test_complete_status_no_block
 
-# --- Test 12: delegated-workflow.sh script contract ---
-test_delegated_workflow_script() {
+new_delegated_test_dir() {
   local tmpdir
   tmpdir=$(mktemp -d)
   mkdir -p "$tmpdir/.vbw-planning"
   echo '{"effort":"balanced"}' > "$tmpdir/.vbw-planning/config.json"
+  printf '%s\n' "$tmpdir"
+}
 
-  # set action
-  (cd "$tmpdir" && bash "$DELEG_SCRIPT" set fix balanced)
-  if [ -f "$tmpdir/.vbw-planning/.delegated-workflow.json" ]; then
-    local mode
-    mode=$(jq -r '.mode' "$tmpdir/.vbw-planning/.delegated-workflow.json" 2>/dev/null)
-    if [ "$mode" = "fix" ]; then
-      pass "delegated-workflow.sh set: creates marker with correct mode"
-    else
-      fail "delegated-workflow.sh set: wrong mode ($mode)"
-    fi
-  else
-    fail "delegated-workflow.sh set: marker file not created"
-  fi
-
-  # execute team marker with runtime delegation metadata
-  jq -n '{phase:1,status:"running",effort:"balanced",correlation_id:"corr-123",plans:[]}' > "$tmpdir/.vbw-planning/.execution-state.json"
+set_live_execute_marker() {
+  local tmpdir="$1"
+  jq -n '{phase:1,status:"running",effort:"balanced",correlation_id:"corr-123",plans:[]}' \
+    > "$tmpdir/.vbw-planning/.execution-state.json"
   (cd "$tmpdir" && bash "$DELEG_SCRIPT" set execute balanced team vbw-phase-01)
-  if [ -f "$tmpdir/.vbw-planning/.delegated-workflow.json" ]; then
-    local execute_mode execute_delegation execute_team execute_correlation
-    execute_mode=$(jq -r '.mode' "$tmpdir/.vbw-planning/.delegated-workflow.json" 2>/dev/null)
-    execute_delegation=$(jq -r '.delegation_mode // ""' "$tmpdir/.vbw-planning/.delegated-workflow.json" 2>/dev/null)
-    execute_team=$(jq -r '.team_name // ""' "$tmpdir/.vbw-planning/.delegated-workflow.json" 2>/dev/null)
-    execute_correlation=$(jq -r '.correlation_id // ""' "$tmpdir/.vbw-planning/.delegated-workflow.json" 2>/dev/null)
-    if [ "$execute_mode" = "execute" ] && [ "$execute_delegation" = "team" ] && [ "$execute_team" = "vbw-phase-01" ] && [ "$execute_correlation" = "corr-123" ]; then
-      pass "delegated-workflow.sh set execute: records delegation_mode, team_name, and correlation_id"
-    else
-      fail "delegated-workflow.sh set execute: unexpected marker contents (mode=$execute_mode delegation_mode=$execute_delegation team_name=$execute_team correlation_id=$execute_correlation)"
-    fi
-  else
-    fail "delegated-workflow.sh set execute: marker file not created"
-  fi
+}
 
-  local live_status
-  live_status=$(cd "$tmpdir" && bash "$DELEG_SCRIPT" status-json)
-  if echo "$live_status" | jq -e '.live == true and .preserve_on_session_start == true and .reason == "ok"' >/dev/null 2>&1; then
-    pass "delegated-workflow.sh status-json: live execute marker validates against execution state"
+assert_delegated_status() {
+  local tmpdir="$1" filter="$2" success="$3" failure="$4" status
+  status=$(cd "$tmpdir" && bash "$DELEG_SCRIPT" status-json)
+  if echo "$status" | jq -e "$filter" >/dev/null 2>&1; then
+    pass "$success"
   else
-    fail "delegated-workflow.sh status-json: expected live execute marker, got: $live_status"
+    fail "$failure ($status)"
   fi
+}
 
-  touch -t 202001010000 "$tmpdir/.vbw-planning/.execution-state.json"
-  local stale_status
-  stale_status=$(cd "$tmpdir" && bash "$DELEG_SCRIPT" status-json)
-  if echo "$stale_status" | jq -e '.live == false and .reason == "stale_execution_state"' >/dev/null 2>&1; then
-    pass "delegated-workflow.sh status-json: stale running execution state is not treated as live"
+test_execute_marker_metadata() {
+  local tmpdir marker metadata
+  tmpdir=$(new_delegated_test_dir)
+  set_live_execute_marker "$tmpdir"
+  marker="$tmpdir/.vbw-planning/.delegated-workflow.json"
+  metadata=$(jq -r '[.mode, .delegation_mode, .team_name, .correlation_id] | join("|")' "$marker" 2>/dev/null)
+  if [ "$metadata" = "execute|team|vbw-phase-01|corr-123" ]; then
+    pass "delegated-workflow.sh set execute records runtime metadata"
   else
-    fail "delegated-workflow.sh status-json: expected stale execution state, got: $stale_status"
+    fail "delegated-workflow.sh set execute wrote unexpected metadata ($metadata)"
   fi
-
-  (cd "$tmpdir" && bash "$DELEG_SCRIPT" set fix balanced)
-  local fix_status
-  fix_status=$(cd "$tmpdir" && bash "$DELEG_SCRIPT" status-json)
-  if echo "$fix_status" | jq -e '.live == true and .preserve_on_session_start == false and .mode == "fix"' >/dev/null 2>&1; then
-    pass "delegated-workflow.sh status-json: fix marker stays live for same-session guard use but is not preserved across SessionStart"
-  else
-    fail "delegated-workflow.sh status-json: expected non-preserved fix marker, got: $fix_status"
-  fi
-
-  # check action (active)
-  if (cd "$tmpdir" && bash "$DELEG_SCRIPT" check) >/dev/null 2>&1; then
-    pass "delegated-workflow.sh check: returns 0 when active"
-  else
-    fail "delegated-workflow.sh check: should return 0 when active"
-  fi
-
-  # clear action
-  (cd "$tmpdir" && bash "$DELEG_SCRIPT" clear)
-  if [ ! -f "$tmpdir/.vbw-planning/.delegated-workflow.json" ]; then
-    pass "delegated-workflow.sh clear: removes marker"
-  else
-    fail "delegated-workflow.sh clear: marker still exists"
-  fi
-
-  # check action (inactive)
-  local rc=0
-  (cd "$tmpdir" && bash "$DELEG_SCRIPT" check) >/dev/null 2>&1 || rc=$?
-  if [ "$rc" -ne 0 ]; then
-    pass "delegated-workflow.sh check: returns non-zero when inactive"
-  else
-    fail "delegated-workflow.sh check: should return non-zero when inactive"
-  fi
-
   rm -rf "$tmpdir"
 }
-test_delegated_workflow_script
+test_execute_marker_metadata
 
-# --- Test 13: GSD / non-VBW directory unaffected ---
+test_live_execute_status() {
+  local tmpdir
+  tmpdir=$(new_delegated_test_dir)
+  set_live_execute_marker "$tmpdir"
+  assert_delegated_status "$tmpdir" '.live and .preserve_on_session_start and .reason == "ok"' \
+    "delegated-workflow.sh validates live execute marker" "delegated-workflow.sh rejected live execute marker"
+  rm -rf "$tmpdir"
+}
+test_live_execute_status
+
+test_stale_execute_status() {
+  local tmpdir
+  tmpdir=$(new_delegated_test_dir)
+  set_live_execute_marker "$tmpdir"
+  touch -t 202001010000 "$tmpdir/.vbw-planning/.execution-state.json"
+  assert_delegated_status "$tmpdir" '.live == false and .reason == "stale_execution_state"' \
+    "delegated-workflow.sh rejects stale execution state" "delegated-workflow.sh accepted stale execution state"
+  rm -rf "$tmpdir"
+}
+test_stale_execute_status
+
+test_fix_marker_status() {
+  local tmpdir
+  tmpdir=$(new_delegated_test_dir)
+  (cd "$tmpdir" && bash "$DELEG_SCRIPT" set fix balanced)
+  assert_delegated_status "$tmpdir" '.live and (.preserve_on_session_start == false) and .mode == "fix"' \
+    "delegated-workflow.sh keeps fix marker session-local" "delegated-workflow.sh returned unexpected fix status"
+  rm -rf "$tmpdir"
+}
+test_fix_marker_status
+
+test_delegated_set_and_check() {
+  local tmpdir marker mode
+  tmpdir=$(new_delegated_test_dir)
+  (cd "$tmpdir" && bash "$DELEG_SCRIPT" set fix balanced)
+  marker="$tmpdir/.vbw-planning/.delegated-workflow.json"
+  mode=$(jq -r '.mode' "$marker" 2>/dev/null)
+  [ "$mode" = "fix" ] && pass "delegated-workflow.sh set creates marker" || fail "delegated-workflow.sh set wrote mode $mode"
+  if (cd "$tmpdir" && bash "$DELEG_SCRIPT" check) >/dev/null 2>&1; then
+    pass "delegated-workflow.sh check returns active"
+  else
+    fail "delegated-workflow.sh check missed active marker"
+  fi
+  rm -rf "$tmpdir"
+}
+test_delegated_set_and_check
+
+test_delegated_clear_and_check() {
+  local tmpdir marker check_status
+  tmpdir=$(new_delegated_test_dir)
+  (cd "$tmpdir" && bash "$DELEG_SCRIPT" set fix balanced && bash "$DELEG_SCRIPT" clear)
+  marker="$tmpdir/.vbw-planning/.delegated-workflow.json"
+  [ ! -f "$marker" ] && pass "delegated-workflow.sh clear removes marker" || fail "delegated-workflow.sh clear retained marker"
+  check_status=0
+  (cd "$tmpdir" && bash "$DELEG_SCRIPT" check) >/dev/null 2>&1 || check_status=$?
+  [ "$check_status" -ne 0 ] && pass "delegated-workflow.sh check returns inactive" || fail "delegated-workflow.sh check accepted missing marker"
+  rm -rf "$tmpdir"
+}
+test_delegated_clear_and_check
+
 test_gsd_unaffected() {
   local tmpdir
   tmpdir=$(mktemp -d)
-  # .planning/ (GSD) but no .vbw-planning/
   mkdir -p "$tmpdir/.planning/phases/01-test"
 
   local input
@@ -493,142 +466,125 @@ test_gsd_unaffected() {
 }
 test_gsd_unaffected
 
-# --- Test 14: Active delegated state, no VBW_AGENT_ROLE, but .active-agent-count > 0 → allowed ---
-# This is the real runtime scenario: PreToolUse hooks don't inherit VBW_AGENT_ROLE,
-# but agent-start.sh has incremented the count. The guard should allow the write.
-test_active_agent_count_bypass() {
+test_active_agent_count_does_not_classify_orchestrator() {
   setup_project
-  jq -n '{status:"running", phase:1, effort:"balanced", started_at:"2026-03-03T00:00:00Z", plans:[]}' \
+  jq -n '{status:"running", phase:1, effort:"balanced", plans:[]}' \
     > "$PROJECT/.vbw-planning/.execution-state.json"
-
-  # Simulate agent-start.sh having run: subagent active
   echo "1" > "$PROJECT/.vbw-planning/.active-agent-count"
   echo "dev" > "$PROJECT/.vbw-planning/.active-agent"
 
-  # No VBW_AGENT_ROLE set (matches real PreToolUse hook behavior)
-  if run_guard "$PROJECT" "src/app.js" "" >/dev/null 2>&1; then
-    pass "Active agent count > 0, no VBW_AGENT_ROLE: allowed (subagent bypass)"
+  local output rc
+  output=$(run_guard "$PROJECT" "src/app.js" "" 2>&1) && rc=$? || rc=$?
+  if [ "$rc" -eq 2 ] && grep -q "orchestrator cannot write product files" <<< "$output"; then
+    pass "Active agent count does not classify payload-less orchestrator"
   else
-    fail "Active agent count > 0, no VBW_AGENT_ROLE: unexpected block (exit $?)"
+    fail "Active agent count bypassed orchestrator guard (rc=$rc output=$output)"
   fi
   cleanup
 }
-test_active_agent_count_bypass
+test_active_agent_count_does_not_classify_orchestrator
 
-# --- Test 14b: Active delegated state, .active-agent=scout, no role → non-planning writes blocked ---
-test_active_agent_count_scout_blocks_non_planning_writes() {
+test_scout_marker_does_not_classify_orchestrator() {
   setup_project
-  jq -n '{status:"running", phase:1, effort:"balanced", started_at:"2026-03-03T00:00:00Z", plans:[]}' \
+  jq -n '{status:"running", phase:1, effort:"balanced", plans:[]}' \
     > "$PROJECT/.vbw-planning/.execution-state.json"
-
   echo "1" > "$PROJECT/.vbw-planning/.active-agent-count"
   echo "scout" > "$PROJECT/.vbw-planning/.active-agent"
 
-  local output rc blocked_all target
-  blocked_all=true
-  for target in "src/app.js" "CLAUDE.md" "STATE.md" "foo-SUMMARY.md" "foo-VERIFICATION.md" ".execution-state.json"; do
-    output=$(run_guard "$PROJECT" "$target" "" 2>&1) && rc=$? || rc=$?
-    if [ "$rc" -ne 2 ] || ! grep -q "read-only outside .vbw-planning/" <<< "$output"; then
-      blocked_all=false
-      fail "Active Scout marker should block non-planning write target $target (rc=$rc output=$output)"
-    fi
-  done
-
-  if [ "$blocked_all" = true ]; then
-    pass "Active Scout marker, no VBW_AGENT_ROLE: non-planning writes blocked before subagent bypass"
-  fi
-
-  if run_guard "$PROJECT" "$PROJECT/.vbw-planning/phases/01-test/01-RESEARCH.md" "" >/dev/null 2>&1; then
-    pass "Active Scout marker, no VBW_AGENT_ROLE: planning artifact write allowed"
+  if run_guard "$PROJECT" "CLAUDE.md" "" >/dev/null 2>&1; then
+    pass "Scout marker does not restrict payload-less orchestrator"
   else
-    fail "Active Scout marker should allow .vbw-planning research artifact writes"
+    fail "Scout marker restricted payload-less orchestrator (exit $?)"
   fi
 
+  local output rc
+  output=$(run_guard "$PROJECT" "src/app.js" "" 2>&1) && rc=$? || rc=$?
+  if [ "$rc" -eq 2 ] && grep -q "orchestrator cannot write product files" <<< "$output"; then
+    pass "Delegated workflow still blocks payload-less orchestrator"
+  else
+    fail "Payload-less orchestrator escaped delegated workflow guard (rc=$rc output=$output)"
+  fi
   cleanup
 }
-test_active_agent_count_scout_blocks_non_planning_writes
+test_scout_marker_does_not_classify_orchestrator
 
-# --- Test 14c: Mixed active role set containing Scout → ambiguous writes use Scout-safe fallback ---
-test_mixed_active_role_set_scout_blocks_non_planning_writes() {
+test_mixed_role_markers_do_not_classify_orchestrator() {
   setup_project
-  jq -n '{status:"running", phase:1, effort:"balanced", started_at:"2026-03-03T00:00:00Z", plans:[]}' \
-    > "$PROJECT/.vbw-planning/.execution-state.json"
-
   echo "2" > "$PROJECT/.vbw-planning/.active-agent-count"
-  echo "dev" > "$PROJECT/.vbw-planning/.active-agent"
   cat > "$PROJECT/.vbw-planning/.active-agent-roles" <<'EOF'
 scout 1
 dev 1
 EOF
 
-  local output rc
-  output=$(run_guard "$PROJECT" "src/app.js" "" 2>&1) && rc=$? || rc=$?
-  if [ "$rc" -eq 2 ] && grep -q "Scout-safe active-agent context" <<< "$output"; then
-    pass "Mixed active role set with Scout: non-planning write blocked conservatively"
+  if run_guard "$PROJECT" "CLAUDE.md" "" >/dev/null 2>&1; then
+    pass "Mixed role markers do not classify payload-less orchestrator"
   else
-    fail "Mixed active role set with Scout should block ambiguous non-planning write (rc=$rc output=$output)"
+    fail "Mixed role markers restricted payload-less orchestrator (exit $?)"
   fi
-
   cleanup
 }
-test_mixed_active_role_set_scout_blocks_non_planning_writes
+test_mixed_role_markers_do_not_classify_orchestrator
 
-# --- Test 14d: Session-local active count bypass applies only to the current session ---
-test_session_local_active_count_bypass() {
+test_session_local_count_never_classifies_orchestrator() {
   setup_project
-  jq -n '{status:"running", phase:1, effort:"balanced", started_at:"2026-03-03T00:00:00Z", plans:[]}' \
+  jq -n '{status:"running", phase:1, effort:"balanced", plans:[]}' \
     > "$PROJECT/.vbw-planning/.execution-state.json"
-
   start_active_agent_session "$PROJECT" "session-A" "dev" "31401"
 
-  if run_guard_with_session "$PROJECT" "src/app.js" "session-A" "" >/dev/null 2>&1; then
-    pass "Session-local active count in current session: allowed (subagent bypass)"
-  else
-    fail "Session-local active count in current session: unexpected block (exit $?)"
-  fi
-
-  local output rc
-  output=$(run_guard_with_session "$PROJECT" "src/app.js" "session-B" "" 2>&1) && rc=$? || rc=$?
-  if [ "$rc" -eq 2 ] && grep -q "orchestrator cannot write product files" <<< "$output"; then
-    pass "Session-local active count in another session: blocked (no cross-session bypass)"
-  else
-    fail "Session-local active count in another session should not bypass orchestrator guard (rc=$rc output=$output)"
-  fi
-
+  local output rc sid
+  for sid in session-A session-B; do
+    output=$(run_guard_with_session "$PROJECT" "src/app.js" "$sid" "" 2>&1) && rc=$? || rc=$?
+    if [ "$rc" -ne 2 ] || ! grep -q "orchestrator cannot write product files" <<< "$output"; then
+      fail "Session-local count bypassed orchestrator guard for $sid (rc=$rc output=$output)"
+      cleanup
+      return
+    fi
+  done
+  pass "Session-local count never classifies payload-less orchestrator"
   cleanup
 }
-test_session_local_active_count_bypass
+test_session_local_count_never_classifies_orchestrator
 
-# --- Test 14e: Session-local Scout role restricts only its owning session ---
-test_session_local_scout_role_restriction() {
+test_session_local_scout_never_classifies_orchestrator() {
   setup_project
   start_active_agent_session "$PROJECT" "session-A" "scout" "31402"
 
-  if run_guard_with_session "$PROJECT" "CLAUDE.md" "session-B" "" >/dev/null 2>&1; then
-    pass "Session-local Scout in another session: non-planning write not restricted"
-  else
-    fail "Session-local Scout in another session should not restrict current session writes (exit $?)"
-  fi
-
-  local output rc
-  output=$(run_guard_with_session "$PROJECT" "CLAUDE.md" "session-A" "" 2>&1) && rc=$? || rc=$?
-  if [ "$rc" -eq 2 ] && grep -q "read-only outside .vbw-planning/" <<< "$output"; then
-    pass "Session-local Scout in current session: non-planning write blocked"
-  else
-    fail "Session-local Scout in current session should block non-planning write (rc=$rc output=$output)"
-  fi
-
+  local sid
+  for sid in session-A session-B; do
+    if ! run_guard_with_session "$PROJECT" "CLAUDE.md" "$sid" "" >/dev/null 2>&1; then
+      fail "Session-local Scout restricted payload-less orchestrator for $sid"
+      cleanup
+      return
+    fi
+  done
+  pass "Session-local Scout never classifies payload-less orchestrator"
   cleanup
 }
-test_session_local_scout_role_restriction
+test_session_local_scout_never_classifies_orchestrator
 
-# --- Test 15: Active delegated state, .active-agent-count = 0 (all agents stopped), no role → blocked ---
+test_child_session_bypasses_orchestrator_without_inheriting_scout() {
+  setup_project
+  jq -n '{status:"running", phase:1, effort:"balanced", plans:[]}' \
+    > "$PROJECT/.vbw-planning/.execution-state.json"
+  echo "1" > "$PROJECT/.vbw-planning/.active-agent-count"
+  echo "scout" > "$PROJECT/.vbw-planning/.active-agent"
+  local input
+  input=$(jq -n '{tool_input:{file_path:"src/app.js"}}')
+
+  if (cd "$PROJECT" && unset VBW_AGENT_ROLE VBW_ACTIVE_AGENT CLAUDE_SESSION_ID; CLAUDE_CODE_CHILD_SESSION=1 bash "$FILE_GUARD" <<< "$input") >/dev/null 2>&1; then
+    pass "Child session bypasses orchestrator guard without inheriting Scout"
+  else
+    fail "Child session was blocked by orchestrator or Scout guard"
+  fi
+  cleanup
+}
+test_child_session_bypasses_orchestrator_without_inheriting_scout
+
 test_zero_agent_count_still_blocks() {
   setup_project
   jq -n '{status:"running", phase:1, effort:"balanced", started_at:"2026-03-03T00:00:00Z", plans:[]}' \
     > "$PROJECT/.vbw-planning/.execution-state.json"
 
-  # Count is 0 — all subagents have stopped, so this is an orchestrator write
   echo "0" > "$PROJECT/.vbw-planning/.active-agent-count"
 
   local output
@@ -642,13 +598,11 @@ test_zero_agent_count_still_blocks() {
 }
 test_zero_agent_count_still_blocks
 
-# --- Test 16: Active delegated state, .active-agent-count missing (no file), no role → blocked ---
 test_no_count_file_still_blocks() {
   setup_project
   jq -n '{status:"running", phase:1, effort:"balanced", started_at:"2026-03-03T00:00:00Z", plans:[]}' \
     > "$PROJECT/.vbw-planning/.execution-state.json"
 
-  # No count file at all (agent-start never ran) — should still block
   rm -f "$PROJECT/.vbw-planning/.active-agent-count" 2>/dev/null
 
   local output
@@ -662,8 +616,8 @@ test_no_count_file_still_blocks() {
 }
 test_no_count_file_still_blocks
 
-# --- Test 17: Execute team marker bypasses guard for teammate writes ---
 test_execute_team_marker_bypasses_guard() {
+  local tmp
   setup_project
   jq -n '{status:"running", phase:1, effort:"balanced", started_at:"2026-03-03T00:00:00Z", plans:[]}' \
     > "$PROJECT/.vbw-planning/.execution-state.json"
@@ -683,7 +637,6 @@ test_execute_team_marker_bypasses_guard() {
 }
 test_execute_team_marker_bypasses_guard
 
-# --- Test 18: aged live execute team marker still bypasses guard ---
 test_aged_live_execute_team_marker_bypasses_guard() {
   setup_project
   jq -n '{status:"running", phase:1, effort:"balanced", correlation_id:"corr-123", started_at:"2026-03-03T00:00:00Z", plans:[]}' \
@@ -703,7 +656,6 @@ test_aged_live_execute_team_marker_bypasses_guard() {
 }
 test_aged_live_execute_team_marker_bypasses_guard
 
-# --- Test 19: stale/mismatched execute team marker does not bypass guard ---
 test_execute_team_marker_mismatch_does_not_bypass() {
   setup_project
   jq -n '{status:"running", phase:1, effort:"balanced", correlation_id:"live-corr", started_at:"2026-03-03T00:00:00Z", plans:[]}' \
@@ -725,7 +677,6 @@ test_execute_team_marker_mismatch_does_not_bypass() {
 }
 test_execute_team_marker_mismatch_does_not_bypass
 
-# --- Test 20: prefer_teams=always alone no longer bypasses guard ---
 test_prefer_teams_always_alone_does_not_bypass() {
   setup_project
   echo '{"effort":"balanced","prefer_teams":"always"}' > "$PROJECT/.vbw-planning/config.json"
@@ -743,7 +694,6 @@ test_prefer_teams_always_alone_does_not_bypass() {
 }
 test_prefer_teams_always_alone_does_not_bypass
 
-# --- Test 21: prefer_teams=auto alone no longer bypasses guard ---
 test_prefer_teams_auto_alone_does_not_bypass() {
   setup_project
   echo '{"effort":"balanced","prefer_teams":"auto"}' > "$PROJECT/.vbw-planning/config.json"
@@ -761,7 +711,6 @@ test_prefer_teams_auto_alone_does_not_bypass() {
 }
 test_prefer_teams_auto_alone_does_not_bypass
 
-# --- Test 22: Legacy when_parallel alias alone no longer bypasses guard ---
 test_prefer_teams_legacy_when_parallel_alone_does_not_bypass() {
   setup_project
   echo '{"effort":"balanced","prefer_teams":"when_parallel"}' > "$PROJECT/.vbw-planning/config.json"
@@ -779,7 +728,6 @@ test_prefer_teams_legacy_when_parallel_alone_does_not_bypass() {
 }
 test_prefer_teams_legacy_when_parallel_alone_does_not_bypass
 
-# --- Test 23: session-start clears fresh fix marker before a new session guard evaluation ---
 test_session_start_clears_fresh_fix_marker() {
   setup_project
   jq -n '{mode:"fix", active:true, effort:"balanced", delegation_mode:"", team_name:"", started_at:"2026-03-03T00:00:00Z", session_id:"session-test", correlation_id:""}' \
@@ -796,7 +744,6 @@ test_session_start_clears_fresh_fix_marker() {
 }
 test_session_start_clears_fresh_fix_marker
 
-# --- Test 24: session-stop preserves live execute team marker for downstream file-guard bypass ---
 test_session_stop_preserves_live_execute_team_marker() {
   setup_project
   jq -n '{status:"running", phase:1, effort:"balanced", correlation_id:"corr-123", started_at:"2026-03-03T00:00:00Z", plans:[]}' \
@@ -822,7 +769,6 @@ test_session_stop_preserves_live_execute_team_marker() {
 }
 test_session_stop_preserves_live_execute_team_marker
 
-# --- Test 25: Claude sidechain agent-start/stop uses host planning dir ---
 test_claude_sidechain_agent_hooks_use_host_planning_dir() {
   setup_sidechain_project
   write_live_execute_state
@@ -848,13 +794,15 @@ test_claude_sidechain_agent_hooks_use_host_planning_dir() {
 }
 test_claude_sidechain_agent_hooks_use_host_planning_dir
 
-# --- Test 26: Claude sidechain subagent can write declared host product path ---
 test_claude_sidechain_host_absolute_write_allowed_after_agent_start() {
+  local input
   setup_sidechain_project
   write_live_execute_state
   run_sidechain_agent_hook agent-start.sh >/dev/null 2>&1 || true
+  input=$(jq -n --arg fp "$PROJECT/src/app.js" \
+    '{agent_id:"agent-sidechain",agent_type:"vbw:vbw-dev",tool_input:{file_path:$fp}}')
 
-  if run_guard_from "$SIDECHAIN" "$PROJECT/src/app.js" "" >/dev/null 2>&1; then
+  if (cd "$SIDECHAIN" && unset CLAUDE_CODE_CHILD_SESSION VBW_AGENT_ROLE VBW_CONFIG_ROOT VBW_PLANNING_DIR CLAUDE_SESSION_ID; bash "$FILE_GUARD" <<< "$input") >/dev/null 2>&1; then
     pass "Claude sidechain active subagent: host-root declared product write allowed"
   else
     fail "Claude sidechain active subagent: host-root declared product write unexpectedly blocked"
@@ -865,7 +813,6 @@ test_claude_sidechain_host_absolute_write_allowed_after_agent_start() {
 }
 test_claude_sidechain_host_absolute_write_allowed_after_agent_start
 
-# --- Test 27: Claude sidechain host write without active marker still blocks orchestrator ---
 test_claude_sidechain_host_absolute_write_blocks_without_agent_marker() {
   setup_sidechain_project
   write_live_execute_state
@@ -882,7 +829,6 @@ test_claude_sidechain_host_absolute_write_blocks_without_agent_marker() {
 }
 test_claude_sidechain_host_absolute_write_blocks_without_agent_marker
 
-# --- Test 28: Claude sidechain relative Write/Edit target is blocked early ---
 test_claude_sidechain_relative_write_target_blocks() {
   setup_sidechain_project
   write_live_execute_state
@@ -902,7 +848,6 @@ test_claude_sidechain_relative_write_target_blocks() {
 }
 test_claude_sidechain_relative_write_target_blocks
 
-# --- Test 29: Claude sidechain absolute target under sidechain is blocked early ---
 test_claude_sidechain_absolute_sidechain_target_blocks() {
   setup_sidechain_project
   write_live_execute_state

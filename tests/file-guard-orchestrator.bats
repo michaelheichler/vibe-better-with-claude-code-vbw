@@ -20,7 +20,7 @@ teardown() {
   local input
   input=$(jq -n '{session_id:"session-A",tool_name:"Write",tool_input:{file_path:"CLAUDE.md",content:"ok"}}')
 
-  run bash -c 'unset VBW_AGENT_ROLE VBW_ACTIVE_AGENT; printf "%s\n" "$1" | bash "$2"' _ "$input" "$SCRIPTS_DIR/file-guard.sh"
+  run bash -c 'unset CLAUDE_CODE_CHILD_SESSION VBW_AGENT_ROLE VBW_ACTIVE_AGENT; printf "%s\n" "$1" | bash "$2"' _ "$input" "$SCRIPTS_DIR/file-guard.sh"
 
   [ "$status" -eq 0 ]
 }
@@ -35,7 +35,7 @@ teardown() {
     input=$(jq -n --arg field "$field" --arg identity "$identity" \
       '{session_id:"session-A",tool_name:"Write",tool_input:{file_path:"CLAUDE.md",content:"blocked"}} + {($field):$identity}')
 
-    run bash -c 'unset VBW_AGENT_ROLE VBW_ACTIVE_AGENT; printf "%s\n" "$1" | bash "$2"' _ "$input" "$SCRIPTS_DIR/file-guard.sh"
+    run bash -c 'unset CLAUDE_CODE_CHILD_SESSION VBW_AGENT_ROLE VBW_ACTIVE_AGENT; printf "%s\n" "$1" | bash "$2"' _ "$input" "$SCRIPTS_DIR/file-guard.sh"
 
     [ "$status" -eq 2 ]
     [[ "$output" == *"read-only outside .vbw-planning/"* ]]
@@ -48,7 +48,7 @@ teardown() {
     bash "$SCRIPTS_DIR/delegated-workflow.sh" set fix balanced subagent
   input=$(jq -n '{session_id:"session-B",tool_name:"Write",tool_input:{file_path:"src/product.js",content:"ok"}}')
 
-  run bash -c 'CLAUDE_SESSION_ID="session-B"; unset VBW_AGENT_ROLE VBW_ACTIVE_AGENT; printf "%s\n" "$1" | bash "$2"' _ \
+  run bash -c 'CLAUDE_SESSION_ID="session-B"; unset CLAUDE_CODE_CHILD_SESSION VBW_AGENT_ROLE VBW_ACTIVE_AGENT; printf "%s\n" "$1" | bash "$2"' _ \
     "$input" "$SCRIPTS_DIR/file-guard.sh"
 
   [ "$status" -eq 0 ]
@@ -60,7 +60,7 @@ teardown() {
     bash "$SCRIPTS_DIR/delegated-workflow.sh" set fix balanced subagent
   input=$(jq -n '{session_id:"session-A",tool_name:"Write",tool_input:{file_path:"src/product.js",content:"blocked"}}')
 
-  run bash -c 'CLAUDE_SESSION_ID="session-A"; unset VBW_AGENT_ROLE VBW_ACTIVE_AGENT; printf "%s\n" "$1" | bash "$2"' _ \
+  run bash -c 'CLAUDE_SESSION_ID="session-A"; unset CLAUDE_CODE_CHILD_SESSION VBW_AGENT_ROLE VBW_ACTIVE_AGENT; printf "%s\n" "$1" | bash "$2"' _ \
     "$input" "$SCRIPTS_DIR/file-guard.sh"
 
   [ "$status" -eq 2 ]
@@ -75,7 +75,7 @@ teardown() {
     bash "$SCRIPTS_DIR/delegated-workflow.sh" set fix balanced subagent
   input=$(jq -n --arg path "$outside_path" '{session_id:"session-A",tool_name:"Write",tool_input:{file_path:$path,content:"ok"}}')
 
-  run bash -c 'CLAUDE_SESSION_ID="session-A"; unset VBW_AGENT_ROLE VBW_ACTIVE_AGENT; printf "%s\n" "$1" | bash "$2"' _ \
+  run bash -c 'CLAUDE_SESSION_ID="session-A"; unset CLAUDE_CODE_CHILD_SESSION VBW_AGENT_ROLE VBW_ACTIVE_AGENT; printf "%s\n" "$1" | bash "$2"' _ \
     "$input" "$SCRIPTS_DIR/file-guard.sh"
 
   [ "$status" -eq 0 ]
@@ -85,8 +85,85 @@ teardown() {
   local input
   input=$(jq -n '{session_id:"session-A",agent_type:"vbw:vbw-qa",tool_name:"Write",tool_input:{file_path:"src/product.js",content:"blocked"}}')
 
-  run bash -c 'unset VBW_AGENT_ROLE VBW_ACTIVE_AGENT; printf "%s\n" "$1" | bash "$2"' _ "$input" "$SCRIPTS_DIR/file-guard.sh"
+  run bash -c 'unset CLAUDE_CODE_CHILD_SESSION VBW_AGENT_ROLE VBW_ACTIVE_AGENT; printf "%s\n" "$1" | bash "$2"' _ "$input" "$SCRIPTS_DIR/file-guard.sh"
 
   [ "$status" -eq 2 ]
   [[ "$output" == *"role 'qa' cannot write outside .vbw-planning/"* ]]
+}
+
+@test "file-guard allows payload-less child caller during delegated workflow" {
+  local input
+  CLAUDE_SESSION_ID="session-A" VBW_PLANNING_DIR="$TEST_TEMP_DIR/.vbw-planning" \
+    bash "$SCRIPTS_DIR/delegated-workflow.sh" set fix balanced subagent
+  input=$(jq -n '{session_id:"session-A",tool_name:"Write",tool_input:{file_path:"src/product.js",content:"ok"}}')
+
+  run bash -c 'CLAUDE_CODE_CHILD_SESSION=1 CLAUDE_SESSION_ID="session-A"; unset VBW_AGENT_ROLE VBW_ACTIVE_AGENT; printf "%s\n" "$1" | bash "$2"' _ \
+    "$input" "$SCRIPTS_DIR/file-guard.sh"
+
+  [ "$status" -eq 0 ]
+}
+
+@test "file-guard child caller does not inherit stale Scout marker" {
+  local input
+  input=$(jq -n '{session_id:"session-A",tool_name:"Write",tool_input:{file_path:"CLAUDE.md",content:"ok"}}')
+
+  run bash -c 'CLAUDE_CODE_CHILD_SESSION=1; unset VBW_AGENT_ROLE VBW_ACTIVE_AGENT; printf "%s\n" "$1" | bash "$2"' _ \
+    "$input" "$SCRIPTS_DIR/file-guard.sh"
+
+  [ "$status" -eq 0 ]
+}
+
+@test "file-guard ignores running execution state from another session" {
+  local input
+  jq -n '{status:"running",session_id:"session-A",effort:"balanced",plans:[]}' \
+    > "$TEST_TEMP_DIR/.vbw-planning/.execution-state.json"
+  input=$(jq -n '{session_id:"session-B",tool_name:"Write",tool_input:{file_path:"src/product.js",content:"ok"}}')
+
+  run bash -c 'CLAUDE_SESSION_ID="session-B"; unset CLAUDE_CODE_CHILD_SESSION VBW_AGENT_ROLE VBW_ACTIVE_AGENT; printf "%s\n" "$1" | bash "$2"' _ \
+    "$input" "$SCRIPTS_DIR/file-guard.sh"
+
+  [ "$status" -eq 0 ]
+}
+
+@test "file-guard applies running execution state to its owning session" {
+  local input
+  jq -n '{status:"running",session_id:"session-A",effort:"balanced",plans:[]}' \
+    > "$TEST_TEMP_DIR/.vbw-planning/.execution-state.json"
+  input=$(jq -n '{session_id:"session-A",tool_name:"Write",tool_input:{file_path:"src/product.js",content:"blocked"}}')
+
+  run bash -c 'CLAUDE_SESSION_ID="session-A"; unset CLAUDE_CODE_CHILD_SESSION VBW_AGENT_ROLE VBW_ACTIVE_AGENT; printf "%s\n" "$1" | bash "$2"' _ \
+    "$input" "$SCRIPTS_DIR/file-guard.sh"
+
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"orchestrator cannot write product files"* ]]
+}
+
+@test "file-guard live team marker allows orchestrator product write" {
+  local input
+  jq -n '{status:"running",session_id:"session-A",effort:"balanced",correlation_id:"corr-team",plans:[]}' \
+    > "$TEST_TEMP_DIR/.vbw-planning/.execution-state.json"
+  CLAUDE_SESSION_ID="session-A" VBW_PLANNING_DIR="$TEST_TEMP_DIR/.vbw-planning" \
+    bash "$SCRIPTS_DIR/delegated-workflow.sh" set execute balanced team vbw-test
+  input=$(jq -n '{session_id:"session-A",tool_name:"Write",tool_input:{file_path:"src/product.js",content:"ok"}}')
+
+  run bash -c 'CLAUDE_SESSION_ID="session-A"; unset CLAUDE_CODE_CHILD_SESSION VBW_AGENT_ROLE VBW_ACTIVE_AGENT; printf "%s\n" "$1" | bash "$2"' _ \
+    "$input" "$SCRIPTS_DIR/file-guard.sh"
+
+  [ "$status" -eq 0 ]
+}
+
+@test "file-guard delegated rule allows writes to sibling worktree" {
+  local input sibling target
+  sibling="$BATS_TEST_TMPDIR/sibling-worktree"
+  target="$sibling/src/product.js"
+  mkdir -p "$sibling/src"
+  git -C "$sibling" init -q
+  CLAUDE_SESSION_ID="session-A" VBW_PLANNING_DIR="$TEST_TEMP_DIR/.vbw-planning" \
+    bash "$SCRIPTS_DIR/delegated-workflow.sh" set fix balanced subagent
+  input=$(jq -n --arg path "$target" '{session_id:"session-A",tool_name:"Write",tool_input:{file_path:$path,content:"ok"}}')
+
+  run bash -c 'CLAUDE_SESSION_ID="session-A"; unset CLAUDE_CODE_CHILD_SESSION VBW_AGENT_ROLE VBW_ACTIVE_AGENT; printf "%s\n" "$1" | bash "$2"' _ \
+    "$input" "$SCRIPTS_DIR/file-guard.sh"
+
+  [ "$status" -eq 0 ]
 }

@@ -37,7 +37,7 @@ create_contract() {
 CONTRACT
 }
 
-# --- Role isolation runtime enforcement ---
+# Role markers are unsafe caller evidence because concurrent callers share session state.
 
 @test "file-guard: blocks lead from writing outside .vbw-planning/ when role isolation enabled" {
   cd "$TEST_TEMP_DIR"
@@ -65,64 +65,56 @@ CONTRACT
   [[ "$output" == *"read-only"* ]]
 }
 
-@test "file-guard: active scout marker blocks non-planning writes before broad exemptions" {
+@test "file-guard: payload-less orchestrator does not inherit active Scout marker" {
   cd "$TEST_TEMP_DIR"
   create_plan_with_files
   echo "1" > "$TEST_TEMP_DIR/.vbw-planning/.active-agent-count"
   echo "scout" > "$TEST_TEMP_DIR/.vbw-planning/.active-agent"
 
-  for target in "src/file.js" "CLAUDE.md" "STATE.md" "foo-SUMMARY.md" "foo-VERIFICATION.md" ".execution-state.json"; do
-    INPUT=$(jq -n --arg fp "$target" '{"tool_name":"Write","tool_input":{"file_path":$fp,"content":"bad"}}')
-    run bash -c "unset VBW_AGENT_ROLE; echo '$INPUT' | bash '$SCRIPTS_DIR/file-guard.sh'"
-    [ "$status" -eq 2 ]
-    [[ "$output" == *"read-only outside .vbw-planning/"* ]]
-  done
+  INPUT='{"tool_name":"Write","tool_input":{"file_path":"CLAUDE.md","content":"ok"}}'
+  run bash -c "unset CLAUDE_CODE_CHILD_SESSION VBW_AGENT_ROLE; echo '$INPUT' | bash '$SCRIPTS_DIR/file-guard.sh'"
+  [ "$status" -eq 0 ]
 }
 
-@test "file-guard: active scout marker allows planning artifact writes" {
+@test "file-guard: payload-less orchestrator can write planning artifact while Scout is active" {
   cd "$TEST_TEMP_DIR"
   create_plan_with_files
   echo "1" > "$TEST_TEMP_DIR/.vbw-planning/.active-agent-count"
   echo "scout" > "$TEST_TEMP_DIR/.vbw-planning/.active-agent"
 
   INPUT='{"tool_name":"Write","tool_input":{"file_path":".vbw-planning/phases/01-test/01-RESEARCH.md","content":"ok"}}'
-  run bash -c "unset VBW_AGENT_ROLE; echo '$INPUT' | bash '$SCRIPTS_DIR/file-guard.sh'"
+  run bash -c "unset CLAUDE_CODE_CHILD_SESSION VBW_AGENT_ROLE; echo '$INPUT' | bash '$SCRIPTS_DIR/file-guard.sh'"
   [ "$status" -eq 0 ]
 }
 
-@test "file-guard: any active scout role set blocks ambiguous non-planning writes" {
+@test "file-guard: payload-less orchestrator ignores mixed active role set" {
   cd "$TEST_TEMP_DIR"
   create_plan_with_files
   echo "2" > "$TEST_TEMP_DIR/.vbw-planning/.active-agent-count"
-  echo "dev" > "$TEST_TEMP_DIR/.vbw-planning/.active-agent"
   cat > "$TEST_TEMP_DIR/.vbw-planning/.active-agent-roles" <<'EOF'
 scout 1
 dev 1
 EOF
 
-  INPUT='{"tool_name":"Write","tool_input":{"file_path":"src/file.js","content":"bad"}}'
-  run bash -c "unset VBW_AGENT_ROLE; echo '$INPUT' | bash '$SCRIPTS_DIR/file-guard.sh'"
-  [ "$status" -eq 2 ]
-  [[ "$output" == *"Scout-safe active-agent context"* ]]
+  INPUT='{"tool_name":"Write","tool_input":{"file_path":"CLAUDE.md","content":"ok"}}'
+  run bash -c "unset CLAUDE_CODE_CHILD_SESSION VBW_AGENT_ROLE; echo '$INPUT' | bash '$SCRIPTS_DIR/file-guard.sh'"
+  [ "$status" -eq 0 ]
 }
 
-@test "file-guard: active Scout in session A does not restrict writes in session B" {
+@test "file-guard: session-local Scout marker never classifies payload-less orchestrator" {
   cd "$TEST_TEMP_DIR"
   create_plan_with_files
   printf '%s\n' '{"session_id":"session-A","agent_type":"vbw:vbw-scout","pid":"10101"}' | \
     VBW_PLANNING_DIR="$TEST_TEMP_DIR/.vbw-planning" bash "$SCRIPTS_DIR/agent-start.sh"
 
-  INPUT=$(jq -n --arg sid 'session-B' '{session_id:$sid,tool_name:"Write",tool_input:{file_path:"CLAUDE.md",content:"ok"}}')
-  run bash -c 'unset VBW_AGENT_ROLE; printf "%s\n" "$1" | bash "$2"' _ "$INPUT" "$SCRIPTS_DIR/file-guard.sh"
-  [ "$status" -eq 0 ]
-
-  INPUT=$(jq -n --arg sid 'session-A' '{session_id:$sid,tool_name:"Write",tool_input:{file_path:"CLAUDE.md",content:"bad"}}')
-  run bash -c 'unset VBW_AGENT_ROLE; printf "%s\n" "$1" | bash "$2"' _ "$INPUT" "$SCRIPTS_DIR/file-guard.sh"
-  [ "$status" -eq 2 ]
-  [[ "$output" == *"read-only outside .vbw-planning/"* ]]
+  for sid in session-A session-B; do
+    INPUT=$(jq -n --arg sid "$sid" '{session_id:$sid,tool_name:"Write",tool_input:{file_path:"CLAUDE.md",content:"ok"}}')
+    run bash -c 'unset CLAUDE_CODE_CHILD_SESSION VBW_AGENT_ROLE; printf "%s\n" "$1" | bash "$2"' _ "$INPUT" "$SCRIPTS_DIR/file-guard.sh"
+    [ "$status" -eq 0 ]
+  done
 }
 
-@test "file-guard: active count in session A does not bypass delegated write block in session B" {
+@test "file-guard: active agent count never bypasses delegated orchestrator block" {
   cd "$TEST_TEMP_DIR"
   create_plan_with_files
   create_contract
@@ -135,14 +127,12 @@ JSON
   printf '%s\n' '{"session_id":"session-A","agent_type":"vbw:vbw-dev","pid":"20202"}' | \
     VBW_PLANNING_DIR="$TEST_TEMP_DIR/.vbw-planning" bash "$SCRIPTS_DIR/agent-start.sh"
 
-  INPUT=$(jq -n --arg sid 'session-B' '{session_id:$sid,tool_name:"Write",tool_input:{file_path:"src/allowed.js",content:"blocked"}}')
-  run bash -c 'unset VBW_AGENT_ROLE; printf "%s\n" "$1" | bash "$2"' _ "$INPUT" "$SCRIPTS_DIR/file-guard.sh"
-  [ "$status" -eq 2 ]
-  [[ "$output" == *"orchestrator cannot write product files"* ]]
-
-  INPUT=$(jq -n --arg sid 'session-A' '{session_id:$sid,tool_name:"Write",tool_input:{file_path:"src/allowed.js",content:"allowed"}}')
-  run bash -c 'unset VBW_AGENT_ROLE; printf "%s\n" "$1" | bash "$2"' _ "$INPUT" "$SCRIPTS_DIR/file-guard.sh"
-  [ "$status" -eq 0 ]
+  for sid in session-A session-B; do
+    INPUT=$(jq -n --arg sid "$sid" '{session_id:$sid,tool_name:"Write",tool_input:{file_path:"src/allowed.js",content:"blocked"}}')
+    run bash -c 'CLAUDE_SESSION_ID="session-orchestrator"; unset CLAUDE_CODE_CHILD_SESSION VBW_AGENT_ROLE; printf "%s\n" "$1" | bash "$2"' _ "$INPUT" "$SCRIPTS_DIR/file-guard.sh"
+    [ "$status" -eq 2 ]
+    [[ "$output" == *"orchestrator cannot write product files"* ]]
+  done
 }
 
 @test "file-guard: degraded mixed-role markers do not leave stale Scout write block" {
@@ -155,14 +145,14 @@ scout 1
 dev 1
 EOF
 
-  run bash -c "cd '$TEST_TEMP_DIR' && echo '{}' | bash '$SCRIPTS_DIR/agent-stop.sh'"
+  run bash -c "cd '$TEST_TEMP_DIR' && unset CLAUDE_CODE_CHILD_SESSION CLAUDE_SESSION_ID && echo '{}' | bash '$SCRIPTS_DIR/agent-stop.sh'"
   [ "$status" -eq 0 ]
   [ "$(cat "$TEST_TEMP_DIR/.vbw-planning/.active-agent-count")" = "1" ]
   [ ! -f "$TEST_TEMP_DIR/.vbw-planning/.active-agent-roles" ]
   [ ! -f "$TEST_TEMP_DIR/.vbw-planning/.active-agent" ]
 
-  INPUT='{"tool_name":"Write","tool_input":{"file_path":"src/file.js","content":"allowed-after-degrade"}}'
-  run bash -c "unset VBW_AGENT_ROLE; echo '$INPUT' | bash '$SCRIPTS_DIR/file-guard.sh'"
+  INPUT='{"tool_name":"Write","tool_input":{"file_path":"src/allowed.js","content":"allowed-after-degrade"}}'
+  run bash -c "unset CLAUDE_CODE_CHILD_SESSION VBW_AGENT_ROLE; echo '$INPUT' | bash '$SCRIPTS_DIR/file-guard.sh'"
   [ "$status" -eq 0 ]
 }
 
@@ -176,17 +166,16 @@ EOF
   [[ "$output" == *"read-only outside .vbw-planning/"* ]]
 }
 
-@test "file-guard: active scout marker blocks non-planning writes before phases exist from nested cwd" {
+@test "file-guard: payload-less nested orchestrator ignores Scout marker before phases exist" {
   rm -rf "$TEST_TEMP_DIR/.vbw-planning/phases"
   mkdir -p "$TEST_TEMP_DIR/packages/app"
   echo "1" > "$TEST_TEMP_DIR/.vbw-planning/.active-agent-count"
   echo "scout" > "$TEST_TEMP_DIR/.vbw-planning/.active-agent"
   cd "$TEST_TEMP_DIR/packages/app"
 
-  INPUT='{"tool_name":"Write","tool_input":{"file_path":"src/outside.js","content":"bad"}}'
-  run bash -c "unset VBW_AGENT_ROLE; echo '$INPUT' | bash '$SCRIPTS_DIR/file-guard.sh'"
-  [ "$status" -eq 2 ]
-  [[ "$output" == *"read-only outside .vbw-planning/"* ]]
+  INPUT='{"tool_name":"Write","tool_input":{"file_path":"src/outside.js","content":"ok"}}'
+  run bash -c "unset CLAUDE_CODE_CHILD_SESSION VBW_AGENT_ROLE; echo '$INPUT' | bash '$SCRIPTS_DIR/file-guard.sh'"
+  [ "$status" -eq 0 ]
 }
 
 @test "file-guard: scout allows planning writes before phases exist" {
@@ -220,10 +209,8 @@ EOF
 @test "file-guard: role isolation always enforced (v2_role_isolation graduated)" {
   cd "$TEST_TEMP_DIR"
   create_plan_with_files
-  # v2_role_isolation graduated — always enforced, config key absence doesn't matter
   INPUT='{"tool_name":"Write","tool_input":{"file_path":"src/allowed.js","content":"ok"}}'
   run bash -c "VBW_AGENT_ROLE=scout echo '$INPUT' | VBW_AGENT_ROLE=scout bash '$SCRIPTS_DIR/file-guard.sh'"
-  # Scout is read-only — always blocked (graduated)
   [ "$status" -eq 2 ]
   [[ "$output" == *"read-only"* ]]
 }
@@ -232,6 +219,6 @@ EOF
   cd "$TEST_TEMP_DIR"
   create_plan_with_files
   INPUT='{"tool_name":"Write","tool_input":{"file_path":"src/allowed.js","content":"ok"}}'
-  run bash -c "unset VBW_AGENT_ROLE; echo '$INPUT' | bash '$SCRIPTS_DIR/file-guard.sh'"
+  run bash -c "unset CLAUDE_CODE_CHILD_SESSION VBW_AGENT_ROLE; echo '$INPUT' | bash '$SCRIPTS_DIR/file-guard.sh'"
   [ "$status" -eq 0 ]
 }

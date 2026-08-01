@@ -1,15 +1,5 @@
 #!/bin/bash
 set -u
-# file-guard.sh — PreToolUse guard for undeclared file modifications
-#
-# NOTE: Worktree isolation has shipped (worktree_isolation config flag).
-# When worktree_isolation is enabled, git worktrees provide filesystem
-# isolation by construction. This guard remains active as a secondary
-# enforcement layer (belt-and-suspenders) for both modes.
-#
-# Blocks Write/Edit to files not declared in active plan's files_modified.
-# V2 enhancement: also checks forbidden_paths from active contract when v2_hard_contracts=true.
-# Fail-open design: exit 0 on any error, exit 2 only on definitive violations
 
 INPUT=$(cat 2>/dev/null) || exit 0
 [ -z "$INPUT" ] && exit 0
@@ -32,17 +22,28 @@ if [ -f "$_FG_SCRIPT_DIR/lib/vbw-config-root.sh" ]; then
   fi
 fi
 
-# Best-effort absolute path resolver for boundary checks.
-# - Relative paths are resolved from current working directory.
-# - Non-existent paths still get a stable absolute lexical form.
-to_abs_path() {
-  local p="$1"
-  local base dir file cwd_base probe suffix resolved_probe
-  [ -z "$p" ] && {
-    echo ""
+resolve_lexical_path() {
+  local base="$1" probe suffix resolved_probe
+  probe=$(dirname "$base")
+  suffix="/$(basename "$base")"
+  while [ ! -d "$probe" ] && [ "$probe" != "/" ]; do
+    suffix="/$(basename "$probe")$suffix"
+    probe=$(dirname "$probe")
+  done
+  [ -d "$probe" ] || {
+    printf '%s\n' "$base"
     return 0
   }
+  resolved_probe=$(cd "$probe" 2>/dev/null && pwd -P 2>/dev/null) || resolved_probe="$probe"
+  printf '%s\n' "${resolved_probe%/}$suffix"
+}
 
+to_abs_path() {
+  local p="$1" base cwd_base
+  [ -z "$p" ] && {
+    printf '\n'
+    return 0
+  }
   case "$p" in
     /*) base="$p" ;;
     *)
@@ -50,25 +51,9 @@ to_abs_path() {
       base="$cwd_base/${p#./}"
       ;;
   esac
-
-  dir=$(dirname "$base")
-  file=$(basename "$base")
-  probe="$dir"
-  suffix="/$file"
-  while [ ! -d "$probe" ] && [ "$probe" != "/" ]; do
-    suffix="/$(basename "$probe")$suffix"
-    probe=$(dirname "$probe")
-  done
-
-  if [ -d "$probe" ]; then
-    resolved_probe=$(cd "$probe" 2>/dev/null && pwd -P 2>/dev/null) || resolved_probe="$probe"
-    echo "${resolved_probe%/}$suffix"
-  else
-    echo "$base"
-  fi
+  resolve_lexical_path "$base"
 }
 
-# Find project root by walking up from $PWD
 find_project_root() {
   local dir="$PWD"
   while [ "$dir" != "/" ]; do
@@ -94,45 +79,8 @@ else
 fi
 
 normalize_agent_role() {
-  local value="$1"
-  local lower
-
-  lower=$(printf '%s' "$value" | tr '[:upper:]' '[:lower:]')
-  lower="${lower#@}"
-  lower="${lower#vbw:}"
-
-  case "$lower" in
-    vbw-scout|vbw-scout-[0-9]*|scout|scout-[0-9]*|team-scout|team-scout-[0-9]*)
-      printf 'scout'
-      return 0
-      ;;
-    vbw-lead|vbw-lead-[0-9]*|lead|lead-[0-9]*|team-lead|team-lead-[0-9]*)
-      printf 'lead'
-      return 0
-      ;;
-    vbw-dev|vbw-dev-[0-9]*|dev|dev-[0-9]*|team-dev|team-dev-[0-9]*)
-      printf 'dev'
-      return 0
-      ;;
-    vbw-qa|vbw-qa-[0-9]*|qa|qa-[0-9]*|team-qa|team-qa-[0-9]*)
-      printf 'qa'
-      return 0
-      ;;
-    vbw-debugger|vbw-debugger-[0-9]*|debugger|debugger-[0-9]*|team-debugger|team-debugger-[0-9]*)
-      printf 'debugger'
-      return 0
-      ;;
-    vbw-architect|vbw-architect-[0-9]*|architect|architect-[0-9]*|team-architect|team-architect-[0-9]*)
-      printf 'architect'
-      return 0
-      ;;
-    vbw-docs|vbw-docs-[0-9]*|docs|docs-[0-9]*|team-docs|team-docs-[0-9]*)
-      printf 'docs'
-      return 0
-      ;;
-  esac
-
-  return 1
+  command -v vbw_active_agent_normalize_role >/dev/null 2>&1 || return 1
+  vbw_active_agent_normalize_role "$1"
 }
 
 _FG_PAYLOAD_AGENT_TYPE=$(printf '%s' "$INPUT" | jq -r '.agent_type // ""' 2>/dev/null) || _FG_PAYLOAD_AGENT_TYPE=""
@@ -140,6 +88,11 @@ _FG_PAYLOAD_AGENT_ID=$(printf '%s' "$INPUT" | jq -r '.agent_id // ""' 2>/dev/nul
 _FG_PAYLOAD_HAS_AGENT=false
 if [ -n "$_FG_PAYLOAD_AGENT_TYPE" ] || [ -n "$_FG_PAYLOAD_AGENT_ID" ]; then
   _FG_PAYLOAD_HAS_AGENT=true
+fi
+_FG_CALLER_IS_DELEGATED="$_FG_PAYLOAD_HAS_AGENT"
+# Trust the undocumented CLAUDE_CODE_CHILD_SESSION flag because live teammate payloads omit agent identity fields.
+if [ "${CLAUDE_CODE_CHILD_SESSION:-}" = "1" ]; then
+  _FG_CALLER_IS_DELEGATED=true
 fi
 
 detect_agent_role() {
@@ -180,22 +133,14 @@ else
   ACTIVE_AGENT_ROLE=""
 fi
 
-# Block misnamed plan/summary/context files in phase dirs (type-first format)
-# Must precede the .vbw-planning/* exemption which exits 0 for all planning artifacts.
-# Case-insensitive on extension (.md/.MD/.Md) to prevent bypass.
-# Normalize path: resolve .. components so traversal paths are matched intentionally,
-# not via accidental * matching across / separators.
 _FG_NORMALIZED=$(echo "$FILE_PATH" | sed 's#/[^/]*/\.\./#/#g')
 FILE_PATH_LC=$(echo "$_FG_NORMALIZED" | tr '[:upper:]' '[:lower:]')
 case "$FILE_PATH_LC" in
   *.vbw-planning/phases/*/plan-[0-9]*.md|*.vbw-planning/phases/*/summary-[0-9]*.md|*.vbw-planning/phases/*/context-[0-9]*.md)
     _BASENAME_CHECK=$(basename "$FILE_PATH" 2>/dev/null) || _BASENAME_CHECK="$FILE_PATH"
     _BASENAME_LC=$(echo "$_BASENAME_CHECK" | tr '[:upper:]' '[:lower:]')
-    # Only block exact type-first patterns (type-NN.md) and known compounds (plan-NN-summary.md, plan-NN-context.md).
-    # Allow arbitrary filenames like plan-01-review.md through.
     if echo "$_BASENAME_LC" | grep -qE '^(plan|summary|context)-[0-9]+\.md$' || \
        echo "$_BASENAME_LC" | grep -qE '^plan-[0-9]+-(summary|context)\.md$'; then
-      # Detect the artifact type for a precise error message
       _FG_TYPE="PLAN"
       case "$_BASENAME_LC" in
         summary-*|*-summary.*) _FG_TYPE="SUMMARY" ;;
@@ -207,11 +152,6 @@ case "$FILE_PATH_LC" in
     ;;
 esac
 
-# Claude Code may execute subagents from an unmanaged internal sidechain at
-# {host}/.claude/worktrees/agent-*. Relative writes from that CWD, or absolute
-# writes under the sidechain, would land in files VBW does not merge/use when
-# VBW worktree isolation is off. Block those targets before planning-artifact
-# exemptions and before the active-agent delegated workflow bypass.
 if [ -n "${VBW_CLAUDE_SIDECHAIN_ROOT:-}" ] && [ -n "${VBW_CLAUDE_SIDECHAIN_HOST_ROOT:-}" ]; then
   _FG_SIDECHAIN_BLOCK=false
   _FG_BLOCKED_TARGET="$FILE_PATH"
@@ -243,11 +183,6 @@ if [ -n "${VBW_CLAUDE_SIDECHAIN_ROOT:-}" ] && [ -n "${VBW_CLAUDE_SIDECHAIN_HOST_
   fi
 fi
 
-# Scout can write only planning artifacts. This must run before broad artifact
-# exemptions and before the active-agent-count delegated-workflow bypass; the
-# PreToolUse payload may not include VBW_AGENT_ROLE, so fall back to current
-# session active-agent state when available, with legacy root markers only when
-# no safe session id exists.
 if [ "$ACTIVE_AGENT_ROLE" = "scout" ] && [ -n "$PROJECT_ROOT" ]; then
   _FG_TARGET_ABS=$(to_abs_path "$FILE_PATH")
   _FG_PLANNING_ABS=$(to_abs_path "$PROJECT_ROOT/.vbw-planning")
@@ -262,37 +197,26 @@ if [ "$ACTIVE_AGENT_ROLE" = "scout" ] && [ -n "$PROJECT_ROOT" ]; then
   esac
 fi
 
-# Exempt planning artifacts — these are always allowed
 case "$FILE_PATH" in
   *.vbw-planning/milestones/*/phases/*)
-    # Archived milestone phase artifacts are read-only after archival.
-    # Block writes to prevent execution from corrupting archived plans/summaries.
-    # All other milestone root files are allowed (fall through to the
-    # general .vbw-planning/* exemption below) because Archive mode
-    # writes SHIPPED.md and moves STATE.md/ROADMAP.md during archival.
     echo "Blocked: writes to archived milestone phases are not allowed ($FILE_PATH)" >&2
     exit 2
     ;;
   *.vbw-planning/*/remediation/uat/round-*/R[0-9]*-SUMMARY.md|\
   *.vbw-planning/*/remediation/qa/round-*/R[0-9]*-SUMMARY.md)
-    # Remediation round summaries have an incremental lifecycle:
-    # task 1 Dev creates with status: in-progress, subsequent Devs append,
-    # Lead finalizes to terminal status. Exempt from terminal-status guard.
     exit 0
     ;;
   *.vbw-planning/*-SUMMARY.md)
-    # Block SUMMARY.md writes with non-terminal status values (prevent stub SUMMARYs)
     _FG_SUM_STATUS=$(echo "$INPUT" | jq -r '.tool_input.content // ""' 2>/dev/null | sed -n '/^---$/,/^---$/{ /^status:/{ s/^status:[[:space:]]*//; s/["'"'"']//g; p; }; }' | head -1 | tr -d '[:space:]')
     if [ -n "$_FG_SUM_STATUS" ]; then
       case "$_FG_SUM_STATUS" in
-        complete|completed|partial|failed) ;;  # terminal — allow
+        complete|completed|partial|failed) ;;
         *)
           echo "Blocked: SUMMARY.md status '${_FG_SUM_STATUS}' is not terminal (must be complete|partial|failed)" >&2
           exit 2
           ;;
       esac
     fi
-    # If status can't be parsed (e.g. Edit tool without full content), fail-open
     exit 0
     ;;
   *.vbw-planning/*|*SUMMARY.md|*VERIFICATION.md|*STATE.md|*CLAUDE.md|*.execution-state.json)
@@ -303,44 +227,40 @@ esac
 [ -z "$PROJECT_ROOT" ] && exit 0
 [ ! -d "$PHASES_DIR" ] && exit 0
 
-# Source shared summary-status helpers (fail-open: inline fallback if lib unavailable)
 _FG_STATUS_LIB="${_FG_SCRIPT_DIR}/summary-utils.sh"
 if [ -f "$_FG_STATUS_LIB" ]; then
   # shellcheck source=summary-utils.sh
   source "$_FG_STATUS_LIB"
   is_plan_finalized() { is_summary_terminal "$1"; }
 else
-  # Safe default: treat plans as not finalized when helpers unavailable
   is_plan_finalized() { return 1; }
 fi
 
-# Normalize path helper
 normalize_path() {
-  local p="$1"
-  local p_abs root_abs
+  local input_path="$1"
+  local absolute_path absolute_root
   if [ -n "$PROJECT_ROOT" ]; then
-    case "$p" in
+    case "$input_path" in
       "$PROJECT_ROOT"/*)
-        p="${p#"$PROJECT_ROOT"/}"
+        input_path="${input_path#"$PROJECT_ROOT"/}"
         ;;
       /*)
-        p_abs=$(to_abs_path "$p")
-        root_abs=$(to_abs_path "$PROJECT_ROOT")
-        if [ "$p_abs" = "$root_abs" ]; then
-          p=""
-        elif [[ "$p_abs" == "$root_abs"/* ]]; then
-          p="${p_abs#"$root_abs"/}"
+        absolute_path=$(to_abs_path "$input_path")
+        absolute_root=$(to_abs_path "$PROJECT_ROOT")
+        if [ "$absolute_path" = "$absolute_root" ]; then
+          input_path=""
+        elif [[ "$absolute_path" == "$absolute_root"/* ]]; then
+          input_path="${absolute_path#"$absolute_root"/}"
         fi
         ;;
     esac
   fi
-  p="${p#./}"
-  echo "$p"
+  input_path="${input_path#./}"
+  echo "$input_path"
 }
 
 NORM_TARGET=$(normalize_path "$FILE_PATH")
 
-# --- Worktree boundary enforcement ---
 CONFIG_PATH="$PROJECT_ROOT/.vbw-planning/config.json"
 WORKTREE_ISOLATION="off"
 if command -v jq >/dev/null 2>&1 && [ -f "$CONFIG_PATH" ]; then
@@ -358,7 +278,7 @@ if [ "$WORKTREE_ISOLATION" != "off" ] && [ -n "${VBW_AGENT_ROLE:-}" ]; then
           TARGET_ABS=$(to_abs_path "$FILE_PATH")
           case "$TARGET_ABS" in
             "$WORKTREE_ABS"/*|"$WORKTREE_ABS")
-              : # inside worktree — allowed
+              :
               ;;
             *)
               echo "Blocked: write outside worktree boundary (expected prefix: $WORKTREE_ABS, got: $TARGET_ABS)" >&2
@@ -371,27 +291,19 @@ if [ "$WORKTREE_ISOLATION" != "off" ] && [ -n "${VBW_AGENT_ROLE:-}" ]; then
   esac
 fi
 
-# --- V2 forbidden_paths check from active contract ---
-# v2_hard_contracts is now always enabled (graduated)
 
-# Contract enforcement is now unconditional
 if true; then
   CONTRACT_DIR="$PROJECT_ROOT/.vbw-planning/.contracts"
   if [ -d "$CONTRACT_DIR" ]; then
-    # Find active contract: match the first plan without a finalized SUMMARY
-    # A plan is active if its SUMMARY doesn't exist or has a non-terminal status.
-    # zsh compat: if no PLAN files exist, glob literal fails -f test and is skipped
     for PLAN_FILE in "$PHASES_DIR"/*/*-PLAN.md; do
       [ ! -f "$PLAN_FILE" ] && continue
       SUMMARY_FILE="${PLAN_FILE%-PLAN.md}-SUMMARY.md"
       if ! is_plan_finalized "$SUMMARY_FILE"; then
-        # Extract phase and plan numbers from filename
         BASENAME=$(basename "$PLAN_FILE")
         PHASE_NUM=$(echo "$BASENAME" | sed 's/^\([0-9]*\)-.*/\1/')
         PLAN_NUM=$(echo "$BASENAME" | sed 's/^[0-9]*-\([0-9]*\)-.*/\1/')
         CONTRACT_FILE="${CONTRACT_DIR}/${PHASE_NUM}-${PLAN_NUM}.json"
         if [ -f "$CONTRACT_FILE" ]; then
-          # Check forbidden_paths
           FORBIDDEN=$(jq -r '.forbidden_paths[]' "$CONTRACT_FILE" 2>/dev/null) || FORBIDDEN=""
           if [ -n "$FORBIDDEN" ]; then
             while IFS= read -r forbidden; do
@@ -404,8 +316,6 @@ if true; then
               fi
             done <<< "$FORBIDDEN"
           fi
-          # Check allowed_paths — file must be in contract scope (only if allowed_paths is specified)
-          # Note: allowed_paths is optional; if empty, fall through to plan files_modified check
           ALLOWED=$(jq -r '.allowed_paths[]' "$CONTRACT_FILE" 2>/dev/null) || ALLOWED=""
           if [ -n "$ALLOWED" ]; then
             IN_SCOPE=false
@@ -429,20 +339,6 @@ if true; then
   fi
 fi
 
-# --- Orchestrator delegation guard (delegated workflows) ---
-# When a VBW delegated workflow is active (execute, fix, debug) and the caller is
-# the orchestrator (no VBW_AGENT_ROLE), block product-file writes. The orchestrator
-# must delegate to Dev/Debugger subagents via Task tool. Subagents (with a role set)
-# are unaffected. Turbo/direct effort modes where the orchestrator is expected to
-# implement are exempt.
-#
-# Fail-open: missing/malformed/stale state files skip the guard.
-#
-# Execute team-mode bypass: teammate sessions may not trigger SubagentStart
-# hooks, so `.active-agent-count` alone is insufficient to detect them. VBW
-# therefore records the actual delegated workflow mode in the transient
-# `.delegated-workflow.json` marker. Only an active execute marker with
-# `delegation_mode="team"` gets the team-style bypass.
 _DG_PROJECT_ABS=$(to_abs_path "$PROJECT_ROOT")
 _DG_TARGET_ABS=$(to_abs_path "$FILE_PATH")
 _DG_TARGET_IN_PROJECT=false
@@ -450,7 +346,7 @@ case "$_DG_TARGET_ABS" in
   "$_DG_PROJECT_ABS"|"$_DG_PROJECT_ABS"/*) _DG_TARGET_IN_PROJECT=true ;;
 esac
 
-if [ "$_DG_TARGET_IN_PROJECT" = true ] && [ -z "${VBW_AGENT_ROLE:-}" ] && [ -z "${VBW_ACTIVE_AGENT:-}" ] && [ "$_FG_PAYLOAD_HAS_AGENT" = false ]; then
+if [ "$_DG_TARGET_IN_PROJECT" = true ] && [ -z "${VBW_AGENT_ROLE:-}" ] && [ -z "${VBW_ACTIVE_AGENT:-}" ] && [ "$_FG_CALLER_IS_DELEGATED" = false ]; then
   _DELEG_FILE="$PROJECT_ROOT/.vbw-planning/.delegated-workflow.json"
   _DG_MARKER_STATUS=""
   _DG_MARKER_LIVE="false"
@@ -472,12 +368,20 @@ if [ "$_DG_TARGET_IN_PROJECT" = true ] && [ -z "${VBW_AGENT_ROLE:-}" ] && [ -z "
   _DG_BLOCK=false
   _DG_EFFORT=""
 
-  # Source 1: .execution-state.json (execute/remediation paths)
   _EXEC_STATE_FILE="$PROJECT_ROOT/.vbw-planning/.execution-state.json"
-  if [ -f "$_EXEC_STATE_FILE" ]; then
+  _EXEC_APPLICABLE=true
+  if [ -f "$_EXEC_STATE_FILE" ] && [ -n "${CLAUDE_SESSION_ID:-}" ]; then
+    _EXEC_APPLICABLE=false
+    _EXEC_SESSION_ID=$(jq -r '.session_id // ""' "$_EXEC_STATE_FILE" 2>/dev/null) || _EXEC_SESSION_ID=""
+    if [ -n "$_EXEC_SESSION_ID" ] && [ "$_EXEC_SESSION_ID" = "${CLAUDE_SESSION_ID:-}" ]; then
+      _EXEC_APPLICABLE=true
+    elif [ "$_DG_MARKER_LIVE" = "true" ] && [ "$_DG_MARKER_MODE" = "execute" ]; then
+      _EXEC_APPLICABLE=true
+    fi
+  fi
+  if [ -f "$_EXEC_STATE_FILE" ] && [ "$_EXEC_APPLICABLE" = true ]; then
     _EXEC_STATUS=$(jq -r '.status // ""' "$_EXEC_STATE_FILE" 2>/dev/null) || _EXEC_STATUS=""
     if [ "$_EXEC_STATUS" = "running" ]; then
-      # Staleness check: skip if file older than 4 hours (14400s)
       _DG_NOW=$(date +%s 2>/dev/null || echo 0)
       if [ "$(uname)" = "Darwin" ]; then
         _DG_MTIME=$(stat -f %m "$_EXEC_STATE_FILE" 2>/dev/null || echo 0)
@@ -492,7 +396,6 @@ if [ "$_DG_TARGET_IN_PROJECT" = true ] && [ -z "${VBW_AGENT_ROLE:-}" ] && [ -z "
     fi
   fi
 
-  # Source 2: .delegated-workflow.json (execute/fix/debug delegated paths)
   if [ "$_DG_BLOCK" = false ]; then
     if [ "$_DG_MARKER_LIVE" = "true" ]; then
       _DG_BLOCK=true
@@ -500,16 +403,13 @@ if [ "$_DG_TARGET_IN_PROJECT" = true ] && [ -z "${VBW_AGENT_ROLE:-}" ] && [ -z "
     fi
   fi
 
-  # If delegated workflow active, check if effort allows direct orchestrator writes
   if [ "$_DG_BLOCK" = true ]; then
-    # Turbo/direct: orchestrator implements directly — no block
-    # Resolve effective effort: state file > config fallback
     if [ -z "$_DG_EFFORT" ] || [ "$_DG_EFFORT" = "null" ]; then
       _DG_EFFORT=$(jq -r '.effort // "balanced"' "$PROJECT_ROOT/.vbw-planning/config.json" 2>/dev/null) || _DG_EFFORT="balanced"
     fi
     case "$_DG_EFFORT" in
       turbo|direct)
-        : # Turbo/direct — orchestrator is expected to write, allow
+        :
         ;;
       *)
         echo "Blocked: orchestrator cannot write product files during delegated workflow (effort=$_DG_EFFORT). Delegate via Task tool to Dev/Debugger subagent." >&2
@@ -519,35 +419,25 @@ if [ "$_DG_TARGET_IN_PROJECT" = true ] && [ -z "${VBW_AGENT_ROLE:-}" ] && [ -z "
   fi
 fi
 
-# --- V2 role isolation: check agent role against path rules ---
-# v2_role_isolation is now always enabled (graduated)
 AGENT_ROLE="$ACTIVE_AGENT_ROLE"
 if [ -n "$AGENT_ROLE" ]; then
   case "$AGENT_ROLE" in
     lead|architect|qa)
-      # Planning roles can only write to .vbw-planning/ (already exempted above, so reaching here means non-planning path)
       echo "Blocked: role '${AGENT_ROLE}' cannot write outside .vbw-planning/" >&2
       exit 2
       ;;
     scout)
-      # Scout is read-only — block all non-planning writes
       echo "Blocked: role 'scout' is read-only" >&2
       exit 2
       ;;
     dev|debugger)
-      # Dev/debugger allowed — contract allowed_paths enforced above
       ;;
     *)
-      # Unknown role — fail-open
       ;;
   esac
 fi
-# No role set — fail-open
 
-# --- Original file-guard: check files_modified from active plan ---
 ACTIVE_PLAN=""
-# A plan is active if its SUMMARY doesn't exist or has a non-terminal status.
-# zsh compat: if no PLAN files exist, glob literal fails -f test and is skipped
 for PLAN_FILE in "$PHASES_DIR"/*/*-PLAN.md; do
   [ ! -f "$PLAN_FILE" ] && continue
   SUMMARY_FILE="${PLAN_FILE%-PLAN.md}-SUMMARY.md"
@@ -557,10 +447,8 @@ for PLAN_FILE in "$PHASES_DIR"/*/*-PLAN.md; do
   fi
 done
 
-# No active plan found — fail-open
 [ -z "$ACTIVE_PLAN" ] && exit 0
 
-# Extract files_modified from YAML frontmatter
 DECLARED_FILES=$(awk '
   BEGIN { in_front=0; in_files=0 }
   /^---$/ {
@@ -577,10 +465,8 @@ DECLARED_FILES=$(awk '
   in_front && in_files && /^[^[:space:]]/ { in_files=0 }
 ' "$ACTIVE_PLAN" 2>/dev/null) || exit 0
 
-# No files_modified declared — fail-open
 [ -z "$DECLARED_FILES" ] && exit 0
 
-# Check if target file is in declared files
 while IFS= read -r declared; do
   [ -z "$declared" ] && continue
   NORM_DECLARED=$(normalize_path "$declared")
@@ -589,6 +475,5 @@ while IFS= read -r declared; do
   fi
 done <<< "$DECLARED_FILES"
 
-# File not declared — block the write
 echo "Blocked: $NORM_TARGET is not in active plan's files_modified ($ACTIVE_PLAN)" >&2
 exit 2
