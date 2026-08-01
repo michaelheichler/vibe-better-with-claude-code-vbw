@@ -644,10 +644,10 @@ else
       fail "skills: Step 5 missing bounded Other-path numbered/hybrid reply guidance"
     fi
 
-    if grep -Fq 'If none were selected, display `○ No skills selected for installation.` and STOP here. Do not ask Step 5b and do not enter Step 6.' <<< "$skills_step_5"; then
-      pass "skills: Step 5 skips scope selection when bounded structured branch declines everything"
+    if grep -Fq 'If none were selected, display `○ No skills selected for installation.` and STOP here. Do not enter Step 6.' <<< "$skills_step_5"; then
+      pass "skills: Step 5 stops when bounded structured branches decline everything"
     else
-      fail "skills: Step 5 missing no-selection stop before Step 5b"
+      fail "skills: Step 5 missing no-selection stop before installation"
     fi
 
     if grep -Fq 'If the combined list has more than 4 candidates: use intentional high-cardinality freeform input.' <<< "$skills_step_5" \
@@ -661,41 +661,40 @@ else
 fi
 
 echo ""
-echo "=== skills.md Step 5b Verification ==="
+echo "=== Project-Scoped Skill Install Verification ==="
 
 if [ ! -f "$SKILLS_FILE" ]; then
   fail "skills: command file not found"
 else
-  skills_step_5b="$({
-    awk '
-      /^### Step 5b: Choose installation scope$/ { in_block=1; next }
-      in_block && /^### / { exit }
-      in_block { print }
-    ' "$SKILLS_FILE"
-  } || true)"
-
-  if [ -z "$skills_step_5b" ]; then
-    fail "skills: missing Step 5b block"
+  if grep -Fq '### Step 5b: Choose installation scope' "$SKILLS_FILE" \
+    || grep -Fq -- '- **Global**' "$SKILLS_FILE" \
+    || grep -Fq 'based on SCOPE' "$SKILLS_FILE"; then
+    fail "skills: selectable installation scope remains"
   else
-    if grep -Fq -- '- **Global** — "Installed to `<global_skills_dir>/`, available in all projects."' <<< "$skills_step_5b"; then
-      pass "skills: Step 5b Global option uses <global_skills_dir>/ placeholder"
-    else
-      fail "skills: Step 5b Global option missing <global_skills_dir>/ placeholder"
-    fi
+    pass "skills: selectable installation scope removed"
+  fi
 
-    if grep -Fq 'Use the `global_skills_dir` value from the Stack detection Context JSON as the display path.' <<< "$skills_step_5b"; then
-      pass "skills: Step 5b explains global_skills_dir display source"
-    else
-      fail "skills: Step 5b missing global_skills_dir Stack detection Context JSON guidance"
-    fi
+  if grep -Fq 'Curated suggestions are suppressed only by project-installed skills.' "$SKILLS_FILE"; then
+    pass "skills: global installs are informational for curated suggestions"
+  else
+    fail "skills: missing project-only curated suggestion guidance"
+  fi
 
-    if grep -Fq '~/.agents/skills/' <<< "$skills_step_5b"; then
-      fail "skills: Step 5b still exposes ~/.agents/skills/ display path"
-    else
-      pass "skills: Step 5b does not expose ~/.agents/skills/ display path"
-    fi
+  if grep -Fq 'Run `npx skills add <skill> -y` for each selected skill.' "$SKILLS_FILE"; then
+    pass "skills: install step uses project scope"
+  else
+    fail "skills: project-scoped install command missing"
   fi
 fi
+
+for skill_install_file in "$COMMANDS_DIR/init.md" "$COMMANDS_DIR/skills.md"; do
+  skill_install_name="$(basename "$skill_install_file")"
+  if grep -Eq 'npx[[:space:]]+skills[[:space:]]+add[^`]*[[:space:]](-g|--global)([[:space:]`]|$)' "$skill_install_file"; then
+    fail "$skill_install_name: global skills install flag present"
+  else
+    pass "$skill_install_name: skills installs remain project-scoped"
+  fi
+done
 
 echo ""
 echo "=== Milestone Context Verification ==="

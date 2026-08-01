@@ -432,7 +432,7 @@ Options:
 
 **6e. Correction flow** (when user picks "Close, but needs adjustments"):
 
-Display all fields as a numbered list. Ask as intentional freeform/no-options input: "Which fields would you like to correct?" Enter comma-separated field numbers (for example, 1,3,5). This is freeform input. Do not format the field list as a structured options array.
+Display all fields as a numbered list. Ask as intentional freeform/no-options input: "Which fields would you like to correct?" Enter comma-separated field numbers (for example, 1,3,5). This is freeform input. In this flow, do not format the field list as a structured options array.
 
 For each selected field, use AskUserQuestion to ask the user for the corrected value. Update the inference JSON with corrected values.
 

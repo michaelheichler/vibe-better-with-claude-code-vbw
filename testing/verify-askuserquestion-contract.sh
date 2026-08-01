@@ -86,29 +86,24 @@ extract_heading_block() {
   local file="$1"
   local heading="$2"
   local end_regex="$3"
-
   awk -v h="$heading" -v end_re="$end_regex" '
     function trim_line(s) {
       sub(/^[[:space:]]+/, "", s)
       sub(/[[:space:]]+$/, "", s)
       return s
     }
-
     {
       line=$0
       gsub(/\r/, "", line)
       trimmed=trim_line(line)
-
       if (trimmed == h) {
         found=1
         print line
         next
       }
-
       if (found && trimmed ~ end_re) {
         exit
       }
-
       if (found) {
         print line
       }
@@ -744,7 +739,7 @@ require_text_literal "skills: 2-4 candidates preserve skip option" '`Skip`' "$SK
 forbid_text_regex "skills: 2-4 candidate branch excludes freeform parser anti-patterns" 'numbered list|comma-separated|high-cardinality|numeric/freeform|Type numbers|Accept comma-separated|Reject out-of-range|freeform response|do NOT use `options` array' "$SKILLS_BOUNDED_MULTI_BRANCH"
 require_text_literal "skills: bounded branches acknowledge built-in Other path" 'the built-in `Other` path is still part of that question' "$SKILLS_STEP_5"
 require_text_literal "skills: bounded branches accept hybrid number replies" 'accept hybrid replies anchored to one of those visible option numbers' "$SKILLS_STEP_5"
-require_text_literal "skills: no-selection stops before installation scope" 'Do not ask Step 5b and do not enter Step 6.' "$SKILLS_STEP_5"
+require_text_literal "skills: no-selection stops before installation" 'Do not enter Step 6.' "$SKILLS_STEP_5"
 require_text_literal "skills: 5+ candidates use intentional high-cardinality freeform" "If the combined list has more than 4 candidates: use intentional high-cardinality freeform input." "$SKILLS_HIGH_CARDINALITY_BRANCH"
 require_text_literal "skills: 5+ candidate branch forbids options array" 'do NOT use `options` array' "$SKILLS_HIGH_CARDINALITY_BRANCH"
 require_text_literal "skills: 5+ candidate branch presents numbered list in question text" "numbered list in the AskUserQuestion text" "$SKILLS_HIGH_CARDINALITY_BRANCH"
