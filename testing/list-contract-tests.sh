@@ -1,21 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
-# list-contract-tests.sh — Single source of truth for the contract test registry.
-#
-# Output: tab-separated name<TAB>relative-path pairs, one per line.
-# Paths are relative to the repo root.
-#
-# Used by: testing/run-all.sh, .github/workflows/ci.yml,
-#          testing/verify-ci-workflow-contract.sh
-#
-# To add a contract test: add a line here and create the script. Both local
-# and CI runners will automatically discover it — no other files need editing.
-
 printf '%s\t%s\n' \
   init-todo                    scripts/verify-init-todo.sh \
   claude-bootstrap             scripts/verify-claude-bootstrap.sh \
   bash-scripts-contract        testing/verify-bash-scripts-contract.sh \
   commands-contract            testing/verify-commands-contract.sh \
+  agent-sendmessage-contract   testing/verify-agent-sendmessage-contract.sh \
   pipefail-safety              testing/verify-pipefail-safety.sh \
   no-inline-exec-spans         testing/verify-no-inline-exec-spans.sh \
   issue-157-migration          testing/verify-issue-157-migration-contract.sh \
