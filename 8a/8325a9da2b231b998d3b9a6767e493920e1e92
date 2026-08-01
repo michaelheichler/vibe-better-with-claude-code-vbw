@@ -1,0 +1,31 @@
+commands/research.md
+  s_27ea496ab5a93e::t_f13587c22dbc1b 85-89
+commands/debug.md
+  s_27ea496ab5a93e::t_c09d62eac866a6 255-259,302-306,471-475
+commands/vibe.md
+  s_27ea496ab5a93e::t_7615075a462deb 941-943
+  s_27ea496ab5a93e::t_97581390c82876 1234
+  s_27ea496ab5a93e::t_901b746d4d6202 330-334,391-395,603-607,765-769,872-876,1230-1233,1309-1313,1558-1562
+references/execute-protocol.md
+  s_27ea496ab5a93e::t_d62b2d86fe377a 712-716,758-762
+commands/qa.md
+  s_27ea496ab5a93e::t_71612d77d6ef37 155-159,336-340
+commands/fix.md
+  s_27ea496ab5a93e::t_ac659c2725914d 86-88
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "8a8325a9da2b231b998d3b9a6767e493920e1e92",
+  "prompts": {},
+  "sessions": {
+    "s_27ea496ab5a93e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4452c98a-815b-4051-9652-732944fc8275",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
