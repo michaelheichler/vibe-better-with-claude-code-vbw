@@ -327,11 +327,13 @@ Acknowledgment from a teammate that it will terminate.
 
 ### Delivery format
 
-Claude Code delivers `shutdown_request` as JSON text in the SendMessage inbox. The delivered message may not include the full V2 envelope — it may arrive as a simpler JSON object with just `type`, `id`, `from` (corresponds to `author_role` in the V2 envelope), `reason`, and `timestamp`. Agents MUST recognize `"type":"shutdown_request"` in the received message text regardless of envelope structure, and respond by **calling the SendMessage tool** with a `shutdown_response` (not plain text).
+Claude Code delivers `shutdown_request` as JSON text in the SendMessage inbox. The delivered message may not include the full V2 envelope. It may arrive as a simpler JSON object with only `type`, `id`, `from` (which corresponds to `author_role` in the V2 envelope), `reason`, and `timestamp`. The normalization rules below handle both forms.
 
-On receiving `shutdown_request`: finish any in-progress tool call, **call the SendMessage tool** with `shutdown_response` (`request_id` echoed from the request, `approved: true`, `final_status`), then STOP all further work. Do NOT start new tasks, fix additional issues, or take any action after responding. After collecting all responses the team config directory is removed automatically when the session exits; there is no TeamDelete call. **Plain text acknowledgement does NOT satisfy the shutdown protocol — you MUST call the SendMessage tool.**
+Follow the team-shutdown contract in `references/subagent-contracts.md`.
 
-> **Conditional refusal:** The schema allows `approved: false` with `pending_work` describing what remains. Currently all agents are instructed to always approve. The orchestrator retries up to 3 times on rejection before proceeding. If a future agent needs to delay shutdown (e.g., mid-write to disk), update its Shutdown Handling section to allow conditional refusal with `approved: false`.
+Shutdown invariant: acknowledge every `shutdown_request` by calling SendMessage with `shutdown_response`, then stop.
+
+> **Conditional refusal:** The schema allows `approved: false` with `pending_work` describing what remains. Currently all agents are instructed to always approve. If a future agent needs to delay shutdown (for example, during a disk write), update its Shutdown Handling section to allow conditional refusal with `approved: false`.
 
 ## Backward Compatibility
 

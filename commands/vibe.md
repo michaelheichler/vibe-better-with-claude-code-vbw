@@ -1719,7 +1719,11 @@ FAIL -> STOP with remediation suggestions. WARN -> proceed with warnings.
 
 After Execute mode completes (autonomy=pure-vibe only): if more unbuilt phases exist, auto-continue to next phase (Plan + Execute). Loop until `next_phase_state=all_done` or error. Other autonomy levels: STOP after phase.
 
-**CRITICAL — Between iterations:** Before starting the next phase's Plan mode, inspect the prior Execute delegation marker/state. Only when the prior run actually persisted `delegation_mode=team` with a real `TEAM_NAME`: send `shutdown_request` to each teammate and await responses, then run Post-shutdown residual cleanup. The team config directory is removed automatically when the session exits; there is no TeamDelete call. If the prior run used serialized subagents, turbo/internal direct, or fallback non-team mode, rely on completed subagent/direct execution plus the cleared delegation state; do not send team shutdown messages without a real team.
+**CRITICAL: Between iterations:** Before starting the next phase's Plan mode, inspect the prior Execute delegation marker and state. Only when the prior run persisted `delegation_mode=team` with a real `TEAM_NAME`, follow the team-shutdown contract in `references/subagent-contracts.md`.
+
+Shutdown invariant: acknowledge every `shutdown_request` by calling SendMessage with `shutdown_response`, then stop.
+
+After the shared shutdown completes, run Post-shutdown residual cleanup. The team config directory is removed automatically when the session exits. There is no TeamDelete call. If the prior run used serialized subagents, turbo or internal direct execution, or fallback non-team mode, rely on completed subagent or direct execution plus the cleared delegation state. Do not send team shutdown messages without a real team.
 
 ## Output Format
 
