@@ -1,0 +1,21 @@
+testing/verify-skill-activation.sh
+  s_cb6db6bc22a2a0::t_edc7efcfb3630e 52-54
+  s_cb6db6bc22a2a0::t_bf7ed6f6616235 1664
+  s_cb6db6bc22a2a0::t_c1a83eda1351d0 1686
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "3f9c79e28e70da16e9d796488cb15a7dafaca41d",
+  "prompts": {},
+  "sessions": {
+    "s_cb6db6bc22a2a0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "134661bc-d3bc-43f9-89e4-713aba547780",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
