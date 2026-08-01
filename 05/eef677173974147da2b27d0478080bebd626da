@@ -1,0 +1,30 @@
+scripts/rtk-manager.sh
+  s_0e6a41e1e30cd3::t_cc15c78a0ecc00 855
+tests/rtk-manager.bats
+  s_0e6a41e1e30cd3::t_645509a03f2411 2072-2077
+  s_cb6db6bc22a2a0::t_4d0da4c65b3a47 2063-2071
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "05eef677173974147da2b27d0478080bebd626da",
+  "prompts": {},
+  "sessions": {
+    "s_0e6a41e1e30cd3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2f5acbb2-f08e-44f2-bc94-ad94397dd129",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    },
+    "s_cb6db6bc22a2a0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "134661bc-d3bc-43f9-89e4-713aba547780",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
