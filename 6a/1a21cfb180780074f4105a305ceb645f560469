@@ -1,0 +1,60 @@
+commands/config.md
+  s_1d0ef8928b5be8::t_74c6164694997b 16
+commands/help.md
+  s_1d0ef8928b5be8::t_e520294fd1ea39 16
+commands/vibe.md
+  s_1d0ef8928b5be8::t_421e747617e20c 24
+commands/init.md
+  s_1d0ef8928b5be8::t_c8e57363faa80f 31
+commands/skills.md
+  s_1d0ef8928b5be8::t_e5efc5d0254fb4 20
+commands/update.md
+  s_1d0ef8928b5be8::t_425c27024ea170 16
+commands/qa.md
+  s_1d0ef8928b5be8::t_4b5b3183ce1ca2 20
+commands/status.md
+  s_1d0ef8928b5be8::t_099dae2eb2514a 20
+commands/verify.md
+  s_1d0ef8928b5be8::t_c169324d34e7eb 21
+commands/debug.md
+  s_1d0ef8928b5be8::t_783e9a380af9dd 19
+commands/map.md
+  s_1d0ef8928b5be8::t_82fedd14e89df2 20
+testing/verify-plugin-root-resolution.sh
+  s_1d0ef8928b5be8::t_b0e35a870dcc22 82-87
+  s_1d0ef8928b5be8::t_7c650a563aa98f 89-91,96-99,102-103,110-121
+  s_1d0ef8928b5be8::t_2cd03eba37d586 92-95
+  s_1d0ef8928b5be8::t_78db91c29f9851 122
+commands/report.md
+  s_1d0ef8928b5be8::t_80835ce6290560 19
+commands/rtk.md
+  s_1d0ef8928b5be8::t_38a107f2a2bc3c 16
+commands/fix.md
+  s_1d0ef8928b5be8::t_4b2e56ac4d56fa 19
+commands/discuss.md
+  s_1d0ef8928b5be8::t_0d0b4d7d585518 20
+commands/research.md
+  s_1d0ef8928b5be8::t_17427e758e15d7 20
+commands/resume.md
+  s_1d0ef8928b5be8::t_f1c762d7ba5ce5 20
+commands/doctor.md
+  s_1d0ef8928b5be8::t_5ac848d08759a3 19
+commands/whats-new.md
+  s_1d0ef8928b5be8::t_326c1c06086991 16
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "6a1a21cfb180780074f4105a305ceb645f560469",
+  "prompts": {},
+  "sessions": {
+    "s_1d0ef8928b5be8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d98ead94-2633-4e93-bfad-c8ee6f966aaa",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
