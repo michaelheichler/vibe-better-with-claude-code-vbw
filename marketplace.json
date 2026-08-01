@@ -5,13 +5,13 @@
     "email": "t.serodio@gmail.com"
   },
   "metadata": {
-    "description": "Vibe Better With Claude Code — development lifecycle plugin"
+    "description": "Vibe Better With Claude Code: development lifecycle plugin"
   },
   "plugins": [
     {
       "name": "vbw",
       "source": "./",
-      "description": "Development lifecycle plugin — 26 commands, 7 agents, continuous verification",
+      "description": "Development lifecycle plugin: 26 commands, 8 agents, continuous verification",
       "version": "1.37.1",
       "license": "MIT",
       "keywords": [
