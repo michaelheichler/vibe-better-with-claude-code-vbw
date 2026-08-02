@@ -1,0 +1,20 @@
+.vbw-planning/phases/06-oversized-file-decomposition/remediation/qa/round-01/R01-SUMMARY.md
+  s_0825a35676f762::t_0eec0392a2fa1c 22
+  s_0825a35676f762::t_af00277713da69 1-21,23-58
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "19a08327db97393ff6c0eb1cca80b881418fac4f",
+  "prompts": {},
+  "sessions": {
+    "s_0825a35676f762": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "bdda186d-4444-4c1d-826e-ec4c6e54a197",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
