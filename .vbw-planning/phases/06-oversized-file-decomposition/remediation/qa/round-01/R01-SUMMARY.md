@@ -17,8 +17,7 @@ files_modified:
   - .vbw-planning/phases/06-oversized-file-decomposition/06-01-PLAN.md
   - .vbw-planning/phases/06-oversized-file-decomposition/06-03-PLAN.md
   - .vbw-planning/phases/06-oversized-file-decomposition/remediation/qa/round-01/R01-SUMMARY.md
-deviations:
-  - "The 06-02 behavior-change FAIL was accepted as a process exception. 06-02-PLAN.md already specifies ref:0f9b3be3 and requires its SUMMARY deviation entry, so no amendment applies."
+deviations: []
 known_issue_outcomes: []
 ---
 
