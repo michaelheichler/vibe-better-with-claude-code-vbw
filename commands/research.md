@@ -84,9 +84,9 @@ Current project:
     - Include the live-validation policy in the Scout task context when external data may matter: public/anonymous HTTP validation uses WebFetch; authenticated/private read-only checks use verified-safe Bash helper scripts or curl wrappers after preflight; unsafe or mutating checks are deferred to Dev/Debugger. When Scout runs or defers live validation, require `## Live Validation Evidence` with `command_shape`, `exit_status`, `redacted_evidence`, `expected_shape`, `confidence`, and `limitations_or_deferred_reason`.
     - Spawn vbw-scout as subagent(s) via Task tool. **Set `subagent_type: "vbw:vbw-scout"` and `model: "${SCOUT_MODEL}"` in the Task tool invocation. If `SCOUT_MAX_TURNS` is non-empty, also pass `maxTurns: ${SCOUT_MAX_TURNS}`. If `SCOUT_MAX_TURNS` is empty, do NOT include maxTurns (omitting it = unlimited).**
 
-Non-team invariant: omit `team_name`, `run_in_background`, `isolation`, and all worktree cwd fields.
+    Non-team invariant: omit `team_name`, `run_in_background`, `isolation`, and all worktree cwd fields.
 
-If `SCOUT_REASONING` is non-empty, also pass `effort: "${SCOUT_REASONING}"`. If `SCOUT_REASONING` is empty, do NOT include effort (the resolved model rejects the parameter).
+    If `SCOUT_REASONING` is non-empty, also pass `effort: "${SCOUT_REASONING}"`. If `SCOUT_REASONING` is empty, do NOT include effort (the resolved model rejects the parameter).
 ```text
 <skill_activation>
 Call Skill('{relevant-skill-1}').

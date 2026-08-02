@@ -254,9 +254,9 @@ If resuming a session with `session_status=complete`: STOP "This debug session i
     - Verify: after shutdown, there must be ZERO active teammates. If teardown stalls, advise the user to run `/vbw:doctor --cleanup`.
     - **Implementation phase:** If `RESOLUTION_OBSERVATION=already_fixed` or `inconclusive`: do NOT spawn an implementation owner. If `RESOLUTION_OBSERVATION=needs_change`: spawn ONE fresh post-synthesis implementation owner via TaskCreate with `subagent_type: "vbw:vbw-debugger"` and `model: "${DEBUGGER_MODEL}"`. If `DEBUGGER_MAX_TURNS` is non-empty, also pass `maxTurns: ${DEBUGGER_MAX_TURNS}`. If `DEBUGGER_MAX_TURNS` is empty, do NOT include maxTurns (omitting it = unlimited).
 
-Non-team invariant: omit `team_name`, `run_in_background`, `isolation`, and all worktree cwd fields.
+    Non-team invariant: omit `team_name`, `run_in_background`, `isolation`, and all worktree cwd fields.
 
-This is a new debugger instance, not one of the earlier hypothesis investigators. Give it the accepted-exception debug semantics block, winning hypothesis, rejected-hypothesis summary, synthesized evidence, relevant file paths, working dir, codebase bootstrap instruction, and explicit authority to implement, verify, and commit `fix({scope}): {description}` as the sole post-synthesis implementation owner. Wait for that implementation owner to finish before continuing to Step 5. Only THEN present results to user. If `DEBUGGER_REASONING` is non-empty, also pass `effort: "${DEBUGGER_REASONING}"`. If `DEBUGGER_REASONING` is empty, do NOT include effort (the resolved model rejects the parameter).
+    This is a new debugger instance, not one of the earlier hypothesis investigators. Give it the accepted-exception debug semantics block, winning hypothesis, rejected-hypothesis summary, synthesized evidence, relevant file paths, working dir, codebase bootstrap instruction, and explicit authority to implement, verify, and commit `fix({scope}): {description}` as the sole post-synthesis implementation owner. Wait for that implementation owner to finish before continuing to Step 5. Only THEN present results to user. If `DEBUGGER_REASONING` is non-empty, also pass `effort: "${DEBUGGER_REASONING}"`. If `DEBUGGER_REASONING` is empty, do NOT include effort (the resolved model rejects the parameter).
 
   **Path B: Standard** (all other cases):
     - Resolve Debugger model:
@@ -301,9 +301,9 @@ This is a new debugger instance, not one of the earlier hypothesis investigators
         Replace `{bug description from Step 1}` with the actual parsed bug description. If `RESEARCH_CONTEXT` is non-empty, include it in the Debugger task prompt below. If empty, omit the `<standalone_research_context>` block entirely — the debug workflow proceeds as today.
     - Spawn vbw-debugger as subagent via Agent tool. **Set `subagent_type: "vbw:vbw-debugger"` and `model: "${DEBUGGER_MODEL}"` in the Agent tool invocation. If `DEBUGGER_MAX_TURNS` is non-empty, also pass `maxTurns: ${DEBUGGER_MAX_TURNS}`. If `DEBUGGER_MAX_TURNS` is empty, do NOT include maxTurns (omitting it = unlimited).**
 
-Non-team invariant: omit `team_name`, `run_in_background`, `isolation`, and all worktree cwd fields.
+    Non-team invariant: omit `team_name`, `run_in_background`, `isolation`, and all worktree cwd fields.
 
-If `DEBUGGER_REASONING` is non-empty, also pass `effort: "${DEBUGGER_REASONING}"`. If `DEBUGGER_REASONING` is empty, do NOT include effort (the resolved model rejects the parameter).
+    If `DEBUGGER_REASONING` is non-empty, also pass `effort: "${DEBUGGER_REASONING}"`. If `DEBUGGER_REASONING` is empty, do NOT include effort (the resolved model rejects the parameter).
         ```text
         Bug investigation. Effort: {DEBUGGER_EFFORT}.
         <accepted_exception_debug_semantics>
@@ -470,9 +470,9 @@ fi
 
 1. Spawn vbw-qa as subagent via Agent tool for debug-session verification. **Set `subagent_type: "vbw:vbw-qa"` and `model: "${QA_MODEL}"` in the Agent tool invocation. If `QA_MAX_TURNS` is non-empty, also pass `maxTurns: ${QA_MAX_TURNS}`.**
 
-Non-team invariant: omit `team_name`, `run_in_background`, `isolation`, and all worktree cwd fields.
+    Non-team invariant: omit `team_name`, `run_in_background`, `isolation`, and all worktree cwd fields.
 
-If `QA_REASONING` is non-empty, also pass `effort: "${QA_REASONING}"`. If `QA_REASONING` is empty, do NOT include effort (the resolved model rejects the parameter).
+    If `QA_REASONING` is non-empty, also pass `effort: "${QA_REASONING}"`. If `QA_REASONING` is empty, do NOT include effort (the resolved model rejects the parameter).
 
     Before composing the QA task description, evaluate installed skills visible in your system context using the same two-pass rubric. **Pass 1:** derive technical domains from the session context, error text, related files, changed files, and any bounded sparse-context enrichment summary/files/markers retained from Step 1. Prefer that structured data before generic stack guesses. If those signals mention or imply SwiftData markers such as `import SwiftData`, `@Model`, `ModelContext`, `ModelContainer`, `FetchDescriptor`, `VersionedSchema`, `SchemaMigrationPlan`, or `PersistentModel`, select `swiftdata`. Do NOT pull in `core-data` as a generic persistence fallback unless the actual evidence instead shows Core Data APIs such as `import CoreData`, `NSManagedObject`, `NSPersistentContainer`, `NSFetchRequest`, or `NSManagedObjectContext`. **Pass 2:** select all materially helpful installed skills that directly match those derived domains, plus only the narrowly adjacent support skills that materially help verification — not just the single most direct skill. The QA prompt MUST begin with exactly one explicit skill outcome block: use `<skill_activation>{For each selected skill: "Call Skill({skill-name})"}</skill_activation>` when one or more installed skills are preselected at orchestration time, or `<skill_no_activation>Evaluated installed skills for this task. No skills were preselected at orchestration time. Reason: {brief task-specific reason}.</skill_no_activation>` when none are preselected. Silent omission of both blocks is invalid. After evaluating, state the skill outcome in your response (e.g., "Skills: activating {skill-name}" or "Skills: none preselected — {reason}") so the user has visibility before the agent is spawned. If bounded sparse-context enrichment influenced the choice, cite that explicitly in the activation/no-activation reason so `.vbw-planning/.skill-decisions.log` records why. After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting. Do not scan entire skill folders or read unrelated references.
 
