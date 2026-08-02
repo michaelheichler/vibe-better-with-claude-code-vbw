@@ -87,16 +87,9 @@ Current project:
       Non-team invariant: omit `team_name`, `run_in_background`, `isolation`, and all worktree cwd fields.
 
       If `SCOUT_REASONING` is non-empty, also pass `effort: "${SCOUT_REASONING}"`. If `SCOUT_REASONING` is empty, do NOT include effort (the resolved model rejects the parameter).
+Render the prompt prefix from `{plugin-root}/references/skill-activation-payload.md` with the local `skill_calls`, task-specific `no_skill_reason`, and optional helper-emitted `follow_up_files_block`. Prepend the rendered bytes to the child prompt so the rendered skill outcome tag is its first line. Do not paste the template path, variables, or an unresolved `@` include into the child prompt.
+The common Scout prompt body follows the rendered prefix:
 ```text
-<skill_activation>
-Call Skill('{relevant-skill-1}').
-Call Skill('{relevant-skill-2}').
-</skill_activation>
-After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting. Do not scan entire skill folders or read unrelated references.
-<skill_follow_up_files>
-{If one or more skills were preselected, run `bash "{plugin-root}/scripts/extract-skill-follow-up-files.sh" "{all preselected skill names from the activation block}" 2>/dev/null || true` before spawning and replace this block with the emitted absolute follow-up file paths. Omit this block when the helper prints nothing.}
-</skill_follow_up_files>
-
 <task_context>
 Research: {topic or sub-topic}.
 Project context: {tech stack, constraints from PROJECT.md if relevant}.
@@ -109,20 +102,6 @@ Todo selection note (include only if TODO_SELECTED=true): Numbered /vbw:list-tod
 <output_format>
 Write your complete findings to the output_path file.
 </output_format>
-```
-  When no installed skills apply, use this variant instead:
-```text
-<skill_no_activation>
-Evaluated installed skills for this task. No skills were preselected at orchestration time. Reason: {brief task-specific reason}.
-</skill_no_activation>
-After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting. Do not scan entire skill folders or read unrelated references.
-
-<task_context>
-Research: {topic or sub-topic}.
-Project context: {tech stack, constraints from PROJECT.md if relevant}.
-Extended context from todo detail (include only if detail was loaded in Step 1): {detail.context}. Related files: {detail.files, comma-separated}.
-Todo selection note (include only if TODO_SELECTED=true): Numbered /vbw:list-todos research selections are context-only; leave the todo visible because research may not complete the underlying work item.
-</task_context>
 ```
     - If save path is unknown yet (user hasn't confirmed), omit `<output_path>`. Scout returns findings in response, and the orchestrator writes them after user confirms a path.
     - Parallel: up to 4 simultaneous Tasks, each with `subagent_type: "vbw:vbw-scout"`, same `model: "${SCOUT_MODEL}"` and the same maxTurns conditional (pass when non-empty, omit when empty).

@@ -298,17 +298,12 @@ if [ $? -ne 0 ]; then echo "$QA_MAX_TURNS" >&2; exit 1; fi
 
 For each runnable plan in the current segment, create the teammate task using the live teammate spawn tool (for example `TaskCreate` or `Agent`). In non-team mode, spawn exactly one Dev and wait for its result before spawning the next runnable plan. In true team mode, every spawn/TaskCreate after the marker is set must include the selected `TEAM_NAME` and teammate `name`.
 
+Render the prompt prefix from `${VBW_PLUGIN_ROOT}/references/skill-activation-payload.md` with the local `skill_calls`, task-specific `no_skill_reason`, and optional helper-emitted `follow_up_files_block`. Prepend the rendered bytes to `description` so the rendered skill outcome tag is the first child-prompt line. Do not paste the template path, variables, the render instruction, or an unresolved `@` include into the child prompt.
+
 **Spawn-shape rule (applies to both non-team and true-team spawns):** On every live teammate spawn call, whether the live tool is `Agent` or `TaskCreate`, never set Claude-side `isolation:"worktree"` or pass a `cwd` pointing into `.claude/worktrees/...` or `.vbw-worktrees/...`. `agent-spawn-guard.sh` validates these isolation/cwd fields before it branches on delegation mode, so the rule is enforced for true-team spawns identically to non-team ones: passing them produces a hard `cross-worktree spawn` rejection in either mode. Prepared VBW worktree targeting means the `Working directory:` and `Worktree targeting:` lines in the task description, derived from `.execution-state.json` `worktree_path` and `scripts/worktree-target.sh`. it is not an `isolation` or `cwd` field on the spawn call. Claude-side `isolation:"worktree"` can create unmanaged `.claude/worktrees/agent-*` sidechains with different tool/artifact assumptions. VBW's current isolation uses its own `.vbw-worktrees` git worktrees. In addition, non-team spawns must omit `team_name` and `run_in_background`. `name` is optional label-only metadata and must never be used for routing, lifecycle state, or team semantics. In true team mode, every spawn/TaskCreate after the marker is set must include the selected `TEAM_NAME` and teammate `name`.
 ```yaml
 subject: "Execute {NN-MM}: {plan-title}"
 description: |
-  <!-- When skills apply: -->
-  <skill_activation>Call Skill('{relevant-skill-1}'). Call Skill('{relevant-skill-2}').</skill_activation>
-  After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting: do not scan entire skill folders or read unrelated references.
-  <skill_follow_up_files>{If one or more skills were preselected, run `bash "${VBW_PLUGIN_ROOT}/scripts/extract-skill-follow-up-files.sh" "{all preselected skill names from the activation block}" 2>/dev/null || true` before spawning and replace this block with the emitted absolute follow-up file paths. Omit this block when the helper prints nothing.}</skill_follow_up_files>
-  <!-- OR when no skills apply: -->
-  <skill_no_activation>Evaluated installed skills for this task. No skills were preselected at orchestration time. Reason: {brief task-specific reason}.</skill_no_activation>
-  After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting: do not scan entire skill folders or read unrelated references.
   Execute all tasks in {PLAN_PATH}.
   Effort: {DEV_EFFORT}. Working directory: {worktree_path (from execution-state.json for this plan) if worktree_isolation is enabled and worktree_path is set, else {pwd}}.
   {If worktree_isolation enabled and WTARGET non-empty: "Worktree targeting: {WTARGET}"}
