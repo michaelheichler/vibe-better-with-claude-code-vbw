@@ -79,7 +79,6 @@ fi
 
 DEBUG_COMMAND_FILE="$COMMANDS_DIR/debug.md"
 NON_TEAM_INVARIANT_TEXT='Non-team invariant: omit `team_name`, `run_in_background`, `isolation`, and all worktree cwd fields.'
-NO_TOOL_INVARIANT_TEXT='No-tool invariant: treat unavailable tools as a provisioning failure, do not advance state, and do not retry the same prompt.'
 
 debug_path_a_block="$(awk '
   /\*\*Path A: Competing Hypotheses\*\*/ { in_block = 1 }

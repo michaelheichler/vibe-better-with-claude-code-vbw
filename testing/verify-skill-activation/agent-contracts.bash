@@ -4,7 +4,6 @@ echo "=== Skill Activation Pipeline Verification (plan-driven model) ==="
 DEV_AGENT="$ROOT/agents/vbw-dev.md"
 FIX_COMMAND="$ROOT/commands/fix.md"
 VIBE_COMMAND="$RUNTIME_HELPER_TEST_ROOT/vibe-skill-effective.md"
-VIBE_INPUT_PARSING="$ROOT/references/vibe-input-parsing.md"
 EXECUTE_PROTOCOL="$ROOT/references/execute-protocol.md"
 cat \
   "$ROOT/commands/vibe.md" \

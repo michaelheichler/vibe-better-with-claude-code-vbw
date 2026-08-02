@@ -157,7 +157,7 @@ fi
 
 if grep -Fq "can't\`/\`cant\` → \`cannot" "$VERIFY_FILE" \
   && grep -Fq 'curly apostrophes as straight apostrophes' "$VERIFY_FILE" \
-  && grep -Fq 'can’t' "$VERIFY_FILE" \
+  && grep -Fq "can’t" "$VERIFY_FILE" \
   && grep -Fq 'marker-first ordering' "$VERIFY_FILE" \
   && grep -Fq 'not ok' "$VERIFY_FILE" \
   && grep -Fq 'cannot accept' "$VERIFY_FILE" \
@@ -178,7 +178,7 @@ fi
 
 if grep -Fq "can't\`/\`cant\` → \`cannot" "$EXECUTE_UAT_REF" \
   && grep -Fq 'curly apostrophes as straight apostrophes' "$EXECUTE_UAT_REF" \
-  && grep -Fq 'can’t continue, track this' "$EXECUTE_UAT_REF" \
+  && grep -Fq "can’t continue, track this" "$EXECUTE_UAT_REF" \
   && grep -Fq 'marker-first ordering' "$EXECUTE_UAT_REF" \
   && grep -Fq 'not ok' "$EXECUTE_UAT_REF" \
   && grep -Fq 'cannot accept' "$EXECUTE_UAT_REF" \

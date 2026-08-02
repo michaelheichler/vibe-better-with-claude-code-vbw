@@ -3,7 +3,7 @@ set -euo pipefail
 
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-COMMANDS_DIR="$ROOT/commands"
+export COMMANDS_DIR="$ROOT/commands"
 
 tracked_command_markdown_files() {
   local rel
