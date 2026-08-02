@@ -1,0 +1,19 @@
+AGENTS.md
+  s_cd1b09f61d7e13::t_f86775d071a0f9 260,262-264,287,311
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "789d7285cf7009a5b7e2532c64cb91664c86c87f",
+  "prompts": {},
+  "sessions": {
+    "s_cd1b09f61d7e13": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "0db3ebad-be67-42c6-8ceb-4ce835618e98",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
