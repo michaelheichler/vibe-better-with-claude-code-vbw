@@ -1,0 +1,25 @@
+.vbw-planning/phases/04-shared-contract-dedup/remediation/qa/round-03/R03-SUMMARY.md
+  s_27ea496ab5a93e::t_2e407e528f55ae 1-36
+.vbw-planning/phases/04-shared-contract-dedup/remediation/qa/round-03/R03-PLAN.md
+  s_27ea496ab5a93e::t_7dbf309bdb754f 82-88
+  s_27ea496ab5a93e::t_f126179e24f931 1-69,71-75,80-81,89-112
+  s_27ea496ab5a93e::t_99894fb22ed22a 70
+  s_27ea496ab5a93e::t_bbc3c5b5fcf15d 76,79
+  s_27ea496ab5a93e::t_aa57d7c43a0639 77-78
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "be31c8ee8df3cc803e142ca13a33c2bbe968f552",
+  "prompts": {},
+  "sessions": {
+    "s_27ea496ab5a93e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4452c98a-815b-4051-9652-732944fc8275",
+        "model": "claude-fable-5"
+      },
+      "human_author": null
+    }
+  }
+}
