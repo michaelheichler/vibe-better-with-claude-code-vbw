@@ -1,0 +1,22 @@
+scripts/verification-freshness.sh
+  s_a794e85eb70248::t_bb9698e8cbd4de 3,16-19
+  s_a794e85eb70248::t_fb8eb43997b555 14-15
+  s_a794e85eb70248::t_caa055dcc728d8 32-34,36-37,39-40,43-44,47-49,51-53,55-58,74-101
+  s_a794e85eb70248::t_dd2b87f5bfcaa3 20
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "f352da0f58a878f7d450033e292921bd5c74f131",
+  "prompts": {},
+  "sessions": {
+    "s_a794e85eb70248": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "159a52bf-a8b4-485b-8796-cd8511dce5b8",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
