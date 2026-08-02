@@ -191,7 +191,7 @@ You are the team LEAD. NEVER implement tasks yourself.
 - **Subagent return handling (non-team model):** When a Dev subagent Task returns, inspect the result immediately:
   1. **platform/tool provisioning failure:** Follow the no-tool circuit breaker in `references/subagent-contracts.md`. Stop immediately, surface the provisioning blocker, and do not consume the normal retry budget.
 
-No-tool invariant: treat unavailable tools as a provisioning failure, do not advance state, and do not retry the same prompt.
+    No-tool invariant: treat unavailable tools as a provisioning failure, do not advance state, and do not retry the same prompt.
   2. **blocker_report received:** Read the blocker details. If the blocker is a tool precondition error (e.g., "File has not been read yet"), amend the task description with explicit "Read {file} first, then edit" and re-spawn once. If the blocker is a validation contradiction or empty-result failure, do NOT blindly re-spawn — the same subagent prompt will hit the same wall. Instead: (a) verify the validation target yourself (run the bash/curl command Lead can execute), (b) if the data truly contradicts expectations, update the plan task to reflect reality, (c) re-spawn with the corrected task.
   3. **Task returned without SUMMARY.md or with incomplete work:** Check what the Dev actually accomplished (git log, file changes). If partial progress was made, spawn a new Dev with "Continue from where the previous Dev stopped — files X, Y already modified, remaining work is Z." If zero progress, check whether the task description was ambiguous or missing context and re-spawn with clarification.
   4. **Max retry: 2 re-spawns per plan.** After 2 failed Dev spawns for the same plan, stop and surface the blocker to the user: "Dev agent failed {N} times on plan {plan_id}. Last blocker: {details}. Manual intervention needed."
@@ -761,9 +761,9 @@ No-tool invariant: treat unavailable tools as a provisioning failure, do not adv
     ```
   - Spawn Lead as a plain sequential work-unit subagent with `subagent_type: "vbw:vbw-lead"` and `model: "${LEAD_MODEL}"`. If `LEAD_MAX_TURNS` is non-empty, include `maxTurns: ${LEAD_MAX_TURNS}`. If `LEAD_MAX_TURNS` is empty, omit `maxTurns` because the resolved profile is unlimited.
 
-Non-team invariant: omit `team_name`, `run_in_background`, `isolation`, and all worktree cwd fields.
+    Non-team invariant: omit `team_name`, `run_in_background`, `isolation`, and all worktree cwd fields.
 
-If `LEAD_REASONING` is non-empty, also pass `effort: "${LEAD_REASONING}"`. If `LEAD_REASONING` is empty, do NOT include effort (the resolved model rejects the parameter).
+    If `LEAD_REASONING` is non-empty, also pass `effort: "${LEAD_REASONING}"`. If `LEAD_REASONING` is empty, do NOT include effort (the resolved model rejects the parameter).
   - Lead prompt MUST include the authoritative `round_dir`, `source_verification_path`, `known_issues_path`, and output path `{round_dir}/R{RR}-PLAN.md`; the failed-check and known-issue inputs above; the deviation-classification and known-issue-resolution requirements above; and `Read the remediation plan template at /tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}/templates/REMEDIATION-PLAN.md and follow its structure exactly.`
   - After Lead returns, apply the no-tool circuit breaker in `references/subagent-contracts.md` before normalizing plan filenames, validating the generated plan, or advancing state. If it triggers, STOP without advancing `.qa-remediation-stage`.
 
