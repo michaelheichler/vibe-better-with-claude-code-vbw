@@ -1,0 +1,23 @@
+scripts/resolve-plugin-root.sh
+  s_d2686ed9c0b94b::t_961ffc641caa31 175
+  s_d2686ed9c0b94b::t_07d049a8dfd381 159-161,170,176
+  s_d2686ed9c0b94b::t_7342a72b6d7219 162-169
+tests/resolve-plugin-root.bats
+  s_d2686ed9c0b94b::t_0c12320528a7aa 193-212
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "c2876e7a08db9e897a77d050ccd34c6c79dbdfb4",
+  "prompts": {},
+  "sessions": {
+    "s_d2686ed9c0b94b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a924c903-92a9-4f1f-aaea-ba6a7f724e8e",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
