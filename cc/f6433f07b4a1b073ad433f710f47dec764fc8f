@@ -1,0 +1,32 @@
+scripts/state-updater.sh
+  s_cd1b09f61d7e13::t_57a0f812faedeb 745-750
+scripts/recover-state.sh
+  s_cd1b09f61d7e13::t_e0dfaae0b1a215 36
+  s_cd1b09f61d7e13::t_b676b22ac76409 115-116
+  s_cd1b09f61d7e13::t_fe140fb0253d32 85
+scripts/session-start.sh
+  s_cd1b09f61d7e13::t_a06b5d34f0edfa 787-790,792-794,803-809,811,813-818,820,825
+testing/verify-exec-state-reconciliation.sh
+  s_cd1b09f61d7e13::t_6a700e47e3d64f 76-78,80
+  s_cd1b09f61d7e13::t_d15f066bba5ed8 380
+  s_cd1b09f61d7e13::t_9537794cb0c30f 400
+  s_cd1b09f61d7e13::t_fd4fb4927c2b56 538-539,545-546
+tests/recover-state-integration.bats
+  s_cd1b09f61d7e13::t_86cf1398be6132 744,757,761,774,821-853
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "ccf6433f07b4a1b073ad433f710f47dec764fc8f",
+  "prompts": {},
+  "sessions": {
+    "s_cd1b09f61d7e13": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "0db3ebad-be67-42c6-8ceb-4ce835618e98",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
