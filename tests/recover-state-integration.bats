@@ -174,6 +174,24 @@ SUMMARY
   [ "$recovered_status" = "complete" ]
 }
 
+@test "session-start: orphan summary does not finalize a pending plan" {
+  cd "$TEST_TEMP_DIR"
+  cat > .vbw-planning/.execution-state.json <<"STATE"
+{"phase":1,"status":"running","plans":[{"id":"01-01","status":"pending"}]}
+STATE
+  cat > .vbw-planning/phases/01-setup/R01-SUMMARY.md <<"SUMMARY"
+---
+status: failed
+---
+# Remediation
+SUMMARY
+
+  run bash "$SCRIPTS_DIR/session-start.sh"
+  [ "$status" -eq 0 ]
+  [ "$(jq -r '.status' .vbw-planning/.execution-state.json)" = "running" ]
+  [ "$(jq -r '.plans[0].status' .vbw-planning/.execution-state.json)" = "pending" ]
+}
+
 @test "session-start: skips recovery when event_recovery is false" {
   cd "$TEST_TEMP_DIR"
   # event_recovery is false by default in test config
@@ -741,7 +759,7 @@ STATE
   echo "$output" | jq -e '.plans[0].status == "complete"' >/dev/null
 }
 
-@test "recover-state: does not mark a phase complete when a summary is only partial" {
+@test "recover-state: marks a phase partial, not complete, when a summary is only partial" {
   cd "$TEST_TEMP_DIR"
   local tmp
   tmp=$(mktemp)
@@ -754,11 +772,11 @@ STATE
 
   run bash "$SCRIPTS_DIR/recover-state.sh" 1 ".vbw-planning/phases"
   [ "$status" -eq 0 ]
-  echo "$output" | jq -e '.status == "running"' >/dev/null
+  echo "$output" | jq -e '.status == "partial"' >/dev/null
   echo "$output" | jq -e '.plans[] | select(.id == "01-02") | .status == "partial"' >/dev/null
 }
 
-@test "recover-state: reports running, not complete, when every summary is partial" {
+@test "recover-state: reports partial, not running, when every summary is terminal" {
   cd "$TEST_TEMP_DIR"
   local tmp
   tmp=$(mktemp)
@@ -771,7 +789,7 @@ STATE
 
   run bash "$SCRIPTS_DIR/recover-state.sh" 1 ".vbw-planning/phases"
   [ "$status" -eq 0 ]
-  echo "$output" | jq -e '.status == "running"' >/dev/null
+  echo "$output" | jq -e '.status == "partial"' >/dev/null
 }
 
 
@@ -817,4 +835,37 @@ STATE
   run bash "$SCRIPTS_DIR/session-start.sh"
   [ "$status" -eq 0 ]
   [ ! -f .vbw-planning/.delegated-workflow.json ]
+}
+
+@test "session-start: reconcile flips running state to partial when every plan summary is terminal" {
+  cd "$TEST_TEMP_DIR"
+  echo "title: Second" > .vbw-planning/phases/01-setup/01-02-PLAN.md
+  cat > .vbw-planning/.execution-state.json <<'STATE'
+{"phase":1,"status":"running","plans":[{"id":"01-01","status":"complete"},{"id":"01-02","status":"running"}]}
+STATE
+  printf -- '---\nstatus: complete\n---\n' > .vbw-planning/phases/01-setup/01-01-SUMMARY.md
+  printf -- '---\nstatus: partial\n---\n' > .vbw-planning/phases/01-setup/01-02-SUMMARY.md
+
+  run bash "$SCRIPTS_DIR/session-start.sh"
+  [ "$status" -eq 0 ]
+  reconciled_status=$(jq -r '.status' .vbw-planning/.execution-state.json)
+  [ "$reconciled_status" = "partial" ]
+}
+
+@test "session-start: reconcile preserves execution-state mtime for interrupted runs" {
+  cd "$TEST_TEMP_DIR"
+  echo "title: Second" > .vbw-planning/phases/01-setup/01-02-PLAN.md
+  cat > .vbw-planning/.execution-state.json <<'STATE'
+{"phase":1,"status":"running","plans":[{"id":"01-01","status":"complete"},{"id":"01-02","status":"pending"}]}
+STATE
+  printf -- '---\nstatus: complete\n---\n' > .vbw-planning/phases/01-setup/01-01-SUMMARY.md
+  touch -t 202001010000 .vbw-planning/.execution-state.json
+  old_mtime=$(stat -f %m .vbw-planning/.execution-state.json 2>/dev/null || stat -c %Y .vbw-planning/.execution-state.json)
+
+  run bash "$SCRIPTS_DIR/session-start.sh"
+  [ "$status" -eq 0 ]
+  reconciled_status=$(jq -r '.status' .vbw-planning/.execution-state.json)
+  [ "$reconciled_status" = "running" ]
+  new_mtime=$(stat -f %m .vbw-planning/.execution-state.json 2>/dev/null || stat -c %Y .vbw-planning/.execution-state.json)
+  [ "$new_mtime" = "$old_mtime" ]
 }

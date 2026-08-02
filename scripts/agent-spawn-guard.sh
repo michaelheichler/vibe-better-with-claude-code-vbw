@@ -121,6 +121,14 @@ emit_strip_json() {
     '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow","permissionDecisionReason":$reason,"updatedInput":$input}}'
 }
 
+allow_with_strip() {
+  if [ -n "${STRIP_REASON:-}" ] && [ -n "${STRIPPED_INPUT:-}" ] && [ "${STRIPPED_INPUT:-}" != "null" ]; then
+    echo "${STRIP_WARN:-}" >&2
+    emit_strip_json "${STRIPPED_INPUT:-}" "${STRIP_REASON:-}"
+  fi
+  exit 0
+}
+
 if is_teammate_spawn_tool; then
   # Non-team .tool_input.name is platform label metadata; VBW routing and
   # lifecycle state must come from delegation markers and team_name only.
@@ -146,28 +154,13 @@ fi
 
 [ "$MARKER_LIVE" = "true" ] || {
   # No marker — if stripping was needed, emit now and exit
-  if [ -n "$STRIP_REASON" ] && [ -n "$STRIPPED_INPUT" ] && [ "$STRIPPED_INPUT" != "null" ]; then
-    echo "$STRIP_WARN" >&2
-    emit_strip_json "$STRIPPED_INPUT" "$STRIP_REASON"
-    exit 0
-  fi
-  exit 0
+  allow_with_strip
 }
 [ "$MODE" = "execute" ] || {
-  if [ -n "$STRIP_REASON" ] && [ -n "$STRIPPED_INPUT" ] && [ "$STRIPPED_INPUT" != "null" ]; then
-    echo "$STRIP_WARN" >&2
-    emit_strip_json "$STRIPPED_INPUT" "$STRIP_REASON"
-    exit 0
-  fi
-  exit 0
+  allow_with_strip
 }
 [ -n "$DELEGATION_MODE" ] || {
-  if [ -n "$STRIP_REASON" ] && [ -n "$STRIPPED_INPUT" ] && [ "$STRIPPED_INPUT" != "null" ]; then
-    echo "$STRIP_WARN" >&2
-    emit_strip_json "$STRIPPED_INPUT" "$STRIP_REASON"
-    exit 0
-  fi
-  exit 0
+  allow_with_strip
 }
 
 case "$DELEGATION_MODE" in
@@ -212,11 +205,6 @@ case "$DELEGATION_MODE" in
     ;;
 esac
 
-# If strip was deferred and we made it past all blocks, emit now
-if [ -n "$STRIP_REASON" ] && [ -n "$STRIPPED_INPUT" ] && [ "$STRIPPED_INPUT" != "null" ]; then
-  echo "$STRIP_WARN" >&2
-  emit_strip_json "$STRIPPED_INPUT" "$STRIP_REASON"
-  exit 0
-fi
+allow_with_strip
 
 exit 0

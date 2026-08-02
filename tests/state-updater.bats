@@ -279,6 +279,50 @@ EOF
   jq -e '.plans[0].status == "complete"' .vbw-planning/.execution-state.json >/dev/null
 }
 
+@test "summary update finalizes pending execution state" {
+  cd "$TEST_TEMP_DIR"
+  mkdir -p .vbw-planning/phases/03-service-utility-tests
+  cat > .vbw-planning/phases/03-service-utility-tests/03-01-SUMMARY.md <<"EOF"
+---
+phase: 3
+plan: 1
+status: complete
+---
+# Summary
+EOF
+  cat > .vbw-planning/.execution-state.json <<"EOF"
+{"phase":3,"status":"pending","plans":[{"id":"03-01","status":"pending"}]}
+EOF
+  local summary_path input
+  summary_path="$TEST_TEMP_DIR/.vbw-planning/phases/03-service-utility-tests/03-01-SUMMARY.md"
+  input=$(jq -nc --arg p "$summary_path" '{tool_input:{file_path:$p}}')
+  run bash -c "cd '$TEST_TEMP_DIR' && printf '%s' '$input' | bash '$SCRIPTS_DIR/state-updater.sh'"
+  [ "$status" -eq 0 ]
+  [ "$(jq -r '.status' .vbw-planning/.execution-state.json)" = "complete" ]
+}
+
+@test "summary update does not finalize without every plan summary" {
+  cd "$TEST_TEMP_DIR"
+  mkdir -p .vbw-planning/phases/03-service-utility-tests
+  cat > .vbw-planning/phases/03-service-utility-tests/03-01-SUMMARY.md <<"EOF"
+---
+phase: 3
+plan: 1
+status: complete
+---
+# Summary
+EOF
+  cat > .vbw-planning/.execution-state.json <<"EOF"
+{"phase":3,"status":"running","plans":[{"id":"03-01","status":"complete"},{"id":"03-02","status":"complete"}]}
+EOF
+  local summary_path input
+  summary_path="$TEST_TEMP_DIR/.vbw-planning/phases/03-service-utility-tests/03-01-SUMMARY.md"
+  input=$(jq -nc --arg p "$summary_path" '{tool_input:{file_path:$p}}')
+  run bash -c "cd '$TEST_TEMP_DIR' && printf '%s' '$input' | bash '$SCRIPTS_DIR/state-updater.sh'"
+  [ "$status" -eq 0 ]
+  [ "$(jq -r '.status' .vbw-planning/.execution-state.json)" = "running" ]
+}
+
 @test "PLAN trigger supports NN-PLAN naming and reconciles planned status" {
   cd "$TEST_TEMP_DIR"
   create_state_and_roadmap "$TEST_TEMP_DIR/.vbw-planning" 2

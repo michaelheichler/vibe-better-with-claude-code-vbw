@@ -257,16 +257,17 @@ Bootstrap & release:
 
 ## Git Workflow
 
-Direct push access to `swt-labs/vibe-better-with-claude-code-vbw`. Single `origin` remote.
+All pushes and PRs go to the `michaelheichler/vibe-better-with-claude-code-vbw` fork (remote `mine`). NEVER push to the `swt-labs` `origin` remote. It is a fetch-only upstream reference.
 
-- **`origin`**: fetch and push target for all branches.
-- **`dev` branch**: permanent local integration branch for combined testing before PRs. Tracks `origin/dev`. Never delete this branch.
+- **`mine`**: push and PR target for all branches (`michaelheichler` fork).
+- **`origin`**: `swt-labs` upstream, fetch only. Never push here.
+- **`dev` branch**: permanent local integration branch for combined testing before PRs. Never delete this branch.
 
 ### Branch Cleanup
 
 - **`fetch.prune`** is enabled. Stale remote tracking refs are removed on every fetch.
 - **`git merged`** and **`git cleanup`** are personal git aliases some contributors configure locally. Neither ships as a repo default or is provisioned by any script in `scripts/`, so treat any reference to them below as describing the intended behavior of an alias you set up yourself, not an out-of-the-box command.
-- **`git merged`** (as commonly configured): finds local branches fully merged into `origin/main` and removes them locally. Also prunes worktrees in `../<repo-name>-worktrees/` whose branches have been merged or whose PRs have been merged/closed. Safe to run anytime, skips `main` and `dev`.
+- **`git merged`** (as commonly configured): finds local branches fully merged into `mine/main` and removes them locally. Also prunes worktrees in `../<repo-name>-worktrees/` whose branches have been merged or whose PRs have been merged/closed. Safe to run anytime, skips `main` and `dev`.
 - **`git cleanup`** (as commonly configured): fetches, prunes, and deletes local branches whose remote tracking branch is gone.
 - After a PR is merged, use whatever branch/worktree cleanup approach you have configured (or `git worktree remove` / `git worktree prune` and `git branch -d` manually) to clean up local branches and their worktrees.
 
@@ -283,7 +284,7 @@ The issue-fix workflow uses git worktrees for parallel-safe issue work.
 
 - `main` requires PRs to merge.
 - Do not commit directly to `main`.
-- After creating a feature branch from `origin/main`, set its upstream to `origin/<branch>` on first push.
+- After creating a feature branch from `main`, set its upstream to `mine/<branch>` on first push.
 
 ## Version Management
 
@@ -307,7 +308,7 @@ This repo can be run locally via `claude-code-router` (CCR) with a toggle betwee
 ## Contributing
 
 See `CONTRIBUTING.md` for full guidelines. Key points:
-- Push branches to `origin`. PRs target `main`.
+- Push branches to `mine` (the `michaelheichler` fork). PRs target `main` on the fork. Never push to `origin` (`swt-labs`).
 - Load locally with `claude --plugin-dir .` or `claude --plugin-dir /absolute/path/to/vibe-better-with-claude-code-vbw`.
 - Run `bash scripts/install-hooks.sh` for the pre-push hook.
 - Good candidates: bug fixes in hooks/scripts, new commands fitting the lifecycle model, stack-to-skill mappings, template improvements.

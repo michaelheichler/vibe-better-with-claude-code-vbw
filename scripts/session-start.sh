@@ -765,18 +765,6 @@ if [ "$_auto_recovered" = false ] && [ -f "$EXEC_STATE" ]; then
     fi
     if [ -n "$PHASE_DIR" ] && [ -d "$PHASE_DIR" ]; then
       PLAN_COUNT=$(jq -r '.plans | length' "$EXEC_STATE" 2>/dev/null)
-      # zsh compat: use ls dir | grep to avoid bare glob expansion errors
-      # shellcheck disable=SC2010
-      SUMMARY_COUNT=0
-      STRICT_COMPLETE=0
-      for _ss_sf in "$PHASE_DIR"/*-SUMMARY.md "$PHASE_DIR"/SUMMARY.md; do
-        [ -f "$_ss_sf" ] || continue
-        _ss_st=$(extract_summary_status "$_ss_sf")
-        case "$_ss_st" in
-          complete|completed) SUMMARY_COUNT=$((SUMMARY_COUNT + 1)); STRICT_COMPLETE=$((STRICT_COMPLETE + 1)) ;;
-          partial) SUMMARY_COUNT=$((SUMMARY_COUNT + 1)) ;;
-        esac
-      done
 
       # Reconcile individual plan statuses against actual SUMMARY.md files.
       # Verified terminal SUMMARY statuses are authoritative for Execute state:
@@ -797,7 +785,9 @@ if [ "$_auto_recovered" = false ] && [ -f "$EXEC_STATE" ]; then
         _summary_status_json=$(jq -cn --argjson current "$_summary_status_json" --arg id "$_sf_id" --arg status "$_sf_st" '$current + {($id): $status}')
       done
       _reconcile_tmp="${EXEC_STATE}.reconcile.$$"
-      jq --argjson summary_statuses "$_summary_status_json" '
+      _reconcile_mtime_ref="${EXEC_STATE}.mtime.$$"
+      cp -p "$EXEC_STATE" "$_reconcile_mtime_ref" 2>/dev/null || _reconcile_mtime_ref=""
+      if jq --argjson summary_statuses "$_summary_status_json" '
         .plans |= map(
           if ($summary_statuses[.id] // null) != null then
             .status = $summary_statuses[.id]
@@ -806,17 +796,33 @@ if [ "$_auto_recovered" = false ] && [ -f "$EXEC_STATE" ]; then
           else .
           end
         )
-      ' "$EXEC_STATE" > "$_reconcile_tmp" 2>/dev/null && mv "$_reconcile_tmp" "$EXEC_STATE" 2>/dev/null || rm -f "$_reconcile_tmp" 2>/dev/null
+      ' "$EXEC_STATE" > "$_reconcile_tmp" 2>/dev/null && mv "$_reconcile_tmp" "$EXEC_STATE" 2>/dev/null; then
+        # restore mtime because a fresh mtime would keep the spawn guard's 4h staleness TTL from ever expiring for dead runs
+        [ -n "$_reconcile_mtime_ref" ] && touch -r "$_reconcile_mtime_ref" "$EXEC_STATE" 2>/dev/null
+      else
+        rm -f "$_reconcile_tmp" 2>/dev/null
+      fi
+      rm -f "$_reconcile_mtime_ref" 2>/dev/null || true
 
+      SUMMARY_COUNT=$(jq -r '[.plans[] | select(.status == "complete" or .status == "partial" or .status == "failed")] | length' "$EXEC_STATE" 2>/dev/null || echo 0)
+      STRICT_COMPLETE=$(jq -r '[.plans[] | select(.status == "complete")] | length' "$EXEC_STATE" 2>/dev/null || echo 0)
+      FAILED_SUMMARIES=$(jq -r '[.plans[] | select(.status == "failed")] | length' "$EXEC_STATE" 2>/dev/null || echo 0)
+
+      _term_status=""
       if [ "${STRICT_COMPLETE:-0}" -ge "${PLAN_COUNT:-1}" ] && [ "${PLAN_COUNT:-0}" -gt 0 ]; then
-        # All plans are strictly complete — build finished after crash
+        _term_status="complete"
+      elif [ "${SUMMARY_COUNT:-0}" -ge "${PLAN_COUNT:-1}" ] && [ "${PLAN_COUNT:-0}" -gt 0 ]; then
+        _term_status="partial"
+        [ "${FAILED_SUMMARIES:-0}" -gt 0 ] && _term_status="failed"
+      fi
+      if [ -n "$_term_status" ]; then
         _exec_tmp="${EXEC_STATE}.tmp.$$"
-        if jq '.status = "complete"' "$EXEC_STATE" > "$_exec_tmp" 2>/dev/null && mv "$_exec_tmp" "$EXEC_STATE" 2>/dev/null; then
+        if jq --arg s "$_term_status" '.status = $s' "$EXEC_STATE" > "$_exec_tmp" 2>/dev/null && mv "$_exec_tmp" "$EXEC_STATE" 2>/dev/null; then
           :
         else
           rm -f "$_exec_tmp" 2>/dev/null || true
         fi
-        BUILD_STATE="complete (recovered)"
+        BUILD_STATE="${_term_status} (recovered)"
       else
         BUILD_STATE="interrupted (${SUMMARY_COUNT:-0}/${PLAN_COUNT:-0} plans)"
       fi

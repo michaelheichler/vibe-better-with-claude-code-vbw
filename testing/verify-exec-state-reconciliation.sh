@@ -73,11 +73,11 @@ fi
 echo ""
 echo "--- Session-start plan status reconciliation ---"
 
-# Test 6: session-start counts complete and partial SUMMARY files for reconciliation
-if grep -q 'SUMMARY_COUNT=0' "$ROOT/scripts/session-start.sh" && grep -q 'partial) SUMMARY_COUNT' "$ROOT/scripts/session-start.sh"; then
-  pass "session-start counts complete and partial SUMMARY files for reconciliation"
+# Test 6: session-start counts terminal SUMMARY files for reconciliation
+if grep -q 'SUMMARY_COUNT=\$(jq -r '\''\[\.plans\[\] | select(\.status == "complete" or \.status == "partial" or \.status == "failed")\] | length'\'' "\$EXEC_STATE"' "$ROOT/scripts/session-start.sh"; then
+  pass "session-start counts terminal SUMMARY files for reconciliation"
 else
-  fail "session-start counts complete and partial SUMMARY files for reconciliation"
+  fail "session-start counts terminal SUMMARY files for reconciliation"
 fi
 
 # Test 7: session-start reconciles JSON statuses from disk SUMMARY status map
@@ -377,7 +377,7 @@ else
   fail "statusline JQ counts partial plans as done"
 fi
 
-if grep -q 'partial) SUMMARY_COUNT' "$ROOT/scripts/session-start.sh" && grep -q 'summary_statuses\[\.id\]' "$ROOT/scripts/session-start.sh"; then
+if grep -q 'partial) _sf_st="partial"' "$ROOT/scripts/session-start.sh" && grep -q 'summary_statuses\[\.id\]' "$ROOT/scripts/session-start.sh"; then
   pass "session-start reconciliation preserves partial plans as done"
 else
   fail "session-start reconciliation preserves partial plans as done"
@@ -397,8 +397,7 @@ else
   fail "summary-utils.sh exports count_done_summaries function"
 fi
 
-# --- Structural: session-start accepts partial in SUMMARY_COUNT (for reconciliation comparison) ---
-if grep -q 'partial) SUMMARY_COUNT' "$ROOT/scripts/session-start.sh"; then
+if grep 'SUMMARY_COUNT=\$(jq -r' "$ROOT/scripts/session-start.sh" | grep -q 'status == "partial"'; then
   pass "session-start SUMMARY_COUNT includes partial for reconciliation"
 else
   fail "session-start SUMMARY_COUNT includes partial for reconciliation"
@@ -536,15 +535,15 @@ else
 fi
 
 # Test: session-start counts STRICT_COMPLETE separately from SUMMARY_COUNT
-if grep -q 'STRICT_COMPLETE=0' "$ROOT/scripts/session-start.sh" && \
-   grep -q 'SUMMARY_COUNT=0' "$ROOT/scripts/session-start.sh"; then
+if grep -q 'STRICT_COMPLETE=\$(jq -r' "$ROOT/scripts/session-start.sh" && \
+   grep -q 'SUMMARY_COUNT=\$(jq -r' "$ROOT/scripts/session-start.sh"; then
   pass "session-start tracks both SUMMARY_COUNT and STRICT_COMPLETE"
 else
   fail "session-start tracks both SUMMARY_COUNT and STRICT_COMPLETE"
 fi
 
-# Test: session-start increments STRICT_COMPLETE only for complete|completed, not partial
-if grep -E 'complete\|completed\).*STRICT_COMPLETE' "$ROOT/scripts/session-start.sh" | grep -qv 'partial'; then
+# Test: session-start counts STRICT_COMPLETE only for complete, not partial
+if grep 'STRICT_COMPLETE=\$(jq -r' "$ROOT/scripts/session-start.sh" | grep -q 'select(\.status == "complete")'; then
   pass "session-start STRICT_COMPLETE excludes partial status"
 else
   fail "session-start STRICT_COMPLETE excludes partial status"

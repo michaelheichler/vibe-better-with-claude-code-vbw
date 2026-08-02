@@ -3,7 +3,6 @@ set -u
 
 _RS_SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 if [ -f "$_RS_SCRIPT_DIR/summary-utils.sh" ]; then
-  # shellcheck source=summary-utils.sh
   . "$_RS_SCRIPT_DIR/summary-utils.sh"
   is_plan_finalized() { is_summary_terminal "$1"; }
 else
@@ -34,7 +33,7 @@ fi
 
 command -v jq &>/dev/null || { echo "{}"; exit 0; }
 
-# Uses jq fromjson? so malformed trailing lines do not mask earlier valid events.
+# fromjson? because a crash-truncated trailing line must not mask earlier valid events
 latest_plan_event_status() {
   local _events_file="$1"
   local _phase="$2"
@@ -83,7 +82,7 @@ for plan_file in "$PHASE_DIR"/*-PLAN.md; do
 
   # Policy: latest valid event is authoritative over SUMMARY.md, which may be stale.
   if [ -f "$EVENTS_FILE" ]; then
-    # log-event.sh writes bare integers ("plan":1, not "plan":01), so strip leading zeros to match
+    # zero-stripped because log-event.sh records bare integers, never "plan":01
     PLAN_NUM=$(echo "$PLAN_ID" | sed 's/^[0-9]*-//' | sed 's/^0*//')
     [ -z "$PLAN_NUM" ] && PLAN_NUM="0"
     EVENT_STATUS=$(latest_plan_event_status "$EVENTS_FILE" "$PHASE" "$PLAN_NUM") || EVENT_STATUS=""
@@ -113,6 +112,8 @@ if [ "$FAILED" -gt 0 ]; then
   STATUS="failed"
 elif [ "$COMPLETE" -eq "$TOTAL" ] && [ "$TOTAL" -gt 0 ]; then
   STATUS="complete"
+elif [ "$TERMINAL" -eq "$TOTAL" ] && [ "$TOTAL" -gt 0 ]; then
+  STATUS="partial"
 elif [ "$COMPLETE" -gt 0 ] || [ "$TERMINAL" -gt 0 ]; then
   STATUS="running"
 else
