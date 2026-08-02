@@ -407,29 +407,17 @@ phase_verification_assessment() {
   esac
 }
 
-phase_verification_state() {
-  local assessment state _
-  assessment=$(phase_verification_assessment "$1" "$2" "$3")
-  IFS=$'\t' read -r state _ <<< "$assessment"
-  printf '%s\n' "${state:-pending}"
-}
-
 phase_has_passing_qa_remediation() {
   local phase_dir="$1"
-  local state_file stage round verification_file assessment assessment_state _
+  local state_file stage verification_file assessment assessment_state _
 
   state_file="${phase_dir%/}/remediation/qa/.qa-remediation-stage"
   [ -f "$state_file" ] || return 1
   stage=$(normalize_qa_remediation_stage "$(state_file_kv_value "$state_file" stage)")
   [ "$stage" = "done" ] || return 1
 
-  round=$(state_file_kv_value "$state_file" round)
-  case "$round" in
-    ''|*[!0-9]*) return 1 ;;
-  esac
-  round=$(printf '%02d' "$((10#$round))")
-  verification_file="${phase_dir%/}/remediation/qa/round-${round}/R${round}-VERIFICATION.md"
-
+  verification_file=$(bash "$_SCRIPT_DIR_PD/resolve-verification-path.sh" current "$phase_dir" 2>/dev/null) || return 1
+  [ -f "$verification_file" ] || return 1
   assessment=$(phase_verification_assessment "$phase_dir" "$verification_file" "satisfied")
   IFS=$'\t' read -r assessment_state _ <<< "$assessment"
   [ "$assessment_state" = "satisfied" ]
@@ -439,11 +427,21 @@ phase_execution_is_satisfied() {
   local phase_dir="$1"
   local plan_count="$2"
   local complete_count="$3"
-  local terminal_count
+  local terminal_count f status has_partial=false
 
   [ "$plan_count" -gt 0 ] || return 1
   [ "$complete_count" -ge "$plan_count" ] && return 0
   terminal_count=$(count_terminal_summaries "$phase_dir")
   [ "$terminal_count" -ge "$plan_count" ] || return 1
+  for f in "$phase_dir"/*-SUMMARY.md "$phase_dir"/SUMMARY.md; do
+    [ -f "$f" ] || continue
+    status=$(extract_summary_status "$f")
+    case "$status" in
+      partial) has_partial=true ;;
+      complete|completed) ;;
+      failed) return 1 ;;
+    esac
+  done
+  [ "$has_partial" = true ] || return 1
   phase_has_passing_qa_remediation "$phase_dir"
 }

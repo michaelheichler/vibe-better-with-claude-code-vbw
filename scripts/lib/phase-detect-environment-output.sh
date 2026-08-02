@@ -16,18 +16,31 @@ CFG_CONTEXT_COMPILER="true"
 CFG_AUTO_UAT="false"
 
 if [ "$JQ_AVAILABLE" = true ] && [ -f "$CONFIG_FILE" ]; then
-  eval "$(jq -r '
-    "CFG_EFFORT=\(.effort // "balanced")",
-    "CFG_AUTONOMY=\(.autonomy // "standard")",
-    "CFG_AUTO_COMMIT=\(if .auto_commit == null then true else .auto_commit end)",
-    "CFG_PLANNING_TRACKING=\(.planning_tracking // "manual")",
-    "CFG_AUTO_PUSH=\(.auto_push // "never")",
-    "CFG_VERIFICATION_TIER=\(.verification_tier // "standard")",
-    "CFG_MAX_TASKS=\(.max_tasks_per_plan // 5)",
-    "CFG_CONTEXT_COMPILER=\(if .context_compiler == null then true else .context_compiler end)",
-    "CFG_COMPACTION=\(.compaction_threshold // 130000)",
-    "CFG_AUTO_UAT=\(if .auto_uat == null then false else .auto_uat end)"
-  ' "$CONFIG_FILE" 2>/dev/null)" || true
+  while IFS=$'\t' read -r cfg_key cfg_value; do
+    case "$cfg_key" in
+      effort) CFG_EFFORT=$cfg_value ;;
+      autonomy) CFG_AUTONOMY=$cfg_value ;;
+      auto_commit) CFG_AUTO_COMMIT=$cfg_value ;;
+      planning_tracking) CFG_PLANNING_TRACKING=$cfg_value ;;
+      auto_push) CFG_AUTO_PUSH=$cfg_value ;;
+      verification_tier) CFG_VERIFICATION_TIER=$cfg_value ;;
+      max_tasks) CFG_MAX_TASKS=$cfg_value ;;
+      context_compiler) CFG_CONTEXT_COMPILER=$cfg_value ;;
+      compaction) CFG_COMPACTION=$cfg_value ;;
+      auto_uat) CFG_AUTO_UAT=$cfg_value ;;
+    esac
+  done < <(jq -r '[
+    ["effort", (.effort // "balanced")],
+    ["autonomy", (.autonomy // "standard")],
+    ["auto_commit", (if .auto_commit == null then true else .auto_commit end)],
+    ["planning_tracking", (.planning_tracking // "manual")],
+    ["auto_push", (.auto_push // "never")],
+    ["verification_tier", (.verification_tier // "standard")],
+    ["max_tasks", (.max_tasks_per_plan // 5)],
+    ["context_compiler", (if .context_compiler == null then true else .context_compiler end)],
+    ["compaction", (.compaction_threshold // 130000)],
+    ["auto_uat", (if .auto_uat == null then false else .auto_uat end)]
+  ][] | @tsv' "$CONFIG_FILE" 2>/dev/null || true)
   CFG_PREFER_TEAMS=$(bash "$_SCRIPT_DIR_PD/normalize-prefer-teams.sh" "$CONFIG_FILE" 2>/dev/null || echo "auto")
 fi
 
@@ -58,15 +71,13 @@ echo "brownfield=$BROWNFIELD"
 
 EXEC_STATE_FILE="$PLANNING_DIR/.execution-state.json"
 EXEC_STATE="none"
-if [ -f "$EXEC_STATE_FILE" ]; then
-  if [ "$JQ_AVAILABLE" = true ]; then
-    EXEC_STATE=$(jq -r '.status // "none"' "$EXEC_STATE_FILE" 2>/dev/null)
-  else
-    EXEC_STATE=$(grep -o '"status"[[:space:]]*:[[:space:]]*"[^"]*"' "$EXEC_STATE_FILE" 2>/dev/null | head -1 | sed 's/.*"status"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')
-    if [ -z "$EXEC_STATE" ]; then
-      EXEC_STATE="none"
-    fi
+if [ -f "$EXEC_STATE_FILE" ] && [ "$JQ_AVAILABLE" = true ]; then
+  if parsed_exec_state=$(jq -r '.status // "none"' "$EXEC_STATE_FILE" 2>/dev/null) && [ -n "$parsed_exec_state" ]; then
+    EXEC_STATE=$parsed_exec_state
   fi
+fi
+if [ -f "$EXEC_STATE_FILE" ] && [ "$JQ_AVAILABLE" != true ]; then
+  EXEC_STATE="none"
 fi
 echo "execution_state=$EXEC_STATE"
 

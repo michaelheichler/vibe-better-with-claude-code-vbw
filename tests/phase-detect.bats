@@ -1055,6 +1055,8 @@ EOF
 
 @test "phase-detect emits only phase_detect_error=true on late failure" {
   local shim_dir="$TEST_TEMP_DIR/scripts-phase-detect-late-failure"
+  mkdir -p .vbw-planning/phases
+  printf '%s\n' '# Fixture Project' > .vbw-planning/PROJECT.md
   cp -R "$SCRIPTS_DIR" "$shim_dir"
   awk '
     /echo "milestone_uat_issues=\$MILESTONE_UAT_ISSUES"/ && !injected {
@@ -1090,6 +1092,16 @@ EOF
   [ "$status" -eq 0 ]
   echo "$output" | grep -q '^next_phase_state=all_done$'
   echo "$output" | grep -q '^next_phase_summaries=0$'
+}
+
+@test "current-round QA PASS cannot mask a terminal failed summary" {
+  bash "$BATS_TEST_DIRNAME/fixtures/phase-detect-output/setup-case.bash" failed-summary-passing-remediation
+
+  run_phase_detect
+
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q '^next_phase_state=needs_execute$'
+  ! echo "$output" | grep -q '^next_phase_state=all_done$'
 }
 
 @test "earlier-round QA PASS cannot mask a current-round failure" {

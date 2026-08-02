@@ -76,6 +76,12 @@ assert_output_fixture() {
   grep -q '^next_phase_summaries=0$' "$ACTUAL_OUTPUT"
 }
 
+@test "output contract: current-round QA PASS cannot mask a terminal failed phase" {
+  assert_output_fixture failed-summary-passing-remediation
+  grep -q '^next_phase_state=needs_execute$' "$ACTUAL_OUTPUT"
+  ! grep -q '^next_phase_state=all_done$' "$ACTUAL_OUTPUT"
+}
+
 @test "output contract: earlier-round PASS cannot mask current-round FAIL" {
   run_output_fixture stale-pass-later-fail
   grep -q '^next_phase_state=needs_execute$' "$ACTUAL_OUTPUT"

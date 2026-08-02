@@ -140,6 +140,19 @@ phase_detect_fixture_setup_stale_pass() {
   printf 'stage=done\nround=02\n' > "$phase_dir/remediation/qa/.qa-remediation-stage"
 }
 
+phase_detect_fixture_setup_failed_remediation() {
+  local phase_dir=".vbw-planning/phases/05-remediated"
+  local round_dir="$phase_dir/remediation/qa/round-01"
+  local current_commit
+
+  phase_detect_fixture_write_plan "$phase_dir" "05-01"
+  phase_detect_fixture_write_summary "$phase_dir" "05-01" "failed"
+  mkdir -p "$round_dir"
+  current_commit=$(git rev-parse HEAD)
+  printf '%s\n' '---' 'result: PASS' 'writer: write-verification.sh' 'plans_verified:' '  - R01' "verified_at_commit: $current_commit" '---' > "$round_dir/R01-VERIFICATION.md"
+  printf 'stage=done\nround=01\n' > "$phase_dir/remediation/qa/.qa-remediation-stage"
+}
+
 phase_detect_fixture_setup_unplanned() {
   phase_detect_fixture_write_project
   mkdir -p .vbw-planning/phases/01-unplanned
@@ -203,6 +216,7 @@ setup_phase_detect_output_case() {
     qa-remediation) phase_detect_fixture_setup_qa_remediation ;;
     milestone-recovery) phase_detect_fixture_setup_milestone_recovery ;;
     phase-05-remediated) phase_detect_fixture_write_project; phase_detect_fixture_setup_remediated ;;
+    failed-summary-passing-remediation) phase_detect_fixture_write_project; phase_detect_fixture_setup_failed_remediation ;;
     stale-pass-later-fail) phase_detect_fixture_write_project; phase_detect_fixture_setup_stale_pass ;;
     *) printf 'unknown fixture case: %s\n' "$case_name" >&2; return 1 ;;
   esac

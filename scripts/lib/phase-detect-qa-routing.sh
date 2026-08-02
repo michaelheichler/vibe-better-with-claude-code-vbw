@@ -19,6 +19,8 @@ QA_REMEDIATING_ROUND="00"
 if [ ${#PHASE_DIRS[@]} -gt 0 ]; then
   for _qr_dir in ${PHASE_DIRS[@]+"${PHASE_DIRS[@]}"}; do
     [ -d "$_qr_dir" ] || continue
+    _qr_dirname=$(basename "$_qr_dir")
+    echo "$_qr_dirname" | grep -qE '^[0-9]+-' || continue
     _qr_plans=$(count_phase_plans "$_qr_dir")
     [ "$_qr_plans" -gt 0 ] || continue
     _qr_sums=$(count_complete_summaries "$_qr_dir")
@@ -51,6 +53,8 @@ fi
 if [ ${#PHASE_DIRS[@]} -gt 0 ]; then
   for _uv_dir in ${PHASE_DIRS[@]+"${PHASE_DIRS[@]}"}; do
     [ -d "$_uv_dir" ] || continue
+    _uv_dirname=$(basename "$_uv_dir")
+    echo "$_uv_dirname" | grep -qE '^[0-9]+-' || continue
     _uv_plans=$(count_phase_plans "$_uv_dir")
     [ "$_uv_plans" -gt 0 ] || continue
     _uv_sums=$(count_complete_summaries "$_uv_dir")
@@ -146,6 +150,8 @@ fi
 if [ ${#PHASE_DIRS[@]} -gt 0 ]; then
   for _qa_dir in ${PHASE_DIRS[@]+"${PHASE_DIRS[@]}"}; do
     [ -d "$_qa_dir" ] || continue
+    _qa_dirname=$(basename "$_qa_dir")
+    echo "$_qa_dirname" | grep -qE '^[0-9]+-' || continue
     _qa_plans=$(count_phase_plans "$_qa_dir")
     [ "$_qa_plans" -gt 0 ] || continue
     _qa_sums=$(count_complete_summaries "$_qa_dir")
