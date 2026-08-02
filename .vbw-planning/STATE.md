@@ -4,17 +4,17 @@
 **Milestone:** VBW Remediation
 
 ## Current Phase
-Phase: 4 of 7 (Shared Contract Dedup)
-Plans: 0/3
-Progress: 0%
-Status: Planned
+Phase: 5 of 7 (Adversarial Review And Fix)
+Plans: 1/1
+Progress: 100%
+Status: active
 
 ## Phase Status
 - **Phase 1 (Quick Win Bug And Low Risk Dedup):** Complete
 - **Phase 2 (Structural Resolution Consolidation):** Complete
 - **Phase 3 (Map And Inference Remediation):** Complete
-- **Phase 4 (Shared Contract Dedup):** Planned
-- **Phase 5 (Adversarial Review And Fix):** Pending
+- **Phase 4 (Shared Contract Dedup):** Complete
+- **Phase 5 (Adversarial Review And Fix):** In progress
 - **Phase 6 (Oversized File Decomposition):** Pending
 - **Phase 7 (Terminology And Punctuation):** Pending
 
@@ -26,7 +26,10 @@ Status: Planned
 | Agent model selection uses frontmatter pins. Do not pass explicit model on spawns | 2026-07-30 | User pinned correct models in agents/*.md. Adaptive/leverframe routing is a separate future phase. |
 
 ## Todos
-- Adaptive model routing phase: vbw:setup/init auto-detect available models (incl. leverframe at /Users/michael/dev/leverframe, detect if running), build a model map, auto-suggest routing so an EoL model never rots the codebase. Needs its own phase.
+- Adaptive model routing phase (needs its own phase):
+  - vbw:setup/init auto-detects available models, including leverframe at /Users/michael/dev/leverframe if running
+  - builds a model map
+  - auto-suggests routing so an EoL model never rots the codebase
 - Bug (agent-marker lifecycle): a normally-completed Scout SubagentStop did not decrement the active-agent markers (flat and session-scoped), leaving a stale scout marker that locked the orchestrator out of writes. Tests pass but the real spawn path has a cleanup gap.
 - Bug (test infra): testing/run-all.sh 63-way parallelism is not safe against a concurrent bats run in the same repo. The isolation tests pollute and report false failures.
 - Bug (execute parallelization): agent teams are never activated during Execute. Wave-parallel plans consistently fall back to serialized Dev subagents even with prefer_teams=auto and genuinely independent same-wave plans. The team-mode gating in execute-protocol.md needs root-cause investigation. (added 2026-08-01)
@@ -65,12 +68,17 @@ Status: Planned
 - [UAT-DEVIATION] R01: Full-suite verification remained blocked by the pre-existing `tests/rtk-manager.bats:2058-2069` failure alr... (phase 02, see remediation/uat/round-01/R01-SUMMARY.md) (added 2026-08-01) (ref:e3341f2e)
 - [UAT-DEVIATION] R02: The full suite completed with 3700 passing BATS tests and one known pre-existing rtk-manager failure. (phase 02, see remediation/uat/round-02/R02-SUMMARY.md) (added 2026-08-01) (ref:44cde73d)
 - [KNOWN-ISSUE] rtk-manager: bash-guard smoke failure prevents proof creation (tests/rtk-manager.bats): Line 2067: expected exit 1 with a bash guard smoke failure message, got exit ... (phase 03, seen 1x) (see 03-VERIFICATION.md) (added 2026-08-01) (ref:76d1faa8)
+- [KNOWN-ISSUE] README accuracy table VERSION row (README.md): row states 1.38.6 but repo VERSION is 1.38.8 (all 4 version files in sync at ... (phase 04, seen 1x) (see 04-VERIFICATION.md) (added 2026-08-02) (ref:a5f56b2c)
+- [KNOWN-ISSUE] session-start cache integrity and auto-sync version pick (scripts/session-start.sh lines 585 and 602): Residual observation outside plan scope: two later call sites still use bare ... — accepted as process-exception for this phase (phase 05, seen 1x) (see remediation/qa/round-01/R01-SUMMARY.md) (added 2026-08-02) (ref:77b86695)
+- [KNOWN-ISSUE] testing/run-all.sh full BATS suite (commands/vibe.md, references/vibe-input-parsing.md, references/vibe-uat-remediation.md, scripts/resolve-phase-state.sh (uncommitted)): DEVN-03: dev reported 10 BATS failures from a concurrent uncommitted vibe pha... — accepted as process-exception for this phase (phase 05, seen 1x) (see remediation/qa/round-01/R01-SUMMARY.md) (added 2026-08-02) (ref:5b2d90ae)
+- [KNOWN-ISSUE] testing/run-all.sh full BATS suite (commands/vibe.md, references/vibe-input-parsing.md, references/vibe-uat-remediation.md, scripts/resolve-phase-state.sh (uncommitted)): DEVN-03: dev reported 10 BATS failures from a concurrent uncommitted vibe pha... — accepted as process-exception for this phase (phase 05, seen 1x) (see remediation/qa/round-01/R01-SUMMARY.md) (added 2026-08-02) (ref:8deab494)
 ### Phase 6 Inventory
 
 - Phase-6 inventory: There are 20 skill-activation payload-prefix pairs (40 emitted blocks). `commands/vibe.md` contains 10 pairs. The rest span `research.md`, `fix.md`, `map.md`, `qa.md`, `debug.md`, and `references/execute-protocol.md`. See `.vbw-planning/phases/04-shared-contract-dedup/04-RESEARCH.md` for the exact line table. (Phase-6 inventory, added 2026-08-02)
 - Phase-6 inventory bug: `commands/map.md` lines 195 and 230 use a period in `Skills: none preselected.` instead of the common comma wording. (Phase-6 inventory, added 2026-08-02)
 - Phase-6 inventory review: `commands/vibe.md` UAT research line 808 selects only directly needed skills. This conflicts with the Scout additive-selection rule. (Phase-6 inventory, added 2026-08-02)
 - Phase-6 inventory note: Seven agent-level `## Skill Activation` sections are parsing rules, not payload templates. The `references/execute-protocol.md` pair is literal child-prompt text and must stay inline. (Phase-6 inventory, added 2026-08-02)
+- Investigate why context balloons on every VBW command invocation without caching (added 2026-08-02) (ref:6ee268e9)
 ## Blockers
 {blockers-or-none}
 
