@@ -741,7 +741,7 @@ STATE
   echo "$output" | jq -e '.plans[0].status == "complete"' >/dev/null
 }
 
-@test "recover-state: marks a phase complete when all summaries are terminal" {
+@test "recover-state: does not mark a phase complete when a summary is only partial" {
   cd "$TEST_TEMP_DIR"
   local tmp
   tmp=$(mktemp)
@@ -754,8 +754,24 @@ STATE
 
   run bash "$SCRIPTS_DIR/recover-state.sh" 1 ".vbw-planning/phases"
   [ "$status" -eq 0 ]
-  echo "$output" | jq -e '.status == "complete"' >/dev/null
+  echo "$output" | jq -e '.status == "running"' >/dev/null
   echo "$output" | jq -e '.plans[] | select(.id == "01-02") | .status == "partial"' >/dev/null
+}
+
+@test "recover-state: reports running, not complete, when every summary is partial" {
+  cd "$TEST_TEMP_DIR"
+  local tmp
+  tmp=$(mktemp)
+  jq '.event_recovery = true' .vbw-planning/config.json > "$tmp" && mv "$tmp" .vbw-planning/config.json
+
+  echo "title: First" > .vbw-planning/phases/01-setup/01-01-PLAN.md
+  echo "title: Second" > .vbw-planning/phases/01-setup/01-02-PLAN.md
+  printf -- '---\nstatus: partial\n---\n' > .vbw-planning/phases/01-setup/01-01-SUMMARY.md
+  printf -- '---\nstatus: partial\n---\n' > .vbw-planning/phases/01-setup/01-02-SUMMARY.md
+
+  run bash "$SCRIPTS_DIR/recover-state.sh" 1 ".vbw-planning/phases"
+  [ "$status" -eq 0 ]
+  echo "$output" | jq -e '.status == "running"' >/dev/null
 }
 
 

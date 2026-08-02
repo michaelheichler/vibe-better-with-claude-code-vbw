@@ -111,9 +111,9 @@ TERMINAL=$(echo "$PLANS_JSON" | jq '[.[] | select(.status == "complete" or .stat
 
 if [ "$FAILED" -gt 0 ]; then
   STATUS="failed"
-elif [ "$TERMINAL" -eq "$TOTAL" ] && [ "$TOTAL" -gt 0 ]; then
+elif [ "$COMPLETE" -eq "$TOTAL" ] && [ "$TOTAL" -gt 0 ]; then
   STATUS="complete"
-elif [ "$COMPLETE" -gt 0 ]; then
+elif [ "$COMPLETE" -gt 0 ] || [ "$TERMINAL" -gt 0 ]; then
   STATUS="running"
 else
   STATUS="pending"
