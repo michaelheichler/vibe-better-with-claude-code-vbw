@@ -7,7 +7,7 @@ set -euo pipefail
 # Lead, and Dev agents run from Claude sidechain CWDs.
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-VIBE_FILE="$ROOT/commands/vibe.md"
+VIBE_FILE="$ROOT/references/vibe-uat-remediation.md"
 VALIDATOR="$ROOT/scripts/validate-uat-remediation-artifact.sh"
 SHARED_CONTRACTS="$ROOT/references/subagent-contracts.md"
 NON_TEAM_INVARIANT_TEXT='Non-team invariant: omit `team_name`, `run_in_background`, `isolation`, and all worktree cwd fields.'
@@ -140,31 +140,17 @@ extract_uat_subsection() {
   local heading="$1"
 
   awk -v heading="$heading" '
-    /^### Mode: UAT Remediation[[:space:]]*$/ { in_uat = 1 }
-    /^### Mode: Milestone UAT Recovery[[:space:]]*$/ { in_uat = 0; in_section = 0 }
-    in_uat && $0 ~ ("^#### " heading "[[:space:]]*$") { in_section = 1 }
-    in_uat && in_section && /^#### / && $0 !~ ("^#### " heading "[[:space:]]*$") { in_section = 0 }
-    in_uat && in_section { print }
+    $0 == "## " heading { in_section = 1 }
+    in_section && /^## / && $0 != "## " heading { exit }
+    in_section { print }
   ' "$VIBE_FILE"
 }
 
-UAT_BLOCK=$(awk '
-  /^### Mode: UAT Remediation[[:space:]]*$/ { in_block = 1 }
-  /^### Mode: Milestone UAT Recovery[[:space:]]*$/ { in_block = 0 }
-  in_block { print }
-' "$VIBE_FILE")
-
-FIX_BLOCK=$(awk '
-  /^### Mode: UAT Remediation[[:space:]]*$/ { in_uat = 1 }
-  /^### Mode: Milestone UAT Recovery[[:space:]]*$/ { in_uat = 0; in_fix = 0 }
-  in_uat && /^#### fix[[:space:]]*$/ { in_fix = 1 }
-  in_uat && /^### Fallback remediation summary[[:space:]]*$/ { in_fix = 0 }
-  in_uat && in_fix { print }
-' "$VIBE_FILE")
-
-UAT_RESEARCH_BLOCK=$(extract_uat_subsection research)
-UAT_PLAN_BLOCK=$(extract_uat_subsection plan)
-UAT_EXECUTE_BLOCK=$(extract_uat_subsection execute)
+UAT_BLOCK="$(<"$VIBE_FILE")"
+FIX_BLOCK=$(extract_uat_subsection "Fix Stage (VIBE-UAT-06)")
+UAT_RESEARCH_BLOCK=$(extract_uat_subsection "Research Stage (VIBE-UAT-03)")
+UAT_PLAN_BLOCK=$(extract_uat_subsection "Plan Stage (VIBE-UAT-04)")
+UAT_EXECUTE_BLOCK=$(extract_uat_subsection "Execute Stage (VIBE-UAT-05)")
 
 SPAWN_ARG_ISOLATION_RE='(^|[^[:alnum:]_])"?isolation"?([[:space:]]*[:=][[:space:]]*"?[^"[:space:]]+"?|[[:space:]]+(worktree|"?\{[A-Za-z0-9_:-]+\}"?|"?\$[A-Za-z_][A-Za-z0-9_]*"?|"?\$\{[A-Za-z_][A-Za-z0-9_]*\}"?))([^[:alnum:]_]|$)'
 SPAWN_ARG_BACKGROUND_RE='(^|[^[:alnum:]_])"?run_in_background"?([[:space:]]*[:=][[:space:]]*"?[^"[:space:]]+"?|[[:space:]]+(true|false|"?\{[A-Za-z0-9_:-]+\}"?|"?\$[A-Za-z_][A-Za-z0-9_]*"?|"?\$\{[A-Za-z_][A-Za-z0-9_]*\}"?))([^[:alnum:]_]|$)'
@@ -194,8 +180,8 @@ fi
 check_contains "state metadata documents summary_path" "$UAT_BLOCK" 'summary_path=<path>'
 check_contains "metadata paths are host-repository absolute paths" "$UAT_BLOCK" 'absolute host-repository path'
 check_contains "artifact contract names sidechain CWDs" "$UAT_BLOCK" '.claude/worktrees/agent-*'
-check_contains "artifact contract passes exact paths to all agents" "$UAT_BLOCK" 'pass these exact paths to every Scout/Lead/Dev prompt'
-check_contains "artifact contract validates legacy metadata paths directly" "$UAT_BLOCK" 'validate that exact metadata path directly instead of rewriting it to `round_dir` or searching for alternatives'
+check_contains "artifact contract passes exact paths to all agents" "$UAT_BLOCK" 'Pass these exact paths to every Scout/Lead/Dev prompt'
+check_contains "artifact contract validates legacy metadata paths directly" "$UAT_BLOCK" 'Validate that exact metadata path directly instead of rewriting it to `round_dir` or searching for alternatives'
 check_contains "spawn contract uses TodoWrite as sole stage progress tracker" "$UAT_BLOCK" 'TodoWrite is the only progress tracker for these stages'
 check_contains "spawn contract distinguishes work-unit delegation from stage tracking" "$UAT_BLOCK" 'TaskCreate/Agent is allowed only for real Scout/Lead/Dev work-unit delegation inside the current stage'
 check_contains "spawn contract requires plain sequential subagent calls" "$UAT_BLOCK" 'UAT remediation spawns are plain sequential subagent calls'
@@ -217,7 +203,7 @@ check_contains "UAT no-tool breaker avoids same-prompt retry" "$UAT_BLOCK" 'do n
 check_contains "UAT research site applies no-tool breaker before validation" "$UAT_BLOCK" 'If Scout returns a no-tool/tool-provisioning failure'
 check_contains "UAT research allows verified-safe Bash live validation" "$UAT_RESEARCH_BLOCK" 'Authenticated/private read-only checks use verified-safe Bash helper scripts or curl wrappers'
 check_contains "UAT research keeps public validation on WebFetch" "$UAT_RESEARCH_BLOCK" 'Public/anonymous HTTP validation uses WebFetch'
-check_contains "UAT research defers unsafe validation" "$UAT_RESEARCH_BLOCK" 'unsafe or mutating checks; defer those to Dev/Debugger'
+check_contains "UAT research defers unsafe validation" "$UAT_RESEARCH_BLOCK" 'Defer those to Dev/Debugger.'
 check_contains "UAT research requests Live Validation Evidence section" "$UAT_RESEARCH_BLOCK" '## Live Validation Evidence'
 check_contains "UAT research evidence includes command_shape" "$UAT_RESEARCH_BLOCK" 'command_shape'
 check_contains "UAT research evidence includes exit_status" "$UAT_RESEARCH_BLOCK" 'exit_status'

@@ -13,6 +13,7 @@ set -euo pipefail
 # - QA remediation guidance requires judging process-exception validity, not mere documentation
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+VIBE_INPUT_PARSING="$ROOT/references/vibe-input-parsing.md"
 
 PASS=0
 FAIL=0
@@ -185,7 +186,7 @@ else
   fail "16: execute-protocol.md QA task descriptions missing \${VBW_PLUGIN_ROOT} (found $PLUGIN_ROOT_COUNT, expected ≥2)"
 fi
 
-if grep -q 'track-known-issues\.sh" sync-summaries' "$ROOT/commands/vibe.md"; then
+if grep -q 'track-known-issues\.sh" sync-summaries' "$VIBE_INPUT_PARSING"; then
   pass "16b: commands/vibe.md backfills summary-known-issues before resumed phase-level QA"
 else
   fail "16b: commands/vibe.md missing summary-known-issues backfill before resumed phase-level QA"
@@ -221,7 +222,7 @@ else
 fi
 
 # 21. promote-todos must appear in commands/vibe.md for known-issues lifecycle
-if grep -q 'track-known-issues\.sh.*promote-todos' "$ROOT/commands/vibe.md"; then
+if grep -q 'track-known-issues\.sh.*promote-todos' "$VIBE_INPUT_PARSING"; then
   pass "21: commands/vibe.md calls promote-todos for known-issues lifecycle"
 else
   fail "21: commands/vibe.md missing promote-todos call — known issues won't auto-promote to STATE.md"

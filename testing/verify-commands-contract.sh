@@ -792,7 +792,20 @@ done
 echo ""
 echo "=== Verify Guardrail Verification ==="
 
-VIBE_FILE="$COMMANDS_DIR/vibe.md"
+VIBE_SOURCE="$COMMANDS_DIR/vibe.md"
+VIBE_FILE=$(mktemp)
+trap 'rm -f "$VIBE_FILE"' EXIT
+while IFS= read -r vibe_line || [ -n "$vibe_line" ]; do
+  printf '%s\n' "$vibe_line"
+  case "$vibe_line" in
+    '@${CLAUDE_PLUGIN_ROOT}/references/vibe-input-parsing.md')
+      cat "$ROOT/references/vibe-input-parsing.md"
+      ;;
+    '@${CLAUDE_PLUGIN_ROOT}/references/vibe-uat-remediation.md')
+      cat "$ROOT/references/vibe-uat-remediation.md"
+      ;;
+  esac
+done < "$VIBE_SOURCE" > "$VIBE_FILE"
 QA_FILE="$COMMANDS_DIR/qa.md"
 VERIFY_FILE="$COMMANDS_DIR/verify.md"
 
@@ -1277,16 +1290,16 @@ qa_remediation_block="$({
 
 qa_remediation_plan_block="$({
   awk '
-    /^- \*\*stage=plan:/ { in_block=1 }
-    /^- \*\*stage=execute:/ { in_block=0 }
+    /^#### stage=plan[[:space:]]*$/ { in_block=1 }
+    /^#### stage=execute[[:space:]]*$/ { in_block=0 }
     in_block { print }
   ' <<< "$qa_remediation_block"
 } || true)"
 
 qa_remediation_execute_block="$({
   awk '
-    /^- \*\*stage=execute:/ { in_block=1 }
-    /^- \*\*stage=verify:/ { in_block=0 }
+    /^#### stage=execute[[:space:]]*$/ { in_block=1 }
+    /^#### stage=verify[[:space:]]*$/ { in_block=0 }
     in_block { print }
   ' <<< "$qa_remediation_block"
 } || true)"
@@ -1301,14 +1314,14 @@ execute_protocol_qa_remediation_block="$({
 
 qa_remediation_verify_block="$({
   awk '
-    /^- \*\*stage=verify:/ { in_block=1 }
+    /^#### stage=verify[[:space:]]*$/ { in_block=1 }
     in_block { print }
   ' <<< "$qa_remediation_block"
 } || true)"
 
 if grep -Fq '<qa_remediation_artifact_contract>' <<< "$qa_remediation_block" \
   && grep -Fq '`round_dir`, `source_verification_path`, `known_issues_path`, and `verification_path` are authoritative host-repository paths from `qa-remediation-state.sh` metadata' <<< "$qa_remediation_block" \
-  && grep -Fq 'pass these exact paths to Lead, Dev, and QA prompts' <<< "$qa_remediation_block" \
+  && grep -Fq 'Pass these exact paths to Lead, Dev, and QA prompts' <<< "$qa_remediation_block" \
   && grep -Fq '.claude/worktrees/agent-*' <<< "$qa_remediation_block" \
   && grep -Fq 'never rewrite them relative to the current CWD' <<< "$qa_remediation_block"; then
   pass "vibe: QA remediation has host artifact path contract"
@@ -1406,15 +1419,15 @@ else
 fi
 
 check_literal_before_literal "vibe: QA plan resolves Lead settings before using Lead model" "$qa_remediation_plan_block" 'resolve-agent-settings.sh lead' 'model: "${LEAD_MODEL}"'
-if grep -Fq 'Existing-plan recovery before spawning Lead' <<< "$qa_remediation_plan_block" \
+if grep -Fq 'Plan recovery and Lead spawn' <<< "$qa_remediation_plan_block" \
   && grep -Fq 'If the canonical `{round_dir}/R{RR}-PLAN.md` exists after normalization' <<< "$qa_remediation_plan_block" \
-  && grep -Fq 'If validation passes, do not spawn Lead again; reuse the persisted plan' <<< "$qa_remediation_plan_block"; then
+  && grep -Fq 'If validation passes, do not spawn Lead again. Reuse the persisted plan' <<< "$qa_remediation_plan_block"; then
   pass "vibe: QA remediation reuses existing validated plan on resume"
 else
   fail "vibe: QA remediation missing existing-plan recovery before Lead respawn"
 fi
 check_literal_before_literal "vibe: QA existing-plan recovery normalizes before canonical probe" "$qa_remediation_plan_block" 'normalize-plan-filenames.sh' 'If the canonical `{round_dir}/R{RR}-PLAN.md` exists after normalization'
-check_literal_before_literal "vibe: QA existing-plan recovery appears before Lead spawn" "$qa_remediation_plan_block" 'Existing-plan recovery before spawning Lead' 'spawns exactly one Lead subagent to write `{round_dir}/R{RR}-PLAN.md`'
+check_literal_before_literal "vibe: QA existing-plan recovery appears before Lead spawn" "$qa_remediation_plan_block" 'Plan recovery and Lead spawn' 'spawns exactly one Lead subagent to write `{round_dir}/R{RR}-PLAN.md`'
 check_literal_before_literal "vibe: QA plan Lead spawn appears before Lead return breaker" "$qa_remediation_plan_block" 'spawns exactly one Lead subagent to write `{round_dir}/R{RR}-PLAN.md`' 'After Lead returns, apply the no-tool circuit breaker in `references/subagent-contracts.md`'
 
 if grep -Fq 'Normalize plan filenames before validation' <<< "$qa_remediation_plan_block" \
@@ -1541,7 +1554,7 @@ else
 fi
 
 # vibe.md must reference qa-result-gate.sh at both gate call sites (primary + remediation verify)
-_vibe_gate_count=$(grep -c 'qa-result-gate\.sh' "$COMMANDS_DIR/vibe.md" 2>/dev/null || echo 0)
+_vibe_gate_count=$(grep -c 'qa-result-gate\.sh' "$VIBE_FILE" 2>/dev/null || echo 0)
 if [ "$_vibe_gate_count" -ge 2 ]; then
   pass "vibe: references qa-result-gate.sh at $_vibe_gate_count call sites"
 else
@@ -1557,8 +1570,12 @@ else
 fi
 
 # Both must include the anti-rationalization instruction at all gate call sites
-for f in "$COMMANDS_DIR/vibe.md" "$ROOT/references/execute-protocol.md"; do
-  base=$(basename "$f")
+for f in "$VIBE_FILE" "$ROOT/references/execute-protocol.md"; do
+  if [ "$f" = "$VIBE_FILE" ]; then
+    base="vibe.md"
+  else
+    base=$(basename "$f")
+  fi
   _ar_count=$(grep -c 'no exceptions, no judgment, no rationalization' "$f" 2>/dev/null || echo 0)
   if [ "$_ar_count" -ge 2 ]; then
     pass "$base: has anti-rationalization instruction at $_ar_count call sites"
@@ -1662,7 +1679,7 @@ uat_section="$(
     /^### Mode: UAT Remediation$/ { in_section=1; next }
     in_section && /^### Mode:/ { exit }
     in_section { print }
-  ' "$COMMANDS_DIR/vibe.md"
+  ' "$VIBE_FILE"
 )"
 if grep -q '\*\*TodoWrite progress list (NON-NEGOTIABLE' <<< "$uat_section"; then
   pass "UAT Remediation step 4 explicitly references TodoWrite"

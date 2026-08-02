@@ -213,17 +213,12 @@ _simulate_phase_detect_reader() {
 
 _extract_vibe_phase_state_block() {
   local out="$1"
+  local out_dir
 
-  awk '
-    /^Pre-computed state \(via phase-detect\.sh\):$/ { capture=1; next }
-    capture && !in_block && /^```$/ { in_block=1; next }
-    in_block && /^```$/ { exit }
-    in_block {
-      sub(/^!`/, "", $0)
-      sub(/`$/, "", $0)
-      print
-    }
-  ' "$PROJECT_ROOT/commands/vibe.md" > "$out"
+  out_dir=$(dirname "$out")
+  cp "$PROJECT_ROOT/scripts/resolve-phase-state.sh" "$out"
+  cp "$PROJECT_ROOT/scripts/resolve-plugin-root.sh" "$out_dir/resolve-plugin-root.sh"
+  cp "$PROJECT_ROOT/scripts/resolve-claude-dir.sh" "$out_dir/resolve-claude-dir.sh"
 }
 
 @test "commands with phase-detect run it atomically in preamble" {
@@ -233,9 +228,10 @@ _extract_vibe_phase_state_block() {
     [ "$count" -ge 1 ] || { echo "FAIL: ${cmd}.md missing atomic phase-detect in preamble"; return 1; }
   done
 
-  grep -q 'PTMP="${P}.tmp\.\$\$"' "$PROJECT_ROOT/commands/vibe.md" || { echo "FAIL: vibe.md missing temp output path for atomic phase-detect preamble"; return 1; }
-  grep -q 'bash "\$LINK/scripts/phase-detect.sh" > "\$PTMP"' "$PROJECT_ROOT/commands/vibe.md" || { echo "FAIL: vibe.md missing temp-file phase-detect write"; return 1; }
-  grep -q 'mv "\$PTMP" "\$P"' "$PROJECT_ROOT/commands/vibe.md" || { echo "FAIL: vibe.md missing atomic phase-detect rename"; return 1; }
+  local phase_state="$PROJECT_ROOT/scripts/resolve-phase-state.sh"
+  grep -q 'PTMP="${P}.tmp\.\$\$"' "$phase_state" || { echo "FAIL: resolve-phase-state.sh missing temp output path"; return 1; }
+  grep -q 'bash "\$L/scripts/phase-detect.sh" > "\$PTMP"' "$phase_state" || { echo "FAIL: resolve-phase-state.sh missing temp-file phase-detect write"; return 1; }
+  grep -q 'mv "\$PTMP" "\$P"' "$phase_state" || { echo "FAIL: resolve-phase-state.sh missing atomic phase-detect rename"; return 1; }
 }
 
 @test "commands with phase-detect preamble no longer use stamp file" {
@@ -274,25 +270,29 @@ _extract_vibe_phase_state_block() {
   done
 }
 
-@test "vibe.md guarded readers require fresh cache before fallback" {
+@test "vibe phase-state readers require fresh cache before fallback" {
+  local vibe="$PROJECT_ROOT/commands/vibe.md"
+  local phase_state="$PROJECT_ROOT/scripts/resolve-phase-state.sh"
   local start_count fresh_count stat_count
-  start_count=$(grep -cF '_PD_START_TS=$(date +%s' "$PROJECT_ROOT/commands/vibe.md" || true)
-  fresh_count=$(grep -cF '_phase_detect_cache_fresh()' "$PROJECT_ROOT/commands/vibe.md" || true)
-  stat_count=$(grep -c 'stat -c %Y "\$P"\|stat -f %m "\$P"' "$PROJECT_ROOT/commands/vibe.md" || true)
-  [ "${start_count:-0}" -ge 3 ] || { echo 'FAIL: vibe.md missing invocation-start freshness guard'; return 1; }
-  [ "${fresh_count:-0}" -ge 3 ] || { echo 'FAIL: vibe.md missing fresh-cache helper in guarded readers'; return 1; }
-  [ "${stat_count:-0}" -ge 3 ] || { echo 'FAIL: vibe.md missing cache mtime freshness check'; return 1; }
+  start_count=$(grep -h 'START_TS=$(date +%s\|start_ts=$(date +%s' "$vibe" "$phase_state" | wc -l | tr -d ' ')
+  fresh_count=$(grep -h 'phase_detect_cache_fresh()' "$vibe" "$phase_state" | wc -l | tr -d ' ')
+  stat_count=$(grep -h 'stat -c %Y "\$P"\|stat -f %m "\$P"' "$vibe" "$phase_state" | wc -l | tr -d ' ')
+  [ "${start_count:-0}" -ge 3 ] || { echo 'FAIL: vibe phase-state readers missing invocation-start freshness guard'; return 1; }
+  [ "${fresh_count:-0}" -ge 3 ] || { echo 'FAIL: vibe phase-state readers missing fresh-cache helper'; return 1; }
+  [ "${stat_count:-0}" -ge 3 ] || { echo 'FAIL: vibe phase-state readers missing cache mtime freshness check'; return 1; }
 }
 
-@test "vibe.md guarded readers use a shared live phase-detect lock" {
+@test "vibe phase-state readers use a shared live phase-detect lock" {
   local lock_count
-  lock_count=$(grep -cF '/tmp/.vbw-phase-detect-live-${SESSION_KEY}.lock' "$PROJECT_ROOT/commands/vibe.md" || true)
-  [ "${lock_count:-0}" -ge 3 ] || { echo 'FAIL: vibe.md missing shared live phase-detect lock in guarded readers'; return 1; }
+  lock_count=$(grep -hF '/tmp/.vbw-phase-detect-live-${SESSION_KEY}.lock' \
+    "$PROJECT_ROOT/commands/vibe.md" \
+    "$PROJECT_ROOT/scripts/resolve-phase-state.sh" | wc -l | tr -d ' ')
+  [ "${lock_count:-0}" -ge 3 ] || { echo 'FAIL: vibe phase-state readers missing shared live lock'; return 1; }
 }
 
-@test "vibe.md preamble uses the same phase-detect live lock" {
-  grep -qF 'LOCK="/tmp/.vbw-phase-detect-live-${SESSION_KEY}.lock"' "$PROJECT_ROOT/commands/vibe.md" || {
-    echo 'FAIL: vibe.md preamble missing shared phase-detect live lock';
+@test "vibe phase-state resolver uses the shared live lock" {
+  grep -qF 'LOCK="/tmp/.vbw-phase-detect-live-${SESSION_KEY}.lock"' "$PROJECT_ROOT/scripts/resolve-phase-state.sh" || {
+    echo 'FAIL: resolve-phase-state.sh missing shared phase-detect live lock';
     return 1;
   }
 }
@@ -305,8 +305,10 @@ _extract_vibe_phase_state_block() {
   done
 
   local vibe_live_count
-  vibe_live_count=$(grep -cF 'bash "$L/scripts/phase-detect.sh"' "$PROJECT_ROOT/commands/vibe.md")
-  [ "$vibe_live_count" -ge 3 ] || { echo "FAIL: vibe.md missing guarded live phase-detect reads"; return 1; }
+  vibe_live_count=$(grep -hF 'bash "$L/scripts/phase-detect.sh"' \
+    "$PROJECT_ROOT/commands/vibe.md" \
+    "$PROJECT_ROOT/scripts/resolve-phase-state.sh" | wc -l | tr -d ' ')
+  [ "$vibe_live_count" -ge 3 ] || { echo "FAIL: vibe phase-state flow missing guarded live reads"; return 1; }
 }
 
 @test "vibe/verify secondary readers no longer use legacy empty-only fallback" {
@@ -401,7 +403,8 @@ EOF
 
   run env CLAUDE_SESSION_ID="$session" CLAUDE_PLUGIN_ROOT="$root" bash "$script"
   [ "$status" -eq 0 ]
-  [ "$output" = "phase_detect_error=true" ]
+  [[ "$output" == *"phase_detect_error=true"* ]]
+  [[ "$output" != *"next_phase_state=fresh_live"* ]]
   [ -L "$link" ]
 }
 
@@ -487,14 +490,16 @@ EOF
   [[ "$out" == "phase_detect_error=true" ]]
 }
 
-@test "vibe.md uses self-healing live read with temp-file fallback" {
+@test "vibe phase-state flow uses self-healing live read with temp-file fallback" {
+  local vibe="$PROJECT_ROOT/commands/vibe.md"
+  local phase_state="$PROJECT_ROOT/scripts/resolve-phase-state.sh"
   local cat_count
-  cat_count=$(grep -cF 'cat "$P"' "$PROJECT_ROOT/commands/vibe.md" || true)
-  [ "${cat_count:-0}" -ge 1 ] || { echo "FAIL: vibe.md missing phase-detect temp-file fallback"; return 1; }
+  cat_count=$(grep -hF 'cat "$P"' "$vibe" "$phase_state" | wc -l | tr -d ' ')
+  [ "${cat_count:-0}" -ge 1 ] || { echo "FAIL: vibe phase-state flow missing temp-file fallback"; return 1; }
 
   local live_count
-  live_count=$(grep -cF 'bash "$L/scripts/phase-detect.sh"' "$PROJECT_ROOT/commands/vibe.md")
-  [ "$live_count" -ge 3 ] || { echo "FAIL: vibe.md missing live phase-detect reads"; return 1; }
+  live_count=$(grep -hF 'bash "$L/scripts/phase-detect.sh"' "$vibe" "$phase_state" | wc -l | tr -d ' ')
+  [ "$live_count" -ge 3 ] || { echo "FAIL: vibe phase-state flow missing live reads"; return 1; }
 }
 
 # ── UAT protocol safeguards ─────────────────────────────────────────────────
@@ -512,11 +517,12 @@ EOF
 
 @test "shared resolver validates candidates by required script" {
   grep -Fq '[ -f "$candidate/scripts/$required_script" ]' "$PROJECT_ROOT/scripts/resolve-plugin-root.sh"
-  # Invariant: every visited command delegates validation. Variant: unvisited commands.
-  for cmd in vibe verify discuss help qa skills; do
+  for cmd in verify discuss help qa skills; do
     grep -Fq 'resolve-plugin-root.sh' "$PROJECT_ROOT/commands/${cmd}.md" || \
       { echo "FAIL: ${cmd}.md missing shared resolver delegation"; return 1; }
   done
+  grep -Fq 'resolve-phase-state.sh' "$PROJECT_ROOT/commands/vibe.md"
+  grep -Fq 'resolve-plugin-root.sh' "$PROJECT_ROOT/scripts/resolve-phase-state.sh"
 }
 
 @test "command trampolines do NOT use bare [ -d ] for local/ acceptance" {
@@ -535,11 +541,12 @@ EOF
 @test "shared resolver owns canonical pwd -P resolution" {
   grep -Fq 'canonical_root=$(cd "$resolved_root" 2>/dev/null && pwd -P)' \
     "$PROJECT_ROOT/scripts/resolve-plugin-root.sh"
-  # Invariant: every visited preamble delegates canonicalization. Variant: unvisited commands.
-  for cmd in config debug discuss doctor fix help init map qa report research resume rtk skills status update verify vibe whats-new; do
+  for cmd in config debug discuss doctor fix help init map qa report research resume rtk skills status update verify whats-new; do
     grep -Fq 'resolve-plugin-root.sh' "$PROJECT_ROOT/commands/${cmd}.md" || \
       { echo "FAIL: ${cmd}.md missing shared resolver delegation"; return 1; }
   done
+  grep -Fq 'resolve-phase-state.sh' "$PROJECT_ROOT/commands/vibe.md"
+  grep -Fq 'resolve-plugin-root.sh' "$PROJECT_ROOT/scripts/resolve-phase-state.sh"
 }
 
 @test "shared resolver repairs links with canonical_root" {

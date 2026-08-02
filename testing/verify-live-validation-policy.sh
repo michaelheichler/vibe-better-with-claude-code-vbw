@@ -15,6 +15,7 @@ EXEC_PROTO="$ROOT/references/execute-protocol.md"
 SCOUT_FILE="$ROOT/agents/vbw-scout.md"
 SCOUT_POLICY_FILE="$ROOT/references/scout-live-validation-policy.md"
 VIBE_FILE="$ROOT/commands/vibe.md"
+VIBE_UAT_REF="$ROOT/references/vibe-uat-remediation.md"
 RESEARCH_FILE="$ROOT/commands/research.md"
 
 PASS=0
@@ -93,7 +94,7 @@ else
   fail "commands/vibe.md: missing authenticated-validation routing guidance"
 fi
 
-if grep -qi 'public/anonymous HTTP validation uses WebFetch' "$VIBE_FILE" && grep -qi 'authenticated/private read-only checks use verified-safe Bash helper scripts or curl wrappers' "$VIBE_FILE"; then
+if grep -qi 'public/anonymous HTTP validation uses WebFetch' "$VIBE_FILE" "$VIBE_UAT_REF" && grep -qi 'authenticated/private read-only checks use verified-safe Bash helper scripts or curl wrappers' "$VIBE_FILE" "$VIBE_UAT_REF"; then
   pass "commands/vibe.md: uses Scout public-vs-authenticated live-validation split"
 else
   fail "commands/vibe.md: missing Scout public-vs-authenticated live-validation split"

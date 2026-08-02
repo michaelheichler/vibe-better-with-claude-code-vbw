@@ -1216,9 +1216,8 @@ EOF
 }
 
 @test "vibe.md needs_verification routing note mentions inline execution" {
-  local vibe="$BATS_TEST_DIRNAME/../commands/vibe.md"
-  # The routing note after the priority table must reinforce inline execution
-  grep -q "do NOT spawn a QA agent or any subagent for UAT" "$vibe"
+  local vibe_input="$BATS_TEST_DIRNAME/../references/vibe-input-parsing.md"
+  grep -q "do NOT spawn a QA agent or any subagent for UAT" "$vibe_input"
 }
 
 @test "execute-protocol.md Step 4.5 contains subagent prohibition" {
@@ -1337,13 +1336,10 @@ EOF
 }
 
 @test "vibe.md UAT Remediation chains into re-verification after execute" {
-  local vibe="$BATS_TEST_DIRNAME/../commands/vibe.md"
-  # Must call prepare-reverification.sh after execute stage
-  grep -q "prepare-reverification.sh" "$vibe"
-  # Must continue directly into Verify mode
-  grep -q "Continue directly into Verify mode" "$vibe"
-  # Must NOT just suggest /vbw:vibe
-  grep -q "Chain into re-verification (NON-NEGOTIABLE)" "$vibe"
+  local vibe_uat="$BATS_TEST_DIRNAME/../references/vibe-uat-remediation.md"
+  grep -q "prepare-reverification.sh" "$vibe_uat"
+  grep -q "Continue directly into Verify mode" "$vibe_uat"
+  grep -q "Chain into re-verification (NON-NEGOTIABLE)" "$vibe_uat"
 }
 
 @test "extract-uat-issues.sh accepts FAIL and PARTIAL Result values" {
@@ -1362,12 +1358,10 @@ EOF
 }
 
 @test "vibe.md re-verification chain has error guard for prepare-reverification" {
-  local vibe="$BATS_TEST_DIRNAME/../commands/vibe.md"
-  # Both call sites must check for script failure:
-  # 1. Execute→verify chain (in UAT Remediation mode)
-  # 2. State routing path (needs_reverification priority)
+  local vibe_input="$BATS_TEST_DIRNAME/../references/vibe-input-parsing.md"
+  local vibe_uat="$BATS_TEST_DIRNAME/../references/vibe-uat-remediation.md"
   local guard_count
-  guard_count=$(grep -c 'Error guard.*script fails\|non-zero exit.*STOP' "$vibe")
+  guard_count=$(grep -h 'Error guard.*script fails\|non-zero exit.*STOP' "$vibe_input" "$vibe_uat" | wc -l | tr -d ' ')
   [ "$guard_count" -ge 2 ]
 }
 

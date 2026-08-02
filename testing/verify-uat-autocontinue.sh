@@ -11,6 +11,11 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 PASS=0
 FAIL=0
 VIBE_VERIFY_STEP4_BLOCK=$(sed -n '/4\. \*\*UAT Remediation Auto-Continuation:/,/### Mode: Add Phase/p' "$ROOT/commands/vibe.md")
+VIBE_FILES=(
+  "$ROOT/commands/vibe.md"
+  "$ROOT/references/vibe-input-parsing.md"
+  "$ROOT/references/vibe-uat-remediation.md"
+)
 
 pass() {
   echo "PASS  $1"
@@ -107,8 +112,8 @@ else
 fi
 
 # 12. vibe.md documents the real prepare-reverification archived/skipped contract
-if grep -q 'archived=kept|in-round-dir|<original-uat-basename>' "$ROOT/commands/vibe.md" \
-  && grep -q 'skipped=already_archived|ready_for_verify|cap_reached' "$ROOT/commands/vibe.md"; then
+if grep -q 'archived=kept|in-round-dir|<original-uat-basename>' "${VIBE_FILES[@]}" \
+  && grep -q 'skipped=already_archived|ready_for_verify|cap_reached' "${VIBE_FILES[@]}"; then
   pass "vibe.md documents the real prepare-reverification archived/skipped contract"
 else
   fail "vibe.md missing the real prepare-reverification archived/skipped contract"
