@@ -397,7 +397,7 @@ else
   fail "summary-utils.sh exports count_done_summaries function"
 fi
 
-if grep -q 'SUMMARY_COUNT=\$(jq -r' "$ROOT/scripts/session-start.sh" && grep -q 'status == "partial"' "$ROOT/scripts/session-start.sh"; then
+if grep 'SUMMARY_COUNT=\$(jq -r' "$ROOT/scripts/session-start.sh" | grep -q 'status == "partial"'; then
   pass "session-start SUMMARY_COUNT includes partial for reconciliation"
 else
   fail "session-start SUMMARY_COUNT includes partial for reconciliation"
