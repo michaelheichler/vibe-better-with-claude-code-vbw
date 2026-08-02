@@ -36,6 +36,7 @@ Status: active
 - Bug (agent-marker lifecycle): a normally-completed Scout SubagentStop did not decrement the active-agent markers (flat and session-scoped), leaving a stale scout marker that locked the orchestrator out of writes. Tests pass but the real spawn path has a cleanup gap.
 - Bug (test infra): testing/run-all.sh 63-way parallelism is not safe against a concurrent bats run in the same repo. The isolation tests pollute and report false failures.
 - Bug (execute parallelization): agent teams are never activated during Execute. Wave-parallel plans consistently fall back to serialized Dev subagents even with prefer_teams=auto and genuinely independent same-wave plans. The team-mode gating in execute-protocol.md needs root-cause investigation. (added 2026-08-01)
+- [HIGH] phase-detect.sh next_phase_state misreports needs_execute for phase 05 even though it was fully resolved via QA remediation round 01 (added 2026-08-02) (ref:0f9b3be3)
 
 **Guard and gate history**
 
