@@ -26,17 +26,12 @@ teardown() {
 }
 
 @test "milestone-context: phase mutation modes refresh and preserve milestone context contract" {
-  VIBE_FILE="$PROJECT_ROOT/commands/vibe.md"
-
-  for mode in "### Mode: Add Phase" "### Mode: Insert Phase" "### Mode: Remove Phase"; do
-    block=$(awk -v h="$mode" '
-      $0 == h { found=1; print; next }
-      found && /^### Mode: / { exit }
-      found { print }
-    ' "$VIBE_FILE")
-
-    printf '%s\n' "$block" | grep -q 'If `\.vbw-planning/CONTEXT\.md` exists, rewrite it to reflect the updated milestone decomposition'
-    printf '%s\n' "$block" | grep -q 'Preserve project-level key decisions and deferred ideas where still valid\.'
+  for mode_file in \
+    "$PROJECT_ROOT/references/vibe-mode-add-phase.md" \
+    "$PROJECT_ROOT/references/vibe-mode-insert-phase.md" \
+    "$PROJECT_ROOT/references/vibe-mode-remove-phase.md"; do
+    grep -q 'If `\.vbw-planning/CONTEXT\.md` exists, rewrite it to reflect the updated milestone decomposition' "$mode_file"
+    grep -q 'Preserve project-level key decisions and deferred ideas where still valid\.' "$mode_file"
   done
 }
 

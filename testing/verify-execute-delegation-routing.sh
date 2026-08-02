@@ -7,6 +7,8 @@ HELPER="$ROOT/scripts/resolve-execute-delegation-mode.sh"
 GENERATE_CONTRACT="$ROOT/scripts/generate-contract.sh"
 STATE_UPDATER="$ROOT/scripts/state-updater.sh"
 EXECUTE_PROTOCOL="$ROOT/references/execute-protocol.md"
+QA_RESULT_GATING="$ROOT/references/execute-qa-result-gating.md"
+POST_BUILD_QA="$ROOT/references/execute-post-build-qa.md"
 NON_TEAM_INVARIANT_TEXT='Non-team invariant: omit `team_name`, `run_in_background`, `isolation`, and all worktree cwd fields.'
 NO_TOOL_INVARIANT_TEXT='No-tool invariant: treat unavailable tools as a provisioning failure, do not advance state, and do not retry the same prompt.'
 
@@ -221,9 +223,14 @@ require_file "$HELPER"
 require_file "$GENERATE_CONTRACT"
 require_file "$STATE_UPDATER"
 require_file "$EXECUTE_PROTOCOL"
+require_file "$QA_RESULT_GATING"
+require_file "$POST_BUILD_QA"
 
 EXECUTE_PROTOCOL_TEXT=$(cat "$EXECUTE_PROTOCOL")
-QA_REMEDIATION_BLOCK=$(extract_protocol_block 'QA Remediation Loop (inline, same session):' '### Step 4.5')
+QA_REMEDIATION_BLOCK=$(awk '
+  /\*\*QA Remediation Loop \(inline, same session\):/ { in_block = 1 }
+  in_block { print }
+' "$QA_RESULT_GATING")
 QA_REMEDIATION_PLAN_BLOCK=$(awk '
   /\*\*stage=plan:/ { in_block = 1 }
   /\*\*stage=execute:/ { in_block = 0 }
@@ -652,19 +659,19 @@ else
   pass "execute-protocol rejects stale off-only or prepared-targeting isolation allowance"
 fi
 
-if grep -Fq '<qa_remediation_artifact_contract>' "$EXECUTE_PROTOCOL" \
-  && grep -Fq '`round_dir`, `source_verification_path`, `known_issues_path`, and `verification_path` from `qa-remediation-state.sh` metadata are authoritative host-repository paths' "$EXECUTE_PROTOCOL" \
-  && grep -Fq 'pass these exact paths to Lead, Dev, and QA prompts' "$EXECUTE_PROTOCOL" \
-  && grep -Fq 'never rewrite them relative to the current CWD' "$EXECUTE_PROTOCOL"; then
+if grep -Fq '<qa_remediation_artifact_contract>' "$QA_RESULT_GATING" \
+  && grep -Fq '`round_dir`, `source_verification_path`, `known_issues_path`, and `verification_path` from `qa-remediation-state.sh` metadata are authoritative host-repository paths' "$QA_RESULT_GATING" \
+  && grep -Fq 'pass these exact paths to Lead, Dev, and QA prompts' "$QA_RESULT_GATING" \
+  && grep -Fq 'never rewrite them relative to the current CWD' "$QA_RESULT_GATING"; then
   pass "execute-protocol documents QA remediation authoritative host artifact paths"
 else
   fail "execute-protocol missing QA remediation authoritative host artifact path contract"
 fi
 
-if grep -Fq '<qa_remediation_spawn_contract>' "$EXECUTE_PROTOCOL" \
-  && grep -Fq 'QA remediation uses plain sequential subagent calls' "$EXECUTE_PROTOCOL" \
-  && grep -Fq "$NON_TEAM_INVARIANT_TEXT" "$EXECUTE_PROTOCOL" \
-  && grep -Fq 'VBW worktree targeting is task prompt/state metadata, not a spawn isolation or cwd handoff' "$EXECUTE_PROTOCOL"; then
+if grep -Fq '<qa_remediation_spawn_contract>' "$QA_RESULT_GATING" \
+  && grep -Fq 'QA remediation uses plain sequential subagent calls' "$QA_RESULT_GATING" \
+  && grep -Fq "$NON_TEAM_INVARIANT_TEXT" "$QA_RESULT_GATING" \
+  && grep -Fq 'VBW worktree targeting is task prompt/state metadata, not a spawn isolation or cwd handoff' "$QA_RESULT_GATING"; then
   pass "execute-protocol documents QA remediation canonical non-team invariant"
 else
   fail "execute-protocol missing QA remediation canonical non-team invariant"
@@ -678,9 +685,9 @@ else
   pass "execute-protocol QA remediation rejects worktree-targeting spawn exceptions"
 fi
 
-if grep -Fq '<qa_remediation_no_tool_circuit_breaker>' "$EXECUTE_PROTOCOL" \
-  && grep -Fq 'STOP without advancing `.qa-remediation-stage`' "$EXECUTE_PROTOCOL" \
-  && grep -Fq 'do not retry the same prompt' "$EXECUTE_PROTOCOL"; then
+if grep -Fq '<qa_remediation_no_tool_circuit_breaker>' "$QA_RESULT_GATING" \
+  && grep -Fq 'STOP without advancing `.qa-remediation-stage`' "$QA_RESULT_GATING" \
+  && grep -Fq 'do not retry the same prompt' "$QA_RESULT_GATING"; then
   pass "execute-protocol documents QA remediation no-tool circuit breaker"
 else
   fail "execute-protocol missing QA remediation no-tool circuit breaker"
@@ -762,7 +769,7 @@ check_literal_before_literal "execute-protocol QA verify breaker appears before 
 check_literal_before_literal "execute-protocol QA verify breaker appears before deterministic gate" "$QA_REMEDIATION_VERIFY_BLOCK" 'After QA returns, apply the no-tool circuit breaker in `references/subagent-contracts.md`' 'qa-result-gate.sh'
 
 if grep -Fq 'When true team mode is active, pass `team_name: "vbw-phase-{NN}"` and `name: "dev-{MM}"`' "$EXECUTE_PROTOCOL" \
-  && grep -Fq 'When true team mode is active, pass `team_name: "vbw-phase-{NN}"` and `name: "qa"`' "$EXECUTE_PROTOCOL"; then
+  && grep -Fq 'When true team mode is active, pass `team_name: "vbw-phase-{NN}"` and `name: "qa"`' "$POST_BUILD_QA"; then
   pass "execute-protocol preserves team_name/name invariant for true team mode"
 else
   fail "execute-protocol preserves team_name/name invariant for true team mode"

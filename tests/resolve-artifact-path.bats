@@ -324,7 +324,7 @@ teardown() {
 # --- Contract: callsite wiring ---
 
 @test "contract: vibe.md Plan mode calls resolve-artifact-path.sh" {
-  count=$(grep -c 'resolve-artifact-path\.sh' commands/vibe.md)
+  count=$(grep -c 'resolve-artifact-path\.sh' references/vibe-mode-plan.md)
   [ "$count" -ge 3 ]  # context, plan, research, turbo
 }
 

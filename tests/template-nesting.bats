@@ -215,12 +215,11 @@ _extract_vibe_embedded_phase_state_block() {
           print line
           if (index(line, "&& _phase_detect_cache_fresh && PD=$(cat \"$P\")") > 0) exit
         }
-      ' "$PROJECT_ROOT/commands/vibe.md" > "$out"
+      ' "$PROJECT_ROOT/references/vibe-mode-milestone-uat-recovery.md" > "$out"
       ;;
     verify)
       awk '
-        /^### Mode: Verify$/ { route = 1 }
-        route && /SESSION_KEY="\$\{CLAUDE_SESSION_ID:-default\}"/ { capture = 1 }
+        /SESSION_KEY="\$\{CLAUDE_SESSION_ID:-default\}"/ { capture = 1 }
         capture {
           line = $0
           sub(/^[[:space:]]+/, "", line)
@@ -228,7 +227,7 @@ _extract_vibe_embedded_phase_state_block() {
           if (line == "PD=\"phase_detect_error=true\"") ending = 1
           else if (ending && line == "fi") exit
         }
-      ' "$PROJECT_ROOT/commands/vibe.md" > "$out"
+      ' "$PROJECT_ROOT/references/vibe-mode-verify.md" > "$out"
       ;;
     *)
       return 1
@@ -295,16 +294,19 @@ _assert_vibe_embedded_phase_state_blocks() {
   done
 
   local vibe_count
-  vibe_count=$(grep -cF 'PD=$(cat "$P")' "$PROJECT_ROOT/commands/vibe.md" || true)
+  vibe_count=$(grep -hF 'PD=$(cat "$P")' "$PROJECT_ROOT/references/vibe-mode-verify.md" | wc -l | tr -d ' ')
   [ "${vibe_count:-0}" -ge 1 ] || { echo 'FAIL: vibe.md missing guarded phase-detect temp-file read'; return 1; }
 }
 
 @test "commands with phase-detect treat error cache as cache miss" {
-  for cmd in resume status vibe discuss qa verify; do
+  for cmd in resume status discuss qa verify; do
     local count
     count=$(grep -cF "$(_error_cache_bypass_pattern)" "$PROJECT_ROOT/commands/${cmd}.md")
     [ "$count" -ge 1 ] || { echo "FAIL: ${cmd}.md missing error-cache bypass"; return 1; }
   done
+  local vibe_count
+  vibe_count=$(grep -hF "$(_error_cache_bypass_pattern)" "$PROJECT_ROOT/references/vibe-mode-verify.md" | wc -l | tr -d ' ')
+  [ "$vibe_count" -ge 1 ] || { echo "FAIL: vibe phase-state references missing error-cache bypass"; return 1; }
 }
 
 @test "commands with phase-detect always re-run when plugin link exists" {
@@ -316,12 +318,11 @@ _assert_vibe_embedded_phase_state_blocks() {
 }
 
 @test "vibe phase-state readers require fresh cache before fallback" {
-  local vibe="$PROJECT_ROOT/commands/vibe.md"
   local phase_state="$PROJECT_ROOT/scripts/resolve-phase-state.sh"
   local start_count fresh_count stat_count
-  start_count=$(grep -h 'START_TS=$(date +%s\|start_ts=$(date +%s' "$vibe" "$phase_state" | wc -l | tr -d ' ')
-  fresh_count=$(grep -h 'phase_detect_cache_fresh()' "$vibe" "$phase_state" | wc -l | tr -d ' ')
-  stat_count=$(grep -h 'stat -c %Y "\$P"\|stat -f %m "\$P"' "$vibe" "$phase_state" | wc -l | tr -d ' ')
+  start_count=$(grep -h 'START_TS=$(date +%s\|start_ts=$(date +%s' "$PROJECT_ROOT/references/vibe-mode-milestone-uat-recovery.md" "$PROJECT_ROOT/references/vibe-mode-verify.md" "$phase_state" | wc -l | tr -d ' ')
+  fresh_count=$(grep -h 'phase_detect_cache_fresh()' "$PROJECT_ROOT/references/vibe-mode-milestone-uat-recovery.md" "$PROJECT_ROOT/references/vibe-mode-verify.md" "$phase_state" | wc -l | tr -d ' ')
+  stat_count=$(grep -h 'stat -c %Y "\$P"\|stat -f %m "\$P"' "$PROJECT_ROOT/references/vibe-mode-milestone-uat-recovery.md" "$PROJECT_ROOT/references/vibe-mode-verify.md" "$phase_state" | wc -l | tr -d ' ')
   [ "${start_count:-0}" -ge 3 ] || { echo 'FAIL: vibe phase-state readers missing invocation-start freshness guard'; return 1; }
   [ "${fresh_count:-0}" -ge 3 ] || { echo 'FAIL: vibe phase-state readers missing fresh-cache helper'; return 1; }
   [ "${stat_count:-0}" -ge 3 ] || { echo 'FAIL: vibe phase-state readers missing cache mtime freshness check'; return 1; }
@@ -330,7 +331,8 @@ _assert_vibe_embedded_phase_state_blocks() {
 @test "vibe phase-state readers use a shared live phase-detect lock" {
   local lock_count
   lock_count=$(grep -hF '/tmp/.vbw-phase-detect-live-${SESSION_KEY}.lock' \
-    "$PROJECT_ROOT/commands/vibe.md" \
+    "$PROJECT_ROOT/references/vibe-mode-milestone-uat-recovery.md" \
+    "$PROJECT_ROOT/references/vibe-mode-verify.md" \
     "$PROJECT_ROOT/scripts/resolve-phase-state.sh" | wc -l | tr -d ' ')
   [ "${lock_count:-0}" -ge 3 ] || { echo 'FAIL: vibe phase-state readers missing shared live lock'; return 1; }
 }
@@ -351,13 +353,14 @@ _assert_vibe_embedded_phase_state_blocks() {
 
   local vibe_live_count
   vibe_live_count=$(grep -hF 'bash "$L/scripts/phase-detect.sh"' \
-    "$PROJECT_ROOT/commands/vibe.md" \
+    "$PROJECT_ROOT/references/vibe-mode-milestone-uat-recovery.md" \
+    "$PROJECT_ROOT/references/vibe-mode-verify.md" \
     "$PROJECT_ROOT/scripts/resolve-phase-state.sh" | wc -l | tr -d ' ')
   [ "$vibe_live_count" -ge 3 ] || { echo "FAIL: vibe phase-state flow missing guarded live reads"; return 1; }
 }
 
 @test "vibe/verify secondary readers no longer use legacy empty-only fallback" {
-  run bash -c "grep -nF '[ -z \"\$PD\" ] && [ -L \"\$L\" ] && [ -f \"\$L/scripts/phase-detect.sh\" ]' \"$PROJECT_ROOT/commands/vibe.md\" \"$PROJECT_ROOT/commands/verify.md\""
+  run bash -c "grep -nF '[ -z \"\$PD\" ] && [ -L \"\$L\" ] && [ -f \"\$L/scripts/phase-detect.sh\" ]' \"$PROJECT_ROOT/commands/vibe.md\" \"$PROJECT_ROOT/references/vibe-mode-milestone-uat-recovery.md\" \"$PROJECT_ROOT/references/vibe-mode-verify.md\" \"$PROJECT_ROOT/commands/verify.md\""
   [ "$status" -eq 1 ]
 }
 
@@ -574,14 +577,13 @@ EOF
 }
 
 @test "vibe phase-state flow uses self-healing live read with temp-file fallback" {
-  local vibe="$PROJECT_ROOT/commands/vibe.md"
   local phase_state="$PROJECT_ROOT/scripts/resolve-phase-state.sh"
   local cat_count
-  cat_count=$(grep -hF 'cat "$P"' "$vibe" "$phase_state" | wc -l | tr -d ' ')
+  cat_count=$(grep -hF 'cat "$P"' "$PROJECT_ROOT/references/vibe-mode-milestone-uat-recovery.md" "$PROJECT_ROOT/references/vibe-mode-verify.md" "$phase_state" | wc -l | tr -d ' ')
   [ "${cat_count:-0}" -ge 1 ] || { echo "FAIL: vibe phase-state flow missing temp-file fallback"; return 1; }
 
   local live_count
-  live_count=$(grep -hF 'bash "$L/scripts/phase-detect.sh"' "$vibe" "$phase_state" | wc -l | tr -d ' ')
+  live_count=$(grep -hF 'bash "$L/scripts/phase-detect.sh"' "$PROJECT_ROOT/references/vibe-mode-milestone-uat-recovery.md" "$PROJECT_ROOT/references/vibe-mode-verify.md" "$phase_state" | wc -l | tr -d ' ')
   [ "$live_count" -ge 3 ] || { echo "FAIL: vibe phase-state flow missing live reads"; return 1; }
 }
 

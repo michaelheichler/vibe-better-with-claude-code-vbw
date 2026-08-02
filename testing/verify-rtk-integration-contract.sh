@@ -18,17 +18,29 @@ fail() {
 
 contains() {
   local file="$1" needle="$2"
-  grep -Fq -- "$needle" "$file"
+  if [ "$file" = "$RTK_MANAGER" ]; then
+    grep -Fq -- "$needle" "$RTK_MANAGER" "$RTK_MANAGER_ENV"
+  else
+    grep -Fq -- "$needle" "$file"
+  fi
 }
 
 contains_re() {
   local file="$1" regex="$2"
-  grep -Eq -- "$regex" "$file"
+  if [ "$file" = "$RTK_MANAGER" ]; then
+    grep -Eq -- "$regex" "$RTK_MANAGER" "$RTK_MANAGER_ENV"
+  else
+    grep -Eq -- "$regex" "$file"
+  fi
 }
 
 not_contains_re() {
   local file="$1" regex="$2"
-  ! grep -Eq -- "$regex" "$file"
+  if [ "$file" = "$RTK_MANAGER" ]; then
+    ! grep -Eq -- "$regex" "$RTK_MANAGER" "$RTK_MANAGER_ENV"
+  else
+    ! grep -Eq -- "$regex" "$file"
+  fi
 }
 
 tracked_files() {
@@ -45,13 +57,14 @@ echo "=== RTK Integration Contract Verification ==="
 
 RTK_CMD="$ROOT/commands/rtk.md"
 RTK_MANAGER="$ROOT/scripts/rtk-manager.sh"
+RTK_MANAGER_ENV="$ROOT/scripts/lib/rtk-manager-environment.sh"
 DOCTOR_CMD="$ROOT/commands/doctor.md"
 STATUS_CMD="$ROOT/commands/status.md"
 SESSION_START="$ROOT/scripts/session-start.sh"
 README="$ROOT/README.md"
 
 [ -f "$RTK_CMD" ] && pass "commands/rtk.md exists" || fail "commands/rtk.md missing"
-[ -x "$RTK_MANAGER" ] && pass "scripts/rtk-manager.sh exists and is executable" || fail "scripts/rtk-manager.sh missing or not executable"
+[ -x "$RTK_MANAGER" ] && [ -x "$RTK_MANAGER_ENV" ] && pass "RTK manager scripts exist and are executable" || fail "RTK manager scripts missing or not executable"
 
 if contains "$RTK_CMD" 'name: vbw:rtk' \
   && contains "$RTK_CMD" 'argument-hint: [status|install|init|verify|update|uninstall]' \

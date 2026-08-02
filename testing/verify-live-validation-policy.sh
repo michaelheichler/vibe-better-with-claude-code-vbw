@@ -8,13 +8,13 @@ set -euo pipefail
 # - execute-protocol.md routes authenticated API validation to Bash
 # - vbw-scout.md distinguishes public WebFetch vs authenticated validation
 # - vbw-scout.md handles empty/contradictory results
-# - commands/vibe.md does not over-prescribe WebFetch for auth-required APIs
+# - references/vibe-mode-plan.md does not over-prescribe WebFetch for auth-required APIs
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 EXEC_PROTO="$ROOT/references/execute-protocol.md"
 SCOUT_FILE="$ROOT/agents/vbw-scout.md"
 SCOUT_POLICY_FILE="$ROOT/references/scout-live-validation-policy.md"
-VIBE_FILE="$ROOT/commands/vibe.md"
+VIBE_FILE="$ROOT/references/vibe-mode-plan.md"
 VIBE_UAT_REF="$ROOT/references/vibe-uat-remediation.md"
 RESEARCH_FILE="$ROOT/commands/research.md"
 
@@ -84,20 +84,20 @@ else
   fail "vbw-scout.md: missing empty/contradictory response handling"
 fi
 
-# --- commands/vibe.md checks ---
+# --- references/vibe-mode-plan.md checks ---
 
 # 6. Remediation path does not blanket-prescribe WebFetch for auth APIs
 #    (Positive check: vibe.md mentions the auth-vs-public distinction somewhere)
 if grep -qi 'authenticated.*live.*validation\|REQUIRES.*AUTHENTICATED\|auth.*API.*bash\|private.*API.*Dev\|bash.capable.*execution' "$VIBE_FILE"; then
-  pass "commands/vibe.md: mentions authenticated validation routing"
+  pass "references/vibe-mode-plan.md: mentions authenticated validation routing"
 else
-  fail "commands/vibe.md: missing authenticated-validation routing guidance"
+  fail "references/vibe-mode-plan.md: missing authenticated-validation routing guidance"
 fi
 
 if grep -qi 'public/anonymous HTTP validation uses WebFetch' "$VIBE_FILE" "$VIBE_UAT_REF" && grep -qi 'authenticated/private read-only checks use verified-safe Bash helper scripts or curl wrappers' "$VIBE_FILE" "$VIBE_UAT_REF"; then
-  pass "commands/vibe.md: uses Scout public-vs-authenticated live-validation split"
+  pass "references/vibe-mode-plan.md: uses Scout public-vs-authenticated live-validation split"
 else
-  fail "commands/vibe.md: missing Scout public-vs-authenticated live-validation split"
+  fail "references/vibe-mode-plan.md: missing Scout public-vs-authenticated live-validation split"
 fi
 
 if grep -qi 'public/anonymous HTTP validation uses WebFetch' "$RESEARCH_FILE" && grep -qi 'authenticated/private read-only checks use verified-safe Bash helper scripts or curl wrappers' "$RESEARCH_FILE"; then

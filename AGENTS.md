@@ -114,17 +114,24 @@ cat "$CLAUDE_PROJECT_DIR"/<session-id>/subagents/agent-*.jsonl
 
 ## Conventions
 
+### Naming & structure
 - **Naming**: Commands are kebab-case `.md`, agents are `vbw-{role}.md`, scripts are kebab-case `.sh`, phase dirs are `{NN}-{slug}/`
-- **Commits**: `{type}({scope}): {description}`. One atomic commit per task, stage files explicitly (never `git add .`)
-- **JSON parsing**: Always use `jq`, never grep/sed on JSON
-- **No dependencies**: No package.json, npm, or build step. Everything is bash + markdown
-- **YAML frontmatter**: `description` field must be single-line. Use `.prettierignore` for formatting exclusions (no `prettier-ignore` comments)
 - **Plugin isolation**: VBW files live in `.vbw-planning/`, GSD files in `.planning/`. Never cross-reference between them
-- **Token reduction**: When the LLM needs context to make decisions, prefer pre-extracting data via bash scripts (injected in command template expansions) over instructing the LLM to read files at runtime. Scripts produce compact, deterministic output and avoid burning tokens on file reads the agent doesn't need to reason about. Apply this principle whenever adding context to commands.
-- **Claude Code template expansion semantics**: Standalone one-line `` !`command` `` directives and fenced `` !`command` `` blocks execute. Embedded `` !`command` `` spans inside prose, paths, or larger strings do **not** execute. Claude passes them through literally. Never build runtime paths or sentence fragments with embedded `!` spans. Precompute the value in a fenced block or helper script and reference the resolved output instead.
+
+### Process
+- **Commits**: `{type}({scope}): {description}`. One atomic commit per task, stage files explicitly (never `git add .`)
+- **No dependencies**: No package.json, npm, or build step. Everything is bash + markdown
 - **Root-cause fixes only (non-negotiable)**: Every fix must address the underlying root cause. Masking/symptom-only fixes are not allowed. If a temporary mitigation is added, it must be accompanied by a root-cause fix in the same work item (or the task is incomplete).
 - **No Python in terminal**: Never run `python3` or `python` via the terminal. Use the available Python execution tool instead. **Exception**: the `.github/scripts/wait-github.py` helper is invoked as `python3 .github/scripts/wait-github.py ...` from fix-issue workflow steps. It is a long-running polling helper that must survive outside a short-lived in-process execution and must preserve its own exit code, so it is explicitly allowed to run in the terminal.
+
+### Code & content handling
+- **JSON parsing**: Always use `jq`, never grep/sed on JSON
+- **YAML frontmatter**: `description` field must be single-line. Use `.prettierignore` for formatting exclusions (no `prettier-ignore` comments)
+- **Token reduction**: When the LLM needs context to make decisions, prefer pre-extracting data via bash scripts (injected in command template expansions) over instructing the LLM to read files at runtime. Scripts produce compact, deterministic output and avoid burning tokens on file reads the agent doesn't need to reason about. Apply this principle whenever adding context to commands.
+- **Claude Code template expansion semantics**: Standalone one-line `` !`command` `` directives and fenced `` !`command` `` blocks execute. Embedded `` !`command` `` spans inside prose, paths, or larger strings do **not** execute. Claude passes them through literally. Never build runtime paths or sentence fragments with embedded `!` spans. Precompute the value in a fenced block or helper script and reference the resolved output instead.
 - **LSP-first code navigation**: Any agent with LSP in its `tools` list must prefer LSP for semantic code navigation (definitions, references, symbols, call hierarchy) and reserve Search/Grep/Glob for literal strings, filenames, non-code assets, or LSP failure cases. See `references/lsp-first-policy.md` for the canonical policy.
+
+### Documentation accuracy
 - **README claim drift**: `README.md` restates computed counts (script count, BATS files/tests) in prose outside its own "Accuracy and freshness" table. Re-run that table's cited `find`/`grep`/`jq` commands and check the prose copies too before trusting either.
 
 ## Architecture
@@ -150,15 +157,23 @@ Two resolution cascades exist: one for hooks (DXP-01) and one for commands. They
 4. `ps axww` + `grep -oE -- "--plugin-dir [^ ]+"` extraction
 5. Graceful no-op (`exit 0`)
 
-**Command cascade**: implemented once in `scripts/resolve-plugin-root.sh` and invoked via a session-link trampoline by the 19 target commands (`commands/*.md`) and by `references/execute-protocol.md`. `CLAUDE_PLUGIN_ROOT` is checked first because an explicit env var should take priority when the user invokes a command. Exits 1 on failure so the user knows the plugin is misconfigured (the `--nonfatal` mode returns 0 instead, used only by `commands/rtk.md` status):
+**Command cascade**: implemented once in `scripts/resolve-plugin-root.sh` and invoked via a session-link trampoline by the 19 target commands (`commands/*.md`) and by `references/execute-protocol.md`. `CLAUDE_PLUGIN_ROOT` is checked first because an explicit env var should take priority when the user invokes a command. Exits 1 on failure so the user knows the plugin is misconfigured (the `--nonfatal` mode returns 0 instead, used only by `commands/rtk.md` status). The 9 steps below run in this exact sequence and are never reordered. Only within-source candidate selection may change.
+
+Phase 1, explicit override (steps 1-2):
 1. `CLAUDE_PLUGIN_ROOT` env var
 2. `cache/local` symlink
+
+Phase 2, cache discovery (steps 3-5):
 3. Versioned cache dir (`find … sort … tail -1`)
 4. Generic cache dir fallback
 5. Marketplace-root scan under `plugins/marketplaces/*/`
+
+Phase 3, session/process fallback (steps 6-8):
 6. Exact `/tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}` session link
 7. Generic `/tmp/.vbw-plugin-root-link-*` symlink glob
 8. `ps axww` + `grep -oE -- "--plugin-dir [^ ]+"` extraction
+
+Phase 4, terminal (step 9):
 9. Fail guard (`exit 1`)
 
 The helper canonicalizes the resolved root with `pwd -P`, repairs the exact per-session link via `scripts/ensure-plugin-root-link.sh`, then prints it on stdout. `--require-script <name>` swaps the validated sentinel from the default `hook-wrapper.sh` to another script (used by the five phase-detect preambles and `vibe.md` for `phase-detect.sh`). SessionStart (`scripts/session-start.sh`) bootstraps the deterministic session link from its own `SCRIPT_DIR/..` location before the first command runs, so the trampoline can reach the helper without first resolving the root itself. The trampoline's `CLAUDE_PLUGIN_ROOT` branch is only a defensive fallback for a fresh session whose bootstrap lost that race.
@@ -172,13 +187,26 @@ Inside scripts, `CLAUDE_PLUGIN_ROOT` is available and used normally.
 Runtime state lives in `.vbw-planning/` (created per-project by `/vbw:init`): `STATE.md`, `ROADMAP.md`, `PROJECT.md`, `REQUIREMENTS.md`, `config.json`, `phases/{NN}-{slug}/` with PLAN.md and SUMMARY.md per plan.
 
 ### Model routing
-`scripts/resolve-agent-model.sh` resolves each agent's model with precedence: `model_overrides.<agent>` > `model_matrix.<agent>.<effort>` > `model_profile` preset from `config/model-profiles.json`. Override and matrix values may be a single model id or a preference array (first entry present in the detected catalog wins, or the first entry is trusted when no catalog exists). `scripts/detect-models.sh` treats the Claude Code binary's embedded model table as the sole primary source (credential-free, works offline), falling back to `${ANTHROPIC_BASE_URL}/v1/models` only as a last resort when the binary yields nothing and `ANTHROPIC_API_KEY`/`ANTHROPIC_AUTH_TOKEN` exists. Cache is 1h, keyed on binary path/mtime/size, so a re-patched binary is picked up immediately. A `--labeled` mode emits `id` TAB `description` for proposal flows. `/vbw:init` Step 1.8 writes the user-confirmed `model_matrix` + `model_catalog` into `.vbw-planning/config.json`, applying the role guidance in `references/model-profiles.md` (see "Choosing models per role"). The resolved model string is passed as an explicit `model:` parameter to Task tool invocations (session `/model` does not propagate to subagents).
+`scripts/resolve-agent-model.sh` resolves each agent's model with precedence: `model_overrides.<agent>` > `model_matrix.<agent>.<effort>` > `model_profile` preset from `config/model-profiles.json`.
+- Override and matrix values may be a single model id or a preference array (first entry present in the detected catalog wins, or the first entry is trusted when no catalog exists).
+- `scripts/detect-models.sh` treats the Claude Code binary's embedded model table as the sole primary source (credential-free, works offline), falling back to `${ANTHROPIC_BASE_URL}/v1/models` only as a last resort when the binary yields nothing and `ANTHROPIC_API_KEY`/`ANTHROPIC_AUTH_TOKEN` exists. Cache is 1h, keyed on binary path/mtime/size, so a re-patched binary is picked up immediately.
+- A `--labeled` mode emits `id` TAB `description` for proposal flows.
+- `/vbw:init` Step 1.8 writes the user-confirmed `model_matrix` + `model_catalog` into `.vbw-planning/config.json`, applying the role guidance in `references/model-profiles.md` (see "Choosing models per role").
+- The resolved model string is passed as an explicit `model:` parameter to Task tool invocations (session `/model` does not propagate to subagents).
 
 ## Testing
 
 Run all checks (tests + lint): `bash testing/run-all.sh`
 
 Run `testing/run-all.sh` directly. Do not pipe it through `| tail`, `| tail -20`, `| tail -40`, `| tee`, or similar wrappers, especially from concurrent worktrees. `tail` pipelines buffer until EOF, hide live progress, and can make a healthy long-running suite look hung while also obscuring the real exit status.
+
+### Scope every test run to the edit size (non-negotiable)
+
+NEVER run the full `run-all.sh` for a single-line, single-file, or single-check edit. Match the check to what changed:
+- One script edited: `bash -n <script>` plus that script's own `.bats` file.
+- One command/reference/agent doc edited: the one relevant `verify-*.sh` from Individual checks below.
+- Shared/canonical text edited (subagent-contracts.md, execute-protocol.md, invariant strings): `bash testing/verify-shared-contracts.sh` plus checks for files that include it.
+- Full `bash testing/run-all.sh` is never mandatory. Use judgment: run the scoped checks above for the actual change, and only reach for the full suite when the change is genuinely cross-cutting. If it's warranted, run it at most once per session/plan, not once per commit or push, and not again just because more commits followed.
 
 ### Zero-tolerance test failure policy (non-negotiable)
 
@@ -212,12 +240,17 @@ The real test of a markdown instruction file is whether the LLM does the right t
 
 ### Individual checks
 
+Structure & content contracts:
 - `bash testing/verify-bash-scripts-contract.sh`: validates script conventions
 - `bash testing/verify-commands-contract.sh`: validates command frontmatter
 - `bash testing/verify-shared-contracts.sh`: validates canonical shared-contract includes, invariants, and centralized prose
+
+Platform & plugin contracts:
 - `bash testing/verify-hook-event-name.sh`: validates hook event names match platform spec
 - `bash testing/verify-plugin-root-resolution.sh`: validates the plugin-root resolution cascade in commands and references
 - `bash testing/verify-lsp-first-policy.sh`: validates the repo-wide LSP-first rule
+
+Bootstrap & release:
 - `bash scripts/verify-init-todo.sh`: verifies init workflow
 - `bash scripts/verify-claude-bootstrap.sh`: verifies bootstrap script
 - `bash scripts/bump-version.sh --verify`: verifies version consistency
@@ -254,12 +287,12 @@ The issue-fix workflow uses git worktrees for parallel-safe issue work.
 
 ## Version Management
 
-Version is synchronized across 4 files (`VERSION`, `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, `marketplace.json`). The author bumps versions manually via `bash scripts/bump-version.sh`. Contributors should not bump versions themselves.
+Version is synchronized across 4 files (`VERSION`, `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, `marketplace.json`). The author bumps versions manually via `bash scripts/bump-version.sh`. Contributors MUST NOT bump versions or edit these 4 files.
 
 ### Push workflow
 
 - The pre-push hook only checks that version files are **consistent** (all 4 match).
-- Contributors should not modify version files or `CHANGELOG.md` in their branches.
+- Contributors MUST NOT modify `CHANGELOG.md` in their branches (see Version Management above for version files).
 - Verify consistency locally with `bash scripts/bump-version.sh --verify`.
 - Avoid `git push --no-verify` except for emergencies.
 
@@ -277,14 +310,18 @@ See `CONTRIBUTING.md` for full guidelines. Key points:
 - Push branches to `origin`. PRs target `main`.
 - Load locally with `claude --plugin-dir .` or `claude --plugin-dir /absolute/path/to/vibe-better-with-claude-code-vbw`.
 - Run `bash scripts/install-hooks.sh` for the pre-push hook.
-- Version bumps are done by the author. The pre-push hook only checks version file consistency.
 - Good candidates: bug fixes in hooks/scripts, new commands fitting the lifecycle model, stack-to-skill mappings, template improvements.
 - Not welcome without discussion: core lifecycle rewrites, features requiring dependencies.
 - Update consumer-facing docs (`docs/`, `README.md`) whenever a change alters behavior, adds a feature, or modifies a workflow.
 
 ### Required Fix Workflow (Issue → Branch → Draft PR → Automated QA)
 
-When asked to fix a bug or implement an issue-driven change, use the tracked issue as the contract, create a worktree branch, implement the root-cause fix with tests, run `bash testing/run-all.sh`, and iterate through QA review rounds before opening or finalizing the PR.
+When asked to fix a bug or implement an issue-driven change:
+1. Use the tracked issue as the contract.
+2. Create a worktree branch.
+3. Implement the root-cause fix with tests.
+4. Run `bash testing/run-all.sh`.
+5. Iterate through QA review rounds before opening or finalizing the PR.
 
 ### PR and Issue Templates
 
@@ -295,9 +332,9 @@ When asked to fix a bug or implement an issue-driven change, use the tracked iss
 <!-- gitnexus:start -->
 # GitNexus: Code Intelligence
 
-This project is indexed by GitNexus as **vibe-better-with-claude-code-vbw** (2074 symbols, 2071 relationships, 0 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **vibe-better-with-claude-code-vbw** (2180 symbols, 2171 relationships, 0 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
-> Index stale? Run `node .gitnexus/run.cjs analyze` from the project root. It auto-selects an available runner. No `.gitnexus/run.cjs` yet? `npx gitnexus analyze` (npm 11 crash -> `npm i -g gitnexus`, see #1939).
+> Index stale? Run `node .gitnexus/run.cjs analyze` from the project root, it auto-selects an available runner. No `.gitnexus/run.cjs` yet? `npx gitnexus analyze` (npm 11 crash, run `npm i -g gitnexus`, see #1939).
 
 ## Always Do
 
@@ -305,14 +342,14 @@ This project is indexed by GitNexus as **vibe-better-with-claude-code-vbw** (207
 - **MUST run `detect_changes()` before committing** to verify your changes only affect expected symbols and execution flows. For regression review, compare against the default branch: `detect_changes({scope: "compare", base_ref: "main"})`.
 - **MUST warn the user** if impact analysis returns HIGH or CRITICAL risk before proceeding with edits.
 - When exploring unfamiliar code, use `query({search_query: "concept"})` to find execution flows instead of grepping. It returns process-grouped results ranked by relevance.
-- When you need full context on a specific symbol (callers, callees, which execution flows it participates in), use `context({name: "symbolName"})`.
+- When you need full context on a specific symbol, callers, callees, which execution flows it participates in, use `context({name: "symbolName"})`.
 - For security review, `explain({target: "fileOrSymbol"})` lists taint findings (source-to-sink flows, needs `analyze --pdg`).
 
 ## Never Do
 
 - NEVER edit a function, class, or method without first running `impact` on it.
 - NEVER ignore HIGH or CRITICAL risk warnings from impact analysis.
-- NEVER rename symbols with find-and-replace. Use `rename` which understands the call graph.
+- NEVER rename symbols with find-and-replace, use `rename` which understands the call graph.
 - NEVER commit changes without running `detect_changes()` to check affected scope.
 
 ## Resources

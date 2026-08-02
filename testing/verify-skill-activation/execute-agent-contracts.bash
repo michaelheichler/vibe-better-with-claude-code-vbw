@@ -1,0 +1,304 @@
+
+PROTOCOL="$ROOT/references/execute-protocol.md"
+
+if grep -q 'plan-driven' "$PROTOCOL"; then
+  pass "execute-protocol.md: documents plan-driven architecture"
+else
+  fail "execute-protocol.md: missing plan-driven documentation"
+fi
+
+if grep -q 'skills_used' "$PROTOCOL"; then
+  pass "execute-protocol.md: references skills_used frontmatter"
+else
+  fail "execute-protocol.md: missing skills_used reference"
+fi
+
+if grep -q 'skill-hook-dispatch.sh' "$PROTOCOL"; then
+  pass "execute-protocol.md: documents runtime skill hooks (separate concern)"
+else
+  fail "execute-protocol.md: missing skill-hook-dispatch.sh documentation"
+fi
+
+if grep -q 'skill_no_activation' "$PROTOCOL"; then
+  pass "execute-protocol.md: documents explicit no-activation outcome"
+else
+  fail "execute-protocol.md: missing explicit no-activation outcome"
+fi
+
+if ! grep -q 'No written YES/NO evaluation required' "$PROTOCOL"; then
+  pass "execute-protocol.md: legacy silent-decision wording removed"
+else
+  fail "execute-protocol.md: still says no written YES/NO evaluation is required"
+fi
+
+if ! grep -q 'three-layer' "$PROTOCOL"; then
+  pass "execute-protocol.md: old three-layer documentation removed"
+else
+  fail "execute-protocol.md: still has three-layer documentation"
+fi
+
+if grep -q 'states the skill evaluation outcome' "$PROTOCOL"; then
+  pass "execute-protocol.md: documents visible skill reporting contract"
+else
+  fail "execute-protocol.md: missing visible skill reporting documentation"
+fi
+
+
+QA_AGENT="$ROOT/agents/vbw-qa.md"
+
+if grep -q 'skills_used' "$QA_AGENT"; then
+  pass "vbw-qa.md: references skills_used for plan-driven activation"
+else
+  fail "vbw-qa.md: missing skills_used reference"
+fi
+
+if grep -q 'Skill(skill-name)' "$QA_AGENT"; then
+  pass "vbw-qa.md: references Skill() activation"
+else
+  fail "vbw-qa.md: missing Skill() reference"
+fi
+
+if grep -q 'skill_no_activation' "$QA_AGENT"; then
+  pass "vbw-qa.md: recognizes explicit no-activation block"
+else
+  fail "vbw-qa.md: missing explicit no-activation handling"
+fi
+
+if grep -q 'available_skills' "$QA_AGENT"; then
+  pass "vbw-qa.md: references available_skills for ad-hoc fallback"
+else
+  fail "vbw-qa.md: missing available_skills reference for ad-hoc fallback"
+fi
+
+SCOUT_AGENT="$ROOT/agents/vbw-scout.md"
+
+if grep -q 'skills_used' "$SCOUT_AGENT"; then
+  pass "vbw-scout.md: references skills_used for plan-driven path"
+else
+  fail "vbw-scout.md: missing skills_used reference"
+fi
+
+if grep -q 'available_skills' "$SCOUT_AGENT"; then
+  pass "vbw-scout.md: references available_skills for ad-hoc path"
+else
+  fail "vbw-scout.md: missing available_skills reference for ad-hoc path"
+fi
+
+if grep -q 'skill_no_activation' "$SCOUT_AGENT"; then
+  pass "vbw-scout.md: recognizes explicit no-activation block"
+else
+  fail "vbw-scout.md: missing explicit no-activation handling"
+fi
+
+if ! grep -q 'may still honor' "$SCOUT_AGENT"; then
+  pass "vbw-scout.md: no permissive may-still-honor wording on no-activation path"
+else
+  fail "vbw-scout.md: still uses permissive may-still-honor wording on no-activation path"
+fi
+
+if grep -Eq 'still honor( its| any)? `skills_used` frontmatter' "$SCOUT_AGENT"; then
+  pass "vbw-scout.md: preserves plan-driven skills_used behavior on no-activation path"
+else
+  fail "vbw-scout.md: missing mandatory skills_used preservation on no-activation path"
+fi
+
+DEBUGGER_AGENT="$ROOT/agents/vbw-debugger.md"
+
+if grep -q 'available_skills' "$DEBUGGER_AGENT"; then
+  pass "vbw-debugger.md: references available_skills for ad-hoc activation"
+else
+  fail "vbw-debugger.md: missing available_skills reference"
+fi
+
+if grep -q 'bounded completeness pass' "$DEBUGGER_AGENT"; then
+  pass "vbw-debugger.md: includes bounded additive completeness pass"
+else
+  fail "vbw-debugger.md: missing bounded additive completeness pass"
+fi
+
+if grep -q 'skill_no_activation' "$DEBUGGER_AGENT"; then
+  pass "vbw-debugger.md: recognizes explicit no-activation block"
+else
+  fail "vbw-debugger.md: missing explicit no-activation handling"
+fi
+
+if grep -q 'starting set, not a ceiling' "$DEBUGGER_AGENT"; then
+  pass "vbw-debugger.md: treats orchestrator selection as a starting set"
+else
+  fail "vbw-debugger.md: missing starting-set additive wording"
+fi
+
+ARCHITECT_AGENT="$ROOT/agents/vbw-architect.md"
+
+if grep -q 'available_skills' "$ARCHITECT_AGENT"; then
+  pass "vbw-architect.md: references available_skills for ad-hoc activation"
+else
+  fail "vbw-architect.md: missing available_skills reference"
+fi
+
+if grep -q 'bounded completeness pass' "$ARCHITECT_AGENT"; then
+  pass "vbw-architect.md: includes bounded additive completeness pass"
+else
+  fail "vbw-architect.md: missing bounded additive completeness pass"
+fi
+
+if grep -q 'skill_no_activation' "$ARCHITECT_AGENT"; then
+  pass "vbw-architect.md: recognizes explicit no-activation block"
+else
+  fail "vbw-architect.md: missing explicit no-activation handling"
+fi
+
+if grep -q 'starting set, not a ceiling' "$ARCHITECT_AGENT"; then
+  pass "vbw-architect.md: treats orchestrator selection as a starting set"
+else
+  fail "vbw-architect.md: missing starting-set additive wording"
+fi
+
+DOCS_AGENT="$ROOT/agents/vbw-docs.md"
+
+if grep -q 'skills_used' "$DOCS_AGENT"; then
+  pass "vbw-docs.md: references skills_used for plan-driven activation"
+else
+  fail "vbw-docs.md: missing skills_used reference"
+fi
+
+if grep -q 'Skill(skill-name)' "$DOCS_AGENT"; then
+  pass "vbw-docs.md: references Skill() activation"
+else
+  fail "vbw-docs.md: missing Skill() reference"
+fi
+
+if grep -q 'skill_no_activation' "$DOCS_AGENT"; then
+  pass "vbw-docs.md: recognizes explicit no-activation block"
+else
+  fail "vbw-docs.md: missing explicit no-activation handling"
+fi
+
+if grep -q 'available_skills' "$DOCS_AGENT"; then
+  pass "vbw-docs.md: references available_skills for ad-hoc fallback"
+else
+  fail "vbw-docs.md: missing available_skills reference for ad-hoc fallback"
+fi
+
+if grep -q 'available_skills' "$DEV_AGENT"; then
+  pass "vbw-dev.md: references available_skills for ad-hoc fallback"
+else
+  fail "vbw-dev.md: missing available_skills reference for ad-hoc fallback"
+fi
+
+if grep -q 'Dev/QA/Scout/Docs' "$PROTOCOL"; then
+  pass "execute-protocol.md: documents all execution-time agents (Dev/QA/Scout/Docs)"
+else
+  fail "execute-protocol.md: missing updated agent coverage"
+fi
+
+if grep -q 'Debugger/Dev/Scout' "$PROTOCOL"; then
+  pass "execute-protocol.md: names Debugger explicitly in ad-hoc paths"
+else
+  fail "execute-protocol.md: ad-hoc paths missing Debugger"
+fi
+
+if grep -q 'vbw:debug' "$PROTOCOL"; then
+  pass "execute-protocol.md: documents /vbw:debug ad-hoc path"
+else
+  fail "execute-protocol.md: missing /vbw:debug documentation"
+fi
+
+
+DISPATCHER="$ROOT/scripts/skill-hook-dispatch.sh"
+
+if grep -q '\.tools // \..*\.matcher' "$DISPATCHER"; then
+  pass "skill-hook-dispatch.sh: reads both tools and matcher (backward compat)"
+else
+  fail "skill-hook-dispatch.sh: missing backward compat for matcher field"
+fi
+
+CONFIG_CMD="$ROOT/commands/config.md"
+
+if grep -q 'skill_hook <skill> <event> <tools>' "$CONFIG_CMD"; then
+  pass "config.md: skill_hook signature uses tools (not matcher)"
+else
+  fail "config.md: skill_hook signature still uses matcher"
+fi
+
+if grep -q '"tools": "Write|Edit"' "$CONFIG_CMD"; then
+  pass "config.md: example JSON uses tools field"
+else
+  fail "config.md: example JSON still uses matcher field"
+fi
+
+
+if [ ! -f "$ROOT/scripts/skill-eval-prompt-gate.sh" ]; then
+  pass "skill-eval-prompt-gate.sh: deleted"
+else
+  fail "skill-eval-prompt-gate.sh: still exists"
+fi
+
+if [ ! -f "$ROOT/scripts/skill-evaluation-gate.sh" ]; then
+  pass "skill-evaluation-gate.sh: deleted"
+else
+  fail "skill-evaluation-gate.sh: still exists"
+fi
+
+
+if [ ! -f "$ROOT/scripts/emit-skill-xml.sh" ]; then
+  pass "emit-skill-xml.sh: deleted (native CC skill visibility)"
+else
+  fail "emit-skill-xml.sh: still exists (should be deleted)"
+fi
+
+
+if [ ! -f "$ROOT/scripts/inject-subagent-skills.sh" ]; then
+  pass "inject-subagent-skills.sh: deleted (additionalContext injection removed)"
+else
+  fail "inject-subagent-skills.sh: still exists (should be deleted)"
+fi
+
+if ! grep -q 'Installed skills:' "$ROOT/scripts/session-start.sh"; then
+  pass "session-start.sh: no longer injects skill names into additionalContext"
+else
+  fail "session-start.sh: still injects skill names into additionalContext"
+fi
+
+
+if grep -q 'GSD_WARNING' "$ROOT/scripts/session-start.sh"; then
+  pass "session-start.sh: has GSD co-installation warning"
+else
+  fail "session-start.sh: missing GSD co-installation warning"
+fi
+
+if grep -q 'gsd:\*' "$ROOT/scripts/session-start.sh" || grep -q '/gsd:' "$ROOT/scripts/session-start.sh"; then
+  pass "session-start.sh: GSD warning references /gsd:* commands"
+else
+  fail "session-start.sh: GSD warning missing /gsd:* reference"
+fi
+
+
+for agent_file in vbw-dev.md vbw-qa.md vbw-docs.md vbw-lead.md vbw-scout.md vbw-architect.md vbw-debugger.md; do
+  AGENT_PATH="$ROOT/agents/$agent_file"
+  FRONTMATTER=$(sed -n '/^---$/,/^---$/p' "$AGENT_PATH")
+  if grep -q '^maxTurns:' <<< "$FRONTMATTER"; then
+    fail "$agent_file: maxTurns still in YAML frontmatter (should be removed)"
+  else
+    pass "$agent_file: no maxTurns in YAML frontmatter"
+  fi
+done
+
+
+if ! grep -q 'emit-skill-xml.sh' "$ROOT/scripts/session-start.sh"; then
+  pass "session-start.sh: emit-skill-xml.sh call removed"
+else
+  fail "session-start.sh: still calls emit-skill-xml.sh (should be removed)"
+fi
+
+
+for agent_file in vbw-dev.md vbw-qa.md vbw-docs.md vbw-lead.md vbw-scout.md vbw-architect.md vbw-debugger.md; do
+  AGENT_PATH="$ROOT/agents/$agent_file"
+  if grep -q 'available_skills' "$AGENT_PATH"; then
+    pass "$agent_file: references <available_skills>"
+  else
+    fail "$agent_file: missing <available_skills> reference"
+  fi
+done
+
+echo ""

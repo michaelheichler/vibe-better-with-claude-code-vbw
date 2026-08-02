@@ -1208,7 +1208,7 @@ EOF
 # --- Contract: UAT inline execution prohibition (issue #273) ---
 
 @test "vibe.md Verify mode contains inline execution prohibition" {
-  local vibe="$BATS_TEST_DIRNAME/../commands/vibe.md"
+  local vibe="$BATS_TEST_DIRNAME/../references/vibe-mode-verify.md"
   # Verify mode must explicitly prohibit subagent delegation
   grep -q "Do NOT spawn a QA agent" "$vibe"
   grep -q "Do NOT use TaskCreate to delegate UAT" "$vibe"
@@ -1221,7 +1221,7 @@ EOF
 }
 
 @test "execute-protocol.md Step 4.5 contains subagent prohibition" {
-  local proto="$BATS_TEST_DIRNAME/../references/execute-protocol.md"
+  local proto="$BATS_TEST_DIRNAME/../references/execute-uat.md"
   # Step 4.5 must prohibit subagent delegation for UAT
   grep -q "Do NOT spawn a QA agent" "$proto"
   grep -q "this is NOT a subagent operation" "$proto"
@@ -1244,7 +1244,7 @@ EOF
 # --- Contract: UAT automated-check prohibition (issue #274) ---
 
 @test "execute-protocol.md Step 4.5 prohibits automated checks in UAT" {
-  local proto="$BATS_TEST_DIRNAME/../references/execute-protocol.md"
+  local proto="$BATS_TEST_DIRNAME/../references/execute-uat.md"
   # Must prohibit grep/file-check/test-suite type UAT tests
   grep -q "NEVER generate tests that can be performed programmatically" "$proto"
   grep -q "Grep/search files for expected content" "$proto"
@@ -1261,7 +1261,7 @@ EOF
 }
 
 @test "execute-protocol.md Step 4.5 has skill-aware exclusion" {
-  local proto="$BATS_TEST_DIRNAME/../references/execute-protocol.md"
+  local proto="$BATS_TEST_DIRNAME/../references/execute-uat.md"
   # Must account for skill/tool/MCP-based UI automation
   grep -q "Skill-aware exclusion" "$proto"
   grep -q "UI automation capabilities" "$proto"
@@ -1269,7 +1269,7 @@ EOF
 }
 
 @test "execute-protocol.md Step 4.5 preloads summary deviations as review checkpoints" {
-  local proto="$BATS_TEST_DIRNAME/../references/execute-protocol.md"
+  local proto="$BATS_TEST_DIRNAME/../references/execute-uat.md"
   grep -q "compile-verify-context-for-uat.sh" "$proto"
   grep -q "SUMMARY_DEVIATION:" "$proto"
   grep -q "Summary deviation review prefill" "$proto"

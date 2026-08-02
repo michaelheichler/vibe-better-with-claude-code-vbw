@@ -162,25 +162,7 @@ When routed here, skip the standard phase-resolution Steps entirely. Instead:
 
   If one or more skills were preselected, run `bash "{plugin-root}/scripts/extract-skill-follow-up-files.sh" "{all preselected skill names from the activation block}" 2>/dev/null || true` before spawning the debug-session QA agent. If the helper prints a `<skill_follow_up_files>` block, paste it immediately after the follow-up-read sentence in the spawned payload. Otherwise omit that block.
 
-  Use this payload prefix as the FIRST lines of the debug-session QA prompt:
-  ```text
-  <skill_activation>
-  Call Skill('{relevant-skill-1}').
-  Call Skill('{relevant-skill-2}').
-  </skill_activation>
-  After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting. Do not scan entire skill folders or read unrelated references.
-  <skill_follow_up_files>
-  {If one or more skills were preselected, run `bash "{plugin-root}/scripts/extract-skill-follow-up-files.sh" "{all preselected skill names from the activation block}" 2>/dev/null || true` before spawning and replace this block with the emitted absolute follow-up file paths. Omit this block when the helper prints nothing.}
-  </skill_follow_up_files>
-  ```
-
-  When no installed skills apply, use this prefix instead:
-  ```text
-  <skill_no_activation>
-  Evaluated installed skills for this task. No skills were preselected at orchestration time. Reason: {brief task-specific reason}.
-  </skill_no_activation>
-  After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting. Do not scan entire skill folders or read unrelated references.
-  ```
+  Render the prompt prefix from `{plugin-root}/references/skill-activation-payload.md` with the local `skill_calls`, task-specific `no_skill_reason`, and optional helper-emitted `follow_up_files_block`. Prepend the rendered bytes to the child prompt so the rendered skill outcome tag is its first line. Do not paste the template path, variables, or an unresolved `@` include into the child prompt.
 
    Task description for debug-session QA:
    ```text
@@ -309,25 +291,7 @@ Note: Continuous verification handled by hooks. This command is for deep, on-dem
 
       If one or more skills were preselected, run `bash "{plugin-root}/scripts/extract-skill-follow-up-files.sh" "{all preselected skill names from the activation block}" 2>/dev/null || true` before spawning the phase QA agent. If the helper prints a `<skill_follow_up_files>` block, paste it immediately after the follow-up-read sentence in the spawned payload. Otherwise omit that block.
 
-    Use this payload prefix as the FIRST lines of the phase QA prompt:
-    ```text
-    <skill_activation>
-    Call Skill('{relevant-skill-1}').
-    Call Skill('{relevant-skill-2}').
-    </skill_activation>
-    After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting. Do not scan entire skill folders or read unrelated references.
-    <skill_follow_up_files>
-    {If one or more skills were preselected, run `bash "{plugin-root}/scripts/extract-skill-follow-up-files.sh" "{all preselected skill names from the activation block}" 2>/dev/null || true` before spawning and replace this block with the emitted absolute follow-up file paths. Omit this block when the helper prints nothing.}
-    </skill_follow_up_files>
-    ```
-
-    When no installed skills apply, use this prefix instead:
-    ```text
-    <skill_no_activation>
-    Evaluated installed skills for this task. No skills were preselected at orchestration time. Reason: {brief task-specific reason}.
-    </skill_no_activation>
-    After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting. Do not scan entire skill folders or read unrelated references.
-    ```
+    Render the prompt prefix from `{plugin-root}/references/skill-activation-payload.md` with the local `skill_calls`, task-specific `no_skill_reason`, and optional helper-emitted `follow_up_files_block`. Prepend the rendered bytes to the child prompt so the rendered skill outcome tag is its first line. Do not paste the template path, variables, or an unresolved `@` include into the child prompt.
 
     - Also evaluate available MCP tools in your system context. If any MCP servers provide build, test, documentation, or domain-specific capabilities relevant to verification, note them in the QA task context.
 

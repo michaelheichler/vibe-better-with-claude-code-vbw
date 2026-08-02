@@ -122,24 +122,7 @@ If `research_path` is empty, spawn Scout with these requirements:
 
 If one or more skills were preselected, run `bash "{plugin-root}/scripts/extract-skill-follow-up-files.sh" "{all preselected skill names from the activation block}" 2>/dev/null || true` before spawning the UAT remediation research Scout. If the helper prints a `<skill_follow_up_files>` block, paste it immediately after the follow-up-read sentence in the spawned payload. Otherwise omit that block.
 
-Use this payload prefix as the FIRST lines of the UAT remediation research Scout prompt:
-```text
-<skill_activation>
-Call Skill('{relevant-skill-1}').
-Call Skill('{relevant-skill-2}').
-</skill_activation>
-After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting. Do not scan entire skill folders or read unrelated references.
-<skill_follow_up_files>
-{If one or more skills were preselected, run `bash "{plugin-root}/scripts/extract-skill-follow-up-files.sh" "{all preselected skill names from the activation block}" 2>/dev/null || true` before spawning and replace this block with the emitted absolute follow-up file paths. Omit this block when the helper prints nothing.}
-</skill_follow_up_files>
-```
-When no installed skills apply, use this prefix instead:
-```text
-<skill_no_activation>
-Evaluated installed skills for this task. No skills were preselected at orchestration time. Reason: {brief task-specific reason}.
-</skill_no_activation>
-After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting. Do not scan entire skill folders or read unrelated references.
-```
+Render the prompt prefix from `{plugin-root}/references/skill-activation-payload.md` with the local `skill_calls`, task-specific `no_skill_reason`, and optional helper-emitted `follow_up_files_block`. Prepend the rendered bytes to the child prompt so the rendered skill outcome tag is its first line. Do not paste the template path, variables, or an unresolved `@` include into the child prompt.
 
 - **Live data validation:** When any issue involves external data sources (APIs, databases, services), include in the Scout prompt: *"Public/anonymous HTTP validation uses WebFetch. Authenticated/private read-only checks use verified-safe Bash helper scripts or curl wrappers after preflight. Do not run unsafe or mutating checks. Defer those to Dev/Debugger. When live validation runs or is deferred, include `## Live Validation Evidence` with `command_shape`, `exit_status`, `redacted_evidence`, `expected_shape`, `confidence`, and `limitations_or_deferred_reason`."*
 - After Scout completes, validate the exact research artifact before advancing:
@@ -183,24 +166,7 @@ This is NOT "Plan mode steps 1-12", remediation has its own sequential flow that
   ```
 - Before composing the Lead task description, evaluate installed skills visible in your system context, read each skill's description and select only skills directly needed to write the remediation plan. Do not preselect implementation-heavy skills such as SwiftData, SwiftUI, XcodeBuildMCP, database, or accessibility skills unless the planning task itself requires that documentation to produce correct tasks. Instead, record recommended Dev-stage skills in the plan when implementation work will need them. The Lead prompt MUST begin with exactly one explicit skill outcome block: use `<skill_activation>{For each selected skill: "Call Skill({skill-name})"}</skill_activation>` when one or more installed skills are preselected at orchestration time, or `<skill_no_activation>Evaluated installed skills for this task. No skills were preselected at orchestration time. Reason: {brief task-specific reason}.</skill_no_activation>` when none are preselected. Silent omission of both blocks is invalid. After evaluating, state the skill outcome in your response (e.g., "Skills: activating {skill-name}" or "Skills: none preselected, {reason}") so the user has visibility before the agent is spawned. After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting. Do not scan entire skill folders or read unrelated references.
 - If one or more skills were preselected, run `bash "{plugin-root}/scripts/extract-skill-follow-up-files.sh" "{all preselected skill names from the activation block}" 2>/dev/null || true` before spawning the UAT remediation Lead. If the helper prints a `<skill_follow_up_files>` block, paste it immediately after the follow-up-read sentence in the spawned payload. Otherwise omit that block.
-- Use this payload prefix as the FIRST lines of the UAT remediation Lead prompt:
-  ```text
-  <skill_activation>
-  Call Skill('{relevant-skill-1}').
-  Call Skill('{relevant-skill-2}').
-  </skill_activation>
-  After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting. Do not scan entire skill folders or read unrelated references.
-  <skill_follow_up_files>
-  {If one or more skills were preselected, run `bash "{plugin-root}/scripts/extract-skill-follow-up-files.sh" "{all preselected skill names from the activation block}" 2>/dev/null || true` before spawning and replace this block with the emitted absolute follow-up file paths. Omit this block when the helper prints nothing.}
-  </skill_follow_up_files>
-  ```
-  When no installed skills apply, use this prefix instead:
-  ```text
-  <skill_no_activation>
-  Evaluated installed skills for this task. No skills were preselected at orchestration time. Reason: {brief task-specific reason}.
-  </skill_no_activation>
-  After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting. Do not scan entire skill folders or read unrelated references.
-  ```
+- Render the prompt prefix from `{plugin-root}/references/skill-activation-payload.md` with the local `skill_calls`, task-specific `no_skill_reason`, and optional helper-emitted `follow_up_files_block`. Prepend the rendered bytes to the child prompt so the rendered skill outcome tag is its first line. Do not paste the template path, variables, or an unresolved `@` include into the child prompt.
 - Also evaluate available MCP tools in your system context. If any MCP servers provide capabilities relevant to this planning task, use them to derive concise facts, docs, results, or recommended Dev-stage CLIs/skills for the Lead's task context. Dev subagents may call any MCP tools available in their runtime. No orchestrator-side gating is required.
 - Spawn vbw-lead via Agent tool: Set `subagent_type: "vbw:vbw-lead"` and `model: "${LEAD_MODEL}"`. If `LEAD_MAX_TURNS` is non-empty, also pass `maxTurns: ${LEAD_MAX_TURNS}`. If empty, omit maxTurns. If `LEAD_REASONING` is non-empty, also pass `effort: "${LEAD_REASONING}"`. If `LEAD_REASONING` is empty, do NOT include effort (the resolved model rejects the parameter).
 - Lead prompt MUST include:
@@ -251,24 +217,7 @@ Non-team invariant: omit `team_name`, `run_in_background`, `isolation`, and all 
   ```
 - Before composing Dev task descriptions, evaluate installed skills visible in your system context, read each skill's description and select the task-specific skills listed in the remediation plan plus any directly required build, test, documentation, or domain skills for the current task. Do not carry over broad Scout/Lead context or activate skills for unrelated future tasks. The Dev prompt MUST begin with exactly one explicit skill outcome block: use `<skill_activation>{For each selected skill: "Call Skill({skill-name})"}</skill_activation>` when one or more installed skills are preselected at orchestration time, or `<skill_no_activation>Evaluated installed skills for this task. No skills were preselected at orchestration time. Reason: {brief task-specific reason}.</skill_no_activation>` when none are preselected. Silent omission of both blocks is invalid. After evaluating, state the skill outcome in your response (e.g., "Skills: activating {skill-name}" or "Skills: none preselected, {reason}") so the user has visibility before the agent is spawned. After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting. Do not scan entire skill folders or read unrelated references.
 - If one or more skills were preselected, run `bash "{plugin-root}/scripts/extract-skill-follow-up-files.sh" "{all preselected skill names from the activation block}" 2>/dev/null || true` before spawning the UAT remediation Dev. If the helper prints a `<skill_follow_up_files>` block, paste it immediately after the follow-up-read sentence in the spawned payload. Otherwise omit that block.
-- Use this payload prefix as the FIRST lines of the UAT remediation Dev prompt:
-  ```text
-  <skill_activation>
-  Call Skill('{relevant-skill-1}').
-  Call Skill('{relevant-skill-2}').
-  </skill_activation>
-  After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting. Do not scan entire skill folders or read unrelated references.
-  <skill_follow_up_files>
-  {If one or more skills were preselected, run `bash "{plugin-root}/scripts/extract-skill-follow-up-files.sh" "{all preselected skill names from the activation block}" 2>/dev/null || true` before spawning and replace this block with the emitted absolute follow-up file paths. Omit this block when the helper prints nothing.}
-  </skill_follow_up_files>
-  ```
-  When no installed skills apply, use this prefix instead:
-  ```text
-  <skill_no_activation>
-  Evaluated installed skills for this task. No skills were preselected at orchestration time. Reason: {brief task-specific reason}.
-  </skill_no_activation>
-  After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting. Do not scan entire skill folders or read unrelated references.
-  ```
+- Render the prompt prefix from `{plugin-root}/references/skill-activation-payload.md` with the local `skill_calls`, task-specific `no_skill_reason`, and optional helper-emitted `follow_up_files_block`. Prepend the rendered bytes to the child prompt so the rendered skill outcome tag is its first line. Do not paste the template path, variables, or an unresolved `@` include into the child prompt.
 - For each task in the plan (**sequentially**, one at a time, wait for each Dev to complete before spawning the next):
   - Spawn vbw-dev via Agent tool: Set `subagent_type: "vbw:vbw-dev"` and `model: "${DEV_MODEL}"`. If `DEV_MAX_TURNS` is non-empty, also pass `maxTurns: ${DEV_MAX_TURNS}`. If empty, omit maxTurns. If `DEV_REASONING` is non-empty, also pass `effort: "${DEV_REASONING}"`. If `DEV_REASONING` is empty, do NOT include effort (the resolved model rejects the parameter).
   - Dev prompt MUST include:

@@ -10,7 +10,8 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 
 PASS=0
 FAIL=0
-VIBE_VERIFY_STEP4_BLOCK=$(sed -n '/4\. \*\*UAT Remediation Auto-Continuation:/,/### Mode: Add Phase/p' "$ROOT/commands/vibe.md")
+VIBE_VERIFY="$ROOT/references/vibe-mode-verify.md"
+VIBE_VERIFY_STEP4_BLOCK=$(cat "$VIBE_VERIFY")
 VIBE_UAT_REMEDIATION="$ROOT/references/vibe-uat-remediation.md"
 
 pass() {
@@ -38,14 +39,14 @@ else
 fi
 
 # 3. vibe.md contains cap-reached banner
-if grep -q 'Reached maximum UAT remediation rounds' "$ROOT/commands/vibe.md"; then
+if grep -q 'Reached maximum UAT remediation rounds' "$VIBE_VERIFY"; then
   pass "vibe.md contains cap-reached banner"
 else
   fail "vibe.md missing cap-reached banner"
 fi
 
 # 4. vibe.md contains transition banner with issue count
-if grep -q 'Re-verification found {N} issue' "$ROOT/commands/vibe.md"; then
+if grep -q 'Re-verification found {N} issue' "$VIBE_VERIFY"; then
   pass "vibe.md contains transition banner with issue count"
 else
   fail "vibe.md missing transition banner with issue count"

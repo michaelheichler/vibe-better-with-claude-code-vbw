@@ -13,10 +13,28 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 
 VIBE=$(mktemp)
 trap 'rm -f "$VIBE"' EXIT
-cat \
-  "$ROOT/commands/vibe.md" \
-  "$ROOT/references/vibe-input-parsing.md" \
-  "$ROOT/references/vibe-uat-remediation.md" > "$VIBE"
+VIBE_CAT_FILES=(
+  "$ROOT/commands/vibe.md"
+  "$ROOT/references/vibe-input-parsing.md"
+  "$ROOT/references/vibe-uat-remediation.md"
+  "$ROOT/references/vibe-mode-bootstrap.md"
+  "$ROOT/references/vibe-mode-milestone-uat-recovery.md"
+  "$ROOT/references/vibe-mode-plan.md"
+  "$ROOT/references/vibe-mode-execute.md"
+  "$ROOT/references/vibe-mode-verify.md"
+  "$ROOT/references/vibe-mode-add-phase.md"
+  "$ROOT/references/vibe-mode-insert-phase.md"
+  "$ROOT/references/vibe-mode-remove-phase.md"
+  "$ROOT/references/vibe-mode-archive.md"
+)
+while IFS= read -r vibe_reference; do
+  [ -n "$vibe_reference" ] || continue
+  if ! printf '%s\n' "${VIBE_CAT_FILES[@]}" | grep -Fq "/$vibe_reference"; then
+    echo "verify-vibe: $vibe_reference is imported by commands/vibe.md but omitted from the effective scan" >&2
+    exit 1
+  fi
+done < <(grep -oE 'references/vibe-mode-[[:alnum:]-]+\.md' "$ROOT/commands/vibe.md" | sort -u)
+cat "${VIBE_CAT_FILES[@]}" > "$VIBE"
 PROTOCOL="$ROOT/references/execute-protocol.md"
 README="$ROOT/README.md"
 CLAUDE_MD="$ROOT/CLAUDE.md"

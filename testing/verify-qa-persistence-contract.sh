@@ -8,7 +8,7 @@ set -euo pipefail
 # - QA agent instructs calling write-verification.sh directly
 # - Orchestrator (commands/qa.md) does NOT pipe qa_verdict through write-verification.sh
 # - Orchestrator passes output path to QA in the task description
-# - execute-protocol.md describes QA calling write-verification.sh (not orchestrator)
+# - execute-post-build-qa.md describes QA calling write-verification.sh (not orchestrator)
 # - verification-protocol.md reflects QA-side persistence
 # - QA remediation guidance requires judging process-exception validity, not mere documentation
 
@@ -91,23 +91,23 @@ else
   fail "6b: commands/qa.md missing summary-known-issues backfill before phase-level QA"
 fi
 
-# ── Execute protocol checks ─────────────────────────────────────────
-EXEC_PROTO="$ROOT/references/execute-protocol.md"
+# ── Execute post-build QA checks ─────────────────────────────────────────
+EXEC_PROTO="$ROOT/references/execute-post-build-qa.md"
 
-# 7. Execute protocol does NOT have orchestrator-side pipe to write-verification.sh
+# 7. Execute post-build QA does NOT have orchestrator-side pipe to write-verification.sh
 #    (The old pattern was: echo "$QA_VERDICT_JSON" | bash ... write-verification.sh)
 EXEC_PIPE_COUNT=$(grep -c 'echo.*QA_VERDICT.*write-verification' "$EXEC_PROTO" || true)
 if [ "$EXEC_PIPE_COUNT" -gt 0 ]; then
-  fail "7: execute-protocol.md still has orchestrator-side pipe to write-verification.sh ($EXEC_PIPE_COUNT occurrences)"
+  fail "7: execute-post-build-qa.md still has orchestrator-side pipe to write-verification.sh ($EXEC_PIPE_COUNT occurrences)"
 else
-  pass "7: execute-protocol.md does not have orchestrator-side pipe to write-verification.sh"
+  pass "7: execute-post-build-qa.md does not have orchestrator-side pipe to write-verification.sh"
 fi
 
-# 8. Execute protocol mentions QA persists directly (via task description)
+# 8. Execute post-build QA mentions QA persists directly (via task description)
 if grep -qi 'QA.*persist\|QA.*write-verification\|QA.*calls.*write-verification\|task description.*output.path\|task description.*write-verification' "$EXEC_PROTO"; then
-  pass "8: execute-protocol.md describes QA-side persistence"
+  pass "8: execute-post-build-qa.md describes QA-side persistence"
 else
-  fail "8: execute-protocol.md does not describe QA-side persistence"
+  fail "8: execute-post-build-qa.md does not describe QA-side persistence"
 fi
 
 # ── Verification protocol checks ────────────────────────────────────
@@ -145,21 +145,21 @@ fi
 
 # ── Finding-regression checks (QA round 2) ───────────────────────────
 
-# 13. Execute protocol does NOT pass a literal `echo ...` snippet as plugin root
+# 13. Execute post-build QA does NOT pass a literal `echo ...` snippet as plugin root
 #     (must use $VBW_PLUGIN_ROOT or `!` executable expansion, not a bare code span)
 if grep -q 'Plugin root:.*`echo /tmp/' "$EXEC_PROTO"; then
-  fail "13: execute-protocol.md passes literal echo snippet instead of resolved plugin root"
+  fail "13: execute-post-build-qa.md passes literal echo snippet instead of resolved plugin root"
 else
-  pass "13: execute-protocol.md does not pass literal echo snippet as plugin root"
+  pass "13: execute-post-build-qa.md does not pass literal echo snippet as plugin root"
 fi
 
-# 15. Execute protocol QA task descriptions use VBW_PLUGIN_ROOT (not CLAUDE_PLUGIN_ROOT)
+# 15. Execute post-build QA QA task descriptions use VBW_PLUGIN_ROOT (not CLAUDE_PLUGIN_ROOT)
 #     CLAUDE_PLUGIN_ROOT is only set for --plugin-dir installs; VBW_PLUGIN_ROOT is the
-#     resolved variable from the 6-step cascade at the top of execute-protocol.md.
+#     resolved variable from the 6-step cascade at the top of execute-post-build-qa.md.
 if grep -q 'Plugin root: \${CLAUDE_PLUGIN_ROOT}' "$EXEC_PROTO"; then
-  fail "15: execute-protocol.md QA task descriptions use CLAUDE_PLUGIN_ROOT instead of VBW_PLUGIN_ROOT"
+  fail "15: execute-post-build-qa.md QA task descriptions use CLAUDE_PLUGIN_ROOT instead of VBW_PLUGIN_ROOT"
 else
-  pass "15: execute-protocol.md QA task descriptions use correct plugin root variable"
+  pass "15: execute-post-build-qa.md QA task descriptions use correct plugin root variable"
 fi
 
 # 14. No orchestrator fallback that reintroduces manual VERIFICATION.md writes
@@ -177,13 +177,13 @@ fi
 
 # ── Finding-regression checks (QA round 4) ───────────────────────────
 
-# 16. Execute protocol QA task descriptions use ${VBW_PLUGIN_ROOT} consistently
+# 16. Execute post-build QA QA task descriptions use ${VBW_PLUGIN_ROOT} consistently
 #     (same pattern as all other script invocations — orchestrator resolves at top of file)
 PLUGIN_ROOT_COUNT=$(grep -c 'Plugin root: \${VBW_PLUGIN_ROOT}' "$EXEC_PROTO" || true)
 if [ "$PLUGIN_ROOT_COUNT" -ge 2 ]; then
-  pass "16: execute-protocol.md QA task descriptions use \${VBW_PLUGIN_ROOT} consistently ($PLUGIN_ROOT_COUNT occurrences)"
+  pass "16: execute-post-build-qa.md QA task descriptions use \${VBW_PLUGIN_ROOT} consistently ($PLUGIN_ROOT_COUNT occurrences)"
 else
-  fail "16: execute-protocol.md QA task descriptions missing \${VBW_PLUGIN_ROOT} (found $PLUGIN_ROOT_COUNT, expected ≥2)"
+  fail "16: execute-post-build-qa.md QA task descriptions missing \${VBW_PLUGIN_ROOT} (found $PLUGIN_ROOT_COUNT, expected ≥2)"
 fi
 
 if grep -q 'track-known-issues\.sh" sync-summaries' "$VIBE_INPUT_PARSING"; then

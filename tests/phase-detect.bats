@@ -1055,6 +1055,8 @@ EOF
 
 @test "phase-detect emits only phase_detect_error=true on late failure" {
   local shim_dir="$TEST_TEMP_DIR/scripts-phase-detect-late-failure"
+  mkdir -p .vbw-planning/phases
+  printf '%s\n' '# Fixture Project' > .vbw-planning/PROJECT.md
   cp -R "$SCRIPTS_DIR" "$shim_dir"
   awk '
     /echo "milestone_uat_issues=\$MILESTONE_UAT_ISSUES"/ && !injected {
@@ -1062,13 +1064,54 @@ EOF
       injected=1
     }
     { print }
-  ' "$SCRIPTS_DIR/phase-detect.sh" > "$shim_dir/phase-detect.sh"
-  chmod +x "$shim_dir/phase-detect.sh"
+  ' "$SCRIPTS_DIR/lib/phase-detect-milestone-recovery.sh" > "$shim_dir/lib/phase-detect-milestone-recovery.sh"
+  chmod +x "$shim_dir/lib/phase-detect-milestone-recovery.sh"
 
   run bash "$shim_dir/phase-detect.sh"
 
   [ "$status" -eq 0 ]
   [ "$output" = "phase_detect_error=true" ]
+}
+
+@test "phase-detect emits only phase_detect_error=true when a library fails to source" {
+  local shim_dir="$TEST_TEMP_DIR/scripts-phase-detect-source-failure"
+  cp -R "$SCRIPTS_DIR" "$shim_dir"
+  printf 'return 23\n' > "$shim_dir/lib/phase-detect-support.sh"
+
+  run bash "$shim_dir/phase-detect.sh"
+
+  [ "$status" -eq 0 ]
+  [ "$output" = "phase_detect_error=true" ]
+}
+
+@test "current-round QA PASS satisfies a phase with a terminal partial summary" {
+  bash "$BATS_TEST_DIRNAME/fixtures/phase-detect-output/setup-case.bash" phase-05-remediated
+
+  run_phase_detect
+
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q '^next_phase_state=all_done$'
+  echo "$output" | grep -q '^next_phase_summaries=0$'
+}
+
+@test "current-round QA PASS cannot mask a terminal failed summary" {
+  bash "$BATS_TEST_DIRNAME/fixtures/phase-detect-output/setup-case.bash" failed-summary-passing-remediation
+
+  run_phase_detect
+
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q '^next_phase_state=needs_execute$'
+  ! echo "$output" | grep -q '^next_phase_state=all_done$'
+}
+
+@test "earlier-round QA PASS cannot mask a current-round failure" {
+  bash "$BATS_TEST_DIRNAME/fixtures/phase-detect-output/setup-case.bash" stale-pass-later-fail
+
+  run_phase_detect
+
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q '^next_phase_state=needs_execute$'
+  ! echo "$output" | grep -q '^next_phase_state=all_done$'
 }
 
 @test "phase-detect treats git freshness probe failure as dormant when terminal UAT exists" {
