@@ -1,0 +1,59 @@
+scripts/verify-vibe.sh
+  s_0825a35676f762::t_4f2d995b98e6f1 16-37
+testing/verify-skill-activation/agent-contracts.bash
+  s_0825a35676f762::t_8ce088e3d62197 11-12,16,18-19,21-24
+  s_0825a35676f762::t_b137314de789f2 236,242,249
+testing/verify-commands-contract/verification-guardrails.bash
+  s_0825a35676f762::t_a0186dfba58039 72
+  s_0825a35676f762::t_55aae2292602a4 63
+  s_0825a35676f762::t_2ebe08c6a1d6e7 78
+  s_0825a35676f762::t_492405295cc80d 66
+  s_0825a35676f762::t_d973611f0e87f9 60
+  s_0825a35676f762::t_f7fc2143340d98 51
+  s_0825a35676f762::t_580d9bcb3caf0f 54
+  s_0825a35676f762::t_28b616f100146a 33-40
+  s_0825a35676f762::t_9eaf6db5e7c55f 81
+  s_0825a35676f762::t_189c13bb513208 44-49,82
+  s_0825a35676f762::t_2585a5598ea8c9 83-84
+  s_0825a35676f762::t_6472bd3cdbdccf 57
+  s_0825a35676f762::t_5cc44905f5560a 69
+  s_0825a35676f762::t_c4d02d86758695 75
+testing/verify-skill-activation/subagent-hook-contracts.bash
+  s_0825a35676f762::t_328bd119268439 211
+  s_0825a35676f762::t_12b5dc43a8d6bd 5
+  s_0825a35676f762::t_e0cb356439a8d3 166
+testing/verify-commands-contract/qa-gating.bash
+  s_0825a35676f762::t_371d9a1a66ad21 343
+  s_0825a35676f762::t_6932f2481f9e16 350
+testing/verify-skill-activation/runtime-fixtures.bash
+  s_0825a35676f762::t_e1c35d582a445d 156-158
+  s_0825a35676f762::t_b2fe19f03a47e7 220-222
+  s_0825a35676f762::t_0c7c5c4d20e098 193-195
+  s_0825a35676f762::t_756059bcc98b93 139-140,144
+  s_0825a35676f762::t_8a53ebc47b596b 132-138,141-143,149-152
+  s_0825a35676f762::t_f945a0413cdd28 176-178
+  s_0825a35676f762::t_18a05fc0a5b2f6 162-164
+  s_0825a35676f762::t_639847f4649c85 234-236
+  s_0825a35676f762::t_916a316f4238b5 210-212
+testing/verify-commands-contract.sh
+  s_0825a35676f762::t_d5480d22463fb0 54,57,60-63
+testing/verify-commands-contract/base-contracts.bash
+  s_0825a35676f762::t_fca9923f66ccc7 21-22
+  s_0825a35676f762::t_556f22e2911db6 33
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "d14af05cfe415b2e339ce8a3ea99348de75fe6db",
+  "prompts": {},
+  "sessions": {
+    "s_0825a35676f762": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "bdda186d-4444-4c1d-826e-ec4c6e54a197",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
