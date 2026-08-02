@@ -1,0 +1,106 @@
+agents/vbw-dev.md
+  s_d2686ed9c0b94b::t_d68c5f74b83cc1 122
+references/execute-protocol.md
+  s_d2686ed9c0b94b::t_64d6bd105860df 782
+  s_d2686ed9c0b94b::t_0ad589be7d41fd 814-815
+  s_d2686ed9c0b94b::t_2b6f694617ebfb 1012,1019
+  s_d2686ed9c0b94b::t_053a25a98c4c64 729,733
+  s_d2686ed9c0b94b::t_577d68f9c40ec2 806
+  s_d2686ed9c0b94b::t_d68c5f74b83cc1 29,32,35,67,69,81,86,111,114,131,155,168,176,189,198,243-244,246,250,264,280,297,301,307,311,319,331,335-348,402,412,427,436,489,502,505,507-508,510,539-540,606-607,651,662,686,688,711-714,718,726,745,750,756,801,829-830,835,838-839,841,879-880,887,891,896-898,916,922,926-927,935,951,977,985,987-988,991,1002,1038,1040,1044,1055,1058,1081,1083,1091,1104,1127,1134,1138,1142
+  s_d2686ed9c0b94b::t_e75184025777e1 195-196
+references/handoff-schemas.md
+  s_d2686ed9c0b94b::t_d68c5f74b83cc1 10,13,26,29,34-35,115,143,153-175
+scripts/analyze-plan-conflicts.sh
+  s_d2686ed9c0b94b::t_d68c5f74b83cc1 142
+testing/verify-askuserquestion-contract.sh
+  s_d2686ed9c0b94b::t_d68c5f74b83cc1 374-376,598-601,614-615
+testing/verify-commands-contract.sh
+  s_d2686ed9c0b94b::t_d68c5f74b83cc1 514-515,535,700,720,739,1196,1499,1646
+testing/verify-execute-delegation-routing.sh
+  s_d2686ed9c0b94b::t_d68c5f74b83cc1 637
+config/schemas/message-schemas.json
+  s_d2686ed9c0b94b::t_d68c5f74b83cc1 29-34,76,83,85,87
+.serena/project.yml
+  s_d2686ed9c0b94b::t_d68c5f74b83cc1 132,139-140,169
+tests/flag-consistency.bats
+  s_d2686ed9c0b94b::t_d68c5f74b83cc1 43,91,93
+agents/vbw-qa-author.md
+  s_d2686ed9c0b94b::t_ace7cf9baf72f2 64,66-70
+  s_d2686ed9c0b94b::t_d68c5f74b83cc1 1-63,65
+  s_d2686ed9c0b94b::t_7e74d41952ad9d 71-73
+commands/config.md
+  s_d2686ed9c0b94b::t_d68c5f74b83cc1 89-91,100,111-114,130-133,139-142,148-150,156-158,168-170,316,493,535,537,539,541,573-575,597
+scripts/session-start.sh
+  s_d2686ed9c0b94b::t_d68c5f74b83cc1 261
+VERSION
+  s_d2686ed9c0b94b::t_d68c5f74b83cc1 1
+tests/test_helper.bash
+  s_d2686ed9c0b94b::t_d68c5f74b83cc1 7-44,53-56,58,82-85,96,100,102-107,110,113,116,141,182
+references/model-profiles.md
+  s_d2686ed9c0b94b::t_d68c5f74b83cc1 3
+references/dijkstra/d07-array-variables.md
+  s_d2686ed9c0b94b::t_d68c5f74b83cc1 79,81,94
+references/dijkstra/d09-hamming-pattern-matching-two-squares.md
+  s_d2686ed9c0b94b::t_d68c5f74b83cc1 90
+testing/verify-ghost-team-cleanup.sh
+  s_d2686ed9c0b94b::t_d68c5f74b83cc1 242-245,247,251,258-262,264,467-468
+scripts/detect-models.sh
+  s_d2686ed9c0b94b::t_d68c5f74b83cc1 33-36,62
+scripts/file-guard.sh
+  s_d2686ed9c0b94b::t_d68c5f74b83cc1 45,91,96,101-103,105-107,110,112-119,155,158,185,196,206-214,237-239,249,252,348,362,365
+testing/debug-path-a-isolation-smoke.md
+  s_d2686ed9c0b94b::t_d68c5f74b83cc1 22,30
+marketplace.json
+  s_d2686ed9c0b94b::t_d68c5f74b83cc1 8,17-18,31
+tests/role-isolation-runtime.bats
+  s_d2686ed9c0b94b::t_d68c5f74b83cc1 190-208
+.claude-plugin/plugin.json
+  s_d2686ed9c0b94b::t_d68c5f74b83cc1 3
+testing/verify-codex-agent-assets-contract.sh
+  s_d2686ed9c0b94b::t_d68c5f74b83cc1 100,105
+scripts/bash-guard.sh
+  s_d2686ed9c0b94b::t_d68c5f74b83cc1 3,34,39-46,61-63,65-67,70,72-77,99,104,108,129,131-133,137,142-143,148,150,153,157,171-172,176,184,186-188,192,197-198,202,217-218,225,233,235-237,241,246-247,252,254,257,261,272-273,277,285,287-289,292,294,299-301,306,308,311-312,316,319,323,327,330,334,337,363,365-367,370,372,377,380,382,387,389,392,394,398,415,419
+README.md
+  s_d2686ed9c0b94b::t_085c93760c53ca 27,46
+  s_d2686ed9c0b94b::t_9459e6f118db15 47,52
+  s_d2686ed9c0b94b::t_d68c5f74b83cc1 43,119,123,125,127,137,139,149,248-251,265-269,275,277,414,422,510
+  s_d2686ed9c0b94b::t_cb6e953348de4e 734
+testing/verify-skill-activation.sh
+  s_d2686ed9c0b94b::t_d68c5f74b83cc1 53-55,333,1707,1709,1726-1729
+tests/config-migration.bats
+  s_d2686ed9c0b94b::t_d68c5f74b83cc1 69,72,122,125,443,445
+commands/vibe.md
+  s_d2686ed9c0b94b::t_d68c5f74b83cc1 424-430,441-444,449-450,500
+  s_d2686ed9c0b94b::t_714c021485cd9a 448
+  s_d2686ed9c0b94b::t_1a37388b6ca1fe 501
+tests/analyze-plan-conflicts.bats
+  s_d2686ed9c0b94b::t_d68c5f74b83cc1 103-125
+scripts/resolve-agent-model.sh
+  s_d2686ed9c0b94b::t_d68c5f74b83cc1 31-34,48,84,97,99,116,140,145
+AGENTS.md
+  s_d2686ed9c0b94b::t_d68c5f74b83cc1 3,133
+config/defaults.json
+  s_d2686ed9c0b94b::t_d68c5f74b83cc1 16
+references/ask-user-question.md
+  s_d2686ed9c0b94b::t_d68c5f74b83cc1 54,63,72
+.claude-plugin/marketplace.json
+  s_d2686ed9c0b94b::t_d68c5f74b83cc1 18
+scripts/map-verify-response.sh
+  s_d2686ed9c0b94b::t_d68c5f74b83cc1 20-27
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "b48f1cd83817b56b3a81667c44e70e9a26bb319b",
+  "prompts": {},
+  "sessions": {
+    "s_d2686ed9c0b94b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a924c903-92a9-4f1f-aaea-ba6a7f724e8e",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
