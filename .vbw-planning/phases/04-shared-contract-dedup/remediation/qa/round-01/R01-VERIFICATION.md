@@ -6,7 +6,7 @@ passed: 18
 failed: 2
 total: 20
 date: 2026-08-02
-verified_at_commit: 576c9755aca2684dae5c4005e2407fa33b5fe57e
+verified_at_commit: 87deae9207d94f8507fb7640b9e8e408fcb21675
 writer: write-verification.sh
 plans_verified:
   - R01
