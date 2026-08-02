@@ -566,9 +566,11 @@ fi
 # --- Clean old cache versions (keep only latest) ---
 VBW_CLEANUP_LOCK="/tmp/vbw-cache-cleanup-lock"
 if [ -d "$CACHE_DIR" ] && mkdir "$VBW_CLEANUP_LOCK" 2>/dev/null; then
-  VERSIONS=$(ls -d "$CACHE_DIR"/*/ 2>/dev/null | sort -V)
+  VERSIONS=$(ls -d "$CACHE_DIR"/*/ 2>/dev/null | sort -V 2>/dev/null || \
+    ls -d "$CACHE_DIR"/*/ 2>/dev/null | awk -F/ '{v=$(NF-1); split(v,p,"."); printf "%010d.%010d.%010d\t%s\n",p[1]+0,p[2]+0,p[3]+0,$0}' | sort | cut -f2-)
   COUNT=$(echo "$VERSIONS" | wc -l | tr -d ' ')
   if [ "$COUNT" -gt 1 ]; then
+    # Invariant: processed entries are older than the retained final entry. Variant: unprocessed old entries decrease.
     echo "$VERSIONS" | head -n $((COUNT - 1)) | while IFS= read -r dir; do
       [ -L "${dir%/}" ] && continue  # Skip local dev symlinks
       rm -rf "$dir"
