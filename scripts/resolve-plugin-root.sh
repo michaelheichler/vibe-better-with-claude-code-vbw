@@ -91,10 +91,14 @@ if [ -z "$resolved_root" ]; then
     fi
   done
   if [ "${#numeric_names[@]}" -gt 0 ]; then
-    numeric_name=$(printf '%s\n' "${numeric_names[@]}" | sort -t. -k1,1n -k2,2n -k3,3n | tail -1)
-    if valid_root "$cache_root/$numeric_name"; then
-      resolved_root="$cache_root/$numeric_name"
-    fi
+    mapfile -t numeric_names < <(printf '%s\n' "${numeric_names[@]}" | sort -t. -k1,1nr -k2,2nr -k3,3nr)
+    # Invariant: every higher-ranked candidate was rejected. Variant: unexamined candidates decrease.
+    for numeric_name in "${numeric_names[@]}"; do
+      if valid_root "$cache_root/$numeric_name"; then
+        resolved_root="$cache_root/$numeric_name"
+        break
+      fi
+    done
   fi
 fi
 
@@ -107,10 +111,14 @@ if [ -z "$resolved_root" ]; then
     fi
   done
   if [ "${#generic_names[@]}" -gt 0 ]; then
-    generic_name=$(printf '%s\n' "${generic_names[@]}" | sort | tail -1)
-    if valid_root "$cache_root/$generic_name"; then
-      resolved_root="$cache_root/$generic_name"
-    fi
+    mapfile -t generic_names < <(printf '%s\n' "${generic_names[@]}" | sort -r)
+    # Invariant: every higher-ranked candidate was rejected. Variant: unexamined candidates decrease.
+    for generic_name in "${generic_names[@]}"; do
+      if valid_root "$cache_root/$generic_name"; then
+        resolved_root="$cache_root/$generic_name"
+        break
+      fi
+    done
   fi
 fi
 

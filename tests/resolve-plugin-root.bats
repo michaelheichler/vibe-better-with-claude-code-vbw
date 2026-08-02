@@ -84,6 +84,27 @@ assert_resolved() {
   assert_resolved "$newer"
 }
 
+@test "invalid newest numeric cache entry falls back to older valid entry" {
+  local older
+  older=$(make_root numeric-valid-older)
+  ln -s "$older" "$VBW_CACHE_ROOT/1.9.0"
+  mkdir -p "$VBW_CACHE_ROOT/1.10.0"
+
+  run bash "$RESOLVER"
+
+  assert_resolved "$older"
+}
+
+@test "invalid numeric cache entry without a valid fallback fails" {
+  mkdir -p "$VBW_CACHE_ROOT/1.10.0"
+
+  run bash "$RESOLVER"
+
+  [ "$status" -eq 1 ]
+  [ "$output" = "VBW: plugin root unavailable. Restart this session to recreate $SESSION_LINK." ]
+  [ ! -e "$SESSION_LINK" ]
+}
+
 @test "lexically last generic cache entry resolves without numeric entries" {
   local alpha zulu
   alpha=$(make_root generic-alpha)
@@ -94,6 +115,17 @@ assert_resolved() {
   run bash "$RESOLVER"
 
   assert_resolved "$zulu"
+}
+
+@test "invalid lexically last generic cache entry falls back to earlier valid entry" {
+  local alpha
+  alpha=$(make_root generic-valid-alpha)
+  ln -s "$alpha" "$VBW_CACHE_ROOT/alpha"
+  mkdir -p "$VBW_CACHE_ROOT/zulu"
+
+  run bash "$RESOLVER"
+
+  assert_resolved "$alpha"
 }
 
 @test "marketplace root resolves without a cache entry" {
