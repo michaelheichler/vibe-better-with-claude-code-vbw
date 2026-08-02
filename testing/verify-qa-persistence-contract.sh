@@ -92,7 +92,7 @@ else
 fi
 
 # ── Execute protocol checks ─────────────────────────────────────────
-EXEC_PROTO="$ROOT/references/execute-protocol.md"
+EXEC_PROTO="$ROOT/references/execute-post-build-qa.md"
 
 # 7. Execute protocol does NOT have orchestrator-side pipe to write-verification.sh
 #    (The old pattern was: echo "$QA_VERDICT_JSON" | bash ... write-verification.sh)

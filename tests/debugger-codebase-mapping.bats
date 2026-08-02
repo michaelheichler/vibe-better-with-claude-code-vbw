@@ -685,11 +685,11 @@ STATE
 # =============================================================================
 
 @test "execute-protocol.md per-wave QA prompt includes codebase bootstrap" {
-  grep -A5 'Per-wave QA' "$PROJECT_ROOT/references/execute-protocol.md" | grep -q 'META.md'
+  grep -A5 'Per-wave QA' "$PROJECT_ROOT/references/execute-post-build-qa.md" | grep -q 'META.md'
 }
 
 @test "execute-protocol.md post-build QA prompt includes codebase bootstrap" {
-  grep -A5 'Post-build QA' "$PROJECT_ROOT/references/execute-protocol.md" | grep -q 'META.md'
+  grep -A5 'Post-build QA' "$PROJECT_ROOT/references/execute-post-build-qa.md" | grep -q 'META.md'
 }
 
 # =============================================================================

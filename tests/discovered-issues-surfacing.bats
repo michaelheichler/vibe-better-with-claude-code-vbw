@@ -503,15 +503,15 @@ path_b_debug_block() {
 }
 
 @test "execute-protocol persists known issues before QA" {
-  grep -q 'sync-summaries' "$PROJECT_ROOT/references/execute-protocol.md"
+  grep -q 'sync-summaries' "$PROJECT_ROOT/references/execute-post-build-qa.md"
 }
 
 @test "execute-protocol syncs known issues from verification artifacts" {
-  grep -q 'sync-verification' "$PROJECT_ROOT/references/execute-protocol.md"
+  grep -q 'sync-verification' "$PROJECT_ROOT/references/execute-qa-result-gating.md"
 }
 
 @test "execute-protocol only uses legacy pre-existing fallback when frontmatter key is absent" {
-  grep -q 'key is absent' "$PROJECT_ROOT/references/execute-protocol.md"
+  grep -q 'key is absent' "$PROJECT_ROOT/references/execute-post-build-qa.md"
 }
 
 # =============================================================================
@@ -551,7 +551,7 @@ path_b_debug_block() {
 
 @test "execute-protocol mirrors synthesized UAT issue description contract" {
   local section
-  section=$(sed -n '/### Step 4\.5: Human acceptance testing (UAT)/,/### Step 5:/p' "$PROJECT_ROOT/references/execute-protocol.md")
+  section=$(cat "$PROJECT_ROOT/references/execute-uat.md")
 
   grep -q 'Issue description capture' <<< "$section"
   grep -q 'synthesize an actionable persisted `Description`' <<< "$section"
@@ -788,7 +788,7 @@ path_b_debug_block() {
 
 @test "execute-protocol UAT D{NN} allocation scans current file for every append" {
   local section
-  section=$(sed -n '/### Step 4\.5: Human acceptance testing (UAT)/,/### Step 5:/p' "$PROJECT_ROOT/references/execute-protocol.md")
+  section=$(cat "$PROJECT_ROOT/references/execute-uat.md")
 
   grep -qi 'separate defect observation' <<< "$section"
   grep -q '{phase-dir}/{uat_path}' <<< "$section"
@@ -873,7 +873,7 @@ path_b_debug_block() {
 @test "execute-protocol DEV_ISSUES block has body Deviations fallback" {
   # The YAML-only extractor misses deviations written to the body ## Deviations
   # section, which is the common case. The fallback must be present.
-  grep -q '## Deviations' "$PROJECT_ROOT/references/execute-protocol.md"
+  grep -q '## Deviations' "$PROJECT_ROOT/references/execute-post-build-qa.md"
 }
 
 # =============================================================================

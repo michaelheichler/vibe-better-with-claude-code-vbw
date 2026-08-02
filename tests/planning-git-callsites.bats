@@ -63,7 +63,10 @@ load test_helper
   [ "$c" -eq 2 ]
   c=$(grep -c 'PG_SCRIPT="/tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}/scripts/planning-git.sh"' "$PROJECT_ROOT/commands/verify.md")
   [ "$c" -eq 1 ]
-  c=$(grep -c 'PG_SCRIPT="${VBW_PLUGIN_ROOT}/scripts/planning-git.sh"' "$PROJECT_ROOT/references/execute-protocol.md")
+  c=$(grep -h 'PG_SCRIPT="${VBW_PLUGIN_ROOT}/scripts/planning-git.sh"' \
+    "$PROJECT_ROOT/references/execute-protocol.md" \
+    "$PROJECT_ROOT/references/execute-post-build-qa.md" \
+    "$PROJECT_ROOT/references/execute-uat.md" | wc -l | tr -d ' ')
   [ "$c" -eq 2 ]
 }
 

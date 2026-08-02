@@ -1,6 +1,7 @@
 echo "=== QA Result Gate Contract ==="
 
 QA_FILE="$COMMANDS_DIR/qa.md"
+EXECUTE_QA_GATE_REF="$ROOT/references/execute-qa-result-gating.md"
 
 if grep -Eq 'qa-remediation-state\.sh"? get' "$QA_FILE"; then
   pass "qa: resolves remediation state before choosing verification output path"
@@ -32,20 +33,20 @@ else
   fail "qa: missing authoritative done-stage verification path resolution"
 fi
 
-if grep -q 'source_verification_path' "$ROOT/references/execute-protocol.md" && grep -q 'verification_path' "$ROOT/references/execute-protocol.md"; then
+if grep -q 'source_verification_path' "$EXECUTE_QA_GATE_REF" && grep -q 'verification_path' "$EXECUTE_QA_GATE_REF"; then
   pass "execute-protocol: parses full QA remediation metadata contract"
 else
   fail "execute-protocol: missing source_verification_path/verification_path in QA remediation metadata parsing"
 fi
 
-if grep -Eq 'source_plan`? must reference an original plan in the current phase only' "$ROOT/references/execute-protocol.md" \
+if grep -Eq 'source_plan`? must reference an original plan in the current phase only' "$EXECUTE_QA_GATE_REF" \
   && grep -Eq 'source_plan`? must reference an original plan in the current phase only' "$VIBE_FILE"; then
   pass "execute-protocol/vibe: plan-amendment source_plan is constrained to current-phase original plans"
 else
   fail "execute-protocol/vibe: missing current-phase-only constraint for plan-amendment source_plan"
 fi
 
-if grep -q 'carry forward the nearest earlier verification artifact in the remediation chain that still contains the unresolved FAILs' "$ROOT/references/execute-protocol.md" \
+if grep -q 'carry forward the nearest earlier verification artifact in the remediation chain that still contains the unresolved FAILs' "$EXECUTE_QA_GATE_REF" \
   && grep -q 'carry forward the nearest earlier verification artifact in the remediation chain that still contains the unresolved FAILs' "$VIBE_FILE"; then
   pass "execute-protocol/vibe: round 02+ planning carries unresolved FAIL source forward across gate-rejected PASS rounds"
 else
@@ -95,7 +96,7 @@ execute_protocol_qa_remediation_block="$({
     /^\*\*QA Remediation Loop \(inline, same session\):/ { in_block=1 }
     /^### Step 4\.5: Human acceptance testing \(UAT\)/ { in_block=0 }
     in_block { print }
-  ' "$ROOT/references/execute-protocol.md"
+  ' "$EXECUTE_QA_GATE_REF"
 } || true)"
 
 qa_remediation_verify_block="$({
@@ -319,7 +320,7 @@ if grep -Fq 'resolve-execute-delegation-mode.sh' "$ROOT/references/execute-proto
   && grep -Fq 'max_parallel_width > 1' "$ROOT/references/execute-protocol.md" \
   && ! grep -Fq "prefer_teams='auto': request team mode only when 2+ uncompleted plans remain" "$ROOT/references/execute-protocol.md" \
   && grep -Fq 'When true team mode is active, pass `team_name: "vbw-phase-{NN}"` and `name: "dev-{MM}"`' "$ROOT/references/execute-protocol.md" \
-  && grep -Fq 'When true team mode is active, pass `team_name: "vbw-phase-{NN}"` and `name: "qa"' "$ROOT/references/execute-protocol.md"; then
+  && grep -Fq 'When true team mode is active, pass `team_name: "vbw-phase-{NN}"` and `name: "qa"' "$EXECUTE_POST_BUILD_QA_REF"; then
   pass "execute-protocol: dependency-aware routing uses consistent true-team metadata wording"
 else
   fail "execute-protocol: dependency-aware routing wording is inconsistent or still references stale 2+ plan team creation"
@@ -346,14 +347,14 @@ else
   fail "vibe: expected >=2 qa-result-gate.sh references, found $_vibe_gate_count"
 fi
 
-_ep_gate_count=$(grep -c 'qa-result-gate\.sh' "$ROOT/references/execute-protocol.md" 2>/dev/null || echo 0)
+_ep_gate_count=$(grep -c 'qa-result-gate\.sh' "$EXECUTE_QA_GATE_REF" 2>/dev/null || echo 0)
 if [ "$_ep_gate_count" -ge 2 ]; then
   pass "execute-protocol: references qa-result-gate.sh at $_ep_gate_count call sites"
 else
   fail "execute-protocol: expected >=2 qa-result-gate.sh references, found $_ep_gate_count"
 fi
 
-for f in "$VIBE_FILE" "$ROOT/references/execute-protocol.md"; do
+for f in "$VIBE_FILE" "$EXECUTE_QA_GATE_REF"; do
   if [ "$f" = "$VIBE_FILE" ]; then
     base="vibe.md"
   else

@@ -15,6 +15,7 @@ LIST_TODOS_COMMAND_FILE="$COMMANDS_DIR/list-todos.md"
 CONFIG_COMMAND_FILE="$COMMANDS_DIR/config.md"
 SKILLS_COMMAND_FILE="$COMMANDS_DIR/skills.md"
 EXECUTE_PROTOCOL_FILE="$REFERENCES_DIR/execute-protocol.md"
+EXECUTE_UAT_FILE="$REFERENCES_DIR/execute-uat.md"
 
 tracked_command_markdown_files() {
   local rel
@@ -422,9 +423,9 @@ echo ""
 echo "--- Check 4b: Summary-deviation UAT prompt context ---"
 
 VERIFY_DEVIATION_PROMPT_BLOCK="$(extract_regex_block "$VERIFY_COMMAND_FILE" 'Summary-deviation checkpoint prompt' 'AskUserQuestion is a tool call' || true)"
-EXECUTE_DEVIATION_PROMPT_BLOCK="$(extract_regex_block "$EXECUTE_PROTOCOL_FILE" 'Summary-deviation checkpoint prompt' 'STOP HERE' || true)"
+EXECUTE_DEVIATION_PROMPT_BLOCK="$(extract_regex_block "$EXECUTE_UAT_FILE" 'Summary-deviation checkpoint prompt' 'STOP HERE' || true)"
 VERIFY_RESPONSE_MAPPING_BLOCK="$(extract_regex_block "$VERIFY_COMMAND_FILE" '### 6\. Response mapping' '### 7\. Issue handling' || true)"
-EXECUTE_RESPONSE_MAPPING_BLOCK="$(extract_regex_block "$EXECUTE_PROTOCOL_FILE" 'Map the AskUserQuestion response' 'If a pass/skip response includes' || true)"
+EXECUTE_RESPONSE_MAPPING_BLOCK="$(extract_regex_block "$EXECUTE_UAT_FILE" 'Map the AskUserQuestion response' 'If a pass/skip response includes' || true)"
 
 if [ -n "$VERIFY_DEVIATION_PROMPT_BLOCK" ]; then
   pass "verify: summary-deviation prompt block extracted"
@@ -473,8 +474,8 @@ done
 
 require_file_literal "verify: accepted tracked DNN invokes todo-from-uat helper" 'track-uat-deviations.sh" todo-from-uat' "$VERIFY_COMMAND_FILE"
 require_file_literal "verify: tracked DNN uses helper-emitted todo ref" 'accepted deviation added to todos (ref:{TODO_REF})' "$VERIFY_COMMAND_FILE"
-require_file_literal "execute-protocol: accepted tracked DNN invokes todo-from-uat helper" 'track-uat-deviations.sh" todo-from-uat' "$EXECUTE_PROTOCOL_FILE"
-require_file_literal "execute-protocol: tracked DNN uses helper-emitted todo ref" 'accepted deviation added to todos (ref:{todo_ref})' "$EXECUTE_PROTOCOL_FILE"
+require_file_literal "execute-protocol: accepted tracked DNN invokes todo-from-uat helper" 'track-uat-deviations.sh" todo-from-uat' "$EXECUTE_UAT_FILE"
+require_file_literal "execute-protocol: tracked DNN uses helper-emitted todo ref" 'accepted deviation added to todos (ref:{todo_ref})' "$EXECUTE_UAT_FILE"
 
 for mapping_target in \
   "verify:$VERIFY_RESPONSE_MAPPING_BLOCK" \
@@ -518,7 +519,7 @@ PRODUCT_UAT_MODAL='question: "Scenario: {scenario description}\n\nExpected: {exp
 EXPECTED_ONLY_MODAL='question: "Expected: {expected result}"'
 
 require_file_literal "verify: product UAT modal includes Scenario and Expected" "$PRODUCT_UAT_MODAL" "$VERIFY_COMMAND_FILE"
-require_file_literal "execute-protocol: product UAT modal includes Scenario and Expected" "$PRODUCT_UAT_MODAL" "$EXECUTE_PROTOCOL_FILE"
+require_file_literal "execute-protocol: product UAT modal includes Scenario and Expected" "$PRODUCT_UAT_MODAL" "$EXECUTE_UAT_FILE"
 require_file_literal "debug: product UAT modal includes Scenario and Expected" "$PRODUCT_UAT_MODAL" "$COMMANDS_DIR/debug.md"
 
 if grep -Fq "$EXPECTED_ONLY_MODAL" "$VERIFY_COMMAND_FILE"; then
@@ -527,7 +528,7 @@ else
   pass "verify: product UAT modal no longer uses expected-only question"
 fi
 
-if grep -Fq "$EXPECTED_ONLY_MODAL" "$EXECUTE_PROTOCOL_FILE"; then
+if grep -Fq "$EXPECTED_ONLY_MODAL" "$EXECUTE_UAT_FILE"; then
   fail "execute-protocol: product UAT modal no longer uses expected-only question"
 else
   pass "execute-protocol: product UAT modal no longer uses expected-only question"

@@ -1,5 +1,9 @@
 echo "=== Phase-Detect Refresh Safety Verification ==="
 
+EXECUTE_POST_BUILD_QA_REF="$ROOT/references/execute-post-build-qa.md"
+EXECUTE_QA_GATE_REF="$ROOT/references/execute-qa-result-gating.md"
+EXECUTE_UAT_REF="$ROOT/references/execute-uat.md"
+
 for pd_safe_cmd in vibe verify resume status discuss qa; do
   pd_safe_file="$COMMANDS_DIR/${pd_safe_cmd}.md"
   if [ ! -f "$pd_safe_file" ]; then
@@ -126,9 +130,9 @@ else
   fail "verify: summary-deviation Track Todo path missing deterministic helper/ref contract"
 fi
 
-if grep -Fq 'Track Todo' "$ROOT/references/execute-protocol.md" \
-  && grep -Fq 'track-uat-deviations.sh" todo-from-uat' "$ROOT/references/execute-protocol.md" \
-  && grep -Fq 'accepted deviation added to todos (ref:{todo_ref})' "$ROOT/references/execute-protocol.md"; then
+if grep -Fq 'Track Todo' "$EXECUTE_UAT_REF" \
+  && grep -Fq 'track-uat-deviations.sh" todo-from-uat' "$EXECUTE_UAT_REF" \
+  && grep -Fq 'accepted deviation added to todos (ref:{todo_ref})' "$EXECUTE_UAT_REF"; then
   pass "execute-protocol: summary-deviation Track Todo path mirrors helper output contract"
 else
   fail "execute-protocol: summary-deviation Track Todo path missing helper output contract"
@@ -155,22 +159,22 @@ else
   fail "verify: summary-deviation todo intent missing contraction blocker guard"
 fi
 
-if grep -Fq "can't\`/\`cant\` → \`cannot" "$ROOT/references/execute-protocol.md" \
-  && grep -Fq 'curly apostrophes as straight apostrophes' "$ROOT/references/execute-protocol.md" \
-  && grep -Fq 'can’t continue, track this' "$ROOT/references/execute-protocol.md" \
-  && grep -Fq 'marker-first ordering' "$ROOT/references/execute-protocol.md" \
-  && grep -Fq 'not ok' "$ROOT/references/execute-protocol.md" \
-  && grep -Fq 'cannot accept' "$ROOT/references/execute-protocol.md" \
-  && grep -Fq 'do not accept' "$ROOT/references/execute-protocol.md" \
-  && grep -Fq 'will not accept' "$ROOT/references/execute-protocol.md" \
-  && grep -Fq 'unable to accept' "$ROOT/references/execute-protocol.md" \
-  && grep -Fq 'refuse to accept' "$ROOT/references/execute-protocol.md" \
-  && grep -Fq 'not acceptable' "$ROOT/references/execute-protocol.md" \
-  && grep -Fq "can't continue, track this" "$ROOT/references/execute-protocol.md" \
-  && grep -Fq 'not ok, track this' "$ROOT/references/execute-protocol.md" \
-  && grep -Fq "can't accept this, track this" "$ROOT/references/execute-protocol.md" \
-  && grep -Fq 'not acceptable, add to todo' "$ROOT/references/execute-protocol.md" \
-  && grep -Fq 'rejected-by-user' "$ROOT/references/execute-protocol.md"; then
+if grep -Fq "can't\`/\`cant\` → \`cannot" "$EXECUTE_UAT_REF" \
+  && grep -Fq 'curly apostrophes as straight apostrophes' "$EXECUTE_UAT_REF" \
+  && grep -Fq 'can’t continue, track this' "$EXECUTE_UAT_REF" \
+  && grep -Fq 'marker-first ordering' "$EXECUTE_UAT_REF" \
+  && grep -Fq 'not ok' "$EXECUTE_UAT_REF" \
+  && grep -Fq 'cannot accept' "$EXECUTE_UAT_REF" \
+  && grep -Fq 'do not accept' "$EXECUTE_UAT_REF" \
+  && grep -Fq 'will not accept' "$EXECUTE_UAT_REF" \
+  && grep -Fq 'unable to accept' "$EXECUTE_UAT_REF" \
+  && grep -Fq 'refuse to accept' "$EXECUTE_UAT_REF" \
+  && grep -Fq 'not acceptable' "$EXECUTE_UAT_REF" \
+  && grep -Fq "can't continue, track this" "$EXECUTE_UAT_REF" \
+  && grep -Fq 'not ok, track this' "$EXECUTE_UAT_REF" \
+  && grep -Fq "can't accept this, track this" "$EXECUTE_UAT_REF" \
+  && grep -Fq 'not acceptable, add to todo' "$EXECUTE_UAT_REF" \
+  && grep -Fq 'rejected-by-user' "$EXECUTE_UAT_REF"; then
   pass "execute-protocol: summary-deviation todo intent handles contraction blockers before tracking"
 else
   fail "execute-protocol: summary-deviation todo intent missing contraction blocker guard"
@@ -276,20 +280,20 @@ else
   fail "vibe: Verify mode missing deterministic UAT resume fields or wrapper sentinels"
 fi
 
-if grep -q 'compile-verify-context.sh --remediation-only {phase-dir}' "$ROOT/references/execute-protocol.md"; then
+if grep -q 'compile-verify-context.sh --remediation-only {phase-dir}' "$EXECUTE_QA_GATE_REF"; then
   pass "execute-protocol: QA remediation verify uses remediation-only verify context"
 else
   fail "execute-protocol: QA remediation verify missing remediation-only verify context"
 fi
 
-if grep -q 'verify the exception is documented with non-fixable justification and that the justification is credible for this FAIL' "$ROOT/references/execute-protocol.md" \
-  && grep -q 'documentation alone is insufficient when the original FAIL still appears fixable via code or plan amendment' "$ROOT/references/execute-protocol.md"; then
+if grep -q 'verify the exception is documented with non-fixable justification and that the justification is credible for this FAIL' "$EXECUTE_QA_GATE_REF" \
+  && grep -q 'documentation alone is insufficient when the original FAIL still appears fixable via code or plan amendment' "$EXECUTE_QA_GATE_REF"; then
   pass "execute-protocol: remediation QA rejects unjustified process-exception labels"
 else
   fail "execute-protocol: remediation QA guidance still allows documentation-only process-exception loophole"
 fi
 
-if grep -q 'After QA persists VERIFICATION.md (and only after that), run the verification threshold gate' "$ROOT/references/execute-protocol.md"; then
+if grep -q 'After QA persists VERIFICATION.md (and only after that), run the verification threshold gate' "$EXECUTE_POST_BUILD_QA_REF"; then
   pass "execute-protocol: verification_threshold runs after QA persists VERIFICATION"
 else
   fail "execute-protocol: verification_threshold ordering still appears before QA"

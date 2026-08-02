@@ -5,7 +5,7 @@ set -euo pipefail
 # generation and verify.md UAT generation rules.
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-EXEC_PROTO="$ROOT/references/execute-protocol.md"
+EXEC_PROTO="$ROOT/references/execute-uat.md"
 VERIFY_FILE="$ROOT/commands/verify.md"
 
 PASS=0
