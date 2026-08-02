@@ -1082,6 +1082,26 @@ EOF
   [ "$output" = "phase_detect_error=true" ]
 }
 
+@test "current-round QA PASS satisfies a phase with a terminal partial summary" {
+  bash "$BATS_TEST_DIRNAME/fixtures/phase-detect-output/setup-case.bash" phase-05-remediated
+
+  run_phase_detect
+
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q '^next_phase_state=all_done$'
+  echo "$output" | grep -q '^next_phase_summaries=0$'
+}
+
+@test "earlier-round QA PASS cannot mask a current-round failure" {
+  bash "$BATS_TEST_DIRNAME/fixtures/phase-detect-output/setup-case.bash" stale-pass-later-fail
+
+  run_phase_detect
+
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q '^next_phase_state=needs_execute$'
+  ! echo "$output" | grep -q '^next_phase_state=all_done$'
+}
+
 @test "phase-detect treats git freshness probe failure as dormant when terminal UAT exists" {
   mkdir -p .vbw-planning/phases/01-test
   echo "# Plan" > .vbw-planning/phases/01-test/01-PLAN.md

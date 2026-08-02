@@ -22,7 +22,9 @@ if [ ${#PHASE_DIRS[@]} -gt 0 ]; then
     _qr_plans=$(count_phase_plans "$_qr_dir")
     [ "$_qr_plans" -gt 0 ] || continue
     _qr_sums=$(count_complete_summaries "$_qr_dir")
-    [ "$_qr_sums" -ge "$_qr_plans" ] || continue
+    if ! phase_execution_is_satisfied "$_qr_dir" "$_qr_plans" "$_qr_sums"; then
+      continue
+    fi
     if phase_has_uat_cutover "$_qr_dir"; then
       continue
     fi
@@ -52,7 +54,9 @@ if [ ${#PHASE_DIRS[@]} -gt 0 ]; then
     _uv_plans=$(count_phase_plans "$_uv_dir")
     [ "$_uv_plans" -gt 0 ] || continue
     _uv_sums=$(count_complete_summaries "$_uv_dir")
-    [ "$_uv_sums" -ge "$_uv_plans" ] || continue
+    if ! phase_execution_is_satisfied "$_uv_dir" "$_uv_plans" "$_uv_sums"; then
+      continue
+    fi
     _uv_uat_cutover=false
     if phase_has_uat_cutover "$_uv_dir"; then
       _uv_uat_cutover=true
@@ -145,7 +149,9 @@ if [ ${#PHASE_DIRS[@]} -gt 0 ]; then
     _qa_plans=$(count_phase_plans "$_qa_dir")
     [ "$_qa_plans" -gt 0 ] || continue
     _qa_sums=$(count_complete_summaries "$_qa_dir")
-    [ "$_qa_sums" -ge "$_qa_plans" ] || continue
+    if ! phase_execution_is_satisfied "$_qa_dir" "$_qa_plans" "$_qa_sums"; then
+      continue
+    fi
     if phase_has_uat_cutover "$_qa_dir"; then
       continue
     fi

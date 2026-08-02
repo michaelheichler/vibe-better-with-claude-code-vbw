@@ -414,3 +414,36 @@ phase_verification_state() {
   printf '%s\n' "${state:-pending}"
 }
 
+phase_has_passing_qa_remediation() {
+  local phase_dir="$1"
+  local state_file stage round verification_file assessment assessment_state _
+
+  state_file="${phase_dir%/}/remediation/qa/.qa-remediation-stage"
+  [ -f "$state_file" ] || return 1
+  stage=$(normalize_qa_remediation_stage "$(state_file_kv_value "$state_file" stage)")
+  [ "$stage" = "done" ] || return 1
+
+  round=$(state_file_kv_value "$state_file" round)
+  case "$round" in
+    ''|*[!0-9]*) return 1 ;;
+  esac
+  round=$(printf '%02d' "$((10#$round))")
+  verification_file="${phase_dir%/}/remediation/qa/round-${round}/R${round}-VERIFICATION.md"
+
+  assessment=$(phase_verification_assessment "$phase_dir" "$verification_file" "satisfied")
+  IFS=$'\t' read -r assessment_state _ <<< "$assessment"
+  [ "$assessment_state" = "satisfied" ]
+}
+
+phase_execution_is_satisfied() {
+  local phase_dir="$1"
+  local plan_count="$2"
+  local complete_count="$3"
+  local terminal_count
+
+  [ "$plan_count" -gt 0 ] || return 1
+  [ "$complete_count" -ge "$plan_count" ] && return 0
+  terminal_count=$(count_terminal_summaries "$phase_dir")
+  [ "$terminal_count" -ge "$plan_count" ] || return 1
+  phase_has_passing_qa_remediation "$phase_dir"
+}

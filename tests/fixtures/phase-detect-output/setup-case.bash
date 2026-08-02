@@ -92,7 +92,7 @@ plan: R01
 status: complete
 files_modified:
   - README.md
-  - .vbw-planning/phases/05-remediated/05-01-SUMMARY.md
+  - .vbw-planning/phases/05-remediated/remediation/qa/round-01/R01-SUMMARY.md
 deviations: []
 ---
 EOF

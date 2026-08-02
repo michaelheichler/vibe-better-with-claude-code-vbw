@@ -46,8 +46,11 @@ route_earlier_phase_candidate() {
     set_next_phase_candidate "$phase_num" "$phase_name" "$state" "$plans" "$summaries"
     return 0
   fi
-  [ "$summaries" -lt "$plans" ] || return 1
-  set_next_phase_candidate "$phase_num" "$phase_name" "needs_execute" "$plans" "$summaries"
+  if ! phase_execution_is_satisfied "$phase_dir" "$plans" "$summaries"; then
+    set_next_phase_candidate "$phase_num" "$phase_name" "needs_execute" "$plans" "$summaries"
+    return 0
+  fi
+  return 1
 }
 
 route_earlier_incomplete_before_phase() {
@@ -98,7 +101,7 @@ if [ -d "$PHASES_DIR" ]; then
 
       DIR_PLANS=$(count_phase_plans "$DIR")
       DIR_SUMMARIES=$(count_complete_summaries "$DIR")
-      if [ "$DIR_PLANS" -eq 0 ] || [ "$DIR_SUMMARIES" -lt "$DIR_PLANS" ]; then
+      if [ "$DIR_PLANS" -eq 0 ] || ! phase_execution_is_satisfied "$DIR" "$DIR_PLANS" "$DIR_SUMMARIES"; then
         continue
       fi
 
@@ -319,7 +322,7 @@ if [ -d "$PHASES_DIR" ]; then
           fi
           ALL_DONE=false
           break
-        elif [ "$S_COUNT" -lt "$P_COUNT" ]; then
+        elif ! phase_execution_is_satisfied "$DIR" "$P_COUNT" "$S_COUNT"; then
           if [ "$NEXT_PHASE" = "none" ]; then
             NEXT_PHASE="$NUM"
             NEXT_PHASE_SLUG="$DIRNAME"
