@@ -156,12 +156,24 @@ fi
 if [ -z "$resolved_root" ]; then
   # Invariant: no examined process path is a valid VBW root. Variant: unexamined paths decrease.
   while IFS= read -r process_plugin_dir; do
-    process_plugin_dir="${process_plugin_dir#--plugin-dir }"
+    process_plugin_dir="${process_plugin_dir#--plugin-dir}"
+    process_plugin_dir="${process_plugin_dir#"${process_plugin_dir%%[![:space:]]*}"}"
+    case "$process_plugin_dir" in
+      \"*\")
+        process_plugin_dir="${process_plugin_dir#\"}"
+        process_plugin_dir="${process_plugin_dir%\"}"
+        ;;
+      \'*\')
+        process_plugin_dir="${process_plugin_dir#\'}"
+        process_plugin_dir="${process_plugin_dir%\'}"
+        ;;
+    esac
     if valid_vbw_root "$process_plugin_dir"; then
       resolved_root="$process_plugin_dir"
       break
     fi
-  done < <(ps axww -o args= 2>/dev/null | grep -v grep | grep -oE -- "--plugin-dir [^ ]+" || true)
+  # ponytail: escaped unquoted spaces are excluded. Add shell-argument parsing if Claude emits them.
+  done < <(ps axww -o args= 2>/dev/null | grep -v grep | grep -oE -- "--plugin-dir[[:space:]]+(\"[^\"]*\"|'[^']*'|[^[:space:]]+)" || true)
 fi
 
 [ -n "$resolved_root" ] || fail_resolution

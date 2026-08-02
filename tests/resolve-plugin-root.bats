@@ -190,6 +190,26 @@ assert_resolved() {
   assert_resolved "$root"
 }
 
+@test "process recovery preserves a double-quoted plugin-dir path with spaces" {
+  local root
+  root=$(make_root "process double quoted")
+  export MOCK_PS_OUTPUT="claude --plugin-dir \"$root\" --verbose"
+
+  run bash "$RESOLVER"
+
+  assert_resolved "$root"
+}
+
+@test "process recovery preserves a single-quoted plugin-dir path with spaces" {
+  local root
+  root=$(make_root "process single quoted")
+  export MOCK_PS_OUTPUT="claude --plugin-dir '$root' --verbose"
+
+  run bash "$RESOLVER"
+
+  assert_resolved "$root"
+}
+
 @test "process fallback skips a non-VBW plugin collision" {
   local collision root
   collision=$(make_root process-collision)
