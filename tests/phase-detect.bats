@@ -1062,8 +1062,19 @@ EOF
       injected=1
     }
     { print }
-  ' "$SCRIPTS_DIR/phase-detect.sh" > "$shim_dir/phase-detect.sh"
-  chmod +x "$shim_dir/phase-detect.sh"
+  ' "$SCRIPTS_DIR/lib/phase-detect-milestone-recovery.sh" > "$shim_dir/lib/phase-detect-milestone-recovery.sh"
+  chmod +x "$shim_dir/lib/phase-detect-milestone-recovery.sh"
+
+  run bash "$shim_dir/phase-detect.sh"
+
+  [ "$status" -eq 0 ]
+  [ "$output" = "phase_detect_error=true" ]
+}
+
+@test "phase-detect emits only phase_detect_error=true when a library fails to source" {
+  local shim_dir="$TEST_TEMP_DIR/scripts-phase-detect-source-failure"
+  cp -R "$SCRIPTS_DIR" "$shim_dir"
+  printf 'return 23\n' > "$shim_dir/lib/phase-detect-support.sh"
 
   run bash "$shim_dir/phase-detect.sh"
 
