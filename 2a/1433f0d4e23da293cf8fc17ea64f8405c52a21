@@ -1,0 +1,27 @@
+scripts/lib/qa-result-gate-known-issues.sh
+  s_0825a35676f762::t_ba2e782fa25487 11,14
+  s_0825a35676f762::t_c578ef95d8880b 65
+references/execute-post-build-qa.md
+  s_0825a35676f762::t_bab43e67c01b4c 57
+  s_0825a35676f762::t_f6d3b7b584fe7e 90-91,94-95
+scripts/lib/qa-result-gate-fail-classifications.sh
+  s_0825a35676f762::t_adce1e0f1c1ae5 3,5,7-8,13-16,28-31,41-44,48,50-51,58-61
+scripts/qa-remediation-state.sh
+  s_0825a35676f762::t_080d691afb21eb 28-31
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "2a1433f0d4e23da293cf8fc17ea64f8405c52a21",
+  "prompts": {},
+  "sessions": {
+    "s_0825a35676f762": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "bdda186d-4444-4c1d-826e-ec4c6e54a197",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
