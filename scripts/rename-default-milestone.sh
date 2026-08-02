@@ -41,12 +41,6 @@ derive_slug() {
   local slug=""
 
   if [[ -f "$shipped" ]]; then
-    # Normalize em/en dashes to a plain hyphen via bash literal substitution
-    # rather than relying on awk/sed bracket expressions to match the
-    # multi-byte UTF-8 dash bytes: those are locale-sensitive and, under a
-    # non-UTF-8 LC_CTYPE (for example, an unset locale falling back to
-    # "C"), split each dash into stray bytes instead of matching it,
-    # leaving phase descriptions un-stripped from the derived slug.
     local shipped_content
     shipped_content=$(cat "$shipped")
     shipped_content="${shipped_content//—/-}"
@@ -68,7 +62,6 @@ derive_slug() {
     fi
 
     # Try 2: Extract phase names from "## Phases" section
-    # Handles both bulleted (- Phase N: Name) and numbered (N. **Name** - desc) formats
     if [[ -z "$slug" ]]; then
       local phases
       phases=$(printf '%s\n' "$shipped_content" | awk '

@@ -1,14 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# verify-commands-contract.sh — Structural + reference checks for all command files
-#
-# Checks each commands/*.md file for:
-# - YAML frontmatter
-# - name matches file basename (plugin auto-prefixes vbw:)
-# - single-line non-empty description
-# - allowed-tools field present
-# - `${CLAUDE_PLUGIN_ROOT}/...` references resolve to real files/dirs
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 COMMANDS_DIR="$ROOT/commands"
@@ -316,7 +308,6 @@ check_allowed_tool_match() {
 
 echo "=== Command Contract Verification ==="
 
-# Scan both commands/ (consumer-facing) and internal/ (maintainer-only)
 for file in "${TRACKED_COMMAND_MARKDOWN_FILES[@]}"; do
   base="$(basename "$file" .md)"
 
@@ -332,7 +323,6 @@ for file in "${TRACKED_COMMAND_MARKDOWN_FILES[@]}"; do
   fi
 
   NAME_VALUE="$(frontmatter_first_scalar "$FRONTMATTER" "name")"
-  # Strip vbw: prefix if present — plugin auto-prefixes the namespace
   NAME_STEM="${NAME_VALUE#vbw:}"
 
   if [ -z "$NAME_VALUE" ]; then
@@ -521,8 +511,8 @@ else
   fail "ask-user-question: missing intentional freeform boundary"
 fi
 
-if [ -f "$ASK_USER_QUESTION_REF" ] && grep -Fq '### Example — structured single-select' "$ASK_USER_QUESTION_REF" \
-  && grep -Fq '### Example — intentional freeform' "$ASK_USER_QUESTION_REF"; then
+if [ -f "$ASK_USER_QUESTION_REF" ] && grep -Eq '### Example[^[:alnum:]]+structured single-select' "$ASK_USER_QUESTION_REF" \
+  && grep -Eq '### Example[^[:alnum:]]+intentional freeform' "$ASK_USER_QUESTION_REF"; then
   pass "ask-user-question: includes structured and freeform examples"
 else
   fail "ask-user-question: missing structured/freeform example coverage"
@@ -542,7 +532,7 @@ else
   fail "ask-user-question: missing anti-patterns section"
 fi
 
-if [ -f "$ASK_USER_QUESTION_REF" ] && grep -Fq '### Example — decision gate' "$ASK_USER_QUESTION_REF"; then
+if [ -f "$ASK_USER_QUESTION_REF" ] && grep -Eq '### Example[^[:alnum:]]+decision gate' "$ASK_USER_QUESTION_REF"; then
   pass "ask-user-question: includes decision gate example"
 else
   fail "ask-user-question: missing decision gate example"
@@ -700,22 +690,14 @@ done
 echo ""
 echo "=== Milestone Context Verification ==="
 
-# Commands that reference milestone-scoped paths in their Steps section must have
-# either:
-# 1. The ACTIVE milestone shell interpolation in their Context section, OR
-# 2. Bash in allowed-tools (so the agent can read ACTIVE at runtime)
-# Without either, the agent has no way to discover the active milestone slug.
 for file in "${TRACKED_COMMAND_MARKDOWN_FILES[@]}"; do
   base="$(basename "$file" .md)"
 
-  # Extract body after frontmatter, excluding Context section (which contains the fix itself)
   body="$(awk '/^---$/{d++; next} d>=2' "$file")"
   body_no_context="$(printf '%s\n' "$body" | awk '/^## Context$/{skip=1; next} /^## /{skip=0} !skip')"
 
-  # ACTIVE-file milestone indirection was removed (architecture simplification).
-  # Commands should NOT reference .vbw-planning/ACTIVE anymore.
   if grep -qi '\.vbw-planning/ACTIVE' <<< "$body_no_context"; then
-    fail "$base: references .vbw-planning/ACTIVE — milestone indirection was removed"
+    fail "$base: references .vbw-planning/ACTIVE. milestone indirection was removed"
   else
     pass "$base: no stale ACTIVE file references"
   fi
@@ -724,21 +706,18 @@ done
 echo ""
 echo "=== Stale ACTIVE Reference Verification (scripts + references) ==="
 
-# Scan scripts and references for any runtime usage of .vbw-planning/ACTIVE
-# (session-start.sh is allowed — it only deletes the stale file)
 for scan_file in "${TRACKED_ACTIVE_SCAN_FILES[@]}"; do
   rel_scan_file="${scan_file#$ROOT/}"
   dir_label="${rel_scan_file%%/*}"
   scan_base="$(basename "$scan_file")"
 
-  # session-start.sh is allowed to reference ACTIVE (rm -f cleanup migration)
   if [[ "$scan_base" == "session-start.sh" ]]; then
     pass "$dir_label/$scan_base: ACTIVE reference allowed (cleanup migration)"
     continue
   fi
 
   if grep -qi '\.vbw-planning/ACTIVE' "$scan_file" 2>/dev/null; then
-    fail "$dir_label/$scan_base: references .vbw-planning/ACTIVE — milestone indirection was removed"
+    fail "$dir_label/$scan_base: references .vbw-planning/ACTIVE. milestone indirection was removed"
   else
     pass "$dir_label/$scan_base: no stale ACTIVE file references"
   fi
@@ -747,11 +726,6 @@ done
 echo ""
 echo "=== Phase-Detect Usage Verification ==="
 
-# Commands that present phase progress MUST use phase-detect.sh output for state
-# detection rather than having the LLM glob and compute state independently.
-# Without this, the LLM may read from archived milestone directories and present
-# stale data. Commands that read STATE.md/ROADMAP.md should also scope reads to
-# top-level .vbw-planning/ only (not milestones/).
 PHASE_DETECT_REQUIRED_COMMANDS="resume vibe discuss qa verify"
 for pd_cmd in $PHASE_DETECT_REQUIRED_COMMANDS; do
   pd_file="$COMMANDS_DIR/${pd_cmd}.md"
@@ -762,7 +736,7 @@ for pd_cmd in $PHASE_DETECT_REQUIRED_COMMANDS; do
   if grep -q 'phase-detect\.sh' "$pd_file"; then
     pass "$pd_cmd: uses phase-detect.sh for state detection"
   else
-    fail "$pd_cmd: missing phase-detect.sh — LLM may read archived milestone data"
+    fail "$pd_cmd: missing phase-detect.sh. LLM may read archived milestone data"
   fi
 done
 
@@ -1219,7 +1193,7 @@ QA_FILE="$COMMANDS_DIR/qa.md"
 if grep -Eq 'qa-remediation-state\.sh"? get' "$QA_FILE"; then
   pass "qa: resolves remediation state before choosing verification output path"
 else
-  fail "qa: missing qa-remediation-state.sh get — standalone QA may overwrite phase-level verification"
+  fail "qa: missing qa-remediation-state.sh get. standalone QA may overwrite phase-level verification"
 fi
 
 if grep -q 'first_qa_attention_phase' "$QA_FILE" && grep -q 'qa_attention_status' "$QA_FILE"; then
@@ -1522,7 +1496,7 @@ else
   fail "execute-protocol: missing faux-team Agent prohibition"
 fi
 
-if grep -q '⚠ Agent Teams not enabled — using non-team mode' "$ROOT/references/execute-protocol.md"; then
+if grep -Eq 'Agent Teams not enabled.{1,3}using non-team mode' "$ROOT/references/execute-protocol.md"; then
   pass "execute-protocol: pins explicit non-team fallback warning text"
 else
   fail "execute-protocol: missing explicit non-team fallback warning text"
@@ -1553,7 +1527,6 @@ else
   fail "vibe: missing execute invariant for real-team vs explicit fallback"
 fi
 
-# vibe.md must reference qa-result-gate.sh at both gate call sites (primary + remediation verify)
 _vibe_gate_count=$(grep -c 'qa-result-gate\.sh' "$VIBE_FILE" 2>/dev/null || echo 0)
 if [ "$_vibe_gate_count" -ge 2 ]; then
   pass "vibe: references qa-result-gate.sh at $_vibe_gate_count call sites"
@@ -1561,7 +1534,6 @@ else
   fail "vibe: expected >=2 qa-result-gate.sh references, found $_vibe_gate_count"
 fi
 
-# execute-protocol.md must reference qa-result-gate.sh at both call sites
 _ep_gate_count=$(grep -c 'qa-result-gate\.sh' "$ROOT/references/execute-protocol.md" 2>/dev/null || echo 0)
 if [ "$_ep_gate_count" -ge 2 ]; then
   pass "execute-protocol: references qa-result-gate.sh at $_ep_gate_count call sites"
@@ -1569,7 +1541,6 @@ else
   fail "execute-protocol: expected >=2 qa-result-gate.sh references, found $_ep_gate_count"
 fi
 
-# Both must include the anti-rationalization instruction at all gate call sites
 for f in "$VIBE_FILE" "$ROOT/references/execute-protocol.md"; do
   if [ "$f" = "$VIBE_FILE" ]; then
     base="vibe.md"
@@ -1587,10 +1558,6 @@ done
 echo ""
 echo "=== Allowed-Tools Consistency Verification ==="
 
-# Commands that reference specific tool names in their body must include those
-# tools in their allowed-tools frontmatter. Keep these checks exact-pattern and
-# low-noise: match real tool-call syntax or explicit tool names, not generic
-# prose about "skills" or "search".
 for file in "${TRACKED_COMMAND_MARKDOWN_FILES[@]}"; do
   base="$(basename "$file" .md)"
 
@@ -1613,9 +1580,6 @@ for file in "${TRACKED_COMMAND_MARKDOWN_FILES[@]}"; do
   check_allowed_tool_match "$base" "$ALLOWED" "$file" "SendMessage" '(^|[^[:alnum:]_])SendMessage([^[:alnum:]_]|$)' 'do[[:space:]]+not.*SendMessage'
 done
 
-# Regression guards for prompt-text tool references that previously slipped
-# through the generic matcher. Keep these explicit until the generic helper is
-# proven to catch them in all command bodies.
 for skill_cmd in debug fix map qa research vibe; do
   skill_file="$COMMANDS_DIR/${skill_cmd}.md"
   [ -f "$skill_file" ] || continue
@@ -1646,13 +1610,11 @@ echo "=== Command Reference Verification ==="
 while IFS= read -r ref; do
   rel="${ref#\$\{CLAUDE_PLUGIN_ROOT\}/}"
 
-  # Template placeholders like {profile} are dynamic by design.
   if [[ "$rel" == *"{"* || "$rel" == *"}"* ]]; then
     pass "reference uses template placeholder (skipped): $ref"
     continue
   fi
 
-  # Wildcard references must match at least one file.
   if [[ "$rel" == *"*"* ]]; then
     if compgen -G "$ROOT/$rel" >/dev/null; then
       pass "wildcard reference resolves: $ref"
@@ -1669,11 +1631,8 @@ while IFS= read -r ref; do
   fi
 done < <(grep -RhoE '\$\{CLAUDE_PLUGIN_ROOT\}/[A-Za-z0-9._/*{}-]+' "${TRACKED_COMMAND_MARKDOWN_FILES[@]}" 2>/dev/null | sort -u)
 
-# ── UAT Remediation step 4 must use TodoWrite (not generic "task list") ──
 echo ""
 echo "--- UAT Remediation TodoWrite disambiguation ---"
-# Extract the UAT Remediation section body (between its header and the next ### Mode:)
-# Match step 4's heading specifically — not just any "TodoWrite progress list" in the section
 uat_section="$(
   awk '
     /^### Mode: UAT Remediation$/ { in_section=1; next }
@@ -1684,7 +1643,7 @@ uat_section="$(
 if grep -q '\*\*TodoWrite progress list (NON-NEGOTIABLE' <<< "$uat_section"; then
   pass "UAT Remediation step 4 explicitly references TodoWrite"
 else
-  fail "UAT Remediation step 4 missing 'TodoWrite progress list' heading — risk of TaskCreate conflation (see issue #367)"
+  fail "UAT Remediation step 4 missing 'TodoWrite progress list' heading. risk of TaskCreate conflation (see issue #367)"
 fi
 
 if contains_literal "$uat_section" 'TodoWrite is the only progress tracker for these stages'; then

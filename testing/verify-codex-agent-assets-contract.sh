@@ -92,20 +92,17 @@ expected_skills=(
   vbw-qa-investigator
 )
 
-# .agents/skills/ is local-only dev config (untracked since b87f1471) and is
-# not copied into fresh `git worktree add` checkouts, which only populate
-# tracked files. Skip these file-presence checks there instead of failing.
 if [ -d "$SKILL_DIR" ]; then
 
   for skill in "${expected_skills[@]}"; do
     skill_file="$SKILL_DIR/$skill/SKILL.md"
     metadata_file="$SKILL_DIR/$skill/agents/openai.yaml"
-  
+
     require_file "$skill_file" "skill $skill SKILL.md"
     require_file "$metadata_file" "skill $skill openai metadata"
     [ -f "$skill_file" ] || continue
     [ -f "$metadata_file" ] || continue
-  
+
     require_contains "$skill_file" '^---$' "$skill has YAML frontmatter boundary"
     require_contains "$skill_file" "^name: $skill$" "$skill has matching skill name"
     require_contains "$skill_file" '^description: .+' "$skill has description"

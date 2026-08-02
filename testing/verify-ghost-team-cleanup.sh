@@ -239,25 +239,29 @@ test_exec_protocol_pre_teamcreate_cleanup() {
   fi
 }
 
-test_vibe_no_team_in_plan_mode() {
-  if grep -q 'No team creation in Plan mode' "$ROOT/commands/vibe.md"; then
-    pass "vibe.md enforces no team creation in Plan mode"
+test_vibe_plan_team_boundary() {
+  if grep -q 'Team creation in Plan mode is limited to the step 3 RESEARCH fan-out' "$ROOT/commands/vibe.md" \
+    && grep -q 'Lead is always a single plain subagent' "$ROOT/commands/vibe.md"; then
+    pass "vibe.md limits Plan mode teams to research fan-out"
   else
-    fail "vibe.md missing 'No team creation in Plan mode' statement"
+    fail "vibe.md missing Plan research team boundary"
   fi
 }
 
-test_vibe_no_team_machinery_in_plan() {
+test_vibe_plan_research_cleanup() {
   local plan_section
   plan_section=$(sed -n '/^### Mode: Plan$/,/^### Mode:/p' "$ROOT/commands/vibe.md")
   if [ -z "$plan_section" ]; then
     fail "Could not extract Plan mode section from vibe.md (heading format may have changed)"
     return
   fi
-  if grep -q 'TeamCreate' <<<"$plan_section" || grep -q 'TeamDelete' <<<"$plan_section"; then
-    fail "vibe.md Plan mode section still references TeamCreate/TeamDelete"
+  if grep -q 'The team forms when the first teammate is spawned via the Agent tool' <<<"$plan_section" \
+    && grep -q 'There is no TeamCreate setup step' <<<"$plan_section" \
+    && grep -q 'Send `shutdown_request` to every teammate' <<<"$plan_section" \
+    && grep -q 'There is no TeamDelete call' <<<"$plan_section"; then
+    pass "vibe.md brackets implicit Plan research teams with automatic cleanup"
   else
-    pass "vibe.md Plan mode section has no team machinery"
+    fail "vibe.md Plan research fan-out lacks implicit formation or automatic cleanup guidance"
   fi
 }
 
@@ -460,8 +464,8 @@ test_doctor_scan_reports_orphaned
 test_doctor_scan_skips_non_vbw_orphan
 test_exec_protocol_post_teamdelete_cleanup
 test_exec_protocol_pre_teamcreate_cleanup
-test_vibe_no_team_in_plan_mode
-test_vibe_no_team_machinery_in_plan
+test_vibe_plan_team_boundary
+test_vibe_plan_research_cleanup
 test_debug_prefer_teams_never
 test_map_prefer_teams_never
 test_map_post_teamdelete_cleanup

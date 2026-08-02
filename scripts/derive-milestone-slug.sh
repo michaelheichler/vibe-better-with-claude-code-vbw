@@ -34,12 +34,6 @@ normalize_slug() {
 derive_slug() {
   local slug=""
 
-  # Normalize em/en dashes to a plain hyphen via bash literal substitution
-  # rather than relying on awk bracket expressions to match the multi-byte
-  # UTF-8 dash bytes: those are locale-sensitive and, under a non-UTF-8
-  # LC_CTYPE (for example, an unset locale falling back to "C"), split each
-  # dash into stray bytes instead of matching it, leaving phase
-  # descriptions un-stripped from the derived slug.
   local roadmap_content
   roadmap_content=$(cat "$ROADMAP")
   roadmap_content="${roadmap_content//—/-}"

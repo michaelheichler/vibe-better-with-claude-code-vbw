@@ -119,7 +119,7 @@ Before running any database command that modifies schema or data:
 ## Constraints
 Before each task: if `.vbw-planning/.compaction-marker` exists, re-read PLAN.md from disk (compaction occurred). If no marker: use plan already in context. If marker check fails: re-read (conservative default). When in doubt, re-read. First task always reads from disk (initial load). Progress = `git log --oneline`. No subagents.
 
-Your frontmatter denylist explicitly bans recursive delegation and user-question tools: `Task`, `TaskCreate`, `Agent`, and `AskUserQuestion`. Do not form an agent team (do not spawn teammates). Do not ask the orchestrator to enable these tools and do not simulate subagent/team behavior through other tools. Use the listed implementation tools directly. Use `SendMessage` for teammate protocol messages and `TaskGet` only for the blocker self-start checks described in the Blocked Task Self-Start section.
+Your frontmatter denylist explicitly bans recursive delegation and user-question tools: `Task`, `TaskCreate`, `Agent`, and `AskUserQuestion`. Do not form an agent team (do not spawn teammates). Do not ask the orchestrator to enable these tools and do not simulate subagent or team behavior through other tools. Use the listed implementation tools directly. Use `SendMessage` for teammate protocol messages and `TaskGet` only for the blocker self-start checks described in the Blocked Task Self-Start section.
 
 ## V2 Role Isolation (always enforced)
 - You may ONLY write files listed in the active contract's `allowed_paths`. File-guard hook enforces this.

@@ -30,8 +30,10 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-# shellcheck source=lib/vbw-cache-key.sh
-. "$SCRIPT_DIR/lib/vbw-cache-key.sh"
+CACHE_KEY_LIB="$SCRIPT_DIR/lib/vbw-cache-key.sh"
+hash_path() {
+  bash -c '. "$1"; vbw_hash_path "$2"' _ "$CACHE_KEY_LIB" "$1"
+}
 
 LABELED=""
 [ "${1:-}" = "--labeled" ] && LABELED="1"
@@ -57,13 +59,12 @@ if [ -n "$CLAUDE_BIN" ]; then
 fi
 
 SRC="bin:${CLAUDE_BIN:-none}:${BIN_STAMP}|${AUTH:+$BASE}"
-CACHE="/tmp/vbw-models-$(vbw_hash_path "$SRC")${LABELED:+-labeled}"
+CACHE="/tmp/vbw-models-$(hash_path "$SRC")${LABELED:+-labeled}"
 if [ -f "$CACHE" ] && [ -n "$(find "$CACHE" -mmin -60 2>/dev/null)" ]; then
   cat "$CACHE"
   exit 0
 fi
 
-# No source at all, so caching nothing would hide a later install.
 if [ -z "$CLAUDE_BIN" ] && [ -z "$AUTH" ]; then
   exit 0
 fi
@@ -71,14 +72,11 @@ fi
 ENTRY='\{value:"[^"]+",label:"[^"]+",description:"[^"]+"\}'
 
 extract_binary() {
-  # Historic ids carry no alias entry, which keeps this precise across versions.
   grep -aoE '(opus|sonnet|haiku|fable|default):"claude-[a-z0-9-]+"' "$CLAUDE_BIN" 2>/dev/null \
     | sed 's/^[a-z]*:"//; s/"$//; s/$/\tClaude (built-in)/' || true
-  # The .forEach anchor keeps unrelated UI menus of the same shape out.
   grep -aoE "${ENTRY}(,${ENTRY})*\]\.forEach" "$CLAUDE_BIN" 2>/dev/null \
     | grep -aoE 'value:"[^"]+",label:"[^"]+",description:"[^"]+"' \
     | sed 's/^value:"//; s/",label:"[^"]*",description:"/\t/; s/"$//' || true
-  # The token regex drops prose fragments that survive the semicolon split.
   grep -aoE 'Additional custom models: [^`"]+' "$CLAUDE_BIN" 2>/dev/null \
     | sed 's/^Additional custom models: //; s/\.$//' | tr ';' '\n' \
     | sed 's/^ *//; s/ = /\t/' | grep -E '^[A-Za-z0-9._:/[-]+(\[1m\])?\t' || true
@@ -93,7 +91,6 @@ fetch_endpoint() {
   else
     return 0
   fi
-  # Auth header via --config on stdin so the key never hits argv.
   { curl -fsS --max-time 2 --config - "$BASE/v1/models?limit=1000" 2>/dev/null <<EOF || true
 header = "$auth"
 header = "anthropic-version: 2023-06-01"

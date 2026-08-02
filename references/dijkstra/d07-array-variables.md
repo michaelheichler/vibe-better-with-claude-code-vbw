@@ -76,9 +76,9 @@ All modifier semantics follow one scheme: `wp("ax:op", R) = (domain conditions) 
 shift:
 ```
 wp("ax:shift(E)", R) = R[ax := ax']  where
-  ax'.lob = ax.lob + E,  ax'.dom = ax.dom,  ax'(arg) = ax(arg - E)
+  ax'.lob = ax.lob + E,  ax'.dom = ax.dom,  ax'(arg) = ax(arg-E)
 ```
-(Equivalently: replace `ax.lob` by `ax.lob + E` and `ax(arg)` by `ax(arg - E)` throughout R.) If E itself depends on ax, first compute wp with a fresh name K, then substitute E for K, the same trick as for `x := x + f(x)`.
+(Equivalently: replace `ax.lob` by `ax.lob + E` and `ax(arg)` by `ax(arg-E)` throughout R.) If E itself depends on ax, first compute wp with a fresh name K, then substitute E for K, the same trick as for `x := x + f(x)`.
 
 hiext (loext is the mirror image at the low end):
 ```
@@ -91,7 +91,7 @@ wp("ax:hiext(x)", R) = R[ax := ax']  where
 hirem (lorem mirrors at the low end):
 ```
 wp("ax:hirem", R) = ax.dom > 0 and R[ax := ax']  where
-  ax'.hib = ax.hib - 1,  ax'.dom = ax.dom - 1
+  ax'.hib = ax.hib-1,  ax'.dom = ax.dom-1
   ax'(arg) = ax(arg) for arg != ax.hib, undefined at ax.hib
 ```
 

@@ -1,6 +1,6 @@
 # Model Profiles
 
-**Purpose:** choose a model and a reasoning effort for each of VBW's 7 agents (Lead, Dev, QA, Scout, Debugger, Architect, Docs).
+**Purpose:** choose a model and a reasoning effort for each of VBW's 8 agents (Lead, Dev, QA, QA Author, Scout, Debugger, Architect, Docs). QA Author follows the QA route.
 
 Two independent axes. **Model** decides which engine runs the role. **Reasoning effort** decides how hard that engine thinks. A strong model at `medium` often beats a weaker model at its default, so reach for the effort dial before downgrading the model.
 

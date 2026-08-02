@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Dependency-aware Execute routing contract.
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 HELPER="$ROOT/scripts/resolve-execute-delegation-mode.sh"
@@ -244,7 +243,6 @@ TMPDIR_BASE=$(mktemp -d)
 
 echo "=== Execute Delegation Routing Contract Tests ==="
 
-# auto + linear two-plan chain -> subagent
 make_fixture linear '"auto"' balanced
 write_state '{"plans":[{"id":"01-01","status":"pending"},{"id":"01-02","status":"pending"}],"effort":"balanced","phase_effort":"balanced"}'
 write_plan_inline 01-01-PLAN.md 01 01 '[]'
@@ -254,7 +252,6 @@ assert_eq "$(json_field "$out" '.delegation_mode')" "subagent" "auto + linear gr
 assert_eq "$(json_field "$out" '.max_parallel_width')" "1" "auto + linear graph has max_parallel_width=1"
 assert_json_array_eq "$(jq -c '.dependency_waves' <<< "$out")" '[["01-01"],["01-02"]]' "auto + linear graph waves are serialized"
 
-# auto + two independent delegate plans -> team
 make_fixture independent '"auto"' balanced
 write_state '{"plans":[{"id":"01-01","status":"pending"},{"id":"01-02","status":"pending"}],"effort":"balanced","phase_effort":"balanced"}'
 write_plan_inline 01-01-PLAN.md 01 01 '[]'
@@ -323,7 +320,6 @@ unset TEST_TEAM_CAPABILITY
 assert_json_array_eq "$(jq -c '[.segments[].delegation_mode]' <<< "$out")" '["subagent"]' "disabled teams downgrade team segments"
 assert_eq "$(json_field "$out" '.segments[0].delegation_blocked_reason')" "teams_disabled:env_disabled" "disabled team segments expose the capability reason"
 
-# auto + completed prerequisite unlocks two delegate plans -> team
 make_fixture completed-prereq '"auto"' balanced
 write_state '{"plans":[{"id":"01-01","status":"complete"},{"id":"01-02","status":"pending"},{"id":"01-03","status":"pending"}],"effort":"balanced","phase_effort":"balanced"}'
 write_plan_inline 01-01-PLAN.md 01 01 '[]'
@@ -333,7 +329,6 @@ out=$(run_helper)
 assert_eq "$(json_field "$out" '.delegation_mode')" "team" "completed prerequisite unlocks two delegate plans -> team"
 assert_eq "$(json_field "$out" '.max_parallel_width')" "2" "completed prerequisite graph has delegate width 2"
 
-# auto + partial prerequisite unlocks dependent delegate plans
 make_fixture partial-prereq '"auto"' balanced
 write_state '{"plans":[{"id":"01-01","status":"partial"},{"id":"01-02","status":"pending"},{"id":"01-03","status":"pending"}],"effort":"balanced","phase_effort":"balanced"}'
 write_plan_inline 01-01-PLAN.md 01 01 '[]'
@@ -343,14 +338,12 @@ out=$(run_helper)
 assert_eq "$(json_field "$out" '.delegation_mode')" "team" "partial prerequisite unlocks dependent delegate plans for routing"
 assert_json_array_eq "$(jq -c '.completed_satisfied_nodes' <<< "$out")" '["01-01"]' "partial prerequisite is reported as execute-satisfied"
 
-# auto + single pending delegate plan -> subagent
 make_fixture single '"auto"' balanced
 write_state '{"plans":[{"id":"01-01","status":"pending"}],"effort":"balanced","phase_effort":"balanced"}'
 write_plan_inline 01-01-PLAN.md 01 01 '[]'
 out=$(run_helper)
 assert_eq "$(json_field "$out" '.delegation_mode')" "subagent" "auto + single pending delegate plan -> subagent"
 
-# never + independent delegate plans -> subagent
 make_fixture never '"never"' balanced
 write_state '{"plans":[{"id":"01-01","status":"pending"},{"id":"01-02","status":"pending"}],"effort":"balanced","phase_effort":"balanced"}'
 write_plan_inline 01-01-PLAN.md 01 01 '[]'
@@ -358,7 +351,6 @@ write_plan_inline 01-02-PLAN.md 01 02 '[]'
 out=$(run_helper)
 assert_eq "$(json_field "$out" '.delegation_mode')" "subagent" "prefer_teams=never + independent plans -> subagent"
 
-# always + linear delegate chain -> team unless excluded by turbo/direct
 make_fixture always-linear '"always"' balanced
 write_state '{"plans":[{"id":"01-01","status":"pending"},{"id":"01-02","status":"pending"}],"effort":"balanced","phase_effort":"balanced"}'
 write_plan_inline 01-01-PLAN.md 01 01 '[]'
@@ -366,7 +358,6 @@ write_plan_inline 01-02-PLAN.md 01 02 '["01-01"]'
 out=$(run_helper)
 assert_eq "$(json_field "$out" '.delegation_mode')" "team" "prefer_teams=always overrides delegate width for linear delegate graph"
 
-# execution-state effort turbo overrides balanced config and bypasses team selection
 make_fixture state-turbo '"always"' balanced
 write_state '{"plans":[{"id":"01-01","status":"pending"},{"id":"01-02","status":"pending"}],"effort":"turbo","phase_effort":"balanced"}'
 write_plan_inline 01-01-PLAN.md 01 01 '[]'
@@ -376,7 +367,6 @@ assert_eq "$(json_field "$out" '.effective_effort')" "turbo" "execution-state ef
 assert_eq "$(json_field "$out" '.delegation_mode')" "direct" "phase-level turbo bypasses team selection"
 assert_eq "$(json_field "$out" '.requested_mode')" "turbo" "phase-level turbo reports requested_mode=turbo"
 
-# single-plan smart-routed turbo bypasses always team override
 make_fixture smart-turbo '"always"' balanced
 write_state '{"plans":[{"id":"01-01","status":"pending"}],"effort":"balanced","phase_effort":"balanced"}'
 write_plan_inline 01-01-PLAN.md 01 01 '[]'
@@ -385,7 +375,6 @@ out=$(run_helper --route-map .vbw-planning/.cache/execute-route-map.json)
 assert_eq "$(json_field "$out" '.delegation_mode')" "direct" "smart-routed turbo plan bypasses team even with prefer_teams=always"
 assert_json_array_eq "$(jq -c '.turbo_plan_ids' <<< "$out")" '["01-01"]' "smart-routed turbo plan is reported"
 
-# mixed routing: one turbo + one delegate -> no team for single delegate
 make_fixture mixed-single-delegate '"auto"' balanced
 write_state '{"plans":[{"id":"01-01","status":"pending"},{"id":"01-02","status":"pending"}],"effort":"balanced","phase_effort":"balanced"}'
 write_plan_inline 01-01-PLAN.md 01 01 '[]'
@@ -395,7 +384,6 @@ out=$(run_helper --route-map .vbw-planning/.cache/execute-route-map.json)
 assert_eq "$(json_field "$out" '.delegate_count')" "1" "mixed turbo/delegate counts one delegate-eligible plan"
 assert_eq "$(json_field "$out" '.delegation_mode')" "subagent" "mixed turbo + single delegate does not create team"
 
-# mixed routing: direct excluded + two delegates independent -> team
 make_fixture mixed-two-delegates '"auto"' balanced
 write_state '{"plans":[{"id":"01-01","status":"pending"},{"id":"01-02","status":"pending"},{"id":"01-03","status":"pending"}],"effort":"balanced","phase_effort":"balanced"}'
 write_plan_inline 01-01-PLAN.md 01 01 '[]'
@@ -406,7 +394,6 @@ out=$(run_helper --route-map .vbw-planning/.cache/execute-route-map.json)
 assert_eq "$(json_field "$out" '.delegate_count')" "2" "mixed direct/delegate counts two delegate-eligible plans"
 assert_eq "$(json_field "$out" '.delegation_mode')" "team" "mixed direct + two independent delegates creates team"
 
-# segment transitions: team -> direct, direct -> team, team -> subagent
 make_fixture segment-team-direct '"auto"' balanced
 write_state '{"plans":[{"id":"01-01","status":"pending"},{"id":"01-02","status":"pending"},{"id":"01-03","status":"pending"}],"effort":"balanced","phase_effort":"balanced"}'
 write_plan_inline 01-01-PLAN.md 01 01 '[]'
@@ -433,7 +420,6 @@ write_plan_inline 01-03-PLAN.md 01 03 '["01-01", "01-02"]'
 out=$(run_helper --segments)
 assert_json_array_eq "$(jq -c '[.segments[].delegation_mode]' <<< "$out")" '["team","subagent"]' "segments can transition team -> subagent"
 
-# invalid dependency graphs fail closed
 make_fixture cyclic '"auto"' balanced
 write_state '{"plans":[{"id":"01-01","status":"pending"},{"id":"01-02","status":"pending"}],"effort":"balanced","phase_effort":"balanced"}'
 write_plan_inline 01-01-PLAN.md 01 01 '["01-02"]'
@@ -450,7 +436,6 @@ write_state '{"plans":[{"id":"01-02","status":"pending"}],"effort":"balanced","p
 write_plan_inline 01-02-PLAN.md 01 03 '[]'
 expect_helper_failure "frontmatter plan mismatch fails closed with invalid_dependency_graph"
 
-# malformed execution-state / route-map schemas fail closed before spawning
 make_fixture valid-empty-plans '"auto"' balanced
 write_state '{"plans":[],"effort":"balanced","phase_effort":"balanced"}'
 out=$(run_helper)
@@ -498,7 +483,6 @@ write_plan_inline 01-01-PLAN.md 01 01 '[]'
 printf '{"plans":{"01-01":{"route":"parallel"}}}\n' > "$FIXTURE/.vbw-planning/.cache/execute-route-map.json"
 expect_helper_failure "invalid route-map route fails closed with invalid_dependency_graph" --route-map .vbw-planning/.cache/execute-route-map.json
 
-# prefer_teams canonicalization, including legacy aliases only in tests/helper code
 for raw in '"when_parallel"' 'false' 'null' '""'; do
   make_fixture "canon-$raw" "$raw" balanced
   write_state '{"plans":[{"id":"01-01","status":"pending"},{"id":"01-02","status":"pending"}],"effort":"balanced","phase_effort":"balanced"}'
@@ -524,7 +508,6 @@ assert_eq "$(json_field "$out" '.prefer_teams')" "surprise" "unknown prefer_team
 assert_eq "$(json_field "$out" '.delegation_mode')" "subagent" "unknown prefer_teams value returns subagent"
 assert_eq "$(json_field "$out" '.reason')" "unknown_prefer_teams:surprise" "unknown prefer_teams emits diagnostic reason"
 
-# Path resolution and dependency parser forms
 make_fixture path-parser '"auto"' balanced
 write_state '{"plans":[{"id":"01-01","status":"pending"},{"id":"01-02","status":"pending"},{"id":"01-03","status":"pending"}],"effort":"balanced","phase_effort":"balanced"}'
 write_plan_inline 01-01-PLAN.md 01 01 '[]'
@@ -556,7 +539,6 @@ PLAN
 contract_deps=$(jq -c '.depends_on' "$CONTRACT_FIXTURE/.vbw-planning/.contracts/3-4.json")
 assert_json_array_eq "$contract_deps" '["03-01","03-02","custom-id"]' "generate-contract retains normalized string dependency edges"
 
-# state-updater: nonterminal/missing SUMMARY status must not mark complete or unlock dependents
 STATE_FIXTURE="$TMPDIR_BASE/state-updater"
 STATE_PHASE="$STATE_FIXTURE/.vbw-planning/phases/01-test"
 mkdir -p "$STATE_PHASE"
@@ -585,7 +567,6 @@ state_status=$(jq -r '.plans[] | select(.id == "01-01") | .status' "$STATE_FIXTU
 assert_eq "$state_status" "partial" "state-updater writes verified terminal partial status"
 assert_eq "$(jq -r '.session_id' "$STATE_FIXTURE/.vbw-planning/.execution-state.json")" "session-owner" "state-updater records the owning session"
 
-# Protocol text invariants
 if grep -q 'resolve-execute-delegation-mode\.sh' "$EXECUTE_PROTOCOL"; then
   pass "execute-protocol references resolve-execute-delegation-mode.sh"
 else
@@ -653,7 +634,7 @@ if grep -Fq '**Spawn-shape rule (applies to both non-team and true-team spawns):
   && grep -Fq 'whether the live tool is `Agent` or `TaskCreate`' "$EXECUTE_PROTOCOL" \
   && grep -Fq 'never set Claude-side `isolation:"worktree"` or pass a `cwd` pointing into `.claude/worktrees/...` or `.vbw-worktrees/...`' "$EXECUTE_PROTOCOL" \
   && grep -Fq 'agent-spawn-guard.sh` validates these isolation/cwd fields before it branches on delegation mode' "$EXECUTE_PROTOCOL" \
-  && grep -Fq 'non-team spawns must omit `team_name` and `run_in_background`; `name` is optional label-only metadata' "$EXECUTE_PROTOCOL" \
+  && grep -Eq 'non-team spawns must omit `team_name` and `run_in_background`[.;:][[:space:]]+`name` is optional label-only metadata' "$EXECUTE_PROTOCOL" \
   && grep -Fq 'must never be used for routing, lifecycle state, or team semantics' "$EXECUTE_PROTOCOL" \
   && grep -Fq 'Prepared VBW worktree targeting means the `Working directory:` and `Worktree targeting:` lines in the task description' "$EXECUTE_PROTOCOL" \
   && grep -Fq '`.execution-state.json` `worktree_path` and `scripts/worktree-target.sh`' "$EXECUTE_PROTOCOL" \

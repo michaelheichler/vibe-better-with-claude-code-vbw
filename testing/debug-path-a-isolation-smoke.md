@@ -19,7 +19,7 @@ Use this when you need reviewer-verifiable evidence for debug-investigator isola
 
 1. `/vbw:debug` enters **Competing Hypotheses (3 parallel)**.
 2. Three hypothesis investigators are spawned as `vbw:vbw-debugger` teammates.
-3. All three investigators report, receive shutdown requests, and the orchestrator runs Post-shutdown residual cleanup (the team config directory is removed automatically when the session exits; there is no TeamDelete call).
+3. All three investigators report, receive shutdown requests, and the orchestrator runs Post-shutdown residual cleanup (the team config directory is removed automatically when the session exits. There is no TeamDelete call).
 4. No post-synthesis implementation owner is spawned.
 5. Through the investigation and teardown checkpoint, the **source tree** remains unchanged.
 
@@ -27,7 +27,7 @@ Use this when you need reviewer-verifiable evidence for debug-investigator isola
 
 1. `/vbw:debug` enters **Competing Hypotheses (3 parallel)**.
 2. Three hypothesis investigators are spawned as `vbw:vbw-debugger` teammates.
-3. All three investigators report, receive shutdown requests, and the orchestrator runs Post-shutdown residual cleanup (the team config directory is removed automatically when the session exits; there is no TeamDelete call).
+3. All three investigators report, receive shutdown requests, and the orchestrator runs Post-shutdown residual cleanup (the team config directory is removed automatically when the session exits. There is no TeamDelete call).
 4. Only **after** teardown does the orchestrator spawn one fresh post-synthesis implementation owner.
 5. That fresh implementation owner is the only actor that changes project source files.
 

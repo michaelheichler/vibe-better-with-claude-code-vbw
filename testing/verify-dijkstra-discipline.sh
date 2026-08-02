@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Contract test for the Dijkstra correctness discipline wiring (router doc, briefs, Dev/QA/Lead guidance).
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 
@@ -20,7 +19,6 @@ fail() {
 
 echo "=== Dijkstra Correctness Discipline Verification ==="
 
-# --- Router document ---
 
 ROUTER="$ROOT/references/dijkstra/DISCIPLINE.md"
 
@@ -58,7 +56,6 @@ else
   fail "router doc missing the 1-3 brief loading budget"
 fi
 
-# --- Routing table paths resolve to real brief files ---
 
 echo ""
 echo "--- Routing table path checks ---"
@@ -83,7 +80,6 @@ if [[ "$MISSING" -eq 0 && "$BRIEF_COUNT" -gt 0 ]]; then
   pass "all routing table paths resolve to files on disk"
 fi
 
-# Every brief on disk must be reachable from the routing table.
 while IFS= read -r brief; do
   name="$(basename "$brief")"
   if ! grep -q "$name" "$ROUTER" 2>/dev/null; then
@@ -92,7 +88,6 @@ while IFS= read -r brief; do
 done < <(find "$ROOT/references/dijkstra" -name '[ds][0-9][0-9]-*.md' 2>/dev/null)
 pass "brief-to-routing-table reachability scan completed"
 
-# --- Dev agent wiring ---
 
 echo ""
 echo "--- Dev agent checks ---"
@@ -130,7 +125,6 @@ else
   fail "dev: description missing the Dijkstra correctness discipline clause"
 fi
 
-# --- QA agent wiring ---
 
 echo ""
 echo "--- QA agent checks ---"
@@ -162,7 +156,6 @@ else
   fail "qa: missing Grounding line check"
 fi
 
-# --- Lead plan-time flag and execute-protocol mirror ---
 
 echo ""
 echo "--- Lead and execute-protocol checks ---"
@@ -182,7 +175,6 @@ else
   fail "execute-protocol: missing the correctness: dijkstra flag paragraph"
 fi
 
-# The mirrored sentence must stay identical in both files.
 SYNC_SENTENCE='Dev engages `references/dijkstra/DISCIPLINE.md` and QA verifies the invariant/variant reasoning'
 if grep -qF "$SYNC_SENTENCE" "$LEAD" && grep -qF "$SYNC_SENTENCE" "$PROTO"; then
   pass "lead/execute-protocol: mirrored flag sentence in sync"
@@ -190,7 +182,6 @@ else
   fail "lead/execute-protocol: mirrored flag sentence out of sync"
 fi
 
-# --- Summary ---
 
 echo ""
 echo "==============================="

@@ -50,10 +50,9 @@ AGENT_SKILL_CONTRACT_FILES=(
   "$ROOT/agents/vbw-docs.md"
 )
 
-IFS= read -r -d '' SKILL_FOLLOW_UP_SENTENCE <<'EOF' || true
-After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting. Do not scan entire skill folders or read unrelated references.
-EOF
-SKILL_FOLLOW_UP_SENTENCE=${SKILL_FOLLOW_UP_SENTENCE%$'\n'}
+SKILL_FOLLOW_UP_PREFIX="After calling \`Skill(...)\`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting"
+SKILL_FOLLOW_UP_SUFFIX="do not scan entire skill folders or read unrelated references."
+SKILL_FOLLOW_UP_SEPARATOR_RE='acting.{1,3}[Dd]o not scan'
 
 SKILL_FOLLOW_UP_BLOCK_OPEN='<skill_follow_up_files>'
 
@@ -331,7 +330,7 @@ verify_payload_prefix_block() {
 
   close_line=$(printf '%s\n' "$block_content" | awk -v tag="$close_tag" 'index($0, tag) { print NR; exit }')
   if [ -n "$close_line" ]; then
-    sentence_line=$(printf '%s\n' "$block_content" | awk -v needle="$SKILL_FOLLOW_UP_SENTENCE" -v after="$close_line" 'NR > after && index($0, needle) { print NR; exit }')
+    sentence_line=$(printf '%s\n' "$block_content" | awk -v prefix="$SKILL_FOLLOW_UP_PREFIX" -v suffix="$SKILL_FOLLOW_UP_SUFFIX" -v separator="$SKILL_FOLLOW_UP_SEPARATOR_RE" -v after="$close_line" 'NR > after && index($0, prefix) && index(tolower($0), suffix) && $0 ~ separator { print NR; exit }')
   else
     sentence_line=""
   fi
@@ -1702,12 +1701,12 @@ for agent_file in "${AGENT_SKILL_CONTRACT_FILES[@]}"; do
   fi
 done
 
-# architect has no per-task execution loop to repeat the nudge in, so one occurrence is correct rather than missing.
 for agent_file in "${AGENT_SKILL_CONTRACT_FILES[@]}"; do
   agent_name=$(basename "$agent_file")
   required_count=2
+  # Architect has no per-task execution loop, so one planning nudge is sufficient.
   [ "$agent_name" = "vbw-architect.md" ] && required_count=1
-  if [ "$(grep -Fc "$SKILL_FOLLOW_UP_SENTENCE" "$agent_file")" -ge "$required_count" ]; then
+  if [ "$(grep -F "$SKILL_FOLLOW_UP_PREFIX" "$agent_file" | grep -Fi "$SKILL_FOLLOW_UP_SUFFIX" | grep -Ec "$SKILL_FOLLOW_UP_SEPARATOR_RE")" -ge "$required_count" ]; then
     pass "$agent_name: has runtime-local follow-up read nudge"
   else
     fail "$agent_name: missing runtime-local follow-up read nudge"
@@ -1724,7 +1723,10 @@ fi
 
 # vbw-scout.md: has second surface near File Writing
 # Use awk to extract content after "## File Writing" header up to the next "## " header
-if awk '/^## File Writing/{found=1; next} found && /^## /{exit} found' "$SCOUT_AGENT" | grep -Fq "$SKILL_FOLLOW_UP_SENTENCE"; then
+if awk '/^## File Writing/{found=1; next} found && /^## /{exit} found' "$SCOUT_AGENT" \
+  | grep -F "$SKILL_FOLLOW_UP_PREFIX" \
+  | grep -Fi "$SKILL_FOLLOW_UP_SUFFIX" \
+  | grep -Eq "$SKILL_FOLLOW_UP_SEPARATOR_RE"; then
   pass "vbw-scout.md: has runtime-local follow-up read nudge near File Writing"
 else
   fail "vbw-scout.md: missing runtime-local follow-up read nudge near File Writing"

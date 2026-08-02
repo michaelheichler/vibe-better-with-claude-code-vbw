@@ -86,9 +86,9 @@ Note: Core infrastructure flags (v2_hard_contracts, v2_hard_gates, v2_typed_prot
 - header: `Config`
 - question: `What would you like to adjust?`
 - options:
-  - `Core settings` — Effort, autonomy, planning tracking, auto push
-  - `Model profile` — Preset profile or per-agent overrides
-  - `Exit` — Leave config unchanged
+  - `Core settings`: Effort, autonomy, planning tracking, auto push
+  - `Model profile`: Preset profile or per-agent overrides
+  - `Exit`: Leave config unchanged
 
 Store selection in variable `CONFIG_SECTION`.
 
@@ -97,7 +97,7 @@ For every bounded AskUserQuestion branch below that uses visible options, the bu
 - accept unambiguous visible option-by-number replies (for example `#1`, `option 2`, or `2` when it clearly maps to one visible option)
 - accept hybrid replies anchored to one visible option number (for example `#2 please`)
 - re-ask only when the reply is ambiguous or invalid for that same question
-- do NOT add an extra visible `Other` option — keep these prompts within the 2–4 option sweet spot
+- do NOT add an extra visible `Other` option: keep these prompts within the 2-4 option sweet spot
 
 If `CONFIG_SECTION = "Exit"`:
 - Display `✓ No changes made.`
@@ -108,10 +108,10 @@ If `CONFIG_SECTION = "Exit"`:
 - header: `Core`
 - question: `Which core setting do you want to change?`
 - options:
-  - `Effort` — current: {effort value}  (thorough | balanced | fast | turbo)
-  - `Autonomy` — current: {autonomy value}  (cautious | standard | confident | pure-vibe)
-  - `Planning tracking` — current: {tracking value}  (manual | ignore | commit)
-  - `Auto push` — current: {auto_push value}  (never | after_phase | always)
+  - `Effort`: current: {effort value}  (thorough | balanced | fast | turbo)
+  - `Autonomy`: current: {autonomy value}  (cautious | standard | confident | pure-vibe)
+  - `Planning tracking`: current: {tracking value}  (manual | ignore | commit)
+  - `Auto push`: current: {auto_push value}  (never | after_phase | always)
 
 Store selection in variable `SETTING_GROUP`.
 
@@ -127,35 +127,35 @@ If `SETTING=effort`, AskUserQuestion with 1 question:
 - header: `Effort`
 - question: `Choose effort level.`
 - options:
-  - `thorough` — Maximum planning and verification depth
-  - `balanced` — Default depth for most work
-  - `fast` — Lighter planning, quicker verification
-  - `turbo` — Minimal ceremony, fastest path
+  - `thorough`: Maximum planning and verification depth
+  - `balanced`: Default depth for most work
+  - `fast`: Lighter planning, quicker verification
+  - `turbo`: Minimal ceremony, fastest path
 
 If `SETTING=autonomy`, AskUserQuestion with 1 question:
 - header: `Autonomy`
 - question: `Choose autonomy level.`
 - options:
-  - `cautious` — Confirm more often
-  - `standard` — Default phase-by-phase flow
-  - `confident` — Fewer confirmations
-  - `pure-vibe` — Full auto loop through phases
+  - `cautious`: Confirm more often
+  - `standard`: Default phase-by-phase flow
+  - `confident`: Fewer confirmations
+  - `pure-vibe`: Full auto loop through phases
 
 If `SETTING=planning_tracking`, AskUserQuestion with 1 question:
 - header: `Tracking`
 - question: `How should planning artifacts be tracked?`
 - options:
-  - `manual` — Leave planning files for manual git handling
-  - `ignore` — Keep `.vbw-planning/` out of git
-  - `commit` — Auto-commit planning artifacts
+  - `manual`: Leave planning files for manual git handling
+  - `ignore`: Keep `.vbw-planning/` out of git
+  - `commit`: Auto-commit planning artifacts
 
 If `SETTING=auto_push`, AskUserQuestion with 1 question:
 - header: `Auto push`
 - question: `When should VBW push automatically?`
 - options:
-  - `never` — Never push automatically
-  - `after_phase` — Push once after each phase
-  - `always` — Push after every commit
+  - `never`: Never push automatically
+  - `after_phase`: Push once after each phase
+  - `always`: Push after every commit
 
 Store the selected value in variable `VALUE`.
 
@@ -165,9 +165,9 @@ After a core setting value is chosen, continue to Step 3 and apply it there with
 - header: `Models`
 - question: `How do you want to configure model behavior?`
 - options:
-  - `Use preset profile` — quality, balanced, or budget
-  - `Configure each agent individually` — 6 per-agent model questions
-  - `Model matrix` — Re-detect available models and rebuild the agent x effort matrix
+  - `Use preset profile`: quality, balanced, or budget
+  - `Configure each agent individually`: 6 per-agent model questions
+  - `Model matrix`: Re-detect available models and rebuild the agent x effort matrix
 
 Store selection in variable `PROFILE_METHOD`.
 
@@ -313,7 +313,7 @@ fi
 
 **Step 3:** Apply changes to config.json. This is the shared apply step for no-args core-setting changes and preset-model-profile changes. Display ✓ per changed setting with ➜. No changes: "✓ No changes made."
 
-**Step 4: Profile drift detection** — if effort/autonomy/verification_tier changed:
+**Step 4: Profile drift detection**: if effort/autonomy/verification_tier changed:
 - Compare against active profile's expected values
 - If mismatch: AskUserQuestion "Settings no longer match '{profile}'. Save as new profile?" → "Save" (route to /vbw:profile save) or "No" (set active_profile to "custom")
 - Skip if no profile-tracked settings changed or already "custom"
@@ -490,6 +490,7 @@ Note: `auto_commit` controls source-task commits during Execute mode. Planning a
 | visual_format | string | unicode/ascii | unicode |
 | max_tasks_per_plan | number | 1-7 | 5 |
 | prefer_teams | string | always/auto/never | auto |
+| pipeline_research | boolean | true/false | false |
 | branch_per_milestone | boolean | true/false | false |
 | plain_summary | boolean | true/false | true |
 | active_profile | string | profile name or "custom" | default |
@@ -531,13 +532,13 @@ Note: `auto_commit` controls source-task commits during Execute mode. Planning a
 
 Four flags control what the VBW statusline shows:
 
-- **`statusline_hide_limits`** — Suppress the Limits line (L3) unconditionally. Use this if you never want to see token limit information in the statusline.
+- **`statusline_hide_limits`**: Suppress the Limits line (L3) unconditionally. Use this if you never want to see token limit information in the statusline.
 
-- **`statusline_hide_limits_for_api_key`** — Suppress the Limits line only when authenticated via an API key (not via Claude.ai OAuth). Useful when you find the usage display redundant in API-key sessions. Has no effect when `statusline_hide_limits` is also `true` (the broader flag takes precedence).
+- **`statusline_hide_limits_for_api_key`**: Suppress the Limits line only when authenticated via an API key (not via Claude.ai OAuth). Useful when you find the usage display redundant in API-key sessions. Has no effect when `statusline_hide_limits` is also `true` (the broader flag takes precedence).
 
-- **`statusline_hide_agent_in_tmux`** — Suppress the Build/agent progress line (L1) while inside a tmux session. Has no effect outside tmux or when no build is running. Use this to reduce statusline noise in tmux-based workflows.
+- **`statusline_hide_agent_in_tmux`**: Suppress the Build/agent progress line (L1) while inside a tmux session. Has no effect outside tmux or when no build is running. Use this to reduce statusline noise in tmux-based workflows.
 
-- **`statusline_collapse_agent_in_tmux`** — Collapse the full 4-line statusline into a single summary line in agent/worktree panes (not the orchestrator). Only applies inside tmux, only when running in a git worktree. Has no effect outside tmux or in the main repo pane.
+- **`statusline_collapse_agent_in_tmux`**: Collapse the full 4-line statusline into a single summary line in agent/worktree panes (not the orchestrator). Only applies inside tmux, only when running in a git worktree. Has no effect outside tmux or in the main repo pane.
 
 ### agent_max_turns
 
@@ -569,9 +570,9 @@ You can also provide per-effort overrides using an object instead of a number:
 Controls only the UAT remediation auto-continuation loop after re-verification finds issues. It does **not** apply to QA remediation.
 
 Accepted values:
-- `false` — unlimited UAT remediation rounds
-- `0` — unlimited UAT remediation rounds
-- positive integer — finite UAT remediation round cap
+- `false`: unlimited UAT remediation rounds
+- `0`: unlimited UAT remediation rounds
+- positive integer: finite UAT remediation round cap
 
 Injected default is `false`, and runtime fallback is also unlimited when the persisted value is absent or malformed. `/vbw:config` rejects malformed interactive input instead of writing it.
 
@@ -593,4 +594,4 @@ Unlimited example:
 
 ## Output Format
 
-Follow @${CLAUDE_PLUGIN_ROOT}/references/vbw-brand-essentials.md — single-line box, ✓ success, ⚠ invalid, ➜ transitions, no ANSI.
+Follow @${CLAUDE_PLUGIN_ROOT}/references/vbw-brand-essentials.md: single-line box, ✓ success, ⚠ invalid, ➜ transitions, no ANSI.

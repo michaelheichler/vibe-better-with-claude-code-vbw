@@ -187,6 +187,25 @@ JSON
   done
 }
 
+@test "file-guard: active agent count never bypasses delegated orchestrator block" {
+  cd "$TEST_TEMP_DIR"
+  create_plan_with_files
+  create_contract
+  mkdir -p src
+  cat > "$TEST_TEMP_DIR/.vbw-planning/.execution-state.json" <<'JSON'
+{"phase":1,"phase_name":"test","status":"running","effort":"balanced","correlation_id":"corr-123","plans":[]}
+JSON
+  echo "1" > "$TEST_TEMP_DIR/.vbw-planning/.active-agent-count"
+  echo "dev" > "$TEST_TEMP_DIR/.vbw-planning/.active-agent"
+
+  for sid in session-A session-B; do
+    INPUT=$(jq -n --arg sid "$sid" '{session_id:$sid,tool_name:"Write",tool_input:{file_path:"src/allowed.js",content:"blocked"}}')
+    run bash -c 'unset CLAUDE_CODE_CHILD_SESSION VBW_AGENT_ROLE; printf "%s\n" "$1" | bash "$2"' _ "$INPUT" "$SCRIPTS_DIR/file-guard.sh"
+    [ "$status" -eq 2 ]
+    [[ "$output" == *"orchestrator cannot write product files"* ]]
+  done
+}
+
 @test "file-guard: runtime Dev identity works when SubagentStart marker is absent" {
   cd "$TEST_TEMP_DIR"
   create_plan_with_files
@@ -273,12 +292,6 @@ EOF
   mkdir -p "$NON_VBW"
   cd "$NON_VBW"
 
-  # The checkout this suite runs from can itself sit inside an ancestor
-  # VBW-dogfooded repo tree, so find_vbw_root's script-dir fallback would
-  # otherwise walk up past $NON_VBW and resolve that ancestor's
-  # .vbw-planning/, defeating this "no VBW workspace" simulation.
-  # Pre-seeding VBW_CONFIG_ROOT hits find_vbw_root's cache-hit path and
-  # keeps resolution inside the sandbox dir.
   INPUT='{"tool_name":"Write","tool_input":{"file_path":"src/outside.js","content":"bad"}}'
   run bash -c "VBW_AGENT_ROLE=scout VBW_CONFIG_ROOT='$NON_VBW' echo '$INPUT' | VBW_AGENT_ROLE=scout VBW_CONFIG_ROOT='$NON_VBW' bash '$SCRIPTS_DIR/file-guard.sh'"
   [ "$status" -eq 0 ]
@@ -309,8 +322,6 @@ EOF
   run bash -c "unset CLAUDE_CODE_CHILD_SESSION VBW_AGENT_ROLE; echo '$INPUT' | bash '$SCRIPTS_DIR/file-guard.sh'"
   [ "$status" -eq 0 ]
 }
-
-# --- files_modified liveness gate ---
 
 @test "file-guard: unfinalized plan alone does not block arbitrary writes when no execution is live" {
   cd "$TEST_TEMP_DIR"

@@ -154,8 +154,6 @@ if [ -n "$ROUND_PLAN_TOKEN" ]; then
 
   if [ -f "$TARGET" ]; then
     ROUND_PLAN_MTIME_TIE=false
-    # ${arr[@]+"${arr[@]}"} guards against bash 3.2 treating an empty array's
-    # "${arr[@]}" expansion as an unbound variable under `set -u`.
     for f in ${ROUND_PLAN_CANDIDATES[@]+"${ROUND_PLAN_CANDIDATES[@]}"}; do
       if cmp -s "$f" "$TARGET"; then
         continue
@@ -179,9 +177,6 @@ if [ -n "$ROUND_PLAN_TOKEN" ]; then
     fi
   fi
 
-  # ${arr[@]+"${arr[@]}"} guards against bash 3.2 treating an empty array's
-  # "${arr[@]}" expansion as an unbound variable under `set -u` (empty when
-  # every candidate was skipped for a round-token mismatch).
   for f in ${ROUND_PLAN_CANDIDATES[@]+"${ROUND_PLAN_CANDIDATES[@]}"}; do
     BASENAME=$(basename "$f")
     if [ -f "$TARGET" ]; then

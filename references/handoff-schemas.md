@@ -7,10 +7,10 @@ V2 inter-agent messages use strict JSON schemas. Every message includes a mandat
 ```json
 {
   "id": "uuid-v4",
-  "type": "scout_findings|plan_contract|execution_update|blocker_report|qa_verdict|approval_request|approval_response|shutdown_request|shutdown_response",
+  "type": "scout_findings|plan_contract|execution_update|blocker_report|tests_ready|qa_verdict|approval_request|approval_response|shutdown_request|shutdown_response",
   "phase": 1,
   "task": "1-1-T3",
-  "author_role": "lead|dev|qa|scout|debugger|architect|docs",
+  "author_role": "lead|dev|qa|qa-author|scout|debugger|architect|docs",
   "timestamp": "2026-02-12T10:00:00Z",
   "schema_version": "2.0",
   "payload": {},
@@ -23,15 +23,16 @@ V2 inter-agent messages use strict JSON schemas. Every message includes a mandat
 | Message Type | Allowed Senders | Typical Receivers |
 |---|---|---|
 | scout_findings | scout | lead, architect |
-| plan_contract | lead, architect | dev, qa, scout |
+| plan_contract | lead, architect | dev, qa, qa-author, scout |
 | execution_update | dev, docs | lead |
 | blocker_report | dev, docs | lead |
+| tests_ready | qa-author | lead, dev |
 | debugger_report | debugger | lead |
 | qa_verdict | qa | lead |
 | approval_request | dev, lead | lead, architect |
 | approval_response | lead, architect | dev, lead |
-| shutdown_request | lead (orchestrator) | dev, qa, scout, lead, debugger, docs |
-| shutdown_response | dev, qa, scout, lead, debugger, docs | lead (orchestrator) |
+| shutdown_request | lead (orchestrator) | dev, qa, qa-author, scout, lead, debugger, docs |
+| shutdown_response | dev, qa, qa-author, scout, lead, debugger, docs | lead (orchestrator) |
 
 Unauthorized sender -> message rejected.
 
@@ -111,7 +112,7 @@ Task progress or completion update from Dev or Docs.
     "status": "complete|partial|failed",
     "commit": "abc1234",
     "files_modified": ["src/feature.js"],
-    "concerns": ["Interface changed — downstream plans may need update"],
+    "concerns": ["Interface changed. Downstream plans may need update"],
     "evidence": "All tests pass",
     "pre_existing_issues": [
       {"test": "testName", "file": "path/to/file", "error": "failure message"}
@@ -139,7 +140,7 @@ Escalation when agent is blocked and cannot proceed.
     "task_id": "1-2-T1",
     "blocker": "Dependency module from plan 1-1 not yet committed",
     "needs": "Plan 1-1 to complete first",
-    "attempted": ["Checked git log for 1-1 commits — none found"],
+    "attempted": ["Checked git log for 1-1 commits. None found"],
     "severity": "blocking|degraded|informational",
     "pre_existing_issues": [
       {"test": "testName", "file": "path/to/file", "error": "failure message"}
@@ -148,6 +149,29 @@ Escalation when agent is blocked and cannot proceed.
 }
 ```
 If no pre-existing issues were found, omit the field or pass an empty array.
+
+## `tests_ready` (QA Author -> Lead/Dev)
+
+Failing tests committed for a plan's TDD red stage.
+
+```json
+{
+  "id": "tests-234",
+  "type": "tests_ready",
+  "phase": 1,
+  "task": "1-2",
+  "author_role": "qa-author",
+  "timestamp": "2026-02-12T10:12:00Z",
+  "schema_version": "2.0",
+  "confidence": "high",
+  "payload": {
+    "plan_id": "1-2",
+    "test_files": ["tests/feature.test.js"],
+    "failing_test_count": 2,
+    "test_command": "npx jest tests/feature.test.js"
+  }
+}
+```
 
 ## `debugger_report` (Debugger -> Lead)
 

@@ -17,15 +17,14 @@ if [ -z "$input" ]; then
 fi
 
 _ascii_input="${input//$'\n'/ }"
-# Curly-quote/dash normalization uses bash literal substitution rather than
-# a sed bracket expression, which is locale-sensitive: under a non-UTF-8
-# LC_CTYPE (for example, an unset locale falling back to "C"), sed matches
-# the multi-byte UTF-8 sequence byte-by-byte and corrupts a single U+2019
-# right single quote into multiple stray apostrophes.
-_ascii_input="${_ascii_input//’/\'}"
-_ascii_input="${_ascii_input//‘/\'}"
-_ascii_input="${_ascii_input//–/-}"
-_ascii_input="${_ascii_input//—/-}"
+right_quote=$'\342\200\231'
+left_quote=$'\342\200\230'
+en_dash=$'\342\200\223'
+em_dash=$'\342\200\224'
+_ascii_input="${_ascii_input//$right_quote/\'}"
+_ascii_input="${_ascii_input//$left_quote/\'}"
+_ascii_input="${_ascii_input//$en_dash/-}"
+_ascii_input="${_ascii_input//$em_dash/-}"
 normalized=$(printf '%s' "$_ascii_input" | tr '[:upper:]' '[:lower:]' |
   sed -E "s/[[:space:]]+/ /g; s/^ //; s/ $//")
 

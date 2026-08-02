@@ -43,9 +43,6 @@ check_contains() {
 
 echo "=== VBW Contributor PR Review Submission Contract ==="
 
-# .agents/skills/ is local-only dev config (untracked since b87f1471, will
-# not be re-tracked) and is absent from fresh `git worktree add` checkouts,
-# which only populate tracked files. Skip these content checks there.
 if [ -d "$SKILL_DIR" ]; then
   if [ -f "$SKILL" ]; then
     pass "skill exists"
