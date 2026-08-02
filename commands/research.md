@@ -60,9 +60,9 @@ Current project:
     ```bash
     bash "{plugin-root}/scripts/todo-lifecycle.sh" detail-warning <hash>
     ```
-    Ignore missing-root-state cases — the helper already degrades gracefully. In all cases, continue without detail.
+    Ignore missing-root-state cases. The helper already degrades gracefully. In all cases, continue without detail.
     If no ref suffix, set `DETAIL_STATUS=none`, then $ARGUMENTS minus flags = topic.
-    **Post-parse validation:** If the topic is empty or whitespace-only after stripping flags and ref, check whether a ref was found (including a numbered selection's resolved ref) AND `DETAIL_STATUS=ok`. If yes, proceed — the detail provides the research context. If no ref was found, or the ref detail failed to load, STOP: `"Usage: /vbw:research <topic> [--parallel]"`.
+    **Post-parse validation:** If the topic is empty or whitespace-only after stripping flags and ref, check whether a ref was found (including a numbered selection's resolved ref) AND `DETAIL_STATUS=ok`. If yes, proceed. The detail provides the research context. If no ref was found, or the ref detail failed to load, STOP: `"Usage: /vbw:research <topic> [--parallel]"`.
     `--parallel` controls Scout fan-out (Step 2) and must not be included in the topic text passed to Scout.
 2. **Scope:** Single question = 1 Scout. Multi-faceted or --parallel = 2-4 sub-topics.
 3. **Spawn Scout:**
@@ -78,15 +78,15 @@ Current project:
     SCOUT_REASONING="$RESOLVED_REASONING"
      ```
    - Display: `◆ Spawning Scout (${SCOUT_MODEL})...`
-    - Before composing the Scout task description, evaluate installed skills visible in your system context — read each skill's description and select all materially helpful installed skills for this research task, including adjacent/supporting domain skills surfaced by the prompt, logs, error text, related files, or stack context — not just the single most direct skill. The spawned prompt MUST begin with exactly one explicit skill outcome block: use `<skill_activation>` when one or more installed skills are preselected at orchestration time, or `<skill_no_activation>` when none are preselected. Silent omission of both blocks is invalid. After evaluating, state the skill outcome in your response (e.g., "Skills: activating {skill-name}" or "Skills: none preselected — {reason}") so the user has visibility before the agent is spawned. Example: if the prompt or error mentions SwiftData, include `swiftdata` alongside relevant test/build/debug skills. After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting. Do not scan entire skill folders or read unrelated references.
+    - Before composing the Scout task description, evaluate installed skills visible in your system context. Read each skill's description and select all materially helpful installed skills for this research task, including adjacent/supporting domain skills surfaced by the prompt, logs, error text, related files, or stack context, not just the single most direct skill. The spawned prompt MUST begin with exactly one explicit skill outcome block: use `<skill_activation>` when one or more installed skills are preselected at orchestration time, or `<skill_no_activation>` when none are preselected. Silent omission of both blocks is invalid. After evaluating, state the skill outcome in your response (e.g., "Skills: activating {skill-name}" or "Skills: none preselected ({reason})") so the user has visibility before the agent is spawned. Example: if the prompt or error mentions SwiftData, include `swiftdata` alongside relevant test/build/debug skills. After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting. Do not scan entire skill folders or read unrelated references.
      - If one or more skills were preselected, run `bash "{plugin-root}/scripts/extract-skill-follow-up-files.sh" "{all preselected skill names from the activation block}" 2>/dev/null || true` before spawning the Scout. If the helper prints a `<skill_follow_up_files>` block, paste it immediately after the follow-up-read sentence in the spawned payload. Otherwise omit that block.
    - Also evaluate available MCP tools in your system context. If any MCP servers provide documentation, search, or data retrieval capabilities relevant to this research topic (e.g., Apple Docs for Apple APIs, web search MCPs for multi-source queries), note them in the Scout's task context so it prioritizes those tools over generic WebSearch/WebFetch where applicable.
-    - Include the live-validation policy in the Scout task context when external data may matter: public/anonymous HTTP validation uses WebFetch; authenticated/private read-only checks use verified-safe Bash helper scripts or curl wrappers after preflight; unsafe or mutating checks are deferred to Dev/Debugger. When Scout runs or defers live validation, require `## Live Validation Evidence` with `command_shape`, `exit_status`, `redacted_evidence`, `expected_shape`, `confidence`, and `limitations_or_deferred_reason`.
+    - Include the live-validation policy in the Scout task context when external data may matter. Public/anonymous HTTP validation uses WebFetch. Authenticated/private read-only checks use verified-safe Bash helper scripts or curl wrappers after preflight. Unsafe or mutating checks are deferred to Dev/Debugger. When Scout runs or defers live validation, require `## Live Validation Evidence` with `command_shape`, `exit_status`, `redacted_evidence`, `expected_shape`, `confidence`, and `limitations_or_deferred_reason`.
     - Spawn vbw-scout as subagent(s) via Task tool. **Set `subagent_type: "vbw:vbw-scout"` and `model: "${SCOUT_MODEL}"` in the Task tool invocation. If `SCOUT_MAX_TURNS` is non-empty, also pass `maxTurns: ${SCOUT_MAX_TURNS}`. If `SCOUT_MAX_TURNS` is empty, do NOT include maxTurns (omitting it = unlimited).**
 
-    Non-team invariant: omit `team_name`, `run_in_background`, `isolation`, and all worktree cwd fields.
+      Non-team invariant: omit `team_name`, `run_in_background`, `isolation`, and all worktree cwd fields.
 
-    If `SCOUT_REASONING` is non-empty, also pass `effort: "${SCOUT_REASONING}"`. If `SCOUT_REASONING` is empty, do NOT include effort (the resolved model rejects the parameter).
+      If `SCOUT_REASONING` is non-empty, also pass `effort: "${SCOUT_REASONING}"`. If `SCOUT_REASONING` is empty, do NOT include effort (the resolved model rejects the parameter).
 ```text
 <skill_activation>
 Call Skill('{relevant-skill-1}').
@@ -124,7 +124,7 @@ Extended context from todo detail (include only if detail was loaded in Step 1):
 Todo selection note (include only if TODO_SELECTED=true): Numbered /vbw:list-todos research selections are context-only; leave the todo visible because research may not complete the underlying work item.
 </task_context>
 ```
-    - If save path is unknown yet (user hasn't confirmed), omit `<output_path>` — Scout returns findings in response, and the orchestrator writes them after user confirms a path.
+    - If save path is unknown yet (user hasn't confirmed), omit `<output_path>`. Scout returns findings in response, and the orchestrator writes them after user confirms a path.
     - Parallel: up to 4 simultaneous Tasks, each with `subagent_type: "vbw:vbw-scout"`, same `model: "${SCOUT_MODEL}"` and the same maxTurns conditional (pass when non-empty, omit when empty).
 4. **Synthesize:** Single: present directly. Parallel: merge, note contradictions, rank by confidence.
 5. **Persist:** Ask "Save findings? (y/n)". If yes, determine save path:
@@ -134,7 +134,7 @@ Todo selection note (include only if TODO_SELECTED=true): Numbered /vbw:list-tod
      RESEARCH_SLUG=$(printf '%s' "{topic}" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g' | sed 's/--*/-/g' | sed 's/^-//' | sed 's/-$//' | head -c 50)
     eval "$(bash "{plugin-root}/scripts/research-session-state.sh" start .vbw-planning "$RESEARCH_SLUG")"
      ```
-     Use `$research_file` as the save path. Preserve the existing YAML frontmatter block (lines between the opening and closing `---` markers) — update the `title` and `confidence` fields to match your findings, then write research content below the frontmatter closing marker. After writing findings, mark complete:
+     Use `$research_file` as the save path. Preserve the existing YAML frontmatter block (lines between the opening and closing `---` markers). Update the `title` and `confidence` fields to match your findings, then write research content below the frontmatter closing marker. After writing findings, mark complete:
      ```bash
     bash "{plugin-root}/scripts/research-session-state.sh" complete .vbw-planning "$research_id"
      ```
