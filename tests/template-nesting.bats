@@ -632,3 +632,80 @@ EOF
     "$PROJECT_ROOT/scripts/resolve-plugin-root.sh"
   grep -Fq '"$session_link" "$canonical_root"' "$PROJECT_ROOT/scripts/resolve-plugin-root.sh"
 }
+
+@test "phase-state resolver reclaims lock from dead owner" {
+  local td root script session link cache lock
+  td=$(_new_tmp_test_dir)
+
+  root="$td/root"
+  script="$td/resolve-phase-state.sh"
+  session="phase-state-dead-owner-$$-$RANDOM"
+  link="/tmp/.vbw-plugin-root-link-${session}"
+  cache="/tmp/.vbw-phase-detect-${session}.txt"
+  lock="/tmp/.vbw-phase-detect-live-${session}.lock"
+  mkdir -p "$root/scripts" "$lock"
+
+  cat > "$root/scripts/phase-detect.sh" <<'EOF'
+#!/usr/bin/env bash
+owner_pid=$(cat "/tmp/.vbw-phase-detect-live-${CLAUDE_SESSION_ID:-default}.lock/pid")
+[ "$owner_pid" = "$PPID" ] || exit 1
+printf '%s\n' 'next_phase_state=fresh_live' 'phase_detect_complete=true'
+EOF
+  : > "$root/scripts/hook-wrapper.sh"
+  _install_shared_resolver_fixture "$root"
+  chmod +x "$root/scripts/phase-detect.sh" "$root/scripts/ensure-plugin-root-link.sh"
+
+  printf '%s\n' '99999999' > "$lock/pid"
+  printf '%s\n' 'next_phase_state=old_cache' 'phase_detect_complete=true' > "$cache"
+  touch -t 209912312359 "$cache"
+
+  _track_tmp_test_path "$link"
+  _track_tmp_test_path "$cache"
+  _track_tmp_test_path "$lock"
+  _copy_vibe_phase_state_resolver "$script"
+
+  run env CLAUDE_SESSION_ID="$session" CLAUDE_PLUGIN_ROOT="$root" bash "$script"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"next_phase_state=fresh_live"* ]]
+  [[ "$output" != *"next_phase_state=old_cache"* ]]
+  [ ! -d "$lock" ]
+  grep -qF 'trap release_phase_detect_lock EXIT' "$script"
+  grep -qF "trap 'exit 130' INT" "$script"
+  grep -qF "trap 'exit 143' TERM" "$script"
+}
+
+@test "phase-state resolver accepts cache written during invocation" {
+  local td root script session link cache lock counter
+  td=$(_new_tmp_test_dir)
+
+  root="$td/root"
+  script="$td/resolve-phase-state.sh"
+  session="phase-state-fresh-cache-$$-$RANDOM"
+  link="/tmp/.vbw-plugin-root-link-${session}"
+  cache="/tmp/.vbw-phase-detect-${session}.txt"
+  lock="/tmp/.vbw-phase-detect-live-${session}.lock"
+  counter="$td/phase-detect-runs"
+  mkdir -p "$root/scripts"
+
+  cat > "$root/scripts/phase-detect.sh" <<'EOF'
+#!/usr/bin/env bash
+printf '%s\n' run >> "$COUNTER_FILE"
+printf '%s\n' 'next_phase_state=fresh_live' 'phase_detect_complete=true'
+sleep 1.2
+EOF
+  : > "$root/scripts/hook-wrapper.sh"
+  _install_shared_resolver_fixture "$root"
+  chmod +x "$root/scripts/phase-detect.sh" "$root/scripts/ensure-plugin-root-link.sh"
+  : > "$counter"
+
+  _track_tmp_test_path "$link"
+  _track_tmp_test_path "$cache"
+  _track_tmp_test_path "$lock"
+  _copy_vibe_phase_state_resolver "$script"
+
+  run env CLAUDE_SESSION_ID="$session" CLAUDE_PLUGIN_ROOT="$root" COUNTER_FILE="$counter" bash "$script"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"next_phase_state=fresh_live"* ]]
+  [ "$(wc -l < "$counter" | tr -d ' ')" -eq 1 ]
+  [ ! -d "$lock" ]
+}
