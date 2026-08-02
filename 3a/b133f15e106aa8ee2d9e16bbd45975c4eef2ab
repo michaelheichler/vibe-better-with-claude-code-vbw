@@ -1,0 +1,25 @@
+scripts/delegated-workflow.sh
+  s_82961528916288::t_5643cfacef5728 169-171
+scripts/recover-state.sh
+  s_82961528916288::t_80a7fb35a2bbfc 132,134-135
+scripts/session-start.sh
+  s_82961528916288::t_2d68b0fb2a69ee 735
+tests/recover-state-integration.bats
+  s_82961528916288::t_1735de898ab890 453,719-720,722,726-727,729-740,742,744,746-749,753-754,758-759,761
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "3ab133f15e106aa8ee2d9e16bbd45975c4eef2ab",
+  "prompts": {},
+  "sessions": {
+    "s_82961528916288": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8aec7123-2a60-4356-bce3-02e7c64d4a1d",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
