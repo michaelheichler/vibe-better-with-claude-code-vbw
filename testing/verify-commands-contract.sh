@@ -1460,12 +1460,12 @@ else
   fail "execute-protocol: QA remediation plan may omit validator-required known-issue arrays"
 fi
 
-if grep -Fq 'After Lead returns, apply the no-tool circuit breaker in `references/subagent-contracts.md`' <<< "$qa_remediation_plan_block" \
-  && grep -Fq "$NO_TOOL_INVARIANT_TEXT" <<< "$qa_remediation_plan_block" \
-  && grep -Fq 'After Dev returns, apply the no-tool circuit breaker in `references/subagent-contracts.md`' <<< "$qa_remediation_execute_block" \
-  && grep -Fq "$NO_TOOL_INVARIANT_TEXT" <<< "$qa_remediation_execute_block" \
-  && grep -Fq 'After QA returns, apply the no-tool circuit breaker in `references/subagent-contracts.md`' <<< "$qa_remediation_verify_block" \
-  && grep -Fq "$NO_TOOL_INVARIANT_TEXT" <<< "$qa_remediation_verify_block"; then
+if block_contains_normalized "$qa_remediation_plan_block" \
+  'After Lead returns, apply the no-tool circuit breaker in `references/subagent-contracts.md` before normalization, plan validation, or state advancement. If it triggers, STOP without advancing `.qa-remediation-stage`. '"$NO_TOOL_INVARIANT_TEXT" \
+  && block_contains_normalized "$qa_remediation_execute_block" \
+    'After Dev returns, apply the no-tool circuit breaker in `references/subagent-contracts.md` before checking the summary or advancing state. If it triggers, STOP without advancing `.qa-remediation-stage`. '"$NO_TOOL_INVARIANT_TEXT" \
+  && block_contains_normalized "$qa_remediation_verify_block" \
+    'After QA returns, apply the no-tool circuit breaker in `references/subagent-contracts.md` before syncing known issues or running the deterministic gate. If it triggers, STOP without advancing `.qa-remediation-stage`. '"$NO_TOOL_INVARIANT_TEXT"; then
   pass "vibe: QA remediation applies no-tool breaker at Lead, Dev, and QA return sites"
 else
   fail "vibe: QA remediation missing no-tool breaker at Lead, Dev, or QA return site"
