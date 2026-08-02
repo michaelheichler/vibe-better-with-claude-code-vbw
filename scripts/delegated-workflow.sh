@@ -166,9 +166,18 @@ print_status_json() {
       fi
     fi
   fi
-  if [ "$live" = true ] && [ -n "${CLAUDE_SESSION_ID:-}" ] && [ "$session_id" != "${CLAUDE_SESSION_ID:-}" ]; then
-    live=false
-    reason="session_mismatch"
+  if [ "$live" = true ] && [ -n "$session_id" ]; then
+    if [ -z "${CLAUDE_SESSION_ID:-}" ]; then
+      if [ "$mode" = "execute" ]; then
+        live=false
+        preserve_on_session_start=false
+        reason="unknown_session"
+      fi
+    elif [ "$session_id" != "${CLAUDE_SESSION_ID:-}" ]; then
+      live=false
+      preserve_on_session_start=false
+      reason="session_mismatch"
+    fi
   fi
 
   if command -v jq >/dev/null 2>&1; then

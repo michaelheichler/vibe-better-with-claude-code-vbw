@@ -731,8 +731,20 @@ if [ -d "$PLANNING_DIR" ] && [ -f "$PLANNING_DIR/config.json" ]; then
           _recovered_phase=$(echo "$_recovered" | jq -r '.phase // 0' 2>/dev/null || echo 0)
           _recovered_plan_count=$(echo "$_recovered" | jq -r '.plans | length // 0' 2>/dev/null || echo 0)
           if [ "$_recovered_phase" = "$_phase_num" ] && [ "${_recovered_plan_count:-0}" -gt 0 ] 2>/dev/null; then
+            _recovered_status=$(echo "$_recovered" | jq -r '.status // ""' 2>/dev/null || echo "")
+            _recovery_mtime_ref=""
+            if [ "$_recovered_status" != "running" ] && [ -f "$_exec_state" ]; then
+              _recovery_mtime_ref="${_exec_state}.mtime.$$"
+              cp -p "$_exec_state" "$_recovery_mtime_ref" 2>/dev/null || _recovery_mtime_ref=""
+            fi
             if atomic_write_string "$PLANNING_DIR/.execution-state.json" "$_recovered"; then
+              if [ -n "$_recovery_mtime_ref" ]; then
+                touch -r "$_recovery_mtime_ref" "$_exec_state" 2>/dev/null || true
+                rm -f "$_recovery_mtime_ref" 2>/dev/null || true
+              fi
               _auto_recovered=true
+            elif [ -n "$_recovery_mtime_ref" ]; then
+              rm -f "$_recovery_mtime_ref" 2>/dev/null || true
             fi
           fi
         fi

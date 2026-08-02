@@ -77,6 +77,7 @@ PHASE_SLUG=$(basename "$PHASE_DIR" | sed "s/^$(printf '%02d' "$PHASE")-//")
 
 # Collect plan IDs from PLAN.md files
 PLANS_JSON="[]"
+FINALIZED=0
 for plan_file in "$PHASE_DIR"/*-PLAN.md; do
   [ ! -f "$plan_file" ] && continue
   PLAN_ID=$(basename "$plan_file" | sed 's/-PLAN\.md$//')
@@ -86,6 +87,7 @@ for plan_file in "$PHASE_DIR"/*-PLAN.md; do
   # Check if SUMMARY.md exists with terminal status
   SUMMARY_FILE="$PHASE_DIR/${PLAN_ID}-SUMMARY.md"
   if is_plan_finalized "$SUMMARY_FILE"; then
+    FINALIZED=$((FINALIZED + 1))
     PLAN_STATUS=$(extract_summary_status "$SUMMARY_FILE")
     # Normalize to execution-state compatible values
     case "$PLAN_STATUS" in
@@ -127,7 +129,7 @@ TOTAL=$(echo "$PLANS_JSON" | jq 'length' 2>/dev/null) || TOTAL=0
 COMPLETE=$(echo "$PLANS_JSON" | jq '[.[] | select(.status == "complete")] | length' 2>/dev/null) || COMPLETE=0
 FAILED=$(echo "$PLANS_JSON" | jq '[.[] | select(.status == "failed")] | length' 2>/dev/null) || FAILED=0
 
-if [ "$COMPLETE" -eq "$TOTAL" ] && [ "$TOTAL" -gt 0 ]; then
+if [ "$FINALIZED" -eq "$TOTAL" ] && [ "$TOTAL" -gt 0 ]; then
   STATUS="complete"
 elif [ "$FAILED" -gt 0 ]; then
   STATUS="failed"
