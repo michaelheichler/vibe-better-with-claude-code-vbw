@@ -45,6 +45,13 @@ valid_root() {
     [ -f "$candidate/scripts/$required_script" ]
 }
 
+valid_vbw_root() {
+  local candidate="${1:-}"
+  valid_root "$candidate" &&
+    [ -f "$candidate/.claude-plugin/plugin.json" ] &&
+    [ "$(jq -r '.name // empty' "$candidate/.claude-plugin/plugin.json" 2>/dev/null)" = "vbw" ]
+}
+
 export LC_ALL=C
 cache_root="${VBW_CACHE_ROOT:-$CLAUDE_DIR/plugins/cache/vbw-marketplace/vbw}"
 marketplaces_root="$CLAUDE_DIR/plugins/marketplaces"
@@ -123,9 +130,9 @@ if [ -z "$resolved_root" ]; then
 fi
 
 if [ -z "$resolved_root" ]; then
-  # Invariant: no examined marketplace entry is valid. Variant: unexamined marketplace entries decrease.
+  # Invariant: no examined marketplace entry is a valid VBW root. Variant: unexamined entries decrease.
   for candidate in "$marketplaces_root"/* "$marketplaces_root"/*/*; do
-    if valid_root "$candidate" && [ -f "$candidate/commands/vibe.md" ]; then
+    if valid_vbw_root "$candidate" && [ -f "$candidate/commands/vibe.md" ]; then
       resolved_root="$candidate"
       break
     fi
@@ -147,11 +154,14 @@ if [ -z "$resolved_root" ]; then
 fi
 
 if [ -z "$resolved_root" ]; then
-  process_plugin_dir=$(ps axww -o args= 2>/dev/null | grep -v grep | grep -oE -- "--plugin-dir [^ ]+" | head -1 || true)
-  process_plugin_dir="${process_plugin_dir#--plugin-dir }"
-  if valid_root "$process_plugin_dir"; then
-    resolved_root="$process_plugin_dir"
-  fi
+  # Invariant: no examined process path is a valid VBW root. Variant: unexamined paths decrease.
+  while IFS= read -r process_plugin_dir; do
+    process_plugin_dir="${process_plugin_dir#--plugin-dir }"
+    if valid_vbw_root "$process_plugin_dir"; then
+      resolved_root="$process_plugin_dir"
+      break
+    fi
+  done < <(ps axww -o args= 2>/dev/null | grep -v grep | grep -oE -- "--plugin-dir [^ ]+" || true)
 fi
 
 [ -n "$resolved_root" ] || fail_resolution

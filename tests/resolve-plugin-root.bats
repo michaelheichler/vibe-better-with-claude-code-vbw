@@ -32,9 +32,10 @@ make_root() {
   local name="$1"
   local root="$TEST_TEMP_DIR/roots/$name"
 
-  mkdir -p "$root/scripts" "$root/commands"
+  mkdir -p "$root/scripts" "$root/commands" "$root/.claude-plugin"
   : > "$root/scripts/hook-wrapper.sh"
   : > "$root/commands/vibe.md"
+  printf '%s\n' '{"name":"vbw"}' > "$root/.claude-plugin/plugin.json"
   cp "$ENSURE_LINK" "$root/scripts/ensure-plugin-root-link.sh"
   (cd "$root" && pwd -P)
 }
@@ -140,6 +141,21 @@ assert_resolved() {
   assert_resolved "$root"
 }
 
+@test "marketplace fallback skips a non-VBW plugin collision" {
+  local collision root marketplaces_root
+  collision=$(make_root marketplace-collision)
+  root=$(make_root marketplace-vbw)
+  printf '%s\n' '{"name":"other-plugin"}' > "$collision/.claude-plugin/plugin.json"
+  marketplaces_root="$CLAUDE_CONFIG_DIR/plugins/marketplaces"
+  mkdir -p "$marketplaces_root"
+  ln -s "$collision" "$marketplaces_root/a-collision"
+  ln -s "$root" "$marketplaces_root/z-vbw"
+
+  run bash "$RESOLVER"
+
+  assert_resolved "$root"
+}
+
 @test "exact session link resolves before generic links" {
   local exact generic
   exact=$(make_root exact-link)
@@ -168,6 +184,18 @@ assert_resolved() {
   local root
   root=$(make_root process)
   export MOCK_PS_OUTPUT="claude --plugin-dir $root"
+
+  run bash "$RESOLVER"
+
+  assert_resolved "$root"
+}
+
+@test "process fallback skips a non-VBW plugin collision" {
+  local collision root
+  collision=$(make_root process-collision)
+  root=$(make_root process-vbw)
+  printf '%s\n' '{"name":"other-plugin"}' > "$collision/.claude-plugin/plugin.json"
+  export MOCK_PS_OUTPUT="claude --plugin-dir $collision"$'\n'"claude --plugin-dir $root"
 
   run bash "$RESOLVER"
 
