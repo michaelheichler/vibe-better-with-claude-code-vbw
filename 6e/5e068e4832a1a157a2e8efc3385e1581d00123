@@ -1,0 +1,19 @@
+testing/verify-exec-state-reconciliation.sh
+  s_cd1b09f61d7e13::t_05949a7be895d0 400
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "6e5e068e4832a1a157a2e8efc3385e1581d00123",
+  "prompts": {},
+  "sessions": {
+    "s_cd1b09f61d7e13": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "0db3ebad-be67-42c6-8ceb-4ce835618e98",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
