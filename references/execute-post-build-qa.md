@@ -54,43 +54,7 @@ do
     END { exit(found ? 0 : 1) }
   ' "$summary_file" >/dev/null 2>&1 && preex_key_present=true
 
-  preex=$(awk '
-    function trim(v) {
-      gsub(/^[[:space:]]+|[[:space:]]+$/, "", v)
-      return v
-    }
-    function strip_quotes(v, first, last) {
-      first = substr(v, 1, 1)
-      last = substr(v, length(v), 1)
-      if ((first == "\"" && last == "\"") || (first == squote && last == squote)) {
-        return substr(v, 2, length(v) - 2)
-      }
-      return v
-    }
-    function emit_value(v) {
-      v = trim(v)
-      if (v == "") return
-      v = strip_quotes(v)
-      if (v != "") print v
-    }
-    BEGIN { in_fm=0; in_arr=0; squote=sprintf("%c", 39) }
-    NR==1 && /^---[[:space:]]*$/ { in_fm=1; next }
-    in_fm && /^---[[:space:]]*$/ { exit }
-    in_fm && /^pre_existing_issues:[[:space:]]*/ {
-      rest=$0
-      sub(/^pre_existing_issues:[[:space:]]*/, "", rest)
-      if (rest ~ /^\[/) exit
-      in_arr=1
-      next
-    }
-    in_fm && in_arr && /^[[:space:]]+- / {
-      line=$0
-      sub(/^[[:space:]]+- /, "", line)
-      emit_value(line)
-      next
-    }
-    in_fm && in_arr && /^[^[:space:]]/ { exit }
-  ' "$summary_file" 2>/dev/null | while IFS= read -r issue_json
+  preex=$(summary_extract_frontmatter_array_items "$summary_file" pre_existing_issues | while IFS= read -r issue_json
   do
     [ -n "$issue_json" ] || continue
     printf '%s' "$issue_json" | jq -er '
@@ -123,10 +87,12 @@ do
   fi
 
   if [ -n "$devs" ]; then
-    DEV_ISSUES="${DEV_ISSUES}DEVIATIONS (Plan ${plan_id}): ${devs}\n"
+    printf -v _dev_line 'DEVIATIONS (Plan %s): %s\n' "$plan_id" "$devs"
+    DEV_ISSUES="${DEV_ISSUES}${_dev_line}"
   fi
   if [ -n "$preex" ]; then
-    DEV_ISSUES="${DEV_ISSUES}PREEXISTING (Plan ${plan_id}): ${preex}\n"
+    printf -v _preex_line 'PREEXISTING (Plan %s): %s\n' "$plan_id" "$preex"
+    DEV_ISSUES="${DEV_ISSUES}${_preex_line}"
   fi
 done
 ```

@@ -1,17 +1,23 @@
 #!/usr/bin/env bash
 
-extract_fail_classification_types() {
+extract_fail_classification_field() {
   local file_path="${1:-}"
+  local field_name="${2:-}"
   [ -f "$file_path" ] || return 0
-  awk '
+  [ -n "$field_name" ] || return 0
+  awk -v field="$field_name" '
     function trim(v) {
       gsub(/^[[:space:]]+|[[:space:]]+$/, "", v)
       return v
     }
+    function emit(v) {
+      gsub(/[",}\]]/, "", v)
+      v = trim(v)
+      if (v != "") print v
+    }
     BEGIN {
       in_fm = 0
       in_fc = 0
-      squote = sprintf("%c", 39)
     }
     NR == 1 && /^---[[:space:]]*$/ { in_fm = 1; next }
     in_fm && /^---[[:space:]]*$/ { exit }
@@ -19,13 +25,10 @@ extract_fail_classification_types() {
       rest = $0
       sub(/^fail_classifications:[[:space:]]*/, "", rest)
       if (rest ~ /^\[/) {
-        while (match(rest, /type:[[:space:]]*[^,}\]]+/)) {
-          type = substr(rest, RSTART, RLENGTH)
-          sub(/^type:[[:space:]]*/, "", type)
-          gsub(/[",}]/, "", type)
-          gsub(squote, "", type)
-          type = trim(type)
-          if (type != "") print type
+        while (match(rest, field ":[[:space:]]*[^,}]+")) {
+          value = substr(rest, RSTART, RLENGTH)
+          sub("^" field ":[[:space:]]*", "", value)
+          emit(value)
           rest = substr(rest, RSTART + RLENGTH)
         }
         exit
@@ -35,86 +38,26 @@ extract_fail_classification_types() {
     }
     in_fm && in_fc && /^[[:space:]]+- / {
       line = $0
-      if (match(line, /type:[[:space:]]*[^,}]+/)) {
-        type = substr(line, RSTART, RLENGTH)
-        sub(/^type:[[:space:]]*/, "", type)
-        gsub(/[",}]/, "", type)
-        gsub(squote, "", type)
-        type = trim(type)
-        if (type != "") print type
+      if (match(line, field ":[[:space:]]*[^,}]+")) {
+        value = substr(line, RSTART, RLENGTH)
+        sub("^" field ":[[:space:]]*", "", value)
+        emit(value)
       }
       next
     }
-    in_fm && in_fc && /^[[:space:]]+type:/ {
+    in_fm && in_fc && $0 ~ ("^[[:space:]]+" field ":") {
       line = $0
-      sub(/^[[:space:]]+type:[[:space:]]*/, "", line)
-      gsub(/[",}]/, "", line)
-      gsub(squote, "", line)
-      line = trim(line)
-      if (line != "") print line
+      sub("^[[:space:]]*" field ":[[:space:]]*", "", line)
+      emit(line)
       next
     }
     in_fm && in_fc && /^[^[:space:]]/ { exit }
   ' "$file_path" 2>/dev/null
 }
 
-extract_fail_classification_ids() {
-  local file_path="${1:-}"
-  [ -f "$file_path" ] || return 0
-  awk '
-    function trim(v) {
-      gsub(/^[[:space:]]+|[[:space:]]+$/, "", v)
-      return v
-    }
-    BEGIN {
-      in_fm = 0
-      in_fc = 0
-      squote = sprintf("%c", 39)
-    }
-    NR == 1 && /^---[[:space:]]*$/ { in_fm = 1; next }
-    in_fm && /^---[[:space:]]*$/ { exit }
-    in_fm && /^fail_classifications:/ {
-      rest = $0
-      sub(/^fail_classifications:[[:space:]]*/, "", rest)
-      if (rest ~ /^\[/) {
-        while (match(rest, /id:[[:space:]]*[^,}\]]+/)) {
-          id = substr(rest, RSTART, RLENGTH)
-          sub(/^id:[[:space:]]*/, "", id)
-          gsub(/[",}]/, "", id)
-          gsub(squote, "", id)
-          id = trim(id)
-          if (id != "") print id
-          rest = substr(rest, RSTART + RLENGTH)
-        }
-        exit
-      }
-      in_fc = 1
-      next
-    }
-    in_fm && in_fc && /^[[:space:]]+- / {
-      line = $0
-      if (match(line, /id:[[:space:]]*[^,}]+/)) {
-        id = substr(line, RSTART, RLENGTH)
-        sub(/^id:[[:space:]]*/, "", id)
-        gsub(/[",}]/, "", id)
-        gsub(squote, "", id)
-        id = trim(id)
-        if (id != "") print id
-      }
-      next
-    }
-    in_fm && in_fc && /^[[:space:]]+id:/ {
-      line = $0
-      sub(/^[[:space:]]+id:[[:space:]]*/, "", line)
-      gsub(/[",}]/, "", line)
-      gsub(squote, "", line)
-      line = trim(line)
-      if (line != "") print line
-      next
-    }
-    in_fm && in_fc && /^[^[:space:]]/ { exit }
-  ' "$file_path" 2>/dev/null
-}
+extract_fail_classification_types() { extract_fail_classification_field "${1:-}" type; }
+extract_fail_classification_ids() { extract_fail_classification_field "${1:-}" id; }
+extract_fail_classification_source_plans() { extract_fail_classification_field "${1:-}" source_plan; }
 
 collect_fail_classification_types_in_dir() {
   local scan_dir="${1:-}"
@@ -134,63 +77,6 @@ collect_fail_classification_ids_in_dir() {
   done < <(find "$scan_dir" -maxdepth 1 ! -name '.*' \( -name '*-PLAN.md' -o -name 'PLAN.md' \) 2>/dev/null | (sort -V 2>/dev/null || sort))
 }
 
-extract_fail_classification_source_plans() {
-  local file_path="${1:-}"
-  [ -f "$file_path" ] || return 0
-  awk '
-    function trim(v) {
-      gsub(/^[[:space:]]+|[[:space:]]+$/, "", v)
-      return v
-    }
-    BEGIN {
-      in_fm = 0
-      in_fc = 0
-      squote = sprintf("%c", 39)
-    }
-    NR == 1 && /^---[[:space:]]*$/ { in_fm = 1; next }
-    in_fm && /^---[[:space:]]*$/ { exit }
-    in_fm && /^fail_classifications:/ {
-      rest = $0
-      sub(/^fail_classifications:[[:space:]]*/, "", rest)
-      if (rest ~ /^\[/) {
-        while (match(rest, /source_plan:[[:space:]]*[^,}\]]+/)) {
-          source_plan = substr(rest, RSTART, RLENGTH)
-          sub(/^source_plan:[[:space:]]*/, "", source_plan)
-          gsub(/[",}]/, "", source_plan)
-          gsub(squote, "", source_plan)
-          source_plan = trim(source_plan)
-          if (source_plan != "") print source_plan
-          rest = substr(rest, RSTART + RLENGTH)
-        }
-        exit
-      }
-      in_fc = 1
-      next
-    }
-    in_fm && in_fc && /^[[:space:]]+- / {
-      line = $0
-      if (match(line, /source_plan:[[:space:]]*[^,}]+/)) {
-        source_plan = substr(line, RSTART, RLENGTH)
-        sub(/^source_plan:[[:space:]]*/, "", source_plan)
-        gsub(/[",}]/, "", source_plan)
-        gsub(squote, "", source_plan)
-        source_plan = trim(source_plan)
-        if (source_plan != "") print source_plan
-      }
-      next
-    }
-    in_fm && in_fc && /^[[:space:]]+source_plan:/ {
-      line = $0
-      sub(/^[[:space:]]+source_plan:[[:space:]]*/, "", line)
-      gsub(/[",}]/, "", line)
-      gsub(squote, "", line)
-      line = trim(line)
-      if (line != "") print line
-      next
-    }
-    in_fm && in_fc && /^[^[:space:]]/ { exit }
-  ' "$file_path" 2>/dev/null
-}
 
 collect_fail_classification_source_plans_in_dir() {
   local scan_dir="${1:-}"

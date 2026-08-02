@@ -8,10 +8,10 @@ extract_frontmatter_json_object_array() {
   [ -f "$file_path" ] || { echo '[]'; return 0; }
   [ -n "$key_name" ] || { echo '[]'; return 0; }
 
-  tmp_file=$(mktemp) || { echo '[]'; return 0; }
+  tmp_file=$(mktemp) || { printf '%s\n' '[{"_extraction_error":true}]'; return 0; }
   if ! extract_frontmatter_array_items "$file_path" "$key_name" > "$tmp_file" 2>/dev/null; then
     rm -f "$tmp_file"
-    echo '[]'
+    printf '%s\n' '[{"_extraction_error":true}]'
     return 0
   fi
 
@@ -62,7 +62,7 @@ collect_frontmatter_json_object_array_in_dir() {
   [ -d "$scan_dir" ] || { echo '[]'; return 0; }
   [ -n "$key_name" ] || { echo '[]'; return 0; }
 
-  tmp_file=$(mktemp)
+  tmp_file=$(mktemp) || { printf '%s\n' '[{"_extraction_error":true}]'; return 0; }
   case "$file_glob_mode" in
     summary)
       while IFS= read -r scan_file; do

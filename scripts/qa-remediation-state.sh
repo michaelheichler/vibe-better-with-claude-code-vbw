@@ -25,6 +25,10 @@ if [ -f "$SCRIPT_DIR/lib/vbw-config-root.sh" ]; then
   # shellcheck source=scripts/lib/vbw-config-root.sh
   source "$SCRIPT_DIR/lib/vbw-config-root.sh"
 fi
+if [ -f "$SCRIPT_DIR/lib/qa-result-gate-fail-classifications.sh" ]; then
+  source "$SCRIPT_DIR/lib/qa-result-gate-fail-classifications.sh"
+fi
+
 
 CMD="${1:-}"
 PHASE_DIR="${2:-}"
@@ -169,37 +173,6 @@ STATE_FILE="$PHASE_DIR/remediation/qa/.qa-remediation-stage"
 
 # QA remediation stages: plan → execute → verify → done
 STAGES=("plan" "execute" "verify" "done")
-
-count_fail_rows_in_verification() {
-  local file_path="${1:-}"
-  [ -f "$file_path" ] || { echo 0; return; }
-  awk -F'|' '
-    function trim(v) {
-      gsub(/^[[:space:]]+|[[:space:]]+$/, "", v)
-      return v
-    }
-    !/^\|/ { header_found = 0; next }
-    /^\|/ {
-      if ($0 ~ /^\|[[:space:]-]+(\|[[:space:]-]+)+\|?[[:space:]]*$/) next
-      if (!header_found) {
-        status_col = 0
-        for (i = 2; i < NF; i++) {
-          cell = trim($i)
-          if (cell == "Status") status_col = i
-        }
-        if (status_col > 0) header_found = 1
-        next
-      }
-      if (status_col > 0) {
-        status = trim($(status_col))
-        gsub(/\*+/, "", status)
-        status = trim(status)
-        if (status == "FAIL") count++
-      }
-    }
-    END { print count + 0 }
-  ' "$file_path" 2>/dev/null
-}
 
 count_pre_existing_issues_in_verification() {
   local file_path="${1:-}"
