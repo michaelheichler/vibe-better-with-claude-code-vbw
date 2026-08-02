@@ -742,6 +742,12 @@ if is_phase_root_artifact "$FILE_PATH" && echo "$FILE_PATH" | grep -qE 'phases/[
         .
       end)
       | if $session_id != "" then .session_id = $session_id else . end
+      | if .status == "running" and (.plans | type) == "array" and (.plans | length) > 0
+           and ([.plans[].status] | all(. == "complete" or . == "partial" or . == "failed"))
+        then .status = (if ([.plans[].status] | any(. == "failed")) then "failed"
+                        elif ([.plans[].status] | all(. == "complete")) then "complete"
+                        else "partial" end)
+        else . end
     ' "$STATE_FILE" > "$TEMP_FILE" 2>/dev/null && [ -s "$TEMP_FILE" ] && mv "$TEMP_FILE" "$STATE_FILE" 2>/dev/null || rm -f "$TEMP_FILE" 2>/dev/null
   fi
 
