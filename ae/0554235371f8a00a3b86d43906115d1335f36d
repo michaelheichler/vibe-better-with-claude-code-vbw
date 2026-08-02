@@ -1,0 +1,28 @@
+.vbw-planning/STATE.md
+  s_d2686ed9c0b94b::t_d30c946e6a6a52 74-76
+  s_d2686ed9c0b94b::t_94a0d4d5047c1f 54-56
+  s_d2686ed9c0b94b::t_037680b0ea51cf 82-84
+  s_d2686ed9c0b94b::t_f6553aee03a21e 95-97
+  s_d2686ed9c0b94b::t_d5a31573307741 39-41
+  s_d2686ed9c0b94b::t_32658dda8622bc 64-66
+  s_d2686ed9c0b94b::t_af4a13fdb82b7d 91-93
+  s_d2686ed9c0b94b::t_ed3f87c3361ec3 29-31
+  s_d2686ed9c0b94b::t_ffd0cd112e579a 50-52
+  s_d2686ed9c0b94b::t_f802dafcd10e6f 106
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "ae0554235371f8a00a3b86d43906115d1335f36d",
+  "prompts": {},
+  "sessions": {
+    "s_d2686ed9c0b94b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a924c903-92a9-4f1f-aaea-ba6a7f724e8e",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
