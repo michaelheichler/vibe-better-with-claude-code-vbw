@@ -994,7 +994,7 @@ Shutdown invariant: acknowledge every `shutdown_request` by calling SendMessage 
 
 1. Send `shutdown_request` via SendMessage to every active teammate in `TEAM_NAME`. The orchestrator controls the sequence and is not a teammate target. The SendMessage JSON body must include at minimum: `{"type": "shutdown_request", "id": "<unique-id>", "reason": "phase_complete", "team_name": "<TEAM_NAME>"}`. This is a simplified form. The full V2 envelope nests these fields under `payload`, with `id` at envelope level. Agents echo the `id` back as `request_id` in their `shutdown_response`.
 2. Log event: `bash "${VBW_PLUGIN_ROOT}/scripts/log-event.sh" shutdown_sent {phase} team={team_name} targets={count} 2>/dev/null || true`
-3. Follow the shared contract orchestrator response procedure. Re-send the `shutdown_request` after a plain-text reply. If a teammate rejects the request, re-send it immediately, up to three attempts per teammate. If the teammate still rejects after three attempts, log a warning and proceed to Post-shutdown residual cleanup.
+3. Follow the shared contract orchestrator response procedure, including its maximum of three `shutdown_request` attempts per teammate and residual-cleanup fallback for any sequence of plain-text or rejected responses.
 4. Log event: `bash "${VBW_PLUGIN_ROOT}/scripts/log-event.sh" shutdown_received {phase} team={team_name} approved={count} rejected={count} 2>/dev/null || true`
 5. **Post-shutdown residual cleanup** catches race-condition residuals where agents recreate inbox files after shutdown. The team config directory itself is removed automatically when the session exits.
    ```bash
