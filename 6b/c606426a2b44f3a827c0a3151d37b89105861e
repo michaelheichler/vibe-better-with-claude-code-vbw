@@ -1,0 +1,43 @@
+tests/debugger-codebase-mapping.bats
+  s_0825a35676f762::t_436ed05245495e 684,687,691
+.vbw-planning/phases/06-oversized-file-decomposition/remediation/qa/round-01/R01-SUMMARY.md
+  s_0825a35676f762::t_1a3adecfed2a5c 30
+references/vibe-mode-insert-phase.md
+  s_0825a35676f762::t_9db758bb2cfaab 8,10-11
+testing/verify-live-validation-policy.sh
+  s_0825a35676f762::t_d031d9a59a8a58 11,87,92,94,98,100
+references/vibe-mode-verify.md
+  s_0825a35676f762::t_582e15c8952c49 93
+references/vibe-mode-bootstrap.md
+  s_0825a35676f762::t_82baa9113c0e08 70
+testing/verify-ghost-team-cleanup.sh
+  s_0825a35676f762::t_e64a9aa2e483fc 246,248
+  s_0825a35676f762::t_9b30bc294465ee 256
+references/vibe-mode-add-phase.md
+  s_0825a35676f762::t_2b934e4df3d624 31
+  s_0825a35676f762::t_4e923e6c552ec1 30
+  s_0825a35676f762::t_4f15eacfed5b7a 27,29
+  s_0825a35676f762::t_0120c44ccc19e8 32-37
+testing/verify-qa-persistence-contract.sh
+  s_0825a35676f762::t_4190ddde9f25b2 11,94,97,101,103,106,108,110,148,151,153,156,158,160,162,180,184,186
+scripts/lib/rtk-manager-environment.sh
+  s_0825a35676f762::t_ddb8c1c412600b 171-179
+references/vibe-mode-execute.md
+  s_0825a35676f762::t_6dab3ce906f206 20
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "6bc606426a2b44f3a827c0a3151d37b89105861e",
+  "prompts": {},
+  "sessions": {
+    "s_0825a35676f762": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "bdda186d-4444-4c1d-826e-ec4c6e54a197",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
