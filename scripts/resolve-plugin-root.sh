@@ -45,6 +45,13 @@ valid_root() {
     [ -f "$candidate/scripts/$required_script" ]
 }
 
+valid_vbw_root() {
+  local candidate="${1:-}"
+  valid_root "$candidate" &&
+    [ -f "$candidate/.claude-plugin/plugin.json" ] &&
+    [ "$(jq -r '.name // empty' "$candidate/.claude-plugin/plugin.json" 2>/dev/null)" = "vbw" ]
+}
+
 export LC_ALL=C
 cache_root="${VBW_CACHE_ROOT:-$CLAUDE_DIR/plugins/cache/vbw-marketplace/vbw}"
 marketplaces_root="$CLAUDE_DIR/plugins/marketplaces"
@@ -86,15 +93,19 @@ if [ -z "$resolved_root" ]; then
       continue
     fi
     name="${candidate##*/}"
-    if [[ "$name" =~ ^[0-9]+(\.[0-9]+)*$ ]]; then
+    if [[ "$name" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
       numeric_names+=("$name")
     fi
   done
   if [ "${#numeric_names[@]}" -gt 0 ]; then
-    numeric_name=$(printf '%s\n' "${numeric_names[@]}" | sort -t. -k1,1n -k2,2n -k3,3n | tail -1)
-    if valid_root "$cache_root/$numeric_name"; then
-      resolved_root="$cache_root/$numeric_name"
-    fi
+    mapfile -t numeric_names < <(printf '%s\n' "${numeric_names[@]}" | sort -t. -k1,1nr -k2,2nr -k3,3nr)
+    # Invariant: every higher-ranked candidate was rejected. Variant: unexamined candidates decrease.
+    for numeric_name in "${numeric_names[@]}"; do
+      if valid_root "$cache_root/$numeric_name"; then
+        resolved_root="$cache_root/$numeric_name"
+        break
+      fi
+    done
   fi
 fi
 
@@ -103,21 +114,28 @@ if [ -z "$resolved_root" ]; then
   # Invariant: generic_names equals the cache entries examined. Variant: unexamined cache entries decrease.
   for candidate in "$cache_root"/*; do
     if [ -e "$candidate" ] || [ -L "$candidate" ]; then
-      generic_names+=("${candidate##*/}")
+      name="${candidate##*/}"
+      if [[ ! "$name" =~ ^[0-9]+(\.[0-9]+)*$ ]]; then
+        generic_names+=("$name")
+      fi
     fi
   done
   if [ "${#generic_names[@]}" -gt 0 ]; then
-    generic_name=$(printf '%s\n' "${generic_names[@]}" | sort | tail -1)
-    if valid_root "$cache_root/$generic_name"; then
-      resolved_root="$cache_root/$generic_name"
-    fi
+    mapfile -t generic_names < <(printf '%s\n' "${generic_names[@]}" | sort -r)
+    # Invariant: every higher-ranked candidate was rejected. Variant: unexamined candidates decrease.
+    for generic_name in "${generic_names[@]}"; do
+      if valid_root "$cache_root/$generic_name"; then
+        resolved_root="$cache_root/$generic_name"
+        break
+      fi
+    done
   fi
 fi
 
 if [ -z "$resolved_root" ]; then
-  # Invariant: no examined marketplace entry is valid. Variant: unexamined marketplace entries decrease.
+  # Invariant: no examined marketplace entry is a valid VBW root. Variant: unexamined entries decrease.
   for candidate in "$marketplaces_root"/* "$marketplaces_root"/*/*; do
-    if valid_root "$candidate" && [ -f "$candidate/commands/vibe.md" ]; then
+    if valid_vbw_root "$candidate" && [ -f "$candidate/commands/vibe.md" ]; then
       resolved_root="$candidate"
       break
     fi
@@ -139,11 +157,26 @@ if [ -z "$resolved_root" ]; then
 fi
 
 if [ -z "$resolved_root" ]; then
-  process_plugin_dir=$(ps axww -o args= 2>/dev/null | grep -v grep | grep -oE -- "--plugin-dir [^ ]+" | head -1 || true)
-  process_plugin_dir="${process_plugin_dir#--plugin-dir }"
-  if valid_root "$process_plugin_dir"; then
-    resolved_root="$process_plugin_dir"
-  fi
+  # Invariant: no examined process path is a valid VBW root. Variant: unexamined paths decrease.
+  while IFS= read -r process_plugin_dir; do
+    process_plugin_dir="${process_plugin_dir#--plugin-dir}"
+    process_plugin_dir="${process_plugin_dir#"${process_plugin_dir%%[![:space:]]*}"}"
+    case "$process_plugin_dir" in
+      \"*\")
+        process_plugin_dir="${process_plugin_dir#\"}"
+        process_plugin_dir="${process_plugin_dir%\"}"
+        ;;
+      \'*\')
+        process_plugin_dir="${process_plugin_dir#\'}"
+        process_plugin_dir="${process_plugin_dir%\'}"
+        ;;
+    esac
+    if valid_vbw_root "$process_plugin_dir"; then
+      resolved_root="$process_plugin_dir"
+      break
+    fi
+  # ponytail: escaped unquoted spaces are excluded. Add shell-argument parsing if Claude emits them.
+  done < <(ps axww -o args= 2>/dev/null | grep -v grep | grep -oE -- "--plugin-dir[[:space:]]+(\"[^\"]*\"|'[^']*'|[^[:space:]]+)" || true)
 fi
 
 [ -n "$resolved_root" ] || fail_resolution

@@ -785,14 +785,14 @@ else
 fi
 
 # Test 45: vibe.md contains normalization guard
-if grep -q 'normalize-plan-filenames.sh' "$SCRIPT_DIR/commands/vibe.md" && grep -q 'misnamed_plans=true' "$SCRIPT_DIR/commands/vibe.md"; then
+if grep -q 'normalize-plan-filenames.sh' "$SCRIPT_DIR/references/vibe-input-parsing.md" && grep -q 'misnamed_plans=true' "$SCRIPT_DIR/references/vibe-input-parsing.md"; then
   pass "vibe.md contains normalization guard"
 else
   fail "vibe.md missing normalization guard"
 fi
 
 # Test 45b: vibe.md guards QA existing-plan recovery normalizer
-RECOVERY_BLOCK=$(awk '/Existing-plan recovery before spawning Lead/{flag=1} flag{print} flag && /If the canonical/ {exit}' "$SCRIPT_DIR/commands/vibe.md")
+RECOVERY_BLOCK=$(awk '/Plan recovery and Lead spawn/{flag=1} flag{print} flag && /If the canonical/ {exit}' "$SCRIPT_DIR/references/vibe-input-parsing.md")
 if grep -q 'NORM_SCRIPT=' <<<"$RECOVERY_BLOCK" \
   && grep -Fq 'if [ -f "$NORM_SCRIPT" ]; then' <<<"$RECOVERY_BLOCK" \
   && grep -Fq 'bash "$NORM_SCRIPT" "{round_dir}"' <<<"$RECOVERY_BLOCK"; then

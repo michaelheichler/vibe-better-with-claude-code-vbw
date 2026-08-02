@@ -32,9 +32,10 @@ make_root() {
   local name="$1"
   local root="$TEST_TEMP_DIR/roots/$name"
 
-  mkdir -p "$root/scripts" "$root/commands"
+  mkdir -p "$root/scripts" "$root/commands" "$root/.claude-plugin"
   : > "$root/scripts/hook-wrapper.sh"
   : > "$root/commands/vibe.md"
+  printf '%s\n' '{"name":"vbw"}' > "$root/.claude-plugin/plugin.json"
   cp "$ENSURE_LINK" "$root/scripts/ensure-plugin-root-link.sh"
   (cd "$root" && pwd -P)
 }
@@ -84,6 +85,39 @@ assert_resolved() {
   assert_resolved "$newer"
 }
 
+@test "invalid newest numeric cache entry falls back to older valid entry" {
+  local older
+  older=$(make_root numeric-valid-older)
+  ln -s "$older" "$VBW_CACHE_ROOT/1.9.0"
+  mkdir -p "$VBW_CACHE_ROOT/1.10.0"
+
+  run bash "$RESOLVER"
+
+  assert_resolved "$older"
+}
+
+@test "invalid numeric cache entry without a valid fallback fails" {
+  mkdir -p "$VBW_CACHE_ROOT/1.10.0"
+
+  run bash "$RESOLVER"
+
+  [ "$status" -eq 1 ]
+  [ "$output" = "VBW: plugin root unavailable. Restart this session to recreate $SESSION_LINK." ]
+  [ ! -e "$SESSION_LINK" ]
+}
+
+@test "four-component numeric cache names are rejected" {
+  local root
+  root=$(make_root numeric-four-component)
+  ln -s "$root" "$VBW_CACHE_ROOT/1.38.9.11"
+
+  run bash "$RESOLVER"
+
+  [ "$status" -eq 1 ]
+  [ "$output" = "VBW: plugin root unavailable. Restart this session to recreate $SESSION_LINK." ]
+  [ ! -e "$SESSION_LINK" ]
+}
+
 @test "lexically last generic cache entry resolves without numeric entries" {
   local alpha zulu
   alpha=$(make_root generic-alpha)
@@ -96,12 +130,38 @@ assert_resolved() {
   assert_resolved "$zulu"
 }
 
+@test "invalid lexically last generic cache entry falls back to earlier valid entry" {
+  local alpha
+  alpha=$(make_root generic-valid-alpha)
+  ln -s "$alpha" "$VBW_CACHE_ROOT/alpha"
+  mkdir -p "$VBW_CACHE_ROOT/zulu"
+
+  run bash "$RESOLVER"
+
+  assert_resolved "$alpha"
+}
+
 @test "marketplace root resolves without a cache entry" {
   local root marketplaces_root
   root=$(make_root marketplace)
   marketplaces_root="$CLAUDE_CONFIG_DIR/plugins/marketplaces"
   mkdir -p "$marketplaces_root"
   ln -s "$root" "$marketplaces_root/vbw-marketplace"
+
+  run bash "$RESOLVER"
+
+  assert_resolved "$root"
+}
+
+@test "marketplace fallback skips a non-VBW plugin collision" {
+  local collision root marketplaces_root
+  collision=$(make_root marketplace-collision)
+  root=$(make_root marketplace-vbw)
+  printf '%s\n' '{"name":"other-plugin"}' > "$collision/.claude-plugin/plugin.json"
+  marketplaces_root="$CLAUDE_CONFIG_DIR/plugins/marketplaces"
+  mkdir -p "$marketplaces_root"
+  ln -s "$collision" "$marketplaces_root/a-collision"
+  ln -s "$root" "$marketplaces_root/z-vbw"
 
   run bash "$RESOLVER"
 
@@ -136,6 +196,38 @@ assert_resolved() {
   local root
   root=$(make_root process)
   export MOCK_PS_OUTPUT="claude --plugin-dir $root"
+
+  run bash "$RESOLVER"
+
+  assert_resolved "$root"
+}
+
+@test "process recovery preserves a double-quoted plugin-dir path with spaces" {
+  local root
+  root=$(make_root "process double quoted")
+  export MOCK_PS_OUTPUT="claude --plugin-dir \"$root\" --verbose"
+
+  run bash "$RESOLVER"
+
+  assert_resolved "$root"
+}
+
+@test "process recovery preserves a single-quoted plugin-dir path with spaces" {
+  local root
+  root=$(make_root "process single quoted")
+  export MOCK_PS_OUTPUT="claude --plugin-dir '$root' --verbose"
+
+  run bash "$RESOLVER"
+
+  assert_resolved "$root"
+}
+
+@test "process fallback skips a non-VBW plugin collision" {
+  local collision root
+  collision=$(make_root process-collision)
+  root=$(make_root process-vbw)
+  printf '%s\n' '{"name":"other-plugin"}' > "$collision/.claude-plugin/plugin.json"
+  export MOCK_PS_OUTPUT="claude --plugin-dir $collision"$'\n'"claude --plugin-dir $root"
 
   run bash "$RESOLVER"
 

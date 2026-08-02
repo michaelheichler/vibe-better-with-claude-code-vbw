@@ -13,6 +13,7 @@ set -euo pipefail
 # - QA remediation guidance requires judging process-exception validity, not mere documentation
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+VIBE_INPUT_PARSING="$ROOT/references/vibe-input-parsing.md"
 
 PASS=0
 FAIL=0
@@ -185,10 +186,10 @@ else
   fail "16: execute-protocol.md QA task descriptions missing \${VBW_PLUGIN_ROOT} (found $PLUGIN_ROOT_COUNT, expected ≥2)"
 fi
 
-if grep -q 'track-known-issues\.sh" sync-summaries' "$ROOT/commands/vibe.md"; then
-  pass "16b: commands/vibe.md backfills summary-known-issues before resumed phase-level QA"
+if grep -q 'track-known-issues\.sh" sync-summaries' "$VIBE_INPUT_PARSING"; then
+  pass "16b: references/vibe-input-parsing.md backfills summary-known-issues before resumed phase-level QA"
 else
-  fail "16b: commands/vibe.md missing summary-known-issues backfill before resumed phase-level QA"
+  fail "16b: references/vibe-input-parsing.md missing summary-known-issues backfill before resumed phase-level QA"
 fi
 
 # 17. vbw-qa.md Constraints does NOT have blanket "No file modification" without qualification
@@ -220,11 +221,11 @@ else
   fail "20: vbw-qa.md missing guard against laundering fixable FAILs through process-exception paperwork"
 fi
 
-# 21. promote-todos must appear in commands/vibe.md for known-issues lifecycle
-if grep -q 'track-known-issues\.sh.*promote-todos' "$ROOT/commands/vibe.md"; then
-  pass "21: commands/vibe.md calls promote-todos for known-issues lifecycle"
+# 21. Resumed known issues would stay hidden unless references/vibe-input-parsing.md promotes them.
+if grep -q 'track-known-issues\.sh.*promote-todos' "$VIBE_INPUT_PARSING"; then
+  pass "21: references/vibe-input-parsing.md calls promote-todos for known-issues lifecycle"
 else
-  fail "21: commands/vibe.md missing promote-todos call — known issues won't auto-promote to STATE.md"
+  fail "21: references/vibe-input-parsing.md missing promote-todos call, known issues will not auto-promote to STATE.md"
 fi
 
 # 22. promote-todos must appear in commands/qa.md for known-issues lifecycle

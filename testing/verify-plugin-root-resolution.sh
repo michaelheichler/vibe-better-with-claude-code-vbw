@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 COMMANDS_DIR="$ROOT/commands"
 RESOLVER="$ROOT/scripts/resolve-plugin-root.sh"
+PHASE_STATE_RESOLVER="$ROOT/scripts/resolve-phase-state.sh"
 ENSURE_LINK="$ROOT/scripts/ensure-plugin-root-link.sh"
 EXECUTE_PROTOCOL="$ROOT/references/execute-protocol.md"
 
@@ -49,6 +50,12 @@ else
   fail "shared resolver is missing or not executable"
 fi
 
+if [ -x "$PHASE_STATE_RESOLVER" ]; then
+  pass "phase-state resolver is executable"
+else
+  fail "phase-state resolver is missing or not executable"
+fi
+
 # Invariant: TARGET_FILES contains exactly the visited target commands. Variant: unvisited targets.
 for rel in "${TARGET_COMMANDS[@]}"; do
   file="$COMMANDS_DIR/$rel"
@@ -82,7 +89,9 @@ fi
 session_link_path='/tmp/.vbw-plugin-root-link-'
 session_id_fallback='${CLAUDE_SESSION_ID:-default}'
 root_fallback='${CLAUDE_PLUGIN_ROOT:-}/scripts/resolve-plugin-root.sh'
+phase_state_fallback='${CLAUDE_PLUGIN_ROOT:-}/scripts/resolve-phase-state.sh'
 resolver_path='scripts/resolve-plugin-root.sh'
+phase_state_resolver_path='scripts/resolve-phase-state.sh'
 helper_execution='bash "$R"'
 unreachable_helper_message='VBW: plugin root unavailable. Restart this session to recreate '
 
@@ -97,11 +106,28 @@ has_semantic_trampoline() {
     grep -Fq '$L.' <<< "$preamble"
 }
 
+has_phase_state_trampoline() {
+  local preamble="$1"
+  grep -Fq "$session_link_path" <<< "$preamble" &&
+    grep -Fq "$session_id_fallback" <<< "$preamble" &&
+    grep -Fq "$phase_state_fallback" <<< "$preamble" &&
+    grep -Fq "$phase_state_resolver_path" <<< "$preamble" &&
+    grep -Fq "$helper_execution" <<< "$preamble" &&
+    grep -Fq "$unreachable_helper_message" <<< "$preamble" &&
+    grep -Fq '$L.' <<< "$preamble"
+}
+
 # Invariant: every processed target has one semantic-contract result. Variant: unvisited target files.
 for file in "${TARGET_FILES[@]}"; do
   base=$(basename "$file")
-  preamble=$(grep -A2 -m1 '^Plugin root:$' "$file" || true)
-  if has_semantic_trampoline "$preamble"; then
+  preamble=$(grep -A2 -m1 '^Plugin root' "$file" || true)
+  if [ "$base" = "vibe.md" ]; then
+    if has_phase_state_trampoline "$preamble"; then
+      pass "$base: delegates its preamble to resolve-phase-state.sh"
+    else
+      fail "$base: missing the phase-state resolver trampoline contract"
+    fi
+  elif has_semantic_trampoline "$preamble"; then
     pass "$base: delegates its preamble to resolve-plugin-root.sh"
   else
     fail "$base: missing the shared resolver trampoline contract"
@@ -143,7 +169,7 @@ declare -A expected_refresh_counts=(
   [resume.md]=1
   [status.md]=1
   [verify.md]=2
-  [vibe.md]=1
+  [vibe.md]=0
 )
 # Invariant: every visited phase command has its expected delegated refreshes. Variant: unvisited phase commands.
 for rel in "${PHASE_DETECT_COMMANDS[@]}"; do
@@ -155,16 +181,30 @@ for rel in "${PHASE_DETECT_COMMANDS[@]}"; do
   fi
 done
 
+phase_state_refresh_count=$(grep -c -- '--require-script phase-detect.sh' "$PHASE_STATE_RESOLVER" || true)
+if [ "$phase_state_refresh_count" -eq 1 ]; then
+  pass "resolve-phase-state.sh delegates phase-detect refreshes with --require-script"
+else
+  fail "resolve-phase-state.sh: expected 1 delegated phase-detect refresh site, found $phase_state_refresh_count"
+fi
+
 for needle in \
+  'L="/tmp/.vbw-plugin-root-link-${SESSION_KEY}"' \
+  'P="/tmp/.vbw-phase-detect-${SESSION_KEY}.txt"' \
   'LOCK="/tmp/.vbw-phase-detect-live-${SESSION_KEY}.lock"' \
-  'while [ $i -lt 100 ]' \
+  'while [ $lock_retry_count -lt 100 ]' \
+  'while [ $cache_retry_count -lt 100 ]' \
+  'while [ $freshness_retry_count -lt 100 ]' \
+  'while [ $refresh_retry_count -lt 100 ]' \
+  'sleep 0.1' \
   'mkdir "$LOCK"' \
-  'mv "$PTMP" "$P"'
+  'mv "$PTMP" "$P"' \
+  "printf '%s\\n' 'phase_detect_error=true'"
 do
-  if grep -Fq "$needle" "$COMMANDS_DIR/vibe.md"; then
-    pass "vibe.md preserves phase-detect locking contract: $needle"
+  if grep -Fq "$needle" "$PHASE_STATE_RESOLVER"; then
+    pass "resolve-phase-state.sh preserves phase-detect locking contract: $needle"
   else
-    fail "vibe.md lost phase-detect locking contract: $needle"
+    fail "resolve-phase-state.sh lost phase-detect locking contract: $needle"
   fi
 done
 
@@ -199,9 +239,10 @@ chmod +x "$TEST_DIR/bin/ps"
 make_root() {
   local name="$1"
   local root="$TEST_DIR/roots/$name"
-  mkdir -p "$root/scripts" "$root/commands"
+  mkdir -p "$root/scripts" "$root/commands" "$root/.claude-plugin"
   : > "$root/scripts/hook-wrapper.sh"
   : > "$root/commands/vibe.md"
+  printf '%s\n' '{"name":"vbw"}' > "$root/.claude-plugin/plugin.json"
   cp "$ENSURE_LINK" "$root/scripts/ensure-plugin-root-link.sh"
   (cd "$root" && pwd -P)
 }

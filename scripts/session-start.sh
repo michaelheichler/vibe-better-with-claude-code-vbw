@@ -543,6 +543,16 @@ fi
 # the same resolution path as marketplace installs.
 CACHE_DIR="$CLAUDE_DIR/plugins/cache/vbw-marketplace/vbw"
 MKT_DIR="$CLAUDE_DIR/plugins/marketplaces/vbw-marketplace"
+
+# R: cache paths are written in ascending canonical version order on GNU and BSD sort.
+sort_cache_versions() {
+  if sort -V </dev/null >/dev/null 2>&1; then
+    sort -V
+  else
+    awk -F/ '{v=$(NF-1); split(v,p,"."); printf "%010d.%010d.%010d\t%s\n",p[1]+0,p[2]+0,p[3]+0,$0}' | sort | cut -f2-
+  fi
+}
+
 if [ -n "${CLAUDE_PLUGIN_ROOT:-}" ] && [ -d "$CLAUDE_PLUGIN_ROOT" ]; then
   if ! ls -d "$CACHE_DIR"/*/ >/dev/null 2>&1; then
     mkdir -p "$CACHE_DIR"
@@ -566,9 +576,10 @@ fi
 # --- Clean old cache versions (keep only latest) ---
 VBW_CLEANUP_LOCK="/tmp/vbw-cache-cleanup-lock"
 if [ -d "$CACHE_DIR" ] && mkdir "$VBW_CLEANUP_LOCK" 2>/dev/null; then
-  VERSIONS=$(ls -d "$CACHE_DIR"/*/ 2>/dev/null | sort -V)
+  VERSIONS=$(ls -d "$CACHE_DIR"/*/ 2>/dev/null | sort_cache_versions)
   COUNT=$(echo "$VERSIONS" | wc -l | tr -d ' ')
   if [ "$COUNT" -gt 1 ]; then
+    # Invariant: processed entries are older than the retained final entry. Variant: unprocessed old entries decrease.
     echo "$VERSIONS" | head -n $((COUNT - 1)) | while IFS= read -r dir; do
       [ -L "${dir%/}" ] && continue  # Skip local dev symlinks
       rm -rf "$dir"
@@ -580,7 +591,7 @@ fi
 # --- Cache integrity check (nuke if critical files missing) ---
 # Skip integrity check for local dev symlinks — the live repo is always current.
 if [ -d "$CACHE_DIR" ]; then
-  LATEST_CACHE=$(ls -d "$CACHE_DIR"/*/ 2>/dev/null | sort -V | tail -1)
+  LATEST_CACHE=$(ls -d "$CACHE_DIR"/*/ 2>/dev/null | sort_cache_versions | tail -1)
   if [ -n "$LATEST_CACHE" ] && [ ! -L "${LATEST_CACHE%/}" ]; then
     INTEGRITY_OK=true
     for f in commands/init.md .claude-plugin/plugin.json VERSION config/defaults.json; do
@@ -597,7 +608,7 @@ if [ -d "$CACHE_DIR" ]; then
 fi
 
 # --- Auto-sync stale marketplace checkout ---
-_CACHE_LATEST=$(ls -d "$CACHE_DIR"/*/ 2>/dev/null | sort -V | tail -1)
+_CACHE_LATEST=$(ls -d "$CACHE_DIR"/*/ 2>/dev/null | sort_cache_versions | tail -1)
 if [ -d "$MKT_DIR/.git" ] && [ -d "$CACHE_DIR" ]; then
   # Skip version-driven sync when latest cache entry is a local dev symlink —
   # local repo version differences should not drive marketplace checkout behavior.

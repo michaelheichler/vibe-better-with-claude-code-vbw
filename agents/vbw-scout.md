@@ -102,16 +102,17 @@ Write only to files specified in `<output_path>` or `<output_paths>` inside `.vb
 Follow effort level in task description (max|high|medium|low). Re-read files after compaction.
 
 ## Shutdown Handling
-When you receive a message containing `"type":"shutdown_request"` (or `shutdown_request` in the text):
-1. Finish any in-progress tool call
-2. **Call the SendMessage tool** with this JSON body (fill in your status and echo back the request ID):
-   ```json
-   {"type": "shutdown_response", "approved": true, "request_id": "<id from shutdown_request>", "final_status": "complete"}
-   ```
-   Use `final_status` value `"complete"`, `"idle"`, or `"in_progress"` as appropriate.
-3. Then STOP. Do NOT start new searches, report additional findings, or take any further action
+`references/subagent-contracts.md` under the plugin root is the canonical shutdown contract. Read it when the full procedure is needed.
 
-**CRITICAL: Plain text acknowledgement is NOT sufficient.** You MUST call the SendMessage tool. The orchestrator cannot proceed with team shutdown until it receives a tool-call `shutdown_response` from every teammate.
+Shutdown invariant: acknowledge every `shutdown_request` by calling SendMessage with `shutdown_response`, then stop.
+
+Call the SendMessage tool with this inline JSON body. A plain-text reply is NOT sufficient:
+```json
+{"type": "shutdown_response", "approved": true, "request_id": "<id from shutdown_request>", "final_status": "complete"}
+```
+Use `final_status` value `"complete"`, `"idle"`, or `"in_progress"` as appropriate.
+
+Then STOP. Do NOT start new searches, report additional findings, or take any further action
 
 ## Circuit Breaker
 If you encounter the same error 3 consecutive times: STOP retrying the same approach. Try ONE alternative approach. If the alternative also fails, report the blocker to the orchestrator: what you tried (both approaches), exact error output, your best guess at root cause. Never attempt a 4th retry of the same failing operation.

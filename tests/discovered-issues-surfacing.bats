@@ -606,15 +606,15 @@ path_b_debug_block() {
 }
 
 @test "vibe command references known-issues sync during QA" {
-  grep -q 'track-known-issues.sh' "$PROJECT_ROOT/commands/vibe.md"
+  grep -q 'track-known-issues.sh' "$PROJECT_ROOT/references/vibe-input-parsing.md"
 }
 
 @test "vibe command has all_done pending-QA fallback into Verify mode" {
-  grep -q 'all_done QA-attention fallback (pending)' "$PROJECT_ROOT/commands/vibe.md"
+  grep -q 'all_done QA-attention fallback (pending)' "$PROJECT_ROOT/references/vibe-input-parsing.md"
 }
 
 @test "vibe command has earlier-work failed-QA fallback into QA remediation" {
-  grep -q 'Earlier-work QA-attention fallback (failed)' "$PROJECT_ROOT/commands/vibe.md"
+  grep -q 'Earlier-work QA-attention fallback (failed)' "$PROJECT_ROOT/references/vibe-input-parsing.md"
 }
 
 @test "verify command skip-qa still blocks on unresolved known issues" {

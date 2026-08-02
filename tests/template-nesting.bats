@@ -2,11 +2,6 @@
 
 load test_helper
 
-# ── Ban nested template expressions ─────────────────────────────────────────
-# Claude Code's template processor cannot parse nested !` backtick expressions.
-# All template directives must be single-level: !`bash /path/to/script.sh`
-# Nested forms like !`bash `!`echo /path`/script.sh` pass raw text to the LLM.
-
 @test "no nested template expressions in command files" {
   run bash -c "grep -rn '!\`bash \`!\`' \"$PROJECT_ROOT/commands/\" 2>/dev/null"
   [ "$status" -eq 1 ]
@@ -22,9 +17,6 @@ load test_helper
   [ "$status" -eq 1 ]
 }
 
-# ── Ban legacy runtime substitution ─────────────────────────────────────────
-# $(cat /tmp/.vbw-plugin-root) was the old pattern — replaced by symlink path.
-
 @test "no legacy cat /tmp/.vbw-plugin-root runtime substitution in commands" {
   run bash -c "grep -R -n 'cat /tmp/.vbw-plugin-root' \"$PROJECT_ROOT/commands\" 2>/dev/null | grep -v 'vbw-plugin-root-link-'"
   [ "$status" -eq 1 ]
@@ -35,13 +27,7 @@ load test_helper
   [ "$status" -eq 1 ]
 }
 
-# ── Guarded symlink template expressions exist only where still needed ───────
-# After the phase-detect self-healing refactor, the heavyweight state readers no
-# longer wait on another prompt block to create the symlink/cache. The remaining
-# guarded wait-patterns are lightweight readers that only need the link path.
-
 _guard_pattern() {
-  # No backticks needed — this substring is inside the template expression
   printf 'while [ ! -L "$L" ] && [ $i -lt 20 ]'
 }
 
@@ -106,13 +92,6 @@ _guard_pattern() {
     [ "$count" -ge 1 ] || { echo "FAIL: ${cmd}.md missing L symlink variable for guarded reads"; return 1; }
   done
 }
-
-# ── Atomic phase-detect via preamble temp file ──────────────────────────────
-# Phase-detect.sh runs atomically inside the preamble (same !` backtick) to
-# avoid race conditions between separate template expressions.
-#
-# Most commands read the preamble output from a temp file. vibe.md now reads
-# phase-detect live (guarded) to avoid stale/shared temp-file collisions.
 
 _atomic_pd_preamble_pattern() {
   printf 'phase-detect.sh" > "/tmp/.vbw-phase-detect-'
@@ -211,19 +190,80 @@ _simulate_phase_detect_reader() {
   fi
 }
 
-_extract_vibe_phase_state_block() {
+_copy_vibe_phase_state_resolver() {
   local out="$1"
+  local out_dir
 
-  awk '
-    /^Pre-computed state \(via phase-detect\.sh\):$/ { capture=1; next }
-    capture && !in_block && /^```$/ { in_block=1; next }
-    in_block && /^```$/ { exit }
-    in_block {
-      sub(/^!`/, "", $0)
-      sub(/`$/, "", $0)
-      print
-    }
-  ' "$PROJECT_ROOT/commands/vibe.md" > "$out"
+  out_dir=$(dirname "$out")
+  cp "$PROJECT_ROOT/scripts/resolve-phase-state.sh" "$out"
+  cp "$PROJECT_ROOT/scripts/resolve-plugin-root.sh" "$out_dir/resolve-plugin-root.sh"
+  cp "$PROJECT_ROOT/scripts/resolve-claude-dir.sh" "$out_dir/resolve-claude-dir.sh"
+}
+
+_extract_vibe_embedded_phase_state_block() {
+  local block="$1"
+  local out="$2"
+
+  case "$block" in
+    milestone)
+      awk '
+        /MILESTONE_UAT_CONTEXT=\$\(/ { route = 1; next }
+        route && /SESSION_KEY="\$\{CLAUDE_SESSION_ID:-default\}"/ { capture = 1 }
+        capture {
+          line = $0
+          sub(/^[[:space:]]+/, "", line)
+          print line
+          if (index(line, "&& _phase_detect_cache_fresh && PD=$(cat \"$P\")") > 0) exit
+        }
+      ' "$PROJECT_ROOT/commands/vibe.md" > "$out"
+      ;;
+    verify)
+      awk '
+        /^### Mode: Verify$/ { route = 1 }
+        route && /SESSION_KEY="\$\{CLAUDE_SESSION_ID:-default\}"/ { capture = 1 }
+        capture {
+          line = $0
+          sub(/^[[:space:]]+/, "", line)
+          print line
+          if (line == "PD=\"phase_detect_error=true\"") ending = 1
+          else if (ending && line == "fi") exit
+        }
+      ' "$PROJECT_ROOT/commands/vibe.md" > "$out"
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+_assert_vibe_embedded_phase_state_blocks() {
+  local td="$1"
+  local root="$2"
+  local expected="$3"
+  local rejected="${4:-}"
+  local block session link cache script
+
+  for block in milestone verify; do
+    session="vibe-embedded-${block}-$$-$RANDOM"
+    link="/tmp/.vbw-plugin-root-link-${session}"
+    cache="/tmp/.vbw-phase-detect-${session}.txt"
+    script="$td/vibe-${block}-phase-state.sh"
+
+    _track_tmp_test_path "$link"
+    _track_tmp_test_path "$cache"
+    ln -s "$root" "$link"
+    printf '%s\n' 'phase_detect_error=true' > "$cache"
+    touch -t 209912312359 "$cache"
+    _extract_vibe_embedded_phase_state_block "$block" "$script"
+    [ -s "$script" ]
+
+    run env CLAUDE_SESSION_ID="$session" bash -c 'source "$1"; printf '\''%s\n'\'' "$PD"' _ "$script"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"$expected"* ]]
+    if [ -n "$rejected" ]; then
+      [[ "$output" != *"$rejected"* ]]
+    fi
+  done
 }
 
 @test "commands with phase-detect run it atomically in preamble" {
@@ -233,9 +273,10 @@ _extract_vibe_phase_state_block() {
     [ "$count" -ge 1 ] || { echo "FAIL: ${cmd}.md missing atomic phase-detect in preamble"; return 1; }
   done
 
-  grep -q 'PTMP="${P}.tmp\.\$\$"' "$PROJECT_ROOT/commands/vibe.md" || { echo "FAIL: vibe.md missing temp output path for atomic phase-detect preamble"; return 1; }
-  grep -q 'bash "\$LINK/scripts/phase-detect.sh" > "\$PTMP"' "$PROJECT_ROOT/commands/vibe.md" || { echo "FAIL: vibe.md missing temp-file phase-detect write"; return 1; }
-  grep -q 'mv "\$PTMP" "\$P"' "$PROJECT_ROOT/commands/vibe.md" || { echo "FAIL: vibe.md missing atomic phase-detect rename"; return 1; }
+  local phase_state="$PROJECT_ROOT/scripts/resolve-phase-state.sh"
+  grep -q 'PTMP="${P}.tmp\.\$\$"' "$phase_state" || { echo "FAIL: resolve-phase-state.sh missing temp output path"; return 1; }
+  grep -q 'bash "\$L/scripts/phase-detect.sh" > "\$PTMP"' "$phase_state" || { echo "FAIL: resolve-phase-state.sh missing temp-file phase-detect write"; return 1; }
+  grep -q 'mv "\$PTMP" "\$P"' "$phase_state" || { echo "FAIL: resolve-phase-state.sh missing atomic phase-detect rename"; return 1; }
 }
 
 @test "commands with phase-detect preamble no longer use stamp file" {
@@ -274,25 +315,29 @@ _extract_vibe_phase_state_block() {
   done
 }
 
-@test "vibe.md guarded readers require fresh cache before fallback" {
+@test "vibe phase-state readers require fresh cache before fallback" {
+  local vibe="$PROJECT_ROOT/commands/vibe.md"
+  local phase_state="$PROJECT_ROOT/scripts/resolve-phase-state.sh"
   local start_count fresh_count stat_count
-  start_count=$(grep -cF '_PD_START_TS=$(date +%s' "$PROJECT_ROOT/commands/vibe.md" || true)
-  fresh_count=$(grep -cF '_phase_detect_cache_fresh()' "$PROJECT_ROOT/commands/vibe.md" || true)
-  stat_count=$(grep -c 'stat -c %Y "\$P"\|stat -f %m "\$P"' "$PROJECT_ROOT/commands/vibe.md" || true)
-  [ "${start_count:-0}" -ge 3 ] || { echo 'FAIL: vibe.md missing invocation-start freshness guard'; return 1; }
-  [ "${fresh_count:-0}" -ge 3 ] || { echo 'FAIL: vibe.md missing fresh-cache helper in guarded readers'; return 1; }
-  [ "${stat_count:-0}" -ge 3 ] || { echo 'FAIL: vibe.md missing cache mtime freshness check'; return 1; }
+  start_count=$(grep -h 'START_TS=$(date +%s\|start_ts=$(date +%s' "$vibe" "$phase_state" | wc -l | tr -d ' ')
+  fresh_count=$(grep -h 'phase_detect_cache_fresh()' "$vibe" "$phase_state" | wc -l | tr -d ' ')
+  stat_count=$(grep -h 'stat -c %Y "\$P"\|stat -f %m "\$P"' "$vibe" "$phase_state" | wc -l | tr -d ' ')
+  [ "${start_count:-0}" -ge 3 ] || { echo 'FAIL: vibe phase-state readers missing invocation-start freshness guard'; return 1; }
+  [ "${fresh_count:-0}" -ge 3 ] || { echo 'FAIL: vibe phase-state readers missing fresh-cache helper'; return 1; }
+  [ "${stat_count:-0}" -ge 3 ] || { echo 'FAIL: vibe phase-state readers missing cache mtime freshness check'; return 1; }
 }
 
-@test "vibe.md guarded readers use a shared live phase-detect lock" {
+@test "vibe phase-state readers use a shared live phase-detect lock" {
   local lock_count
-  lock_count=$(grep -cF '/tmp/.vbw-phase-detect-live-${SESSION_KEY}.lock' "$PROJECT_ROOT/commands/vibe.md" || true)
-  [ "${lock_count:-0}" -ge 3 ] || { echo 'FAIL: vibe.md missing shared live phase-detect lock in guarded readers'; return 1; }
+  lock_count=$(grep -hF '/tmp/.vbw-phase-detect-live-${SESSION_KEY}.lock' \
+    "$PROJECT_ROOT/commands/vibe.md" \
+    "$PROJECT_ROOT/scripts/resolve-phase-state.sh" | wc -l | tr -d ' ')
+  [ "${lock_count:-0}" -ge 3 ] || { echo 'FAIL: vibe phase-state readers missing shared live lock'; return 1; }
 }
 
-@test "vibe.md preamble uses the same phase-detect live lock" {
-  grep -qF 'LOCK="/tmp/.vbw-phase-detect-live-${SESSION_KEY}.lock"' "$PROJECT_ROOT/commands/vibe.md" || {
-    echo 'FAIL: vibe.md preamble missing shared phase-detect live lock';
+@test "vibe phase-state resolver uses the shared live lock" {
+  grep -qF 'LOCK="/tmp/.vbw-phase-detect-live-${SESSION_KEY}.lock"' "$PROJECT_ROOT/scripts/resolve-phase-state.sh" || {
+    echo 'FAIL: resolve-phase-state.sh missing shared phase-detect live lock';
     return 1;
   }
 }
@@ -305,8 +350,10 @@ _extract_vibe_phase_state_block() {
   done
 
   local vibe_live_count
-  vibe_live_count=$(grep -cF 'bash "$L/scripts/phase-detect.sh"' "$PROJECT_ROOT/commands/vibe.md")
-  [ "$vibe_live_count" -ge 3 ] || { echo "FAIL: vibe.md missing guarded live phase-detect reads"; return 1; }
+  vibe_live_count=$(grep -hF 'bash "$L/scripts/phase-detect.sh"' \
+    "$PROJECT_ROOT/commands/vibe.md" \
+    "$PROJECT_ROOT/scripts/resolve-phase-state.sh" | wc -l | tr -d ' ')
+  [ "$vibe_live_count" -ge 3 ] || { echo "FAIL: vibe phase-state flow missing guarded live reads"; return 1; }
 }
 
 @test "vibe/verify secondary readers no longer use legacy empty-only fallback" {
@@ -338,7 +385,7 @@ EOF
   [[ "$out" != *"phase_detect_error=true"* ]]
 }
 
-@test "extracted vibe phase-state block repairs sentinel cache without pre-existing link" {
+@test "shared vibe phase-state resolver repairs sentinel cache without pre-existing link" {
   local td root script session link cache
   td=$(_new_tmp_test_dir)
 
@@ -362,7 +409,7 @@ EOF
 
   _track_tmp_test_path "$link"
   _track_tmp_test_path "$cache"
-  _extract_vibe_phase_state_block "$script"
+  _copy_vibe_phase_state_resolver "$script"
   [ -s "$script" ]
 
   run env CLAUDE_SESSION_ID="$session" CLAUDE_PLUGIN_ROOT="$root" bash "$script"
@@ -372,7 +419,7 @@ EOF
   [ -L "$link" ]
 }
 
-@test "extracted vibe phase-state block fails closed when live refresh returns error sentinel" {
+@test "shared vibe phase-state resolver fails closed when live refresh returns error sentinel" {
   local td root script session link cache
   td=$(_new_tmp_test_dir)
 
@@ -396,13 +443,52 @@ EOF
 
   _track_tmp_test_path "$link"
   _track_tmp_test_path "$cache"
-  _extract_vibe_phase_state_block "$script"
+  _copy_vibe_phase_state_resolver "$script"
   [ -s "$script" ]
 
   run env CLAUDE_SESSION_ID="$session" CLAUDE_PLUGIN_ROOT="$root" bash "$script"
   [ "$status" -eq 0 ]
-  [ "$output" = "phase_detect_error=true" ]
+  [[ "$output" == *"phase_detect_error=true"* ]]
+  [[ "$output" != *"next_phase_state=fresh_live"* ]]
   [ -L "$link" ]
+}
+
+@test "vibe.md embedded phase-state blocks repair sentinel cache with live refresh" {
+  local td root
+  td=$(_new_tmp_test_dir)
+
+  root="$td/root"
+  mkdir -p "$root/scripts"
+
+  cat > "$root/scripts/phase-detect.sh" <<'EOF'
+#!/usr/bin/env bash
+printf '%s\n' 'next_phase_state=fresh_live' 'phase_detect_complete=true'
+EOF
+  : > "$root/scripts/hook-wrapper.sh"
+  _install_shared_resolver_fixture "$root"
+  chmod +x "$root/scripts/phase-detect.sh" "$root/scripts/ensure-plugin-root-link.sh"
+
+  _assert_vibe_embedded_phase_state_blocks \
+    "$td" "$root" "next_phase_state=fresh_live" "phase_detect_error=true"
+}
+
+@test "vibe.md embedded phase-state blocks fail closed on live error sentinel" {
+  local td root
+  td=$(_new_tmp_test_dir)
+
+  root="$td/root"
+  mkdir -p "$root/scripts"
+
+  cat > "$root/scripts/phase-detect.sh" <<'EOF'
+#!/usr/bin/env bash
+echo "phase_detect_error=true"
+EOF
+  : > "$root/scripts/hook-wrapper.sh"
+  _install_shared_resolver_fixture "$root"
+  chmod +x "$root/scripts/phase-detect.sh" "$root/scripts/ensure-plugin-root-link.sh"
+
+  _assert_vibe_embedded_phase_state_blocks \
+    "$td" "$root" "phase_detect_error=true" "next_phase_state=fresh_live"
 }
 
 @test "reader refreshes without pre-existing link when fallback root is available" {
@@ -487,18 +573,17 @@ EOF
   [[ "$out" == "phase_detect_error=true" ]]
 }
 
-@test "vibe.md uses self-healing live read with temp-file fallback" {
+@test "vibe phase-state flow uses self-healing live read with temp-file fallback" {
+  local vibe="$PROJECT_ROOT/commands/vibe.md"
+  local phase_state="$PROJECT_ROOT/scripts/resolve-phase-state.sh"
   local cat_count
-  cat_count=$(grep -cF 'cat "$P"' "$PROJECT_ROOT/commands/vibe.md" || true)
-  [ "${cat_count:-0}" -ge 1 ] || { echo "FAIL: vibe.md missing phase-detect temp-file fallback"; return 1; }
+  cat_count=$(grep -hF 'cat "$P"' "$vibe" "$phase_state" | wc -l | tr -d ' ')
+  [ "${cat_count:-0}" -ge 1 ] || { echo "FAIL: vibe phase-state flow missing temp-file fallback"; return 1; }
 
   local live_count
-  live_count=$(grep -cF 'bash "$L/scripts/phase-detect.sh"' "$PROJECT_ROOT/commands/vibe.md")
-  [ "$live_count" -ge 3 ] || { echo "FAIL: vibe.md missing live phase-detect reads"; return 1; }
+  live_count=$(grep -hF 'bash "$L/scripts/phase-detect.sh"' "$vibe" "$phase_state" | wc -l | tr -d ' ')
+  [ "$live_count" -ge 3 ] || { echo "FAIL: vibe phase-state flow missing live reads"; return 1; }
 }
-
-# ── UAT protocol safeguards ─────────────────────────────────────────────────
-# verify.md must explicitly ban automated test scenarios from UAT checkpoints.
 
 @test "verify.md bans automated test commands in UAT scenarios" {
   grep -q 'NEVER generate tests that ask the user to run automated checks' "$PROJECT_ROOT/commands/verify.md"
@@ -508,15 +593,14 @@ EOF
   grep -q 'xcodebuild test, pytest, bats, jest' "$PROJECT_ROOT/commands/verify.md"
 }
 
-# ── Shared plugin root resolver ownership ───────────────────────────────────
-
 @test "shared resolver validates candidates by required script" {
   grep -Fq '[ -f "$candidate/scripts/$required_script" ]' "$PROJECT_ROOT/scripts/resolve-plugin-root.sh"
-  # Invariant: every visited command delegates validation. Variant: unvisited commands.
-  for cmd in vibe verify discuss help qa skills; do
+  for cmd in verify discuss help qa skills; do
     grep -Fq 'resolve-plugin-root.sh' "$PROJECT_ROOT/commands/${cmd}.md" || \
       { echo "FAIL: ${cmd}.md missing shared resolver delegation"; return 1; }
   done
+  grep -Fq 'resolve-phase-state.sh' "$PROJECT_ROOT/commands/vibe.md"
+  grep -Fq 'resolve-plugin-root.sh' "$PROJECT_ROOT/scripts/resolve-phase-state.sh"
 }
 
 @test "command trampolines do NOT use bare [ -d ] for local/ acceptance" {
@@ -535,15 +619,212 @@ EOF
 @test "shared resolver owns canonical pwd -P resolution" {
   grep -Fq 'canonical_root=$(cd "$resolved_root" 2>/dev/null && pwd -P)' \
     "$PROJECT_ROOT/scripts/resolve-plugin-root.sh"
-  # Invariant: every visited preamble delegates canonicalization. Variant: unvisited commands.
-  for cmd in config debug discuss doctor fix help init map qa report research resume rtk skills status update verify vibe whats-new; do
+  for cmd in config debug discuss doctor fix help init map qa report research resume rtk skills status update verify whats-new; do
     grep -Fq 'resolve-plugin-root.sh' "$PROJECT_ROOT/commands/${cmd}.md" || \
       { echo "FAIL: ${cmd}.md missing shared resolver delegation"; return 1; }
   done
+  grep -Fq 'resolve-phase-state.sh' "$PROJECT_ROOT/commands/vibe.md"
+  grep -Fq 'resolve-plugin-root.sh' "$PROJECT_ROOT/scripts/resolve-phase-state.sh"
 }
 
 @test "shared resolver repairs links with canonical_root" {
   grep -Fq 'bash "$canonical_root/scripts/ensure-plugin-root-link.sh"' \
     "$PROJECT_ROOT/scripts/resolve-plugin-root.sh"
   grep -Fq '"$session_link" "$canonical_root"' "$PROJECT_ROOT/scripts/resolve-plugin-root.sh"
+}
+
+@test "phase-state resolver reclaims lock from dead owner" {
+  local td root script session link cache lock
+  td=$(_new_tmp_test_dir)
+
+  root="$td/root"
+  script="$td/resolve-phase-state.sh"
+  session="phase-state-dead-owner-$$-$RANDOM"
+  link="/tmp/.vbw-plugin-root-link-${session}"
+  cache="/tmp/.vbw-phase-detect-${session}.txt"
+  lock="/tmp/.vbw-phase-detect-live-${session}.lock"
+  mkdir -p "$root/scripts" "$lock"
+
+  cat > "$root/scripts/phase-detect.sh" <<'EOF'
+#!/usr/bin/env bash
+owner_pid=$(cat "/tmp/.vbw-phase-detect-live-${CLAUDE_SESSION_ID:-default}.lock/pid")
+[ "$owner_pid" = "$PPID" ] || exit 1
+printf '%s\n' 'next_phase_state=fresh_live' 'phase_detect_complete=true'
+EOF
+  : > "$root/scripts/hook-wrapper.sh"
+  _install_shared_resolver_fixture "$root"
+  chmod +x "$root/scripts/phase-detect.sh" "$root/scripts/ensure-plugin-root-link.sh"
+
+  printf '%s\n' '99999999' > "$lock/pid"
+  printf '%s\n' 'next_phase_state=old_cache' 'phase_detect_complete=true' > "$cache"
+  touch -t 209912312359 "$cache"
+
+  _track_tmp_test_path "$link"
+  _track_tmp_test_path "$cache"
+  _track_tmp_test_path "$lock"
+  _copy_vibe_phase_state_resolver "$script"
+
+  run env CLAUDE_SESSION_ID="$session" CLAUDE_PLUGIN_ROOT="$root" bash "$script"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"next_phase_state=fresh_live"* ]]
+  [[ "$output" != *"next_phase_state=old_cache"* ]]
+  [ ! -d "$lock" ]
+  grep -qF 'trap release_phase_detect_lock EXIT' "$script"
+  grep -qF "trap 'exit 130' INT" "$script"
+  grep -qF "trap 'exit 143' TERM" "$script"
+}
+
+@test "phase-state resolver accepts cache written during invocation" {
+  local td root script session link cache lock counter
+  td=$(_new_tmp_test_dir)
+
+  root="$td/root"
+  script="$td/resolve-phase-state.sh"
+  session="phase-state-fresh-cache-$$-$RANDOM"
+  link="/tmp/.vbw-plugin-root-link-${session}"
+  cache="/tmp/.vbw-phase-detect-${session}.txt"
+  lock="/tmp/.vbw-phase-detect-live-${session}.lock"
+  counter="$td/phase-detect-runs"
+  mkdir -p "$root/scripts"
+
+  cat > "$root/scripts/phase-detect.sh" <<'EOF'
+#!/usr/bin/env bash
+printf '%s\n' run >> "$COUNTER_FILE"
+printf '%s\n' 'next_phase_state=fresh_live' 'phase_detect_complete=true'
+sleep 1.2
+EOF
+  : > "$root/scripts/hook-wrapper.sh"
+  _install_shared_resolver_fixture "$root"
+  chmod +x "$root/scripts/phase-detect.sh" "$root/scripts/ensure-plugin-root-link.sh"
+  : > "$counter"
+
+  _track_tmp_test_path "$link"
+  _track_tmp_test_path "$cache"
+  _track_tmp_test_path "$lock"
+  _copy_vibe_phase_state_resolver "$script"
+
+  run env CLAUDE_SESSION_ID="$session" CLAUDE_PLUGIN_ROOT="$root" COUNTER_FILE="$counter" bash "$script"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"next_phase_state=fresh_live"* ]]
+  [ "$(wc -l < "$counter" | tr -d ' ')" -eq 1 ]
+  [ ! -d "$lock" ]
+}
+
+@test "phase-state resolver rejects delayed ownership claim after lock reclaim" {
+  local td root script shim_dir session link cache lock counter
+  local delay_ready delay_release phase_started phase_release a_output b_output
+  local a_pid="" b_pid="" a_status=1 b_status=1 owner_before_release="" owner_after_delayed_claim=""
+  local delay_ready_seen=false b_started=false run_count=0 i
+  td=$(_new_tmp_test_dir)
+
+  root="$td/root"
+  script="$td/resolve-phase-state.sh"
+  shim_dir="$td/bin"
+  session="phase-state-delayed-owner-$$-$RANDOM"
+  link="/tmp/.vbw-plugin-root-link-${session}"
+  cache="/tmp/.vbw-phase-detect-${session}.txt"
+  lock="/tmp/.vbw-phase-detect-live-${session}.lock"
+  counter="$td/phase-detect-runs"
+  delay_ready="$td/delay-ready"
+  delay_release="$td/delay-release"
+  phase_started="$td/phase-started"
+  phase_release="$td/phase-release"
+  a_output="$td/a.out"
+  b_output="$td/b.out"
+  mkdir -p "$root/scripts" "$shim_dir"
+
+  cat > "$shim_dir/mkdir" <<'EOF'
+#!/usr/bin/env bash
+/bin/mkdir "$@"
+mkdir_status=$?
+if [ "$mkdir_status" -eq 0 ] && [ "${DELAY_LOCK_OWNER:-}" = "1" ] && [ "${1:-}" = "$DELAY_LOCK_DIR" ]; then
+  : > "$DELAY_READY_FILE"
+  while [ ! -f "$DELAY_RELEASE_FILE" ]; do
+    sleep 0.05
+  done
+fi
+exit "$mkdir_status"
+EOF
+  cat > "$root/scripts/phase-detect.sh" <<'EOF'
+#!/usr/bin/env bash
+printf '%s\n' "$PPID" >> "$COUNTER_FILE"
+: > "$PHASE_STARTED_FILE"
+while [ ! -f "$PHASE_RELEASE_FILE" ]; do
+  sleep 0.05
+done
+printf '%s\n' 'next_phase_state=fresh_live' 'phase_detect_complete=true'
+EOF
+  : > "$root/scripts/hook-wrapper.sh"
+  : > "$counter"
+  _install_shared_resolver_fixture "$root"
+  chmod +x "$shim_dir/mkdir" "$root/scripts/phase-detect.sh" "$root/scripts/ensure-plugin-root-link.sh"
+
+  printf '%s\n' 'next_phase_state=existing_cache' 'phase_detect_complete=true' > "$cache"
+  touch -t 209912312359 "$cache"
+
+  _track_tmp_test_path "$link"
+  _track_tmp_test_path "$cache"
+  _track_tmp_test_path "$lock"
+  _copy_vibe_phase_state_resolver "$script"
+
+  env PATH="$shim_dir:$PATH" CLAUDE_SESSION_ID="$session" CLAUDE_PLUGIN_ROOT="$root" \
+    DELAY_LOCK_OWNER=1 DELAY_LOCK_DIR="$lock" DELAY_READY_FILE="$delay_ready" \
+    DELAY_RELEASE_FILE="$delay_release" COUNTER_FILE="$counter" \
+    PHASE_STARTED_FILE="$phase_started" PHASE_RELEASE_FILE="$phase_release" \
+    bash "$script" > "$a_output" &
+  a_pid=$!
+
+  for ((i = 0; i < 100; i++)); do
+    if [ -f "$delay_ready" ]; then
+      delay_ready_seen=true
+      break
+    fi
+    sleep 0.05
+  done
+
+  if [ "$delay_ready_seen" = true ]; then
+    touch -t 200001010000 "$lock"
+    env PATH="$shim_dir:$PATH" CLAUDE_SESSION_ID="$session" CLAUDE_PLUGIN_ROOT="$root" \
+      DELAY_LOCK_DIR="$lock" DELAY_READY_FILE="$delay_ready" DELAY_RELEASE_FILE="$delay_release" \
+      COUNTER_FILE="$counter" PHASE_STARTED_FILE="$phase_started" PHASE_RELEASE_FILE="$phase_release" \
+      bash "$script" > "$b_output" &
+    b_pid=$!
+  fi
+
+  for ((i = 0; i < 200; i++)); do
+    if [ -f "$phase_started" ]; then
+      b_started=true
+      break
+    fi
+    sleep 0.05
+  done
+
+  if [ "$b_started" = true ]; then
+    owner_before_release=$(cat "$lock/pid" 2>/dev/null || true)
+  fi
+  : > "$delay_release"
+
+  for ((i = 0; i < 100; i++)); do
+    run_count=$(wc -l < "$counter" | tr -d ' ')
+    if ! kill -0 "$a_pid" 2>/dev/null || [ "$run_count" -ge 2 ]; then
+      break
+    fi
+    sleep 0.05
+  done
+  owner_after_delayed_claim=$(cat "$lock/pid" 2>/dev/null || true)
+
+  : > "$phase_release"
+  wait "$a_pid" && a_status=0 || a_status=$?
+  if [ -n "$b_pid" ]; then
+    wait "$b_pid" && b_status=0 || b_status=$?
+  fi
+  run_count=$(wc -l < "$counter" | tr -d ' ')
+
+  [ "$delay_ready_seen" = true ]
+  [ "$b_started" = true ]
+  [ "$a_status" -eq 0 ]
+  [ "$b_status" -eq 0 ]
+  [ "$owner_before_release" = "$b_pid" ]
+  [ "$owner_after_delayed_claim" = "$b_pid" ]
+  [ "$run_count" -eq 1 ]
 }

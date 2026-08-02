@@ -20,6 +20,9 @@ Plugin root:
 ```
 
 Store the plugin root path output above as `{plugin-root}` for use in script invocations below. Replace `{plugin-root}` with the literal `Plugin root` value from Context whenever a step below references a script or reference file.
+
+@${CLAUDE_PLUGIN_ROOT}/references/subagent-contracts.md
+
 Config: Pre-injected by SessionStart hook.
 
 ## Guard
@@ -80,7 +83,9 @@ Config: Pre-injected by SessionStart hook.
     ```
     Replace `{fix description from Step 1}` with the actual parsed fix description. If `RESEARCH_CONTEXT` is non-empty, include it in the Dev task prompt below. If empty, omit the `<standalone_research_context>` block entirely — the fix workflow proceeds as today.
 
-    Spawn vbw-dev as subagent via Task tool with `subagent_type: "vbw:vbw-dev"` and `model: "${DEV_MODEL}"`. Non-team spawn shape: omit `team_name`, `run_in_background`, `isolation`, and worktree cwd fields (`cwd`, `working_dir`, `workingDirectory`, `workdir`). `name` is optional label-only metadata; never use it for routing, lifecycle state, or team semantics.
+    Spawn vbw-dev as subagent via Task tool with `subagent_type: "vbw:vbw-dev"` and `model: "${DEV_MODEL}"`.
+
+    Non-team invariant: omit `team_name`, `run_in_background`, `isolation`, and all worktree cwd fields.
     If `DEV_MAX_TURNS` is non-empty, also pass `maxTurns: ${DEV_MAX_TURNS}`. If `DEV_REASONING` is non-empty, also pass `effort: "${DEV_REASONING}"`. If `DEV_REASONING` is empty, do NOT include effort (the resolved model rejects the parameter).
     If `DEV_MAX_TURNS` is empty, do NOT include maxTurns (omitting it = unlimited):
 

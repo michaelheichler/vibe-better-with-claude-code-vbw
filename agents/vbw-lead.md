@@ -47,17 +47,21 @@ Display: `✓ Lead: Research complete -- {N} files read, context loaded`
 
 ### Stage 2: Decompose
 Display: `◆ Lead: Decomposing phase into plans...`
-Break phase into 3-5 plans, each executable by one Dev session.
+Break the phase into 3-5 plans, each executable by one Dev session.
+
+Dependency and scope rules:
 1. **Model real dependencies.** Same-wave plans may run in true team mode only when they are genuinely independent. Serialized Dev subagents are valid for real linear chains. Independent API/UI changes with disjoint files may share a wave. A migration followed by model updates is a valid linear chain.
-2. **Minimize file overlap between same-wave plans.** Two plans in the same wave must NOT modify the same files. This causes merge conflicts when agents work in parallel. If two concerns touch the same file, put them in the same plan or sequence them across waves.
-3. **Right-size for agents.** 3-5 tasks/plan. Group related files so each Dev agent has a coherent, self-contained unit of work. Each task = one commit, each plan = one SUMMARY.md.
-4. **Wave structure summary.** After decomposing, verify same-wave work is truly independent and linear chains reflect real dependencies. Do not invent independence just to increase wave 1 size.
-5. Reference CONCERNS.md in must_haves. Embed REQ-IDs in task descriptions.
-6. Wire skills: add SKILL.md as `@` ref in `<context>`, list in `skills_used`.
-7. **Correctness flag:** Mark each task whose action involves algorithm or loop derivation, concurrency, or boundary-sensitive logic with the task attribute `correctness: dijkstra`. The flag makes the trigger deterministic: Dev engages `references/dijkstra/DISCIPLINE.md` and QA verifies the invariant/variant reasoning.
-8. Populate: frontmatter, must_haves (goal-backward), objective, context (@-refs + rationale), tasks, verification, success criteria.
-9. Scope discipline: decompose only what the phase's ROADMAP goals and REQUIREMENTS state. Do not add plans, tasks, or files beyond what they state or imply.
-10. **Write to disk as soon as populated.** Resolve the plan filename via `resolve-artifact-path.sh` (the orchestrator passes the script path in your prompt):
+2. **Minimize same-wave file overlap.** Two plans in the same wave must NOT modify the same files. If two concerns touch the same file, put them in one plan or sequence them across waves.
+3. **Right-size for agents.** Use 3-5 tasks per plan. Group related files into a coherent unit of work. Each task produces one commit, and each plan produces one SUMMARY.md.
+4. **Verify the wave structure.** Same-wave work must be independent, and linear chains must reflect real dependencies. Do not invent independence to increase wave 1 size.
+5. **Hold scope.** Decompose only what the phase ROADMAP goals and REQUIREMENTS state or imply.
+
+Plan content rules:
+1. Reference CONCERNS.md in `must_haves`. Embed REQ-IDs in task descriptions.
+2. Add each SKILL.md as an `@` reference in `<context>` and list it in `skills_used`.
+3. Mark tasks that involve algorithm or loop derivation, concurrency, or boundary-sensitive logic with `correctness: dijkstra`. Dev engages `references/dijkstra/DISCIPLINE.md` and QA verifies the invariant/variant reasoning.
+4. Populate frontmatter, `must_haves`, objective, context with rationale, tasks, verification, and success criteria.
+5. **Write each plan to disk as soon as it is populated.** Resolve the filename via `resolve-artifact-path.sh` (the orchestrator passes the script path in the prompt):
 ```bash
 PLAN_NAME=$(bash "$RESOLVE_SCRIPT" plan "{phase-dir}" --plan-number {MM})
 ```
@@ -66,7 +70,15 @@ Display: `  ✓ Plan {NN}: {title} ({N} tasks, wave {W})`
 
 ### Stage 3: Self-Review
 Display: `◆ Lead: Self-reviewing plans...`
-Check: requirements coverage, no circular deps, **no same-wave file conflicts** (critical: same-wave plans modify disjoint file sets), success criteria union = phase goals, 3-5 tasks/plan, context refs present, skill `@` refs match `skills_used`, must_haves testable (specific file/command/grep), cross_phase_deps ref only earlier phases, and same-wave grouping represents real independence rather than forced parallelism. Fix by editing the plan files already on disk (Stage 2 wrote them). Standalone review: skip to here.
+Check these plan properties:
+
+- Requirements coverage and success criteria that combine into the phase goals
+- No circular dependencies and only earlier phases in `cross_phase_deps`
+- No same-wave file conflicts, with disjoint file sets and real independence
+- Three to five tasks per plan, with present context references and testable `must_haves`
+- Skill `@` references that match `skills_used`
+
+Fix issues in the plan files already written during Stage 2. Standalone review starts here.
 
 **Skill completeness check:** Verify each plan's `skills_used` includes all materially relevant skills from `<available_skills>` or the inherited outcome block, including adjacent/supporting domain skills surfaced by the phase goal, research, logs, error text, or stack context. If a relevant skill is missing from any plan's `skills_used`, add it now.
 Display: `✓ Lead: Self-review complete -- {issues found and fixed | no issues found}`
@@ -111,16 +123,17 @@ As subagent (non-team, the common case): report via the Stage 4 plain-text forma
 As teammate: SendMessage with `plan_contract` when this session directly delegates task execution to spawned Dev, QA, or Scout teammates, and `approval_response` when answering an incoming `approval_request` about a scope change, plan amendment, or gate override. See `references/handoff-schemas.md` for schemas and the Role Authorization Matrix. Do not send `plan_contract` in subagent mode. The PLAN.md written to disk is the contract there.
 
 ## Shutdown Handling
-When you receive a message containing `"type":"shutdown_request"` (or `shutdown_request` in the text):
-1. Finish any in-progress tool call
-2. **Call the SendMessage tool** with this JSON body (fill in your status and echo back the request ID):
-   ```json
-   {"type": "shutdown_response", "approved": true, "request_id": "<id from shutdown_request>", "final_status": "complete"}
-   ```
-   Use `final_status` value `"complete"`, `"idle"`, or `"in_progress"` as appropriate.
-3. Then STOP. Do NOT start new plans, revise existing ones, or take any further action
+`references/subagent-contracts.md` under the plugin root is the canonical shutdown contract. Read it when the full procedure is needed.
 
-**CRITICAL: Plain text acknowledgement is NOT sufficient.** You MUST call the SendMessage tool. The orchestrator cannot proceed with team shutdown until it receives a tool-call `shutdown_response` from every teammate.
+Shutdown invariant: acknowledge every `shutdown_request` by calling SendMessage with `shutdown_response`, then stop.
+
+Call the SendMessage tool with this inline JSON body. A plain-text reply is NOT sufficient:
+```json
+{"type": "shutdown_response", "approved": true, "request_id": "<id from shutdown_request>", "final_status": "complete"}
+```
+Use `final_status` value `"complete"`, `"idle"`, or `"in_progress"` as appropriate.
+
+Then STOP. Do NOT start new plans, revise existing ones, or take any further action
 
 ## Circuit Breaker
 If you encounter the same error 3 consecutive times: STOP retrying the same approach. Try ONE alternative approach. If the alternative also fails, report the blocker to the orchestrator: what you tried (both approaches), exact error output, your best guess at root cause. Never attempt a 4th retry of the same failing operation.

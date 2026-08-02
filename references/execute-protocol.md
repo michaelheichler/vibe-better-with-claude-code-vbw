@@ -22,6 +22,8 @@ VBW_PLUGIN_ROOT=$(bash "$RESOLVER") || exit 1
 
 All runtime script invocations below assume `VBW_PLUGIN_ROOT` is set.
 
+Before spawning any subagent, read `${VBW_PLUGIN_ROOT}/references/subagent-contracts.md` for the canonical subagent contracts.
+
 ### Step 2: Load plans and detect resume state
 
 **Orchestrator read-scope boundary:** You may ONLY read planning/state artifacts: `*-PLAN.md`, `*-SUMMARY.md`, `*-RESEARCH.md`, `STATE.md`, `ROADMAP.md`, `REQUIREMENTS.md`, `.execution-state.json`, `.context-*.md`, `config.json`, and `.vbw-planning/` metadata. Do NOT read product source files (application code, tests, configs outside `.vbw-planning/`). If you need to understand product code to make a routing or sequencing decision, that understanding must come from Dev: delegate it via a task.
@@ -135,7 +137,11 @@ Determine whether **real team semantics** are available before spawning anything
 - If the live tool set only supports plain background spawns (for example `Agent` with `run_in_background: true` and no teammate `name`), then real team semantics are **NOT** available.
 - **Plain background `Agent` spawns without team semantics are NOT an agent team. Do NOT use them as a substitute for team mode.**
 
-Process `ROUTING.segments[]` in order. For each segment, extract `route`, `plan_ids`, `effort`, `delegation_mode`, and optional `team_name` from the helper output. Before any direct, turbo, fallback, or serialized subagent segment starts, check the current delegation marker. If a live execute marker has `delegation_mode=team`, complete teardown first: send `shutdown_request` to each teammate and await responses, then run Post-shutdown residual cleanup. The team config directory is removed automatically when the session exits. There is no TeamDelete call. Clear the marker only after teardown completes. Do not start a non-team segment while `.delegated-workflow.json` still reports a live team marker.
+Process `ROUTING.segments[]` in order. For each segment, extract `route`, `plan_ids`, `effort`, `delegation_mode`, and optional `team_name` from the helper output. Before any direct, turbo, fallback, or serialized subagent segment starts, check the current delegation marker. If a live execute marker has `delegation_mode=team`, follow the team-shutdown contract in `references/subagent-contracts.md` before continuing.
+
+Shutdown invariant: acknowledge every `shutdown_request` by calling SendMessage with `shutdown_response`, then stop.
+
+After the shared shutdown completes, run Post-shutdown residual cleanup. The team config directory is removed automatically when the session exits. There is no TeamDelete call. Clear the marker only after teardown completes. Do not start a non-team segment while `.delegated-workflow.json` still reports a live team marker.
 
 Branch each segment into exactly one runtime path and persist that segment's actual mode **before the first spawn or orchestrator product-file write**:
 
@@ -183,9 +189,11 @@ You are the team LEAD. NEVER implement tasks yourself.
 - NEVER Write/Edit files in a plan's `files_modified`: only state files: STATE.md, ROADMAP.md, .execution-state.json, SUMMARY.md
 - If Dev fails: guidance via SendMessage, not takeover. If all Devs unavailable: create new Dev.
 - **Subagent return handling (non-team model):** When a Dev subagent Task returns, inspect the result immediately:
-  1. **platform/tool provisioning failure:** If the returned text explicitly says tools, shell/Bash, filesystem, edits, or API-session access are unavailable, optionally paired with visible zero tool-use metadata when you can see it, stop immediately and surface a platform/tool provisioning blocker. Do not consume the normal retry budget and do not re-spawn the same prompt shape. the child cannot fix missing tools by receiving the same instructions again.
-  2. **blocker_report received:** Read the blocker details. If the blocker is a tool precondition error (e.g., "File has not been read yet"), amend the task description with explicit "Read {file} first, then edit" and re-spawn once. If the blocker is a validation contradiction or empty-result failure, do NOT blindly re-spawn: the same subagent prompt will hit the same wall. Instead: (a) verify the validation target yourself (run the bash/curl command Lead can execute), (b) if the data truly contradicts expectations, update the plan task to reflect reality, (c) re-spawn with the corrected task.
-  3. **Task returned without SUMMARY.md or with incomplete work:** Check what the Dev actually accomplished (git log, file changes). If partial progress was made, spawn a new Dev with "Continue from where the previous Dev stopped: files X, Y already modified, remaining work is Z." If zero progress, check whether the task description was ambiguous or missing context and re-spawn with clarification.
+  1. **platform/tool provisioning failure:** Follow the no-tool circuit breaker in `references/subagent-contracts.md`. Stop immediately, surface the provisioning blocker, and do not consume the normal retry budget.
+
+    No-tool invariant: treat unavailable tools as a provisioning failure, do not advance state, and do not retry the same prompt.
+  2. **blocker_report received:** Read the blocker details. If the blocker is a tool precondition error (e.g., "File has not been read yet"), amend the task description with explicit "Read {file} first, then edit" and re-spawn once. If the blocker is a validation contradiction or empty-result failure, do NOT blindly re-spawn, the same subagent prompt will hit the same wall. Instead: (a) verify the validation target yourself (run the bash/curl command Lead can execute), (b) if the data truly contradicts expectations, update the plan task to reflect reality, (c) re-spawn with the corrected task.
+  3. **Task returned without SUMMARY.md or with incomplete work:** Check what the Dev actually accomplished (git log, file changes). If partial progress was made, spawn a new Dev with "Continue from where the previous Dev stopped, files X, Y already modified, remaining work is Z." If zero progress, check whether the task description was ambiguous or missing context and re-spawn with clarification.
   4. **Max retry: 2 re-spawns per plan.** After 2 failed Dev spawns for the same plan, stop and surface the blocker to the user: "Dev agent failed {N} times on plan {plan_id}. Last blocker: {details}. Manual intervention needed."
 - At Turbo (or smart-routed to turbo): no team: Dev executes directly.
 - **Runtime enforcement:** This directive is structurally enforced by the `file-guard.sh` PreToolUse hook. When `.execution-state.json` has `status: running` and effort is not turbo/direct, the hook blocks product-file Write/Edit from the orchestrator. Two bypass mechanisms exist:
@@ -718,10 +726,16 @@ This loop runs inline during execution: no second `/vbw:vibe` call needed. If th
   `round_dir`, `source_verification_path`, `known_issues_path`, and `verification_path` from `qa-remediation-state.sh` metadata are authoritative host-repository paths. Claude Code may run subagents from `.claude/worktrees/agent-*` sidechain CWDs. pass these exact paths to Lead, Dev, and QA prompts and never rewrite them relative to the current CWD. Rewriting those paths relative to sidechain CWDs can write or read remediation artifacts from the wrong location and break resume or verification.
   </qa_remediation_artifact_contract>
   <qa_remediation_spawn_contract>
-  QA remediation uses plain sequential subagent calls. Do not use TeamCreate. Non-team spawn shape: omit `team_name`, `run_in_background`, `isolation`, and worktree cwd fields (`cwd`, `working_dir`, `workingDirectory`, `workdir`). `name` is optional label-only metadata. never use it for routing, lifecycle state, or team semantics. Use remediation metadata paths in prompts. VBW worktree targeting is task prompt/state metadata, not a spawn isolation or cwd handoff.
+  QA remediation uses plain sequential subagent calls. Do not form an agent team, do not spawn teammates, use plain sequential subagent Agent calls.
+
+Non-team invariant: omit `team_name`, `run_in_background`, `isolation`, and all worktree cwd fields.
+
+Use remediation metadata paths in prompts. VBW worktree targeting is task prompt/state metadata, not a spawn isolation or cwd handoff.
   </qa_remediation_spawn_contract>
   <qa_remediation_no_tool_circuit_breaker>
-  After any QA remediation Lead, Dev, or QA subagent returns, inspect returned text before artifact validation, deterministic gates, or state advancement. If it says tools, shell/Bash, filesystem, edits, or API-session access are unavailable, treat that as a platform/tool provisioning failure: STOP without advancing `.qa-remediation-stage`, report the failed role and stage/task, and do not retry the same prompt.
+  After any QA remediation Lead, Dev, or QA subagent returns, follow the no-tool circuit breaker in `references/subagent-contracts.md` before artifact validation, deterministic gates, or state advancement. If it triggers, STOP without advancing `.qa-remediation-stage` and report the failed role and stage or task.
+
+No-tool invariant: treat unavailable tools as a provisioning failure, do not advance state, and do not retry the same prompt.
   </qa_remediation_no_tool_circuit_breaker>
 
 2. **Loop (until PROCEED_TO_UAT or user intervention):**
@@ -760,9 +774,15 @@ This loop runs inline during execution: no second `/vbw:vibe` call needed. If th
     LEAD_MAX_TURNS="$RESOLVED_MAX_TURNS"
     LEAD_REASONING="$RESOLVED_REASONING"
     ```
-  - Spawn Lead as a plain sequential work-unit subagent with `subagent_type: "vbw:vbw-lead"` and `model: "${LEAD_MODEL}"`. If `LEAD_MAX_TURNS` is non-empty, include `maxTurns: ${LEAD_MAX_TURNS}`. If `LEAD_MAX_TURNS` is empty, omit `maxTurns` because the resolved profile is unlimited. If `LEAD_REASONING` is non-empty, also pass `effort: "${LEAD_REASONING}"`. If `LEAD_REASONING` is empty, omit effort because the resolved model rejects it. Non-team spawn shape: omit `team_name`, `run_in_background`, `isolation`, and worktree cwd fields (`cwd`, `working_dir`, `workingDirectory`, `workdir`). `name` is optional label-only metadata. never use it for routing, lifecycle state, or team semantics.
-  - Lead prompt MUST include the authoritative `round_dir`, `source_verification_path`, `known_issues_path`, and output path `{round_dir}/R{RR}-PLAN.md`. the failed-check and known-issue inputs above. the deviation-classification and known-issue-resolution requirements above. and `Read the remediation plan template at /tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}/templates/REMEDIATION-PLAN.md and follow its structure exactly.`
-  - After Lead returns, apply the QA remediation no-tool circuit breaker before normalizing plan filenames, validating the generated plan, or advancing state. If Lead reports unavailable tools, shell/Bash, filesystem, edits, or API-session access, STOP without advancing `.qa-remediation-stage` and do not retry that same Lead prompt.
+  - Spawn Lead as a plain sequential work-unit subagent with `subagent_type: "vbw:vbw-lead"` and `model: "${LEAD_MODEL}"`. If `LEAD_MAX_TURNS` is non-empty, include `maxTurns: ${LEAD_MAX_TURNS}`. If `LEAD_MAX_TURNS` is empty, omit `maxTurns` because the resolved profile is unlimited.
+
+    Non-team invariant: omit `team_name`, `run_in_background`, `isolation`, and all worktree cwd fields.
+
+    If `LEAD_REASONING` is non-empty, also pass `effort: "${LEAD_REASONING}"`. If `LEAD_REASONING` is empty, do NOT include effort (the resolved model rejects the parameter).
+  - Lead prompt MUST include the authoritative `round_dir`, `source_verification_path`, `known_issues_path`, and output path `{round_dir}/R{RR}-PLAN.md`, the failed-check and known-issue inputs above, the deviation-classification and known-issue-resolution requirements above, and `Read the remediation plan template at /tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}/templates/REMEDIATION-PLAN.md and follow its structure exactly.`
+  - After Lead returns, apply the no-tool circuit breaker in `references/subagent-contracts.md` before normalizing plan filenames, validating the generated plan, or advancing state. If it triggers, STOP without advancing `.qa-remediation-stage`.
+
+No-tool invariant: treat unavailable tools as a provisioning failure, do not advance state, and do not retry the same prompt.
   - Normalize plan filenames before validation:
     ```bash
     NORM_SCRIPT="${VBW_PLUGIN_ROOT}/scripts/normalize-plan-filenames.sh"
@@ -783,15 +803,19 @@ This loop runs inline during execution: no second `/vbw:vibe` call needed. If th
    - Dev fixes code, commits, writes `R{RR}-SUMMARY.md` in `{round_dir}` using `templates/REMEDIATION-SUMMARY.md` (NOT `templates/SUMMARY.md`)
      - The remediation summary frontmatter MUST include aggregated `commit_hashes`, `files_modified`, and `deviations`
      - `files_modified` is required even for documentation-only rounds so `qa-result-gate.sh` can deterministically distinguish metadata-only remediation from real code changes
-     - When `input_mode=known-issues` or `input_mode=both`, the remediation summary frontmatter MUST also include `known_issue_outcomes` with one `{test,file,error,disposition,rationale}` JSON object string per carried known issue. Keys and `disposition` values must match `R{RR}-PLAN.md` `known_issue_resolutions`. do not silently drop accepted non-blocking issues.
-    - After Dev returns, apply the QA remediation no-tool circuit breaker before checking the summary or advancing state. If Dev reports unavailable tools, shell/Bash, filesystem, edits, or API-session access, STOP without advancing `.qa-remediation-stage` and do not retry that same Dev prompt.
+     - When `input_mode=known-issues` or `input_mode=both`, the remediation summary frontmatter MUST also include `known_issue_outcomes` with one `{test,file,error,disposition,rationale}` JSON object string per carried known issue. Keys and `disposition` values must match `R{RR}-PLAN.md` `known_issue_resolutions`. Do not silently drop accepted non-blocking issues.
+    - After Dev returns, apply the no-tool circuit breaker in `references/subagent-contracts.md` before checking the summary or advancing state. If it triggers, STOP without advancing `.qa-remediation-stage`.
+
+No-tool invariant: treat unavailable tools as a provisioning failure, do not advance state, and do not retry the same prompt.
     - After Dev completes without a no-tool provisioning failure, advance state: `bash "${VBW_PLUGIN_ROOT}/scripts/qa-remediation-state.sh" advance "{phase-dir}"`
 
    **stage=verify:** Re-run QA:
    - Run `compile-verify-context.sh --remediation-only {phase-dir}` to get compounded verification history plus the current round's plan/summary context only
-   - Spawn QA agent as subagent: writes to `{verification_path}` (from `qa-remediation-state.sh` metadata)
-     - Output path: `{round_dir}/R{RR}-VERIFICATION.md`: phase-level VERIFICATION.md stays frozen
-    - After QA returns, apply the QA remediation no-tool circuit breaker before syncing known issues or running the deterministic gate. If QA reports unavailable tools, shell/Bash, filesystem, edits, or API-session access, STOP without advancing `.qa-remediation-stage` and do not retry that same QA prompt.
+   - Spawn QA agent as subagent, writes to `{verification_path}` (from `qa-remediation-state.sh` metadata)
+     - Output path: `{round_dir}/R{RR}-VERIFICATION.md`, phase-level VERIFICATION.md stays frozen
+    - After QA returns, apply the no-tool circuit breaker in `references/subagent-contracts.md` before syncing known issues or running the deterministic gate. If it triggers, STOP without advancing `.qa-remediation-stage`.
+
+No-tool invariant: treat unavailable tools as a provisioning failure, do not advance state, and do not retry the same prompt.
      - After QA persists `{verification_path}`, immediately sync tracked known issues from that round artifact:
        ```bash
        bash "${VBW_PLUGIN_ROOT}/scripts/track-known-issues.sh" sync-verification "{phase-dir}" "{verification_path}" 2>/dev/null || true
@@ -979,17 +1003,20 @@ UAT_NAME=$(bash "${VBW_PLUGIN_ROOT}/scripts/resolve-artifact-path.sh" uat "{phas
 
 ### Step 5: Update state and present summary
 
-**HARD GATE: Shutdown before ANY output or state updates:** Run team shutdown only when the persisted/helper-resolved runtime state says `delegation_mode=team` and a real `TEAM_NAME` exists. If the helper selected `subagent`, turbo, internal `direct`, no delegate-eligible plans, or team-tooling-unavailable fallback, skip the shutdown sequence and clear the marker. For actual team mode, shut down the team BEFORE updating state, presenting results, or asking the user anything: send `shutdown_request` to each teammate and await responses, then run Post-shutdown residual cleanup. The team config directory is removed automatically when the session exits. There is no TeamDelete call. This is blocking and non-negotiable:
-1. Send `shutdown_request` via SendMessage to EVERY active teammate in `TEAM_NAME` (excluding yourself: the orchestrator controls the sequence, not the lead agent). Do not skip any. The SendMessage JSON body must include at minimum: `{"type": "shutdown_request", "id": "<unique-id>", "reason": "phase_complete", "team_name": "<TEAM_NAME>"}` (this is a simplified form: the full V2 envelope nests these under `payload` with `id` at envelope level, but agents are instructed to match on `"type":"shutdown_request"` regardless of structure). Agents echo the `id` back as `request_id` in their `shutdown_response`. Teammates respond by calling SendMessage with `type: "shutdown_response"`.
+**HARD GATE: Shutdown before ANY output or state updates:** Run team shutdown only when the persisted or helper-resolved runtime state says `delegation_mode=team` and a real `TEAM_NAME` exists. If the helper selected `subagent`, turbo, internal `direct`, no delegate-eligible plans, or team-tooling-unavailable fallback, skip the shutdown sequence and clear the marker. For actual team mode, follow the team-shutdown contract in `references/subagent-contracts.md` before updating state, presenting results, or asking the user anything.
+
+Shutdown invariant: acknowledge every `shutdown_request` by calling SendMessage with `shutdown_response`, then stop.
+
+1. Send `shutdown_request` via SendMessage to every active teammate in `TEAM_NAME`. The orchestrator controls the sequence and is not a teammate target. The SendMessage JSON body must include at minimum: `{"type": "shutdown_request", "id": "<unique-id>", "reason": "phase_complete", "team_name": "<TEAM_NAME>"}`. This is a simplified form. The full V2 envelope nests these fields under `payload`, with `id` at envelope level. Agents echo the `id` back as `request_id` in their `shutdown_response`.
 2. Log event: `bash "${VBW_PLUGIN_ROOT}/scripts/log-event.sh" shutdown_sent {phase} team={team_name} targets={count} 2>/dev/null || true`
-3. Wait for each `shutdown_response` with `approved: true` (delivered as a SendMessage tool call from the teammate, NOT as plain text). If a teammate responds in plain text instead of calling SendMessage, re-send the `shutdown_request`. If a teammate rejects, re-request immediately (max 3 attempts per teammate. If still rejected after 3 attempts, log a warning and proceed to Post-shutdown residual cleanup).
+3. Follow the shared contract orchestrator response procedure, including its bounded per-teammate retry cap across both plain-text and rejected responses, and its residual-cleanup fallback once that cap is exhausted.
 4. Log event: `bash "${VBW_PLUGIN_ROOT}/scripts/log-event.sh" shutdown_received {phase} team={team_name} approved={count} rejected={count} 2>/dev/null || true`
-5. **Post-shutdown residual cleanup** (belt-and-suspenders: catches race-condition residuals where agents recreate inbox files after shutdown. The team config directory itself is removed automatically when the session exits):
+5. **Post-shutdown residual cleanup** catches race-condition residuals where agents recreate inbox files after shutdown. The team config directory itself is removed automatically when the session exits.
    ```bash
    bash "${VBW_PLUGIN_ROOT}/scripts/clean-stale-teams.sh" 2>/dev/null || true
    ```
-6. Only THEN proceed to state updates and user-facing output below
-Failure to shut down an actual team leaves agents running in the background, consuming API credits (visible as hanging panes in tmux, invisible but still costly without tmux). If no actual team was created, skip the shutdown sequence. **Recovery:** If shutdown stalls or agents linger after Post-shutdown residual cleanup, do NOT manually `rm -rf ~/.claude/teams`. Use `/vbw:doctor --cleanup`, which runs `doctor-cleanup.sh` and `clean-stale-teams.sh` with safe atomic cleanup. These scripts detect stale teams, orphan processes, and dangling PIDs. `clean-stale-teams.sh` immediately removes VBW team directories missing `config.json` (orphaned residuals) without waiting for the 2-hour stale threshold.
+6. Only then proceed to state updates and user-facing output below
+Failure to shut down an actual team leaves agents running in the background, consuming API credits (visible as hanging panes in tmux, invisible but still costly without tmux). If no actual team was created: skip shutdown sequence. **Recovery:** If shutdown stalls or agents linger after Post-shutdown residual cleanup, do NOT manually `rm -rf ~/.claude/teams`. Use `/vbw:doctor --cleanup` which runs `doctor-cleanup.sh` and `clean-stale-teams.sh` with safe atomic cleanup. These scripts detect stale teams, orphan processes, and dangling PIDs. `clean-stale-teams.sh` immediately removes VBW team directories missing `config.json` (orphaned residuals) without waiting for the 2-hour stale threshold.
 
 Regardless of whether a real team was created, clear the execute delegation marker before state updates:
 ```bash

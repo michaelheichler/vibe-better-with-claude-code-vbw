@@ -214,6 +214,7 @@ The real test of a markdown instruction file is whether the LLM does the right t
 
 - `bash testing/verify-bash-scripts-contract.sh`: validates script conventions
 - `bash testing/verify-commands-contract.sh`: validates command frontmatter
+- `bash testing/verify-shared-contracts.sh`: validates canonical shared-contract includes, invariants, and centralized prose
 - `bash testing/verify-hook-event-name.sh`: validates hook event names match platform spec
 - `bash testing/verify-plugin-root-resolution.sh`: validates the plugin-root resolution cascade in commands and references
 - `bash testing/verify-lsp-first-policy.sh`: validates the repo-wide LSP-first rule

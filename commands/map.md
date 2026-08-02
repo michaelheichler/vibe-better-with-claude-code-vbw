@@ -22,6 +22,8 @@ Plugin root:
 
 Store the plugin root path output above as `{plugin-root}` for use in script invocations below. Replace `{plugin-root}` with the literal `Plugin root` value from Context whenever a step below references a script or reference file.
 
+@${CLAUDE_PLUGIN_ROOT}/references/subagent-contracts.md
+
 Existing mapping:
 ```text
 !`ls .vbw-planning/codebase/ 2>/dev/null || echo "No codebase mapping found"`
@@ -270,7 +272,11 @@ Read all 7 docs. Follow the Map Document Format contract above when writing INDE
 
 ### Step 5: Create META.md and present summary
 
-**HARD GATE. Shutdown before presenting results:** Solo: no team, skip. Duo/Quad: send `shutdown_request` to each teammate, wait for `shutdown_response` (approved=true) delivered via SendMessage tool call (NOT plain text). If a teammate responds in plain text instead of calling SendMessage, re-send the `shutdown_request`. If rejected, re-request up to 3 times per teammate. Then proceed. The team config directory is removed automatically when the session exits. There is no TeamDelete call. **Post-shutdown residual cleanup:** `bash "{plugin-root}/scripts/clean-stale-teams.sh" 2>/dev/null || true`. Verify: after shutdown, there must be ZERO active teammates. If teardown stalls, advise the user to run `/vbw:doctor --cleanup`. Only THEN proceed to META.md and user output. Failure to shut down leaves agents running and consuming API credits.
+**HARD GATE. Shutdown before presenting results:** Solo mode has no team and skips shutdown. Duo and Quad modes follow the team-shutdown contract in `references/subagent-contracts.md`, including its orchestrator retry procedure for plain-text replies and rejected responses.
+
+Shutdown invariant: acknowledge every `shutdown_request` by calling SendMessage with `shutdown_response`, then stop.
+
+Run **Post-shutdown residual cleanup:** `bash "{plugin-root}/scripts/clean-stale-teams.sh" 2>/dev/null || true`. Verify that shutdown leaves ZERO active teammates. If teardown stalls, advise the user to run `/vbw:doctor --cleanup`. Only then proceed to META.md and user output. Failure to shut down leaves agents running and consuming API credits.
 
 Write META.md from the exact META.md template in the Map Document Format contract. Keep every top-level key unbulleted and at column one.
 

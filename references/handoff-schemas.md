@@ -175,7 +175,7 @@ Failing tests committed for a plan's TDD red stage.
 
 ## `debugger_report` (Debugger -> Lead)
 
-Diagnostic investigation report from the Debugger agent. Used in Teammate Mode when the Debugger is assigned a single hypothesis to investigate. Unlike `blocker_report`, the Debugger payload uses diagnostic fields, not escalation fields.
+Diagnostic investigation report from the Debugger agent. Used in Teammate Mode when the Debugger is assigned a single hypothesis to investigate. It is distinct from `blocker_report`. The Debugger's payload uses diagnostic fields, not escalation fields.
 
 ```json
 {
@@ -351,17 +351,19 @@ Acknowledgment from a teammate that it will terminate.
 
 ### Delivery format
 
-Claude Code delivers `shutdown_request` as JSON text in the SendMessage inbox. The delivered message may not include the full V2 envelope. It may arrive as a simpler JSON object with just `type`, `id`, `from` (corresponds to `author_role` in the V2 envelope), `reason`, and `timestamp`. Agents MUST recognize `"type":"shutdown_request"` in the received message text regardless of envelope structure, and respond by **calling the SendMessage tool** with a `shutdown_response` (not plain text).
+Claude Code delivers `shutdown_request` as JSON text in the SendMessage inbox. The delivered message may not include the full V2 envelope. It may arrive as a simpler JSON object with only `type`, `id`, `from` (which corresponds to `author_role` in the V2 envelope), `reason`, and `timestamp`. The normalization rules below handle both forms.
 
-On receiving `shutdown_request`: finish any in-progress tool call, **call the SendMessage tool** with `shutdown_response` (`request_id` echoed from the request, `approved: true`, `final_status`), then STOP all further work. Do NOT start new tasks, fix additional issues, or take any action after responding. After collecting all responses, the team config directory is removed automatically when the session exits. There is no TeamDelete call. **Plain text acknowledgement does NOT satisfy the shutdown protocol. You MUST call the SendMessage tool.**
+Follow the team-shutdown contract in `references/subagent-contracts.md`.
 
-> **Conditional refusal:** The schema allows `approved: false` with `pending_work` describing what remains. Currently all agents are instructed to always approve. The orchestrator retries up to 3 times on rejection before proceeding. If a future agent needs to delay shutdown (e.g., mid-write to disk), update its Shutdown Handling section to allow conditional refusal with `approved: false`.
+Shutdown invariant: acknowledge every `shutdown_request` by calling SendMessage with `shutdown_response`, then stop.
+
+> **Conditional refusal:** The schema allows `approved: false` with `pending_work` describing what remains. Currently all agents are instructed to always approve. The orchestrator retries up to 3 times on rejection before proceeding. If a future agent needs to delay shutdown (for example, during a disk write), update its Shutdown Handling section to allow conditional refusal with `approved: false`.
 
 ## Backward Compatibility
 
-The `v2_typed_protocol` flag has been graduated and always-on since v1.20. `migrate-config.sh` strips it from configs. `validate-message.sh` always validates messages against the V2 schema. There is no fail-open bypass.
+The `v2_typed_protocol` flag is a graduated feature flag. It has been always-on since v1.20 and is stripped from configs by `migrate-config.sh`. `validate-message.sh` always validates messages against the V2 schema. There is no fail-open bypass.
 
-Flat shutdown messages (without the full V2 envelope) are handled via **normalization**: `validate-message.sh` detects flat `shutdown_request`/`shutdown_response` messages (no `payload` key) and wraps them into V2 envelope shape before validation. This lets agents accept simplified inbox delivery without constructing a full envelope.
+Flat shutdown messages (without the full V2 envelope) are handled via **normalization**: `validate-message.sh` detects flat `shutdown_request`/`shutdown_response` messages (no `payload` key) and wraps them into V2 envelope shape before validation. This means simplified inbox delivery works. Agents do not need to construct a full envelope.
 
 When receiving messages, agents should:
 1. Try to parse as V2 typed message (full envelope)

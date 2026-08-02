@@ -31,6 +31,7 @@ done < <(tracked_command_reference_files)
 
 COMMAND_SKILL_CONTRACT_FILES=(
   "$ROOT/commands/vibe.md"
+  "$ROOT/references/vibe-uat-remediation.md"
   "$ROOT/commands/research.md"
   "$ROOT/commands/map.md"
   "$ROOT/commands/fix.md"
@@ -265,7 +266,8 @@ EOF
 
 expected_skill_contract_sites() {
   case "$(basename "$1")" in
-    vibe.md) echo 10 ;;
+    vibe.md) echo 5 ;;
+    vibe-uat-remediation.md) echo 3 ;;
     debug.md) echo 3 ;;
     qa.md) echo 2 ;;
     research.md|fix.md|execute-protocol.md) echo 1 ;;
@@ -401,6 +403,10 @@ is_uat_remediation_skill_site() {
   local start_line="$2"
   local uat_start uat_end
 
+  if [ "$(basename "$file")" = "vibe-uat-remediation.md" ]; then
+    return 0
+  fi
+
   [ "$(basename "$file")" = "vibe.md" ] || return 1
 
   uat_start=$(awk '/^### Mode: UAT Remediation[[:space:]]*$/ { print NR; exit }' "$file")
@@ -468,7 +474,7 @@ verify_skill_contract_sites() {
       pass "$file_name: site $site_number rejects silent omission"
     fi
 
-    if grep -q 'state the skill outcome in your response\|states the skill evaluation outcome' <<< "$segment"; then
+    if grep -qi 'state the skill outcome in your response\|states the skill evaluation outcome' <<< "$segment"; then
       pass "$file_name: site $site_number has visible-reporting instruction"
     else
       fail "$file_name: site $site_number missing visible-reporting instruction"
@@ -518,6 +524,7 @@ echo "=== Skill Activation Pipeline Verification (plan-driven model) ==="
 DEV_AGENT="$ROOT/agents/vbw-dev.md"
 FIX_COMMAND="$ROOT/commands/fix.md"
 VIBE_COMMAND="$ROOT/commands/vibe.md"
+VIBE_INPUT_PARSING="$ROOT/references/vibe-input-parsing.md"
 EXECUTE_PROTOCOL="$ROOT/references/execute-protocol.md"
 DEV_TOOLS=$(sed -n '/^---$/,/^---$/p' "$DEV_AGENT" | grep '^tools:' || true)
 DEV_DISALLOWED=$(sed -n '/^---$/,/^---$/p' "$DEV_AGENT" | grep '^disallowedTools:' || true)
@@ -1244,6 +1251,22 @@ done
 for contract_file in "${COMMAND_SKILL_CONTRACT_FILES[@]}"; do
   verify_payload_local_skill_contract_sites "$contract_file"
 done
+
+input_site_count=$(collect_skill_contract_site_lines "$VIBE_INPUT_PARSING" | wc -l | tr -d ' ')
+input_shared_ref_count=$(grep -c 'Use the Shared QA Remediation Skill Payload (VIBE-IP-05) above as the first lines' "$VIBE_INPUT_PARSING" || true)
+if [ "$input_site_count" -eq 2 ] && [ "$input_shared_ref_count" -eq 2 ]; then
+  pass "vibe-input-parsing.md: both QA remediation skill sites reference one shared payload"
+else
+  fail "vibe-input-parsing.md: expected 2 skill sites and 2 shared payload references, found $input_site_count sites and $input_shared_ref_count references"
+fi
+
+if [ "$(grep -c '^<skill_activation>$' "$VIBE_INPUT_PARSING" || true)" -eq 1 ] \
+  && [ "$(grep -c '^<skill_no_activation>$' "$VIBE_INPUT_PARSING" || true)" -eq 1 ] \
+  && grep -q 'extract-skill-follow-up-files.sh' "$VIBE_INPUT_PARSING"; then
+  pass "vibe-input-parsing.md: shared payload defines both outcomes and follow-up resolution once"
+else
+  fail "vibe-input-parsing.md: shared payload must define one activation block, one no-activation block, and follow-up resolution"
+fi
 
 for agent_file in "${AGENT_SKILL_CONTRACT_FILES[@]}"; do
   agent_name=$(basename "$agent_file")
