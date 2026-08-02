@@ -709,3 +709,122 @@ EOF
   [ "$(wc -l < "$counter" | tr -d ' ')" -eq 1 ]
   [ ! -d "$lock" ]
 }
+
+@test "phase-state resolver rejects delayed ownership claim after lock reclaim" {
+  local td root script shim_dir session link cache lock counter
+  local delay_ready delay_release phase_started phase_release a_output b_output
+  local a_pid="" b_pid="" a_status=1 b_status=1 owner_before_release="" owner_after_delayed_claim=""
+  local delay_ready_seen=false b_started=false run_count=0 i
+  td=$(_new_tmp_test_dir)
+
+  root="$td/root"
+  script="$td/resolve-phase-state.sh"
+  shim_dir="$td/bin"
+  session="phase-state-delayed-owner-$$-$RANDOM"
+  link="/tmp/.vbw-plugin-root-link-${session}"
+  cache="/tmp/.vbw-phase-detect-${session}.txt"
+  lock="/tmp/.vbw-phase-detect-live-${session}.lock"
+  counter="$td/phase-detect-runs"
+  delay_ready="$td/delay-ready"
+  delay_release="$td/delay-release"
+  phase_started="$td/phase-started"
+  phase_release="$td/phase-release"
+  a_output="$td/a.out"
+  b_output="$td/b.out"
+  mkdir -p "$root/scripts" "$shim_dir"
+
+  cat > "$shim_dir/mkdir" <<'EOF'
+#!/usr/bin/env bash
+/bin/mkdir "$@"
+mkdir_status=$?
+if [ "$mkdir_status" -eq 0 ] && [ "${DELAY_LOCK_OWNER:-}" = "1" ] && [ "${1:-}" = "$DELAY_LOCK_DIR" ]; then
+  : > "$DELAY_READY_FILE"
+  while [ ! -f "$DELAY_RELEASE_FILE" ]; do
+    sleep 0.05
+  done
+fi
+exit "$mkdir_status"
+EOF
+  cat > "$root/scripts/phase-detect.sh" <<'EOF'
+#!/usr/bin/env bash
+printf '%s\n' "$PPID" >> "$COUNTER_FILE"
+: > "$PHASE_STARTED_FILE"
+while [ ! -f "$PHASE_RELEASE_FILE" ]; do
+  sleep 0.05
+done
+printf '%s\n' 'next_phase_state=fresh_live' 'phase_detect_complete=true'
+EOF
+  : > "$root/scripts/hook-wrapper.sh"
+  : > "$counter"
+  _install_shared_resolver_fixture "$root"
+  chmod +x "$shim_dir/mkdir" "$root/scripts/phase-detect.sh" "$root/scripts/ensure-plugin-root-link.sh"
+
+  printf '%s\n' 'next_phase_state=existing_cache' 'phase_detect_complete=true' > "$cache"
+  touch -t 209912312359 "$cache"
+
+  _track_tmp_test_path "$link"
+  _track_tmp_test_path "$cache"
+  _track_tmp_test_path "$lock"
+  _copy_vibe_phase_state_resolver "$script"
+
+  env PATH="$shim_dir:$PATH" CLAUDE_SESSION_ID="$session" CLAUDE_PLUGIN_ROOT="$root" \
+    DELAY_LOCK_OWNER=1 DELAY_LOCK_DIR="$lock" DELAY_READY_FILE="$delay_ready" \
+    DELAY_RELEASE_FILE="$delay_release" COUNTER_FILE="$counter" \
+    PHASE_STARTED_FILE="$phase_started" PHASE_RELEASE_FILE="$phase_release" \
+    bash "$script" > "$a_output" &
+  a_pid=$!
+
+  for ((i = 0; i < 100; i++)); do
+    if [ -f "$delay_ready" ]; then
+      delay_ready_seen=true
+      break
+    fi
+    sleep 0.05
+  done
+
+  if [ "$delay_ready_seen" = true ]; then
+    touch -t 200001010000 "$lock"
+    env PATH="$shim_dir:$PATH" CLAUDE_SESSION_ID="$session" CLAUDE_PLUGIN_ROOT="$root" \
+      DELAY_LOCK_DIR="$lock" DELAY_READY_FILE="$delay_ready" DELAY_RELEASE_FILE="$delay_release" \
+      COUNTER_FILE="$counter" PHASE_STARTED_FILE="$phase_started" PHASE_RELEASE_FILE="$phase_release" \
+      bash "$script" > "$b_output" &
+    b_pid=$!
+  fi
+
+  for ((i = 0; i < 200; i++)); do
+    if [ -f "$phase_started" ]; then
+      b_started=true
+      break
+    fi
+    sleep 0.05
+  done
+
+  if [ "$b_started" = true ]; then
+    owner_before_release=$(cat "$lock/pid" 2>/dev/null || true)
+  fi
+  : > "$delay_release"
+
+  for ((i = 0; i < 100; i++)); do
+    run_count=$(wc -l < "$counter" | tr -d ' ')
+    if ! kill -0 "$a_pid" 2>/dev/null || [ "$run_count" -ge 2 ]; then
+      break
+    fi
+    sleep 0.05
+  done
+  owner_after_delayed_claim=$(cat "$lock/pid" 2>/dev/null || true)
+
+  : > "$phase_release"
+  wait "$a_pid" && a_status=0 || a_status=$?
+  if [ -n "$b_pid" ]; then
+    wait "$b_pid" && b_status=0 || b_status=$?
+  fi
+  run_count=$(wc -l < "$counter" | tr -d ' ')
+
+  [ "$delay_ready_seen" = true ]
+  [ "$b_started" = true ]
+  [ "$a_status" -eq 0 ]
+  [ "$b_status" -eq 0 ]
+  [ "$owner_before_release" = "$b_pid" ]
+  [ "$owner_after_delayed_claim" = "$b_pid" ]
+  [ "$run_count" -eq 1 ]
+}

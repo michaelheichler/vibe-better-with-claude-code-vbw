@@ -56,7 +56,7 @@ acquire_phase_detect_lock() {
   while [ $lock_retry_count -lt 100 ]; do
     if mkdir "$LOCK" 2>/dev/null; then
       LOCKED=true
-      if printf '%s\n' "$$" > "$LOCK/pid" 2>/dev/null; then
+      if (set -o noclobber; printf '%s\n' "$$" > "$LOCK/pid") 2>/dev/null; then
         return 0
       fi
       release_phase_detect_lock
