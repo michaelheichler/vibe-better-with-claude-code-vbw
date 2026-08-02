@@ -58,8 +58,9 @@ the FAIL rows from the prior `VERIFICATION.md`, writing round-numbered artifacts
 cache-first cascade and always exits 0. It then dispatches to the handler for the firing event.
 
 - `session-start.sh`: bootstraps the plugin-root symlink and recovers state at session start.
-- `pre-compact-save.sh` / `post-compact-verify.sh`: snapshot and restore orchestrator state
-  across context compaction.
+- `compaction-instructions.sh` handles `PreCompact`, and `post-compact.sh` handles the
+  `SessionStart` event whose matcher is `compact`. Together they snapshot and restore orchestrator
+  state across context compaction.
 - `PreToolUse` / `PostToolUse` handlers: guard destructive commands and track tool usage for
   metrics.
 
