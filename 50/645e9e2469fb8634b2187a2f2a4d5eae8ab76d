@@ -1,0 +1,20 @@
+testing/verify-shared-contracts.sh
+  s_d2686ed9c0b94b::t_5e4d096148a93f 51
+  s_d2686ed9c0b94b::t_4eb1f6937e9f30 105
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "50645e9e2469fb8634b2187a2f2a4d5eae8ab76d",
+  "prompts": {},
+  "sessions": {
+    "s_d2686ed9c0b94b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a924c903-92a9-4f1f-aaea-ba6a7f724e8e",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
