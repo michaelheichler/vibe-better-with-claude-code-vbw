@@ -1,0 +1,50 @@
+scripts/phase-detect.sh
+  s_0825a35676f762::t_5042a9856d8faa 49-51,189,191-192,194-195,225-226,228-229,231-232
+scripts/lib/phase-detect-active-routing.sh
+  s_0825a35676f762::t_fcd9f35c3c9084 1,3-25,33,37,45,55,59,72-103,105-324,326-337,339-346
+  s_0825a35676f762::t_92c9dc3bd9d369 338
+  s_0825a35676f762::t_1c0b9df7842f8b 104
+  s_0825a35676f762::t_37a97f65812c2e 27-31
+  s_0825a35676f762::t_eff5e9a6c4de21 26,32,34-36,38-44,46-48,54,56-58,60-71
+  s_0825a35676f762::t_fee1b02bdfb1f4 325
+  s_0825a35676f762::t_5f18f2a96f8a4e 49-53
+  s_0825a35676f762::t_e7cc2d7ae8ae2e 2
+scripts/lib/phase-detect-support.sh
+  s_0825a35676f762::t_fcd9f35c3c9084 1,3-415
+  s_0825a35676f762::t_aec380306d2a2a 2
+  s_0825a35676f762::t_3ab6a7ead19a78 416
+scripts/lib/phase-detect-environment-output.sh
+  s_0825a35676f762::t_aec380306d2a2a 2
+  s_0825a35676f762::t_fcd9f35c3c9084 1,3-73
+scripts/lib/phase-detect-qa-routing.sh
+  s_0825a35676f762::t_f89dfff00760a5 106
+  s_0825a35676f762::t_ddabb107842dde 57-59
+  s_0825a35676f762::t_09b4e53ea7068c 152-154
+  s_0825a35676f762::t_fcd9f35c3c9084 1,3-24,28-56,60-105,107-151,155-330
+  s_0825a35676f762::t_a7d22ebddce1e4 25-27
+  s_0825a35676f762::t_aec380306d2a2a 2
+tests/phase-detect.bats
+  s_0825a35676f762::t_5042a9856d8faa 1065-1077
+scripts/lib/phase-detect-milestone-recovery.sh
+  s_0825a35676f762::t_aec380306d2a2a 2
+  s_0825a35676f762::t_4dd79d197d93ac 105
+  s_0825a35676f762::t_36c7ce0a3ac72b 130-136,138-156,159-160,162-163,165-169,171-173,175-180,183,185-194,197,199-206,208-211,213,216-222,224-228,231-304
+  s_0825a35676f762::t_fcd9f35c3c9084 1,3-104,106-129,137,157-158,161,164,170,174,181-182,184,195-196,198,207,212,214-215,223,229-230
+  s_0825a35676f762::t_04e603b89f6788 305
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "f2e75831cbc72005d28b20e189bb7c56982ee20f",
+  "prompts": {},
+  "sessions": {
+    "s_0825a35676f762": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "bdda186d-4444-4c1d-826e-ec4c6e54a197",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
