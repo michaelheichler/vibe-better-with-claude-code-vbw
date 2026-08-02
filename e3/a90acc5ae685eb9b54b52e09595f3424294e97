@@ -1,0 +1,38 @@
+scripts/lib/phase-detect-support.sh
+  s_0825a35676f762::t_eac350aab57b23 412,419-420,430,436-445
+tests/phase-detect-output-contract.bats
+  s_0825a35676f762::t_7a4dc014e7330a 79,81-84
+  s_0825a35676f762::t_6a61a00accb861 80
+tests/fixtures/phase-detect-output/setup-case.bash
+  s_0825a35676f762::t_7c6750bd53a1dd 143-155
+  s_0825a35676f762::t_1b7d9bf2351fe4 219
+tests/phase-detect.bats
+  s_0825a35676f762::t_c91b372c13a443 1058-1059
+  s_0825a35676f762::t_7e4c82ad32efcb 1097-1106
+scripts/lib/phase-detect-environment-output.sh
+  s_0825a35676f762::t_2bd3864c4c6a72 74-76,79-80
+  s_0825a35676f762::t_21b642d30ecfe6 19-43
+  s_0825a35676f762::t_0f1f1ccf06334e 81
+tests/fixtures/phase-detect-output/failed-summary-passing-remediation.txt
+  s_0825a35676f762::t_6b456af244d907 1-58
+scripts/lib/phase-detect-qa-routing.sh
+  s_0825a35676f762::t_8744cd73184fb9 153-154
+  s_0825a35676f762::t_4e5541efd485b4 56-57
+  s_0825a35676f762::t_e4196294e8195a 22-23
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "e3a90acc5ae685eb9b54b52e09595f3424294e97",
+  "prompts": {},
+  "sessions": {
+    "s_0825a35676f762": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "bdda186d-4444-4c1d-826e-ec4c6e54a197",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
