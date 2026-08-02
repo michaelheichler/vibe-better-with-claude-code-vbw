@@ -1,0 +1,28 @@
+.vbw-planning/phases/06-oversized-file-decomposition/06-03-PLAN.md
+  s_0825a35676f762::t_59b24edd872900 1-2,4-11,14-114
+  s_0825a35676f762::t_b5a4f247e857e6 115-121
+  s_0825a35676f762::t_902743c10d0291 13
+  s_0825a35676f762::t_38504ce5c7db83 12
+  s_0825a35676f762::t_66b60c6c3ae62a 3
+.vbw-planning/phases/06-oversized-file-decomposition/06-01-PLAN.md
+  s_0825a35676f762::t_7fe4acd10757f0 1-2,4-12,14-144
+  s_0825a35676f762::t_86486356c12416 145-152
+  s_0825a35676f762::t_7242a8962edae4 3
+  s_0825a35676f762::t_bbf2a65ba9f95b 13
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "8c1a37ddf3146786f436a8100f13f707810ed9f9",
+  "prompts": {},
+  "sessions": {
+    "s_0825a35676f762": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "bdda186d-4444-4c1d-826e-ec4c6e54a197",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
