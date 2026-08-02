@@ -1,0 +1,19 @@
+.vbw-planning/phases/04-shared-contract-dedup/remediation/qa/round-02/SCOPE-EXCEPTIONS.md
+  s_27ea496ab5a93e::t_aea2a1482bc31a 1-27
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "6b1f26e74c658c07cd6d0f39569b579b75e7e07c",
+  "prompts": {},
+  "sessions": {
+    "s_27ea496ab5a93e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4452c98a-815b-4051-9652-732944fc8275",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
