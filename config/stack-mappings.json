@@ -236,14 +236,21 @@
   },
   "mobile": {
     "ios-swift": {
-      "detect": ["Package.swift", "*.xcodeproj", "*.xcworkspace"],
+      "detect": [
+        "*.xcodeproj",
+        "*.xcworkspace",
+        "**/*.xcodeproj",
+        "**/*.xcworkspace",
+        "Package.swift",
+        "**/Package.swift"
+      ],
       "skills": ["swift-skill"],
-      "description": "iOS/Swift native"
+      "description": "iOS/macOS Swift project"
     },
     "swiftui": {
-      "detect": ["Package.swift"],
-      "skills": ["swift-skill"],
-      "description": "SwiftUI framework"
+      "detect": ["**/ContentView.swift", "**/*App.swift"],
+      "skills": ["swiftui-expert-skill"],
+      "description": "SwiftUI interface"
     },
     "android-kotlin": {
       "detect": ["build.gradle.kts", "build.gradle", "settings.gradle"],
@@ -276,25 +283,6 @@
       "detect": [".github/workflows"],
       "skills": ["github-actions-skill"],
       "description": "GitHub Actions CI/CD"
-    }
-  },
-  "mobile": {
-    "ios-swift": {
-      "detect": [
-        "*.xcodeproj",
-        "*.xcworkspace",
-        "**/*.xcodeproj",
-        "**/*.xcworkspace",
-        "Package.swift",
-        "**/Package.swift"
-      ],
-      "skills": ["swift-skill"],
-      "description": "iOS/macOS Swift project"
-    },
-    "swiftui": {
-      "detect": ["**/ContentView.swift", "**/*App.swift"],
-      "skills": ["swiftui-expert-skill"],
-      "description": "SwiftUI interface"
     }
   }
 }
