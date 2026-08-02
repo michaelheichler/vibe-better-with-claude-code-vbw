@@ -29,6 +29,9 @@ Recorded both hook-required R01 scope expansions as accepted process exceptions 
 - `.vbw-planning/phases/04-shared-contract-dedup/remediation/qa/round-03/R03-PLAN.md`: recorded both process-exception classifications and their evidence.
 - `.vbw-planning/phases/04-shared-contract-dedup/remediation/qa/round-03/R03-SUMMARY.md`: recorded the accepted exceptions in a gate-recognized summary.
 
-### Deviations
+### Accepted Process Exceptions
 - `RDEV-01`: accepted process exception for the hook-required 5+/5- scope expansion in commit `6a6cc206`.
 - `RDEV-02`: accepted process exception for the hook-required 16+/7- scope expansion in commit `576c9755`.
+
+### Deviations
+None.
