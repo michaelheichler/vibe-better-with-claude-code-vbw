@@ -1,0 +1,26 @@
+commands/map.md
+  s_d2686ed9c0b94b::t_2389f89b5d6bf8 275
+references/subagent-contracts.md
+  s_d2686ed9c0b94b::t_7858b2eaef419f 31-32
+testing/verify-uat-autocontinue.sh
+  s_d2686ed9c0b94b::t_b3ed65c56959c3 110-112,114
+  s_d2686ed9c0b94b::t_2a73752c974232 14
+references/execute-protocol.md
+  s_d2686ed9c0b94b::t_5dccf37ac92621 997
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "bef459a72824b4f3faf40b4c3556882cae93f634",
+  "prompts": {},
+  "sessions": {
+    "s_d2686ed9c0b94b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a924c903-92a9-4f1f-aaea-ba6a7f724e8e",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
