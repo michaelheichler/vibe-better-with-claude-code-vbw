@@ -14,6 +14,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Claude Code](https://img.shields.io/badge/Claude_Code-v2.1.32+-blue.svg)](https://code.claude.com)
+
 [![Models](https://img.shields.io/badge/Models-Sonnet_5_%7C_Opus_5_%7C_Fable-purple.svg)](https://anthropic.com)
 [![Discord](https://img.shields.io/badge/Discord-Join%20Us-5865F2.svg?logo=discord&logoColor=white)](https://discord.gg/zh6pV53SaP)
 
@@ -43,12 +44,12 @@ We would rather tell you how to catch us lying than just ask you to trust the nu
 | Hook event types (11) / handlers (30) | Computed | `jq -r '.hooks \| keys[]' hooks/hooks.json` and `jq '[.hooks[][] .hooks[]] \| length' hooks/hooks.json` |
 | Shell scripts (236, repo-wide) | Computed | `find . -path ./.git -prune -o -name "*.sh" -print \| wc -l` |
 | BATS files (154) / test cases (3,747) | Computed | `find . -name "*.bats" \| wc -l` and `grep -rh "^@test" --include="*.bats" . \| wc -l` |
-| VERSION (1.38.6) | Computed | `cat VERSION`, cross-checked with `bash scripts/bump-version.sh --verify` |
+| VERSION (1.38.8) | Computed | `cat VERSION`, cross-checked with `bash scripts/bump-version.sh --verify` |
 | Token-efficiency figures in `docs/*token-analysis*.md` | Estimated | Line-count heuristic against an older stock-agent-teams baseline, not a measured API benchmark. See the caveat at the top of [Token efficiency by design](#token-efficiency-by-design). |
 | Cost Optimization relative percentages | Computed | Derived from list prices in `config/model-pricing.json` (collected 2026-07-31) at an assumed 1:3 input:output ratio, not from logged billing data. Treat as directional. |
 | Benchmark tables in `references/model-profiles.md` | Sourced | Collected 2026-07-31 from Vals AI, tbench.ai, arcprize.org, LMArena, steel.dev, and llm-stats.com. Each row names its source. Re-verify after roughly six months. |
 
-Component counts above were last verified against `VERSION` 1.38.6. Reading this against a newer release? Re-run the commands in the table. Most take under a second and need only `find`, `grep`, and `jq`, all already required by this project.
+Component counts above were last verified against `VERSION` 1.38.8. Reading this against a newer release? Re-run the commands in the table. Most take under a second and need only `find`, `grep`, and `jq`, all already required by this project.
 
 Any claim in this README that is not in the table above and is not visibly marked as an estimate should be treated as unverified. Open an issue or PR to either cite a command for it or add the estimate caveat.
 
@@ -82,6 +83,8 @@ Think of it as project management for a team where the entire engineering depart
 
 ## Table of Contents
 
+**Overview**
+
 - [Token efficiency by design](#token-efficiency-by-design)
 - [Accuracy and freshness](#accuracy-and-freshness)
 - [Manifesto](#manifesto)
@@ -89,11 +92,17 @@ Think of it as project management for a team where the entire engineering depart
 - [Installation](#installation)
 - [Execution Model](#execution-model)
 - [Quick Tutorial](#quick-tutorial)
+
+**Reference**
+
 - [Commands](#commands)
 - [The Agents](#the-agents)
 - [Configuration](#configuration)
 - [Documentation](#documentation)
 - [Project Structure](#project-structure)
+
+**Project**
+
 - [Requirements](#requirements)
 - [Contributing](#contributing)
 - [Contributors](#contributors)
@@ -135,7 +144,7 @@ Agent Teams ship with seven known limitations. VBW addresses all of them. The ei
 
 ### Adaptive multi-model support
 
-VBW does not hardcode a model list and hope Anthropic never ships anything new. `scripts/detect-models.sh` reads the available model catalog straight out of the Claude Code binary itself, the same table the CLI uses internally, so detection is credential-free and works fully offline. It falls back to `${ANTHROPIC_BASE_URL}/v1/models` only as a last resort, when the binary yields nothing and an API key is present. The catalog is cached for an hour, keyed on the binary's path, mtime, and size, so a freshly updated Claude Code binary is picked up on the next run, not after a manual cache-bust.
+VBW does not hardcode a model list and hope Anthropic never ships anything new. `scripts/detect-models.sh` reads the available model catalog straight out of the Claude Code binary itself. The CLI uses the same table internally. Detection is credential-free and works fully offline. It falls back to `${ANTHROPIC_BASE_URL}/v1/models` only as a last resort, when the binary yields nothing and an API key is present. The catalog is cached for an hour, keyed on the binary's path, mtime, and size, so a freshly updated Claude Code binary is picked up on the next run, not after a manual cache-bust.
 
 On top of that catalog, `scripts/resolve-agent-model.sh` resolves a model per agent per effort level: `model_overrides` beats `model_matrix` beats the `model_profile` preset (`quality`/`balanced`/`budget`). Overrides and matrix entries can be a single model id or a preference list, where the first entry present in your detected catalog wins. A parallel `reasoning_matrix`/`reasoning_overrides` axis controls per-agent reasoning effort independently of model choice, reconciled against each model's actual accepted effort values so an unsupported value never becomes a hard API error. Today that resolves to Sonnet 5, Opus 5, Fable, and Haiku 4.5 across VBW's 7 agents. When Anthropic ships the next generation, detection sees it immediately. Wiring a new model into a profile's default tier is a one-line change to `config/model-pricing.json`, not a rewrite of VBW's model-selection logic.
 
@@ -378,7 +387,7 @@ These are the commands you'll use every day. This is the job now.
 
 VBW can optionally manage [RTK](https://github.com/rtk-ai/rtk) setup through `/vbw:rtk install` and keep VBW-managed RTK current through `/vbw:rtk update`. You can also follow RTK's upstream install docs yourself and use `/vbw:rtk status`, `/vbw:rtk init`, or `/vbw:rtk verify` for diagnostics and repair.
 
-`/vbw:rtk install` is complete setup. On macOS, VBW prefers `brew install rtk` when Homebrew is available. Otherwise it uses the checked `rtk-ai/rtk` GitHub release asset path and verifies `checksums.txt` when available. Setup verifies the selected binary with `rtk --version` and `rtk gain`, creates RTK's user `config.toml` when missing (`~/Library/Application Support/rtk/config.toml` on macOS, `~/.config/rtk/config.toml` on Linux), and runs `rtk init -g --auto-patch`. If a GitHub fallback binary is not on `PATH`, VBW still completes setup through that absolute binary path and writes or verifies a usable absolute hook command. The PATH note is only for future manual shell use. If RTK cannot persist the Claude settings hook non-interactively, VBW uses a jq-based settings fallback only when `settings.json` is valid and preserves unrelated settings. RTK/VBW hook coexistence remains WARN/unverified until a runtime smoke test proves `updatedInput` behavior works with both tools active. `/vbw:rtk verify` can run a scoped Claude Code Bash-tool smoke (`ls -la .`, `git status --short`, `git log -n 2 --oneline`) and record a strict local runtime proof when RTK history shows those commands were rewritten, or when the current Claude session transcript proves the RTK hook returned exact post-smoke `updatedInput` rewrites and `ls` produced RTK-style output. VBW's Bash guard must still block a synthetic destructive command before proof is written. Once that proof is valid for the current RTK hook command and version, normal status and doctor warnings quiet for this local setup. Explicit diagnostics still mention the upstream anthropics/claude-code#15897 caveat. RTK savings are shown as external RTK metrics, not VBW savings.
+`/vbw:rtk install` is complete setup. On macOS, VBW prefers `brew install rtk` when Homebrew is available. Otherwise it uses the checked `rtk-ai/rtk` GitHub release asset path and verifies `checksums.txt` when available. Setup verifies the selected binary with `rtk --version` and `rtk gain`, creates RTK's user `config.toml` when missing (`~/Library/Application Support/rtk/config.toml` on macOS, `~/.config/rtk/config.toml` on Linux), and runs `rtk init -g --auto-patch`. If a GitHub fallback binary is not on `PATH`, VBW still completes setup through that absolute binary path and writes or verifies a usable absolute hook command. The PATH note is only for future manual shell use. If RTK cannot persist the Claude settings hook non-interactively, VBW uses a jq-based settings fallback only when `settings.json` is valid and preserves unrelated settings. RTK/VBW hook coexistence remains WARN/unverified until a runtime smoke test proves `updatedInput` behavior works with both tools active. `/vbw:rtk verify` can run a scoped Claude Code Bash-tool smoke (`ls -la .`, `git status --short`, `git log -n 2 --oneline`). It records strict local runtime proof when RTK history shows those commands were rewritten. Alternatively, proof can come from the current Claude session transcript. It succeeds when the current Claude session transcript proves the RTK hook returned exact post-smoke `updatedInput` rewrites. The transcript must also show that `ls` produced RTK-style output. VBW's Bash guard must still block a synthetic destructive command before proof is written. Once that proof is valid for the current RTK hook command and version, normal status and doctor warnings quiet for this local setup. Explicit diagnostics still mention the upstream anthropics/claude-code#15897 caveat. RTK savings are shown as external RTK metrics, not VBW savings.
 
 ### Advanced: For When You're Feeling Ambitious
 
@@ -406,7 +415,7 @@ VBW uses 7 specialized agents, each with native tool permissions enforced via YA
 | **Debugger** | Scientific method bug investigation. One issue, one session. | Full access | none | `acceptEdits` |
 | **Docs** | Documentation specialist. READMEs, changelogs, API docs, guides. | Read, Grep, Glob, Bash, Write, Edit | none | `acceptEdits` |
 
-**Denied / Omitted** = `disallowedTools` for denylist agents. For explicit allowlist agents, it means tools intentionally absent from `tools`. These restrictions are blocked by Claude Code itself, not by instructions an agent might ignore during compaction. **Mode** = `permissionMode`. `plan` means no interactive edits: Scout writes research files to `.vbw-planning/` and can run read-only validation Bash, but cannot edit code or spawn subagents/teams. QA can only persist VERIFICATION.md via `write-verification.sh`. `acceptEdits` means the agent can propose and apply changes.
+**Denied / Omitted** = `disallowedTools` for denylist agents. For explicit allowlist agents, it means tools intentionally absent from `tools`. These restrictions are blocked by Claude Code itself, not by instructions an agent might ignore during compaction. **Mode** = `permissionMode`. `plan` means no interactive edits. Scout writes research files to `.vbw-planning/` and can run read-only validation Bash. Scout cannot edit code or spawn subagents or teams. QA can only persist VERIFICATION.md via `write-verification.sh`. `acceptEdits` means the agent can propose and apply changes.
 
 Here's when each one shows up to work:
 
@@ -712,7 +721,7 @@ Controls when VBW creates an Agent Team (multiple color-coded Dev agents) vs usi
 
 If `prefer_teams` requests team mode but the live tool set cannot express real team semantics, VBW now emits `⚠ Agent Teams not enabled: using non-team mode` and falls back to explicit non-team execution. It does **not** substitute plain background agents without `team_name` and pretend a team was created.
 
-This setting determines whether true team execution is allowed for delegate-eligible Execute work. With a single delegate plan or a real dependency chain, `auto` chooses serialized subagents because there is no useful parallelism. For `/vbw:debug`, `auto` is stricter: it uses **Competing Hypotheses** team mode only when the bug is both on the `thorough-effort` profile and ambiguous: think intermittent/flaky/random behavior, generic or missing error text, multiple plausible root-cause areas, or `--competing` / `--parallel`, which force the bug to count as ambiguous for routing. A clear exact-repro issue stays `Standard (single debugger)` unless those `auto` conditions are met. `--serial` forces non-ambiguous routing under `auto`. `prefer_teams=always` still uses team mode for all debug runs, and `prefer_teams=never` still disables team mode regardless of the flags. Note: Planning always uses sequential subagents (Scout → Lead), not teams. `prefer_teams` only affects Execute and debug/map modes.
+This setting determines whether true team execution is allowed for delegate-eligible Execute work. With a single delegate plan or a real dependency chain, `auto` chooses serialized subagents because there is no useful parallelism. For `/vbw:debug`, `auto` is stricter. It uses **Competing Hypotheses** team mode only when the bug is both on the `thorough-effort` profile and ambiguous. Ambiguous bugs include intermittent, flaky, or random behavior, generic or missing error text, and multiple plausible root-cause areas. The `--competing` and `--parallel` flags force the bug to count as ambiguous for routing. A clear exact-repro issue stays `Standard (single debugger)` unless those `auto` conditions are met. `--serial` forces non-ambiguous routing under `auto`. `prefer_teams=always` still uses team mode for all debug runs. `prefer_teams=never` disables team mode regardless of the flags. Planning always uses sequential subagents (Scout → Lead), not teams. `prefer_teams` only affects Execute and debug/map modes.
 
 #### `worktree_isolation`: Filesystem Isolation
 
@@ -929,7 +938,7 @@ The `model_profile` and `model_overrides` settings from [Model routing and cost]
 
 **Quality** is the default. It puts Opus on Lead, Dev, Debugger, and Architect for maximum reasoning depth on architecture decisions and production-critical work, and keeps QA, Scout, and Docs on Sonnet. Switch to Balanced (`/vbw:config model_profile balanced`) for roughly half the cost on standard development.
 
-**Budget** places Haiku on Docs only. Earlier releases routed QA and Scout to Haiku as well, which the measured benchmarks do not support: Scout needs the 1M context Haiku lacks (200K), and QA needs reasoning depth where Haiku scores 1.3 to 4.0 percent on ARC-AGI-2 against 88 to 92 for the frontier tier. See `references/model-profiles.md` for the sourced tables.
+**Budget** places Haiku on Docs only. Earlier releases routed QA and Scout to Haiku as well. Measured benchmarks do not support that choice. Scout needs the 1M context Haiku lacks (200K). QA needs reasoning depth, and Haiku scores 1.3 to 4.0 percent on ARC-AGI-2 against 88 to 92 for the frontier tier. See `references/model-profiles.md` for the sourced tables.
 
 ### Reasoning effort
 
