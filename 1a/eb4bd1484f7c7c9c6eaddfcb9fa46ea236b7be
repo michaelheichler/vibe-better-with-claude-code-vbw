@@ -1,0 +1,22 @@
+testing/verify-commands-contract/verification-guardrails.bash
+  s_0825a35676f762::t_019ddffb5a36af 160
+  s_0825a35676f762::t_7cc57158e368cc 181
+testing/verify-commands-contract.sh
+  s_0825a35676f762::t_1c679a25d9afb6 6
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "1aeb4bd1484f7c7c9c6eaddfcb9fa46ea236b7be",
+  "prompts": {},
+  "sessions": {
+    "s_0825a35676f762": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "bdda186d-4444-4c1d-826e-ec4c6e54a197",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
