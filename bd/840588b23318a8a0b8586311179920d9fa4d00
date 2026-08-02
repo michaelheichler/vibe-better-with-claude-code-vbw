@@ -1,0 +1,23 @@
+scripts/lib/qa-result-gate-path-evidence.sh
+  s_0825a35676f762::t_dcbb7c8c457178 1-708
+scripts/qa-result-gate.sh
+  s_0825a35676f762::t_dcbb7c8c457178 49-52
+scripts/lib/qa-result-gate-fail-classifications.sh
+  s_0825a35676f762::t_dcbb7c8c457178 1-338
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "bd840588b23318a8a0b8586311179920d9fa4d00",
+  "prompts": {},
+  "sessions": {
+    "s_0825a35676f762": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "bdda186d-4444-4c1d-826e-ec4c6e54a197",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}

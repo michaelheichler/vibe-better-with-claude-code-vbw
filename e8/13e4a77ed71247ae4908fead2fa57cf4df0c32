@@ -1,0 +1,25 @@
+testing/verify-rtk-integration-contract.sh
+  s_0825a35676f762::t_8a66532f67f277 67
+  s_0825a35676f762::t_abcd9dc5d00047 21-25,30-34,39-43
+  s_0825a35676f762::t_ceeb07c6155e02 60
+scripts/lib/rtk-manager-environment.sh
+  s_0825a35676f762::t_eaaf3b67082eba 1-325
+scripts/rtk-manager.sh
+  s_0825a35676f762::t_eaaf3b67082eba 30-31
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "e813e4a77ed71247ae4908fead2fa57cf4df0c32",
+  "prompts": {},
+  "sessions": {
+    "s_0825a35676f762": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "bdda186d-4444-4c1d-826e-ec4c6e54a197",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}

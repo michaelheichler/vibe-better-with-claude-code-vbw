@@ -1,0 +1,74 @@
+testing/verify-skill-activation/additive-contracts.bash
+  s_0825a35676f762::t_7872c5e17c6538 1-96
+references/skill-activation-payload.md
+  s_0825a35676f762::t_2b41aa65534dc2 6
+  s_0825a35676f762::t_01ab865218a31a 1-5,7-33
+references/vibe-uat-remediation.md
+  s_0825a35676f762::t_2567ba4a93b43c 125,169,220
+testing/verify-skill-activation/execute-agent-contracts.bash
+  s_0825a35676f762::t_7872c5e17c6538 1-317
+references/execute-protocol.md
+  s_0825a35676f762::t_2567ba4a93b43c 301-302
+testing/verify-skill-activation/payload-contract-helpers.bash
+  s_0825a35676f762::t_836d88f72fb96c 33
+  s_0825a35676f762::t_53a550d89c14f2 19-20,27,29-30,77,94,96-97
+  s_0825a35676f762::t_5d3f92bc6f49ae 21-26,28,31-32,34-75,83,93,98
+  s_0825a35676f762::t_bb2b667f51c94a 3-5,16
+  s_0825a35676f762::t_7872c5e17c6538 1-2,6-15,17-18,76,78-82,84-92,95,99-101
+testing/verify-skill-activation/explicit-outcome-contracts.bash
+  s_0825a35676f762::t_dfb532741cba41 140
+  s_0825a35676f762::t_139b073e61c7f0 6-31,34-37,39,44-45,47,50-53,55
+  s_0825a35676f762::t_7872c5e17c6538 1-5,32-33,38,40-43,46,48-49,54,56-75,78,80-139,141-216,218-220,222-238,240-258
+  s_0825a35676f762::t_c395c96df12394 217,221,239
+  s_0825a35676f762::t_20fa0053b17008 76-77,79
+references/vibe-input-parsing.md
+  s_0825a35676f762::t_2567ba4a93b43c 336,357
+commands/map.md
+  s_0825a35676f762::t_2567ba4a93b43c 197,201,215,217
+testing/verify-skill-activation/subagent-hook-contracts.bash
+  s_0825a35676f762::t_7872c5e17c6538 1-12,14-121,123-227
+  s_0825a35676f762::t_927159be7a3b94 122
+  s_0825a35676f762::t_5202088f46c493 13
+commands/debug.md
+  s_0825a35676f762::t_2567ba4a93b43c 222,260,447
+testing/verify-skill-activation/agent-contracts.bash
+  s_0825a35676f762::t_4121d8caf0d946 6,9-16
+  s_0825a35676f762::t_7872c5e17c6538 1-5,7-8,17-276
+commands/qa.md
+  s_0825a35676f762::t_2567ba4a93b43c 165,294
+testing/verify-skill-activation.sh
+  s_0825a35676f762::t_7872c5e17c6538 56-63
+  s_0825a35676f762::t_e4f2c3739a6b9c 24,26-32
+commands/fix.md
+  s_0825a35676f762::t_2567ba4a93b43c 92
+commands/research.md
+  s_0825a35676f762::t_2567ba4a93b43c 90-91
+testing/verify-skill-activation/runtime-fixtures.bash
+  s_0825a35676f762::t_7872c5e17c6538 1-14,16-22,24-27,29,36-40,81-87,92,95-102,105,108-110,119-121,191-192
+  s_0825a35676f762::t_7863dcbddfdcd2 15,23,28,30-35,41-80,89-91,93-94,103-104,106-107,111-118,122-190,193-230
+  s_0825a35676f762::t_adedbe322fa3af 88
+references/vibe-mode-add-phase.md
+  s_0825a35676f762::t_2d957b060c8119 32
+references/vibe-mode-bootstrap.md
+  s_0825a35676f762::t_58d6fc04460bec 50
+references/vibe-mode-insert-phase.md
+  s_0825a35676f762::t_1a5568d2b8935d 14
+references/vibe-mode-plan.md
+  s_0825a35676f762::t_a9a1a2fdeff9d5 48,84
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "b6291b5f7450e05d99f1efdae15b860c76b35240",
+  "prompts": {},
+  "sessions": {
+    "s_0825a35676f762": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "bdda186d-4444-4c1d-826e-ec4c6e54a197",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
