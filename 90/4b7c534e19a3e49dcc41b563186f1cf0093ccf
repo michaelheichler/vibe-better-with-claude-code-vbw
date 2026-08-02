@@ -1,0 +1,49 @@
+references/execute-uat.md
+  s_0825a35676f762::t_0720a4e77cc850 1-157
+references/execute-post-build-qa.md
+  s_0825a35676f762::t_0720a4e77cc850 1-178
+testing/verify-human-only-uat-contract.sh
+  s_0825a35676f762::t_072f6a694f5cd6 8
+testing/verify-commands-contract/verification-guardrails.bash
+  s_0825a35676f762::t_34cc09b4571030 3-6
+  s_0825a35676f762::t_dadb9d92132c76 133-135,162-177,283,289-290,296
+tests/discovered-issues-surfacing.bats
+  s_0825a35676f762::t_287e47a6ac2b53 506,510,514,554,791,876
+testing/verify-commands-contract/qa-gating.bash
+  s_0825a35676f762::t_34cc09b4571030 4
+  s_0825a35676f762::t_46883f6564ecdb 36,42,49,99,323,350,357
+testing/verify-askuserquestion-contract.sh
+  s_0825a35676f762::t_072f6a694f5cd6 18,426,428,477-478,522,531
+tests/planning-git-callsites.bats
+  s_0825a35676f762::t_287e47a6ac2b53 66-69
+tests/debugger-codebase-mapping.bats
+  s_0825a35676f762::t_287e47a6ac2b53 688,692
+references/execute-qa-result-gating.md
+  s_0825a35676f762::t_0720a4e77cc850 1-148
+tests/auto-uat.bats
+  s_0825a35676f762::t_fbb5f6ad446bd0 1247,1264,1272
+  s_0825a35676f762::t_287e47a6ac2b53 1224
+testing/verify-qa-persistence-contract.sh
+  s_0825a35676f762::t_072f6a694f5cd6 95
+testing/verify-execute-delegation-routing.sh
+  s_0825a35676f762::t_482b304bbf5ee6 11,227,662-665,671-674,688-690,772
+  s_0825a35676f762::t_072f6a694f5cd6 10,226,230-233
+references/execute-protocol.md
+  s_0825a35676f762::t_cffd80a4e8cddd 514,518,522
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "904b7c534e19a3e49dcc41b563186f1cf0093ccf",
+  "prompts": {},
+  "sessions": {
+    "s_0825a35676f762": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "bdda186d-4444-4c1d-826e-ec4c6e54a197",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
