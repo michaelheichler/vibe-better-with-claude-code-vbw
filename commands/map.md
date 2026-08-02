@@ -272,7 +272,7 @@ Read all 7 docs. Follow the Map Document Format contract above when writing INDE
 
 ### Step 5: Create META.md and present summary
 
-**HARD GATE. Shutdown before presenting results:** Solo mode has no team and skips shutdown. Duo and Quad modes follow the team-shutdown contract in `references/subagent-contracts.md`.
+**HARD GATE. Shutdown before presenting results:** Solo mode has no team and skips shutdown. Duo and Quad modes follow the team-shutdown contract in `references/subagent-contracts.md`, including its orchestrator retry procedure for plain-text replies and rejected responses.
 
 Shutdown invariant: acknowledge every `shutdown_request` by calling SendMessage with `shutdown_response`, then stop.
 

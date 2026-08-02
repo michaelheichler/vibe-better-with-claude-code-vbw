@@ -28,6 +28,8 @@ When a message contains `"type":"shutdown_request"` or `shutdown_request` in its
 
 **CRITICAL: Plain text acknowledgement is NOT sufficient.** You MUST call the SendMessage tool. The orchestrator cannot proceed with team shutdown until it receives a tool-call `shutdown_response` from every teammate.
 
+The orchestrator must wait for each `shutdown_response` with `approved: true`, delivered through a teammate SendMessage tool call. If a teammate responds in plain text instead of calling SendMessage, re-send the `shutdown_request`. If a teammate rejects the request, re-send it immediately, up to three attempts per teammate. If the teammate still rejects after three attempts, log a warning and proceed to residual cleanup.
+
 Call sites must copy this invariant byte-for-byte:
 
 ```text

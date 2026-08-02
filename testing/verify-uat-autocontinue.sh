@@ -11,11 +11,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 PASS=0
 FAIL=0
 VIBE_VERIFY_STEP4_BLOCK=$(sed -n '/4\. \*\*UAT Remediation Auto-Continuation:/,/### Mode: Add Phase/p' "$ROOT/commands/vibe.md")
-VIBE_FILES=(
-  "$ROOT/commands/vibe.md"
-  "$ROOT/references/vibe-input-parsing.md"
-  "$ROOT/references/vibe-uat-remediation.md"
-)
+VIBE_UAT_REMEDIATION="$ROOT/references/vibe-uat-remediation.md"
 
 pass() {
   echo "PASS  $1"
@@ -111,12 +107,11 @@ else
   pass "vibe.md Step 4 avoids direct needs-round mutation"
 fi
 
-# 12. vibe.md documents the real prepare-reverification archived/skipped contract
-if grep -q 'archived=kept|in-round-dir|<original-uat-basename>' "${VIBE_FILES[@]}" \
-  && grep -q 'skipped=already_archived|ready_for_verify|cap_reached' "${VIBE_FILES[@]}"; then
-  pass "vibe.md documents the real prepare-reverification archived/skipped contract"
+if grep -q 'archived=kept|in-round-dir|<original-uat-basename>' "$VIBE_UAT_REMEDIATION" \
+  && grep -q 'skipped=already_archived|ready_for_verify|cap_reached' "$VIBE_UAT_REMEDIATION"; then
+  pass "vibe-uat-remediation.md documents the prepare-reverification archived/skipped contract"
 else
-  fail "vibe.md missing the real prepare-reverification archived/skipped contract"
+  fail "vibe-uat-remediation.md missing the prepare-reverification archived/skipped contract"
 fi
 
 # 13. verify.md explicitly handles skipped=ready_for_verify and flat-layout archived basenames
