@@ -97,7 +97,49 @@ SUMMARY
   echo "$output" | jq -e '.plans[0].status == "pending"' >/dev/null
 }
 
-# --- Integration: session-start.sh calls recover-state.sh ---
+@test "recover-state: reports complete when every plan finishes via event log only" {
+  cd "$TEST_TEMP_DIR"
+  local tmp
+  tmp=$(mktemp)
+  jq '.event_recovery = true' .vbw-planning/config.json > "$tmp" && mv "$tmp" .vbw-planning/config.json
+
+  echo "title: Build UI" > .vbw-planning/phases/01-setup/01-01-PLAN.md
+  echo "title: Ship it" > .vbw-planning/phases/01-setup/01-02-PLAN.md
+
+  mkdir -p .vbw-planning/.events
+  cat > .vbw-planning/.events/event-log.jsonl <<'EVENTS'
+{"event":"plan_end","phase":1,"plan":1,"data":{"status":"complete"}}
+{"event":"plan_end","phase":1,"plan":2,"data":{"status":"complete"}}
+EVENTS
+
+  run bash "$SCRIPTS_DIR/recover-state.sh" 1 ".vbw-planning/phases"
+  [ "$status" -eq 0 ]
+  echo "$output" | jq -e '.status == "complete"' >/dev/null
+  echo "$output" | jq -e '.plans[0].status == "complete"' >/dev/null
+  echo "$output" | jq -e '.plans[1].status == "complete"' >/dev/null
+}
+
+@test "recover-state: reports failed when one plan fails via event log with no SUMMARY.md" {
+  cd "$TEST_TEMP_DIR"
+  local tmp
+  tmp=$(mktemp)
+  jq '.event_recovery = true' .vbw-planning/config.json > "$tmp" && mv "$tmp" .vbw-planning/config.json
+
+  echo "title: Build UI" > .vbw-planning/phases/01-setup/01-01-PLAN.md
+  echo "title: Ship it" > .vbw-planning/phases/01-setup/01-02-PLAN.md
+
+  mkdir -p .vbw-planning/.events
+  cat > .vbw-planning/.events/event-log.jsonl <<'EVENTS'
+{"event":"plan_end","phase":1,"plan":1,"data":{"status":"complete"}}
+{"event":"plan_end","phase":1,"plan":2,"data":{"status":"failed"}}
+EVENTS
+
+  run bash "$SCRIPTS_DIR/recover-state.sh" 1 ".vbw-planning/phases"
+  [ "$status" -eq 0 ]
+  echo "$output" | jq -e '.status == "failed"' >/dev/null
+  echo "$output" | jq -e '.plans[0].status == "complete"' >/dev/null
+  echo "$output" | jq -e '.plans[1].status == "failed"' >/dev/null
+}
 
 @test "session-start: calls recover-state.sh when event log is newer than execution state" {
   cd "$TEST_TEMP_DIR"
