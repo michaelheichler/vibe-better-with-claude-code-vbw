@@ -13,9 +13,7 @@ commit_hashes:
 files_modified:
   - ".vbw-planning/phases/04-shared-contract-dedup/remediation/qa/round-03/R03-PLAN.md"
   - ".vbw-planning/phases/04-shared-contract-dedup/remediation/qa/round-03/R03-SUMMARY.md"
-deviations:
-  - "RDEV-01 is an accepted process exception for hook-required, meaning-preserving edits beyond the R01 task scope."
-  - "RDEV-02 is an accepted process exception for hook-required, meaning-preserving edits beyond the R01 task scope."
+deviations: []
 ---
 
 Recorded both hook-required R01 scope expansions as accepted process exceptions in gate-recognized round 03 artifacts.
