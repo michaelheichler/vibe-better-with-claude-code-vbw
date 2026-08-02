@@ -1,0 +1,19 @@
+ARCHITECTURE.md
+  s_d2686ed9c0b94b::t_a96ac5f204d4f2 61-63
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "bb5e41d8e2c0d08bcdbc0232eea42dc1de415b73",
+  "prompts": {},
+  "sessions": {
+    "s_d2686ed9c0b94b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a924c903-92a9-4f1f-aaea-ba6a7f724e8e",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
