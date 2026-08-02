@@ -1,0 +1,22 @@
+tests/recover-state-integration.bats
+  s_0825a35676f762::t_3b2af0c61b3762 744,757,761-774
+  s_0825a35676f762::t_57365ad0003365 775-776
+scripts/recover-state.sh
+  s_0825a35676f762::t_0864ef2752c86a 114,116
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "87850b42affde75f1c7b5f012af097b491c7bdb2",
+  "prompts": {},
+  "sessions": {
+    "s_0825a35676f762": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "bdda186d-4444-4c1d-826e-ec4c6e54a197",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
