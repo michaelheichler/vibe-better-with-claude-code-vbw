@@ -2,11 +2,6 @@
 
 load test_helper
 
-# ── Ban nested template expressions ─────────────────────────────────────────
-# Claude Code's template processor cannot parse nested !` backtick expressions.
-# All template directives must be single-level: !`bash /path/to/script.sh`
-# Nested forms like !`bash `!`echo /path`/script.sh` pass raw text to the LLM.
-
 @test "no nested template expressions in command files" {
   run bash -c "grep -rn '!\`bash \`!\`' \"$PROJECT_ROOT/commands/\" 2>/dev/null"
   [ "$status" -eq 1 ]
@@ -22,9 +17,6 @@ load test_helper
   [ "$status" -eq 1 ]
 }
 
-# ── Ban legacy runtime substitution ─────────────────────────────────────────
-# $(cat /tmp/.vbw-plugin-root) was the old pattern — replaced by symlink path.
-
 @test "no legacy cat /tmp/.vbw-plugin-root runtime substitution in commands" {
   run bash -c "grep -R -n 'cat /tmp/.vbw-plugin-root' \"$PROJECT_ROOT/commands\" 2>/dev/null | grep -v 'vbw-plugin-root-link-'"
   [ "$status" -eq 1 ]
@@ -35,13 +27,7 @@ load test_helper
   [ "$status" -eq 1 ]
 }
 
-# ── Guarded symlink template expressions exist only where still needed ───────
-# After the phase-detect self-healing refactor, the heavyweight state readers no
-# longer wait on another prompt block to create the symlink/cache. The remaining
-# guarded wait-patterns are lightweight readers that only need the link path.
-
 _guard_pattern() {
-  # No backticks needed — this substring is inside the template expression
   printf 'while [ ! -L "$L" ] && [ $i -lt 20 ]'
 }
 
@@ -106,13 +92,6 @@ _guard_pattern() {
     [ "$count" -ge 1 ] || { echo "FAIL: ${cmd}.md missing L symlink variable for guarded reads"; return 1; }
   done
 }
-
-# ── Atomic phase-detect via preamble temp file ──────────────────────────────
-# Phase-detect.sh runs atomically inside the preamble (same !` backtick) to
-# avoid race conditions between separate template expressions.
-#
-# Most commands read the preamble output from a temp file. vibe.md now reads
-# phase-detect live (guarded) to avoid stale/shared temp-file collisions.
 
 _atomic_pd_preamble_pattern() {
   printf 'phase-detect.sh" > "/tmp/.vbw-phase-detect-'
@@ -211,7 +190,7 @@ _simulate_phase_detect_reader() {
   fi
 }
 
-_extract_vibe_phase_state_block() {
+_copy_vibe_phase_state_resolver() {
   local out="$1"
   local out_dir
 
@@ -219,6 +198,72 @@ _extract_vibe_phase_state_block() {
   cp "$PROJECT_ROOT/scripts/resolve-phase-state.sh" "$out"
   cp "$PROJECT_ROOT/scripts/resolve-plugin-root.sh" "$out_dir/resolve-plugin-root.sh"
   cp "$PROJECT_ROOT/scripts/resolve-claude-dir.sh" "$out_dir/resolve-claude-dir.sh"
+}
+
+_extract_vibe_embedded_phase_state_block() {
+  local block="$1"
+  local out="$2"
+
+  case "$block" in
+    milestone)
+      awk '
+        /MILESTONE_UAT_CONTEXT=\$\(/ { route = 1; next }
+        route && /SESSION_KEY="\$\{CLAUDE_SESSION_ID:-default\}"/ { capture = 1 }
+        capture {
+          line = $0
+          sub(/^[[:space:]]+/, "", line)
+          print line
+          if (index(line, "&& _phase_detect_cache_fresh && PD=$(cat \"$P\")") > 0) exit
+        }
+      ' "$PROJECT_ROOT/commands/vibe.md" > "$out"
+      ;;
+    verify)
+      awk '
+        /^### Mode: Verify$/ { route = 1 }
+        route && /SESSION_KEY="\$\{CLAUDE_SESSION_ID:-default\}"/ { capture = 1 }
+        capture {
+          line = $0
+          sub(/^[[:space:]]+/, "", line)
+          print line
+          if (line == "PD=\"phase_detect_error=true\"") ending = 1
+          else if (ending && line == "fi") exit
+        }
+      ' "$PROJECT_ROOT/commands/vibe.md" > "$out"
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+_assert_vibe_embedded_phase_state_blocks() {
+  local td="$1"
+  local root="$2"
+  local expected="$3"
+  local rejected="${4:-}"
+  local block session link cache script
+
+  for block in milestone verify; do
+    session="vibe-embedded-${block}-$$-$RANDOM"
+    link="/tmp/.vbw-plugin-root-link-${session}"
+    cache="/tmp/.vbw-phase-detect-${session}.txt"
+    script="$td/vibe-${block}-phase-state.sh"
+
+    _track_tmp_test_path "$link"
+    _track_tmp_test_path "$cache"
+    ln -s "$root" "$link"
+    printf '%s\n' 'phase_detect_error=true' > "$cache"
+    touch -t 209912312359 "$cache"
+    _extract_vibe_embedded_phase_state_block "$block" "$script"
+    [ -s "$script" ]
+
+    run env CLAUDE_SESSION_ID="$session" bash -c 'source "$1"; printf '\''%s\n'\'' "$PD"' _ "$script"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"$expected"* ]]
+    if [ -n "$rejected" ]; then
+      [[ "$output" != *"$rejected"* ]]
+    fi
+  done
 }
 
 @test "commands with phase-detect run it atomically in preamble" {
@@ -340,7 +385,7 @@ EOF
   [[ "$out" != *"phase_detect_error=true"* ]]
 }
 
-@test "extracted vibe phase-state block repairs sentinel cache without pre-existing link" {
+@test "shared vibe phase-state resolver repairs sentinel cache without pre-existing link" {
   local td root script session link cache
   td=$(_new_tmp_test_dir)
 
@@ -364,7 +409,7 @@ EOF
 
   _track_tmp_test_path "$link"
   _track_tmp_test_path "$cache"
-  _extract_vibe_phase_state_block "$script"
+  _copy_vibe_phase_state_resolver "$script"
   [ -s "$script" ]
 
   run env CLAUDE_SESSION_ID="$session" CLAUDE_PLUGIN_ROOT="$root" bash "$script"
@@ -374,7 +419,7 @@ EOF
   [ -L "$link" ]
 }
 
-@test "extracted vibe phase-state block fails closed when live refresh returns error sentinel" {
+@test "shared vibe phase-state resolver fails closed when live refresh returns error sentinel" {
   local td root script session link cache
   td=$(_new_tmp_test_dir)
 
@@ -398,7 +443,7 @@ EOF
 
   _track_tmp_test_path "$link"
   _track_tmp_test_path "$cache"
-  _extract_vibe_phase_state_block "$script"
+  _copy_vibe_phase_state_resolver "$script"
   [ -s "$script" ]
 
   run env CLAUDE_SESSION_ID="$session" CLAUDE_PLUGIN_ROOT="$root" bash "$script"
@@ -406,6 +451,44 @@ EOF
   [[ "$output" == *"phase_detect_error=true"* ]]
   [[ "$output" != *"next_phase_state=fresh_live"* ]]
   [ -L "$link" ]
+}
+
+@test "vibe.md embedded phase-state blocks repair sentinel cache with live refresh" {
+  local td root
+  td=$(_new_tmp_test_dir)
+
+  root="$td/root"
+  mkdir -p "$root/scripts"
+
+  cat > "$root/scripts/phase-detect.sh" <<'EOF'
+#!/usr/bin/env bash
+printf '%s\n' 'next_phase_state=fresh_live' 'phase_detect_complete=true'
+EOF
+  : > "$root/scripts/hook-wrapper.sh"
+  _install_shared_resolver_fixture "$root"
+  chmod +x "$root/scripts/phase-detect.sh" "$root/scripts/ensure-plugin-root-link.sh"
+
+  _assert_vibe_embedded_phase_state_blocks \
+    "$td" "$root" "next_phase_state=fresh_live" "phase_detect_error=true"
+}
+
+@test "vibe.md embedded phase-state blocks fail closed on live error sentinel" {
+  local td root
+  td=$(_new_tmp_test_dir)
+
+  root="$td/root"
+  mkdir -p "$root/scripts"
+
+  cat > "$root/scripts/phase-detect.sh" <<'EOF'
+#!/usr/bin/env bash
+echo "phase_detect_error=true"
+EOF
+  : > "$root/scripts/hook-wrapper.sh"
+  _install_shared_resolver_fixture "$root"
+  chmod +x "$root/scripts/phase-detect.sh" "$root/scripts/ensure-plugin-root-link.sh"
+
+  _assert_vibe_embedded_phase_state_blocks \
+    "$td" "$root" "phase_detect_error=true" "next_phase_state=fresh_live"
 }
 
 @test "reader refreshes without pre-existing link when fallback root is available" {
@@ -502,9 +585,6 @@ EOF
   [ "$live_count" -ge 3 ] || { echo "FAIL: vibe phase-state flow missing live reads"; return 1; }
 }
 
-# ── UAT protocol safeguards ─────────────────────────────────────────────────
-# verify.md must explicitly ban automated test scenarios from UAT checkpoints.
-
 @test "verify.md bans automated test commands in UAT scenarios" {
   grep -q 'NEVER generate tests that ask the user to run automated checks' "$PROJECT_ROOT/commands/verify.md"
 }
@@ -512,8 +592,6 @@ EOF
 @test "verify.md lists automated test tools as excluded from UAT" {
   grep -q 'xcodebuild test, pytest, bats, jest' "$PROJECT_ROOT/commands/verify.md"
 }
-
-# ── Shared plugin root resolver ownership ───────────────────────────────────
 
 @test "shared resolver validates candidates by required script" {
   grep -Fq '[ -f "$candidate/scripts/$required_script" ]' "$PROJECT_ROOT/scripts/resolve-plugin-root.sh"
