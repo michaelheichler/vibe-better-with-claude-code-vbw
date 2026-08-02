@@ -168,8 +168,15 @@ shell_first_word_unquote() {
         quote=""
       elif [ "$ch" = "\\" ] && [ $((i + 1)) -lt "$len" ]; then
         next="${input:i+1:1}"
-        word+="$next"
-        i=$((i + 1))
+        case "$next" in
+          '$'|'`'|'"'|'\\')
+            word+="$next"
+            i=$((i + 1))
+            ;;
+          *)
+            word+="$ch"
+            ;;
+        esac
       else
         word+="$ch"
       fi

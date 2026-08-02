@@ -243,9 +243,9 @@ test_exec_protocol_pre_teamcreate_cleanup() {
 test_vibe_plan_team_boundary() {
   if grep -q 'Team creation in Plan mode is limited to the step 3 RESEARCH fan-out' "$VIBE_PLAN" \
     && grep -q 'Lead is always a single plain subagent' "$VIBE_PLAN"; then
-    pass "vibe.md limits Plan mode teams to research fan-out"
+    pass "references/vibe-mode-plan.md limits Plan mode teams to research fan-out"
   else
-    fail "vibe.md missing Plan research team boundary"
+    fail "references/vibe-mode-plan.md missing Plan research team boundary"
   fi
 }
 
@@ -253,7 +253,7 @@ test_vibe_plan_research_cleanup() {
   local plan_section
   plan_section=$(cat "$VIBE_PLAN")
   if [ -z "$plan_section" ]; then
-    fail "Could not extract Plan mode section from vibe.md (heading format may have changed)"
+    fail "Could not extract Plan mode section from references/vibe-mode-plan.md"
     return
   fi
   if grep -q 'The team forms when the first teammate is spawned via the Agent tool' <<<"$plan_section" \

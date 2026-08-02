@@ -14,7 +14,6 @@ INIT_COMMAND_FILE="$COMMANDS_DIR/init.md"
 LIST_TODOS_COMMAND_FILE="$COMMANDS_DIR/list-todos.md"
 CONFIG_COMMAND_FILE="$COMMANDS_DIR/config.md"
 SKILLS_COMMAND_FILE="$COMMANDS_DIR/skills.md"
-EXECUTE_PROTOCOL_FILE="$REFERENCES_DIR/execute-protocol.md"
 EXECUTE_UAT_FILE="$REFERENCES_DIR/execute-uat.md"
 
 tracked_command_markdown_files() {

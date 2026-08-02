@@ -67,7 +67,7 @@ If `SCOUT_REASONING` is non-empty, also pass `effort: "${SCOUT_REASONING}"`. If 
   - **If skip (yolo profile or discovery_questions=false):** Ask 2 minimal static questions via AskUserQuestion:
     1. "What are the must-have features for this project?" Options: ["Core functionality only", "A few essential features", "Comprehensive feature set", "Let me explain..."]
     2. "Who will use this?" Options: ["Just me", "Small team (2-10 people)", "Many users (100+)", "Let me explain..."]
-    Record answers to `.vbw-planning/discovery.json` with `{"answered":[],"inferred":[],"deferred":[]}`.
+    Record both answers to `.vbw-planning/discovery.json` as objects in `answered`, preserving each question and response, for example `{"answered":[{"question":"What are the must-have features for this project?","answer":"{answer1}"},{"question":"Who will use this?","answer":"{answer2}"}],"inferred":[],"deferred":[]}`. If either response is unavailable, add that question to `deferred` instead of discarding it.
   - **After discovery (all depths):** Call:
     ```
     bash /tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}/scripts/bootstrap/bootstrap-requirements.sh .vbw-planning/REQUIREMENTS.md .vbw-planning/discovery.json .vbw-planning/domain-research.md

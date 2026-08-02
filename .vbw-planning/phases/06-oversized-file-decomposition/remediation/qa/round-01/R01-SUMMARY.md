@@ -27,7 +27,7 @@ Amended the 06-01 and 06-03 plans to reconcile five verified scope deviations an
 
 ### What Was Built
 - Expanded `files_touched` with the omitted payload source, contract entry point, sourced module, direct reader, and BATS reader files.
-- Added three `Amendments (R01)` entries with the matching FAIL ids, delivered-scope rationale, and source commit evidence.
+- Added three `Amendments (R01)` entries with the matching amendment ids, delivered-scope rationale, and source commit evidence.
 
 ### Files Modified
 - `.vbw-planning/phases/06-oversized-file-decomposition/06-01-PLAN.md`: expanded delivered scope and recorded the three resolved amendments.
