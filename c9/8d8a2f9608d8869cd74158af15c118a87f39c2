@@ -1,0 +1,19 @@
+.vbw-planning/phases/04-shared-contract-dedup/remediation/qa/round-01/R01-VERIFICATION.md
+  s_d2686ed9c0b94b::t_4707c09d81e056 9
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "c98d8a2f9608d8869cd74158af15c118a87f39c2",
+  "prompts": {},
+  "sessions": {
+    "s_d2686ed9c0b94b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a924c903-92a9-4f1f-aaea-ba6a7f724e8e",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
