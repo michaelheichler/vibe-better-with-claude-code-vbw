@@ -784,10 +784,6 @@ if [ "$_auto_recovered" = false ] && [ -f "$EXEC_STATE" ]; then
         _sf_id=$(basename "$_sf" | sed 's/-SUMMARY\.md$//')
         _summary_status_json=$(jq -cn --argjson current "$_summary_status_json" --arg id "$_sf_id" --arg status "$_sf_st" '$current + {($id): $status}')
       done
-      SUMMARY_COUNT=$(jq -rn --argjson s "$_summary_status_json" '$s | length' 2>/dev/null || echo 0)
-      STRICT_COMPLETE=$(jq -rn --argjson s "$_summary_status_json" '[$s[] | select(. == "complete")] | length' 2>/dev/null || echo 0)
-      FAILED_SUMMARIES=$(jq -rn --argjson s "$_summary_status_json" '[$s[] | select(. == "failed")] | length' 2>/dev/null || echo 0)
-
       _reconcile_tmp="${EXEC_STATE}.reconcile.$$"
       _reconcile_mtime_ref="${EXEC_STATE}.mtime.$$"
       cp -p "$EXEC_STATE" "$_reconcile_mtime_ref" 2>/dev/null || _reconcile_mtime_ref=""
@@ -807,6 +803,10 @@ if [ "$_auto_recovered" = false ] && [ -f "$EXEC_STATE" ]; then
         rm -f "$_reconcile_tmp" 2>/dev/null
       fi
       rm -f "$_reconcile_mtime_ref" 2>/dev/null || true
+
+      SUMMARY_COUNT=$(jq -r '[.plans[] | select(.status == "complete" or .status == "partial" or .status == "failed")] | length' "$EXEC_STATE" 2>/dev/null || echo 0)
+      STRICT_COMPLETE=$(jq -r '[.plans[] | select(.status == "complete")] | length' "$EXEC_STATE" 2>/dev/null || echo 0)
+      FAILED_SUMMARIES=$(jq -r '[.plans[] | select(.status == "failed")] | length' "$EXEC_STATE" 2>/dev/null || echo 0)
 
       _term_status=""
       if [ "${STRICT_COMPLETE:-0}" -ge "${PLAN_COUNT:-1}" ] && [ "${PLAN_COUNT:-0}" -gt 0 ]; then

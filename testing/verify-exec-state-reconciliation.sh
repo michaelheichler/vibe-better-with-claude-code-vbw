@@ -74,7 +74,7 @@ echo ""
 echo "--- Session-start plan status reconciliation ---"
 
 # Test 6: session-start counts terminal SUMMARY files for reconciliation
-if grep -q 'SUMMARY_COUNT=\$(jq -rn --argjson s "\$_summary_status_json"' "$ROOT/scripts/session-start.sh"; then
+if grep -q 'SUMMARY_COUNT=\$(jq -r '\''\[\.plans\[\] | select(\.status == "complete" or \.status == "partial" or \.status == "failed")\] | length'\'' "\$EXEC_STATE"' "$ROOT/scripts/session-start.sh"; then
   pass "session-start counts terminal SUMMARY files for reconciliation"
 else
   fail "session-start counts terminal SUMMARY files for reconciliation"
@@ -397,7 +397,7 @@ else
   fail "summary-utils.sh exports count_done_summaries function"
 fi
 
-if grep -q 'SUMMARY_COUNT=\$(jq -rn --argjson s "\$_summary_status_json" .\$s | length.' "$ROOT/scripts/session-start.sh"; then
+if grep -q 'SUMMARY_COUNT=\$(jq -r' "$ROOT/scripts/session-start.sh" && grep -q 'status == "partial"' "$ROOT/scripts/session-start.sh"; then
   pass "session-start SUMMARY_COUNT includes partial for reconciliation"
 else
   fail "session-start SUMMARY_COUNT includes partial for reconciliation"
@@ -535,15 +535,15 @@ else
 fi
 
 # Test: session-start counts STRICT_COMPLETE separately from SUMMARY_COUNT
-if grep -q 'STRICT_COMPLETE=\$(jq -rn' "$ROOT/scripts/session-start.sh" && \
-   grep -q 'SUMMARY_COUNT=\$(jq -rn' "$ROOT/scripts/session-start.sh"; then
+if grep -q 'STRICT_COMPLETE=\$(jq -r' "$ROOT/scripts/session-start.sh" && \
+   grep -q 'SUMMARY_COUNT=\$(jq -r' "$ROOT/scripts/session-start.sh"; then
   pass "session-start tracks both SUMMARY_COUNT and STRICT_COMPLETE"
 else
   fail "session-start tracks both SUMMARY_COUNT and STRICT_COMPLETE"
 fi
 
 # Test: session-start counts STRICT_COMPLETE only for complete, not partial
-if grep 'STRICT_COMPLETE=\$(jq -rn' "$ROOT/scripts/session-start.sh" | grep -q 'select(\. == "complete")'; then
+if grep 'STRICT_COMPLETE=\$(jq -r' "$ROOT/scripts/session-start.sh" | grep -q 'select(\.status == "complete")'; then
   pass "session-start STRICT_COMPLETE excludes partial status"
 else
   fail "session-start STRICT_COMPLETE excludes partial status"

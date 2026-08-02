@@ -174,6 +174,24 @@ SUMMARY
   [ "$recovered_status" = "complete" ]
 }
 
+@test "session-start: orphan summary does not finalize a pending plan" {
+  cd "$TEST_TEMP_DIR"
+  cat > .vbw-planning/.execution-state.json <<"STATE"
+{"phase":1,"status":"running","plans":[{"id":"01-01","status":"pending"}]}
+STATE
+  cat > .vbw-planning/phases/01-setup/R01-SUMMARY.md <<"SUMMARY"
+---
+status: failed
+---
+# Remediation
+SUMMARY
+
+  run bash "$SCRIPTS_DIR/session-start.sh"
+  [ "$status" -eq 0 ]
+  [ "$(jq -r '.status' .vbw-planning/.execution-state.json)" = "running" ]
+  [ "$(jq -r '.plans[0].status' .vbw-planning/.execution-state.json)" = "pending" ]
+}
+
 @test "session-start: skips recovery when event_recovery is false" {
   cd "$TEST_TEMP_DIR"
   # event_recovery is false by default in test config

@@ -725,7 +725,8 @@ if is_phase_root_artifact "$FILE_PATH" && echo "$FILE_PATH" | grep -qE 'phases/[
   # Update execution-state as best-effort only (never gates STATE/ROADMAP updates)
   if [ -f "$STATE_FILE" ] && [ -n "$PLAN" ] && [ -n "$STATUS" ]; then
     TEMP_FILE="${STATE_FILE}.tmp.$$.${RANDOM:-0}"
-    jq --arg phase "$PHASE" --arg plan "$PLAN" --arg status "$STATUS" --arg summary_id "$SUMMARY_ID" --arg session_id "${CLAUDE_SESSION_ID:-}" '
+    terminal_summary_count=$(count_terminal_summaries "$PHASE_DIR" 2>/dev/null || echo 0)
+    jq --arg phase "$PHASE" --arg plan "$PLAN" --arg status "$STATUS" --arg summary_id "$SUMMARY_ID" --arg session_id "${CLAUDE_SESSION_ID:-}" --argjson terminal_summary_count "$terminal_summary_count" '
       def as_num: (try tonumber catch null);
       (if (.plans | type) == "array" then
         .plans |= map(
@@ -742,7 +743,8 @@ if is_phase_root_artifact "$FILE_PATH" && echo "$FILE_PATH" | grep -qE 'phases/[
         .
       end)
       | if $session_id != "" then .session_id = $session_id else . end
-      | if .status == "running" and (.plans | type) == "array" and (.plans | length) > 0
+      | if (.status == "running" or .status == "pending") and (.plans | type) == "array" and (.plans | length) > 0
+           and ($terminal_summary_count >= (.plans | length))
            and ([.plans[].status] | all(. == "complete" or . == "partial" or . == "failed"))
         then .status = (if ([.plans[].status] | any(. == "failed")) then "failed"
                         elif ([.plans[].status] | all(. == "complete")) then "complete"

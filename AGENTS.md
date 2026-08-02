@@ -267,7 +267,7 @@ All pushes and PRs go to the `michaelheichler/vibe-better-with-claude-code-vbw` 
 
 - **`fetch.prune`** is enabled. Stale remote tracking refs are removed on every fetch.
 - **`git merged`** and **`git cleanup`** are personal git aliases some contributors configure locally. Neither ships as a repo default or is provisioned by any script in `scripts/`, so treat any reference to them below as describing the intended behavior of an alias you set up yourself, not an out-of-the-box command.
-- **`git merged`** (as commonly configured): finds local branches fully merged into `origin/main` and removes them locally. Also prunes worktrees in `../<repo-name>-worktrees/` whose branches have been merged or whose PRs have been merged/closed. Safe to run anytime, skips `main` and `dev`.
+- **`git merged`** (as commonly configured): finds local branches fully merged into `mine/main` and removes them locally. Also prunes worktrees in `../<repo-name>-worktrees/` whose branches have been merged or whose PRs have been merged/closed. Safe to run anytime, skips `main` and `dev`.
 - **`git cleanup`** (as commonly configured): fetches, prunes, and deletes local branches whose remote tracking branch is gone.
 - After a PR is merged, use whatever branch/worktree cleanup approach you have configured (or `git worktree remove` / `git worktree prune` and `git branch -d` manually) to clean up local branches and their worktrees.
 
