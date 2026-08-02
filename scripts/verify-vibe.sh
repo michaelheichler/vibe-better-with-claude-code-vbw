@@ -16,7 +16,16 @@ trap 'rm -f "$VIBE"' EXIT
 cat \
   "$ROOT/commands/vibe.md" \
   "$ROOT/references/vibe-input-parsing.md" \
-  "$ROOT/references/vibe-uat-remediation.md" > "$VIBE"
+  "$ROOT/references/vibe-uat-remediation.md" \
+  "$ROOT/references/vibe-mode-bootstrap.md" \
+  "$ROOT/references/vibe-mode-milestone-uat-recovery.md" \
+  "$ROOT/references/vibe-mode-plan.md" \
+  "$ROOT/references/vibe-mode-execute.md" \
+  "$ROOT/references/vibe-mode-verify.md" \
+  "$ROOT/references/vibe-mode-add-phase.md" \
+  "$ROOT/references/vibe-mode-insert-phase.md" \
+  "$ROOT/references/vibe-mode-remove-phase.md" \
+  "$ROOT/references/vibe-mode-archive.md" > "$VIBE"
 PROTOCOL="$ROOT/references/execute-protocol.md"
 README="$ROOT/README.md"
 CLAUDE_MD="$ROOT/CLAUDE.md"

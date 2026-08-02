@@ -8,6 +8,7 @@ REFERENCES_DIR="$ROOT/references"
 
 ASK_USER_QUESTION_REF="$REFERENCES_DIR/ask-user-question.md"
 VIBE_COMMAND_FILE="$COMMANDS_DIR/vibe.md"
+VIBE_VERIFY_FILE="$REFERENCES_DIR/vibe-mode-verify.md"
 VERIFY_COMMAND_FILE="$COMMANDS_DIR/verify.md"
 INIT_COMMAND_FILE="$COMMANDS_DIR/init.md"
 LIST_TODOS_COMMAND_FILE="$COMMANDS_DIR/list-todos.md"
@@ -540,10 +541,10 @@ fi
 
 require_file_literal "verify: resumed product UAT consumes uat_resume_scenario" 'uat_resume_scenario' "$VERIFY_COMMAND_FILE"
 require_file_literal "verify: resumed product UAT consumes uat_resume_expected" 'uat_resume_expected' "$VERIFY_COMMAND_FILE"
-require_file_literal "vibe: passes resumed product UAT scenario field" 'uat_resume_scenario' "$VIBE_COMMAND_FILE"
-require_file_literal "vibe: passes resumed product UAT expected field" 'uat_resume_expected' "$VIBE_COMMAND_FILE"
-require_file_literal "vibe: extractor failure uses error sentinel" '|| echo "uat_resume=error"' "$VIBE_COMMAND_FILE"
-require_file_literal "vibe: extractor unavailable uses unavailable sentinel" 'echo "uat_resume=unavailable"' "$VIBE_COMMAND_FILE"
+require_file_literal "vibe: passes resumed product UAT scenario field" 'uat_resume_scenario' "$VIBE_VERIFY_FILE"
+require_file_literal "vibe: passes resumed product UAT expected field" 'uat_resume_expected' "$VIBE_VERIFY_FILE"
+require_file_literal "vibe: extractor failure uses error sentinel" '|| echo "uat_resume=error"' "$VIBE_VERIFY_FILE"
+require_file_literal "vibe: extractor unavailable uses unavailable sentinel" 'echo "uat_resume=unavailable"' "$VIBE_VERIFY_FILE"
 
 
 echo ""

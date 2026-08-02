@@ -1208,7 +1208,7 @@ EOF
 # --- Contract: UAT inline execution prohibition (issue #273) ---
 
 @test "vibe.md Verify mode contains inline execution prohibition" {
-  local vibe="$BATS_TEST_DIRNAME/../commands/vibe.md"
+  local vibe="$BATS_TEST_DIRNAME/../references/vibe-mode-verify.md"
   # Verify mode must explicitly prohibit subagent delegation
   grep -q "Do NOT spawn a QA agent" "$vibe"
   grep -q "Do NOT use TaskCreate to delegate UAT" "$vibe"

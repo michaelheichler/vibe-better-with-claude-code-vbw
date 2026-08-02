@@ -280,7 +280,7 @@ EOF
 }
 
 @test "contract: vibe.md uses compile-verify-context-for-uat.sh for auto-UAT context" {
-  grep -q 'compile-verify-context-for-uat\.sh' "$PROJECT_ROOT/commands/vibe.md"
+  grep -q 'compile-verify-context-for-uat\.sh' "$PROJECT_ROOT/references/vibe-mode-verify.md"
 }
 
 @test "contract: verify.md uses compile-verify-context-for-uat.sh for precomputed context" {

@@ -54,7 +54,8 @@ load test_helper
   c=$(grep -h 'PG_SCRIPT="/tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}/scripts/planning-git.sh"' \
     "$PROJECT_ROOT/commands/vibe.md" \
     "$PROJECT_ROOT/references/vibe-input-parsing.md" \
-    "$PROJECT_ROOT/references/vibe-uat-remediation.md" | wc -l | tr -d ' ')
+    "$PROJECT_ROOT/references/vibe-uat-remediation.md" \
+    "$PROJECT_ROOT"/references/vibe-mode-*.md | wc -l | tr -d ' ')
   [ "$c" -eq 12 ]
   c=$(grep -c 'PG_SCRIPT="/tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}/scripts/planning-git.sh"' "$PROJECT_ROOT/commands/discuss.md")
   [ "$c" -eq 1 ]

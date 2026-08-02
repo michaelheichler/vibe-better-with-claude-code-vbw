@@ -14,7 +14,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 EXEC_PROTO="$ROOT/references/execute-protocol.md"
 SCOUT_FILE="$ROOT/agents/vbw-scout.md"
 SCOUT_POLICY_FILE="$ROOT/references/scout-live-validation-policy.md"
-VIBE_FILE="$ROOT/commands/vibe.md"
+VIBE_FILE="$ROOT/references/vibe-mode-plan.md"
 VIBE_UAT_REF="$ROOT/references/vibe-uat-remediation.md"
 RESEARCH_FILE="$ROOT/commands/research.md"
 

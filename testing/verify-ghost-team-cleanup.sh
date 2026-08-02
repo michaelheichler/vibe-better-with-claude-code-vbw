@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 CLEAN_SCRIPT="$ROOT/scripts/clean-stale-teams.sh"
 DOCTOR_SCRIPT="$ROOT/scripts/doctor-cleanup.sh"
+VIBE_PLAN="$ROOT/references/vibe-mode-plan.md"
 
 PASS=0
 FAIL=0
@@ -240,8 +241,8 @@ test_exec_protocol_pre_teamcreate_cleanup() {
 }
 
 test_vibe_plan_team_boundary() {
-  if grep -q 'Team creation in Plan mode is limited to the step 3 RESEARCH fan-out' "$ROOT/commands/vibe.md" \
-    && grep -q 'Lead is always a single plain subagent' "$ROOT/commands/vibe.md"; then
+  if grep -q 'Team creation in Plan mode is limited to the step 3 RESEARCH fan-out' "$VIBE_PLAN" \
+    && grep -q 'Lead is always a single plain subagent' "$VIBE_PLAN"; then
     pass "vibe.md limits Plan mode teams to research fan-out"
   else
     fail "vibe.md missing Plan research team boundary"
@@ -250,7 +251,7 @@ test_vibe_plan_team_boundary() {
 
 test_vibe_plan_research_cleanup() {
   local plan_section
-  plan_section=$(sed -n '/^### Mode: Plan$/,/^### Mode:/p' "$ROOT/commands/vibe.md")
+  plan_section=$(cat "$VIBE_PLAN")
   if [ -z "$plan_section" ]; then
     fail "Could not extract Plan mode section from vibe.md (heading format may have changed)"
     return
