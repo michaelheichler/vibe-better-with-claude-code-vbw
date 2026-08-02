@@ -1,0 +1,20 @@
+.vbw-planning/phases/06-oversized-file-decomposition/06-03-SUMMARY.md
+  s_0825a35676f762::t_1fcb108dbcfef5 75-76,83-85,89-91
+  s_0825a35676f762::t_7dc2c4ad76082f 1-74,77-82,86-88,92-97
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "0ae249e5f4049f2743dc3bf37a950b6e3855f6b3",
+  "prompts": {},
+  "sessions": {
+    "s_0825a35676f762": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "bdda186d-4444-4c1d-826e-ec4c6e54a197",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
