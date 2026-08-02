@@ -450,7 +450,7 @@ SUMMARY
   run bash "$SCRIPTS_DIR/recover-state.sh" 1 ".vbw-planning/phases"
   [ "$status" -eq 0 ]
   echo "$output" | jq -e '.plans[] | select(.id == "01-01") | .status == "failed"' >/dev/null
-  echo "$output" | jq -e '.status == "complete"' >/dev/null
+  echo "$output" | jq -e '.status == "failed"' >/dev/null
 }
 
 @test "recover-state: non-numeric wave defaults to 1 instead of dropping plan" {
@@ -716,26 +716,47 @@ STATE
   echo "$output" | jq -e '.plans[] | select(.id == "01-02") | .status == "partial"' >/dev/null
 }
 
-@test "session-start: clears a stale execute marker before terminal event recovery" {
+
+@test "session-start: preserves recovered state age across sessions" {
   cd "$TEST_TEMP_DIR"
-  local tmp state_mtime_before state_mtime_after
+  local tmp initial_epoch initial_stamp state_mtime_before state_mtime_after recovery_now
   tmp=$(mktemp)
   jq '.event_recovery = true' .vbw-planning/config.json > "$tmp" && mv "$tmp" .vbw-planning/config.json
 
+  echo "title: First" > .vbw-planning/phases/01-setup/01-01-PLAN.md
+  echo "title: Second" > .vbw-planning/phases/01-setup/01-02-PLAN.md
   printf -- '---\nstatus: complete\n---\n' > .vbw-planning/phases/01-setup/01-01-SUMMARY.md
-  printf '%s\n' '{"phase":1,"status":"running","correlation_id":"dead-run","plans":[{"id":"01-01","status":"pending"}]}' > .vbw-planning/.execution-state.json
-  touch -t 202001010000.00 .vbw-planning/.execution-state.json
+  printf '%s\n' '{"phase":1,"status":"running","correlation_id":"dead-run","plans":[{"id":"01-01","status":"pending"},{"id":"01-02","status":"pending"}]}' > .vbw-planning/.execution-state.json
+
+  REAL_DATE=$(command -v date)
+  export REAL_DATE
+  recovery_now=$("$REAL_DATE" +%s)
+  initial_epoch=$((recovery_now - 14300))
+  if [ "$(uname)" = "Darwin" ]; then
+    initial_stamp=$("$REAL_DATE" -r "$initial_epoch" '+%Y%m%d%H%M.%S')
+  else
+    initial_stamp=$("$REAL_DATE" -d "@$initial_epoch" '+%Y%m%d%H%M.%S')
+  fi
+  touch -t "$initial_stamp" .vbw-planning/.execution-state.json
   state_mtime_before=$(stat -f %m .vbw-planning/.execution-state.json 2>/dev/null || stat -c %Y .vbw-planning/.execution-state.json)
+
   printf '%s\n' '{"mode":"execute","active":true,"delegation_mode":"subagent","correlation_id":"dead-run"}' > .vbw-planning/.delegated-workflow.json
-  mkdir -p .vbw-planning/.events
+  mkdir -p .vbw-planning/.events "$TEST_TEMP_DIR/bin"
   printf '{"event":"plan_end","phase":1,"plan":1,"data":{"status":"complete"}}\n' > .vbw-planning/.events/event-log.jsonl
+  printf '%s\n' '#!/bin/bash' 'if [ "${1:-}" = "+%s" ]; then' '  printf "%s\n" "$VBW_TEST_NOW"' 'else' '  exec "$REAL_DATE" "$@"' 'fi' > "$TEST_TEMP_DIR/bin/date"
+  chmod +x "$TEST_TEMP_DIR/bin/date"
+  export PATH="$TEST_TEMP_DIR/bin:$PATH"
+  export VBW_TEST_NOW="$recovery_now"
 
   run bash "$SCRIPTS_DIR/session-start.sh"
   [ "$status" -eq 0 ]
-  [ ! -f .vbw-planning/.delegated-workflow.json ]
+  [ -f .vbw-planning/.delegated-workflow.json ]
+  [ "$(jq -r '.status' .vbw-planning/.execution-state.json)" = "running" ]
   state_mtime_after=$(stat -f %m .vbw-planning/.execution-state.json 2>/dev/null || stat -c %Y .vbw-planning/.execution-state.json)
   [ "$state_mtime_after" = "$state_mtime_before" ]
 
-  run bash -c 'cd "$1" && printf "%s\n" "{\"tool_name\":\"Agent\",\"tool_input\":{\"team_name\":\"fresh-team\"}}" | VBW_PLANNING_DIR="$1/.vbw-planning" bash "$2"' _ "$TEST_TEMP_DIR" "$SCRIPTS_DIR/agent-spawn-guard.sh"
+  export VBW_TEST_NOW=$((recovery_now + 101))
+  run bash "$SCRIPTS_DIR/session-start.sh"
   [ "$status" -eq 0 ]
+  [ ! -f .vbw-planning/.delegated-workflow.json ]
 }

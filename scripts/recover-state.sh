@@ -129,10 +129,10 @@ TOTAL=$(echo "$PLANS_JSON" | jq 'length' 2>/dev/null) || TOTAL=0
 COMPLETE=$(echo "$PLANS_JSON" | jq '[.[] | select(.status == "complete")] | length' 2>/dev/null) || COMPLETE=0
 FAILED=$(echo "$PLANS_JSON" | jq '[.[] | select(.status == "failed")] | length' 2>/dev/null) || FAILED=0
 
-if [ "$FINALIZED" -eq "$TOTAL" ] && [ "$TOTAL" -gt 0 ]; then
-  STATUS="complete"
-elif [ "$FAILED" -gt 0 ]; then
+if [ "$FAILED" -gt 0 ]; then
   STATUS="failed"
+elif [ "$FINALIZED" -eq "$TOTAL" ] && [ "$TOTAL" -gt 0 ]; then
+  STATUS="complete"
 elif [ "$COMPLETE" -gt 0 ]; then
   STATUS="running"
 else
