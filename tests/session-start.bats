@@ -56,3 +56,29 @@ make_cache_version() {
   [ ! -e "$CACHE_DIR/1.9.0" ]
   [ -d "$CACHE_DIR/1.10.0" ]
 }
+
+@test "session-start cache integrity check falls back when sort lacks -V" {
+  make_cache_version "1.10.0"
+  rm "$CACHE_DIR/1.10.0/config/defaults.json"
+
+  run bash -c "cd '$TEST_TEMP_DIR' && printf '%s\\n' '{\"session_id\":\"$SESSION_ID\"}' | bash '$SCRIPTS_DIR/session-start.sh'"
+
+  [ "$status" -eq 0 ]
+  [ ! -d "$CACHE_DIR" ]
+  [[ "$output" == *"VBW cache integrity check failed"* ]]
+}
+
+@test "session-start marketplace auto-sync falls back when sort lacks -V" {
+  local marketplace_dir="$CLAUDE_CONFIG_DIR/plugins/marketplaces/vbw-marketplace"
+  make_cache_version "1.10.0"
+  mkdir -p "$marketplace_dir/.git" "$marketplace_dir/.claude-plugin" "$marketplace_dir/commands"
+  printf '%s\n' '{"name":"vbw","version":"1.10.0"}' > "$marketplace_dir/.claude-plugin/plugin.json"
+  printf '# init\n' > "$marketplace_dir/commands/init.md"
+  printf '# vibe\n' > "$marketplace_dir/commands/vibe.md"
+
+  run bash -c "cd '$TEST_TEMP_DIR' && printf '%s\\n' '{\"session_id\":\"$SESSION_ID\"}' | bash '$SCRIPTS_DIR/session-start.sh'"
+
+  [ "$status" -eq 0 ]
+  [ ! -d "$CACHE_DIR" ]
+  [[ "$output" == *"VBW cache stale"* ]]
+}
