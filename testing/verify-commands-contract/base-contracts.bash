@@ -15,12 +15,11 @@ for file in "${TRACKED_COMMAND_MARKDOWN_FILES[@]}"; do
   fi
 
   NAME_VALUE="$(frontmatter_first_scalar "$FRONTMATTER" "name")"
-  NAME_STEM="${NAME_VALUE#vbw:}"
 
   if [ -z "$NAME_VALUE" ]; then
     fail "$base: missing name field"
-  elif [ "$NAME_STEM" != "$base" ]; then
-    fail "$base: name mismatch (expected '$base', got '$NAME_VALUE')"
+  elif [ "$NAME_VALUE" != "vbw:$base" ]; then
+    fail "$base: name mismatch (expected 'vbw:$base', got '$NAME_VALUE')"
   else
     pass "$base: name matches filename"
   fi
@@ -31,7 +30,7 @@ for file in "${TRACKED_COMMAND_MARKDOWN_FILES[@]}"; do
     pass "$base: allowed-tools present"
   fi
 
-  DESC_COUNT="$(grep -c '^description:' <<<"$FRONTMATTER")"
+  DESC_COUNT="$(grep -c '^description:' <<<"$FRONTMATTER" || true)"
   if [ "$DESC_COUNT" -ne 1 ]; then
     fail "$base: description field missing or duplicated"
     continue

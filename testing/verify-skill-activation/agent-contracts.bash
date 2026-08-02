@@ -8,12 +8,20 @@ VIBE_INPUT_PARSING="$ROOT/references/vibe-input-parsing.md"
 EXECUTE_PROTOCOL="$ROOT/references/execute-protocol.md"
 cat \
   "$ROOT/commands/vibe.md" \
+  "$ROOT/references/ask-user-question.md" \
+  "$ROOT/references/subagent-contracts.md" \
   "$ROOT/references/vibe-input-parsing.md" \
   "$ROOT/references/vibe-uat-remediation.md" \
   "$ROOT/references/vibe-mode-bootstrap.md" \
+  "$ROOT/references/vibe-mode-milestone-uat-recovery.md" \
   "$ROOT/references/vibe-mode-plan.md" \
+  "$ROOT/references/vibe-mode-execute.md" \
+  "$ROOT/references/vibe-mode-verify.md" \
   "$ROOT/references/vibe-mode-add-phase.md" \
-  "$ROOT/references/vibe-mode-insert-phase.md" > "$VIBE_COMMAND"
+  "$ROOT/references/vibe-mode-insert-phase.md" \
+  "$ROOT/references/vibe-mode-remove-phase.md" \
+  "$ROOT/references/vibe-mode-archive.md" \
+  "$ROOT/references/vbw-brand-essentials.md" > "$VIBE_COMMAND"
 DEV_TOOLS=$(sed -n '/^---$/,/^---$/p' "$DEV_AGENT" | grep '^tools:' || true)
 DEV_DISALLOWED=$(sed -n '/^---$/,/^---$/p' "$DEV_AGENT" | grep '^disallowedTools:' || true)
 DEV_MEMORY=$(sed -n '/^---$/,/^---$/p' "$DEV_AGENT" | grep '^memory:' || true)
@@ -225,20 +233,20 @@ fi
 
 HOOKS_FILE="$ROOT/hooks/hooks.json"
 
-if ! grep -q 'skill-evaluation-gate.sh' "$HOOKS_FILE"; then
+if jq -e '[.. | objects | .command? // empty | select(contains("skill-evaluation-gate.sh"))] | length == 0' "$HOOKS_FILE" >/dev/null 2>&1; then
   pass "hooks.json: skill-evaluation-gate.sh removed"
 else
   fail "hooks.json: skill-evaluation-gate.sh still present"
 fi
 
-if ! grep -q 'skill-eval-prompt-gate.sh' "$HOOKS_FILE"; then
+if jq -e '[.. | objects | .command? // empty | select(contains("skill-eval-prompt-gate.sh"))] | length == 0' "$HOOKS_FILE" >/dev/null 2>&1; then
   pass "hooks.json: skill-eval-prompt-gate.sh removed"
 else
   fail "hooks.json: skill-eval-prompt-gate.sh still present"
 fi
 
 
-if grep -q 'skill-hook-dispatch.sh' "$HOOKS_FILE"; then
+if jq -e '[.. | objects | .command? // empty | select(contains("skill-hook-dispatch.sh"))] | length > 0' "$HOOKS_FILE" >/dev/null 2>&1; then
   pass "hooks.json: skill-hook-dispatch.sh preserved (runtime skill hooks)"
 else
   fail "hooks.json: skill-hook-dispatch.sh missing (should be preserved)"

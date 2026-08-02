@@ -51,13 +51,16 @@ fail() {
 extract_frontmatter() {
   local file="$1"
   awk '
-    BEGIN { delim=0 }
+    BEGIN { delim=0; body="" }
     /^---$/ {
       delim++
-      if (delim == 2) exit
+      if (delim == 2) { closed=1; next }
       next
     }
-    delim == 1 { print }
+    delim == 1 { body = body $0 ORS }
+    END {
+      if (closed) printf "%s", body
+    }
   ' "$file"
 }
 

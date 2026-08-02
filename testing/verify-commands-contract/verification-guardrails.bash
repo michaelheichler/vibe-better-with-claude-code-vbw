@@ -30,41 +30,58 @@ echo "=== Verify Guardrail Verification ==="
 VIBE_SOURCE="$COMMANDS_DIR/vibe.md"
 VIBE_FILE=$(mktemp)
 trap 'rm -f "$VIBE_FILE"' EXIT
+append_vibe_reference() {
+  local reference="$1"
+  if [ -f "$reference" ]; then
+    cat "$reference"
+  else
+    fail "vibe: missing referenced file ${reference#"$ROOT/"}"
+  fi
+}
 while IFS= read -r vibe_line || [ -n "$vibe_line" ]; do
   printf '%s\n' "$vibe_line"
   case "$vibe_line" in
+    '@${CLAUDE_PLUGIN_ROOT}/references/ask-user-question.md')
+      append_vibe_reference "$ROOT/references/ask-user-question.md"
+      ;;
+    '@${CLAUDE_PLUGIN_ROOT}/references/subagent-contracts.md')
+      append_vibe_reference "$ROOT/references/subagent-contracts.md"
+      ;;
     '@${CLAUDE_PLUGIN_ROOT}/references/vibe-input-parsing.md')
-      cat "$ROOT/references/vibe-input-parsing.md"
+      append_vibe_reference "$ROOT/references/vibe-input-parsing.md"
       ;;
     '@${CLAUDE_PLUGIN_ROOT}/references/vibe-uat-remediation.md')
-      cat "$ROOT/references/vibe-uat-remediation.md"
+      append_vibe_reference "$ROOT/references/vibe-uat-remediation.md"
       ;;
     '@${CLAUDE_PLUGIN_ROOT}/references/vibe-mode-bootstrap.md')
-      cat "$ROOT/references/vibe-mode-bootstrap.md"
+      append_vibe_reference "$ROOT/references/vibe-mode-bootstrap.md"
       ;;
     '@${CLAUDE_PLUGIN_ROOT}/references/vibe-mode-milestone-uat-recovery.md')
-      cat "$ROOT/references/vibe-mode-milestone-uat-recovery.md"
+      append_vibe_reference "$ROOT/references/vibe-mode-milestone-uat-recovery.md"
       ;;
     '@${CLAUDE_PLUGIN_ROOT}/references/vibe-mode-plan.md')
-      cat "$ROOT/references/vibe-mode-plan.md"
+      append_vibe_reference "$ROOT/references/vibe-mode-plan.md"
       ;;
     '@${CLAUDE_PLUGIN_ROOT}/references/vibe-mode-execute.md')
-      cat "$ROOT/references/vibe-mode-execute.md"
+      append_vibe_reference "$ROOT/references/vibe-mode-execute.md"
       ;;
     '@${CLAUDE_PLUGIN_ROOT}/references/vibe-mode-verify.md')
-      cat "$ROOT/references/vibe-mode-verify.md"
+      append_vibe_reference "$ROOT/references/vibe-mode-verify.md"
       ;;
     '@${CLAUDE_PLUGIN_ROOT}/references/vibe-mode-add-phase.md')
-      cat "$ROOT/references/vibe-mode-add-phase.md"
+      append_vibe_reference "$ROOT/references/vibe-mode-add-phase.md"
       ;;
     '@${CLAUDE_PLUGIN_ROOT}/references/vibe-mode-insert-phase.md')
-      cat "$ROOT/references/vibe-mode-insert-phase.md"
+      append_vibe_reference "$ROOT/references/vibe-mode-insert-phase.md"
       ;;
     '@${CLAUDE_PLUGIN_ROOT}/references/vibe-mode-remove-phase.md')
-      cat "$ROOT/references/vibe-mode-remove-phase.md"
+      append_vibe_reference "$ROOT/references/vibe-mode-remove-phase.md"
       ;;
     '@${CLAUDE_PLUGIN_ROOT}/references/vibe-mode-archive.md')
-      cat "$ROOT/references/vibe-mode-archive.md"
+      append_vibe_reference "$ROOT/references/vibe-mode-archive.md"
+      ;;
+    '@${CLAUDE_PLUGIN_ROOT}/references/vbw-brand-essentials.md')
+      append_vibe_reference "$ROOT/references/vbw-brand-essentials.md"
       ;;
   esac
 done < "$VIBE_SOURCE" > "$VIBE_FILE"

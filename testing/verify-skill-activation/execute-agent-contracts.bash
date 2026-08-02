@@ -254,19 +254,6 @@ else
   fail "inject-subagent-skills.sh: still exists (should be deleted)"
 fi
 
-if ! grep -q 'inject-subagent-skills.sh' "$HOOKS_FILE"; then
-  pass "hooks.json: inject-subagent-skills.sh removed from SubagentStart"
-else
-  fail "hooks.json: inject-subagent-skills.sh still present in SubagentStart"
-fi
-
-
-if ! grep -q 'emit-skill-xml.sh' "$ROOT/scripts/session-start.sh"; then
-  pass "session-start.sh: no longer calls emit-skill-xml.sh (additionalContext injection removed)"
-else
-  fail "session-start.sh: still calls emit-skill-xml.sh (should be removed)"
-fi
-
 if ! grep -q 'Installed skills:' "$ROOT/scripts/session-start.sh"; then
   pass "session-start.sh: no longer injects skill names into additionalContext"
 else

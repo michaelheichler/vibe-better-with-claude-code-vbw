@@ -2,7 +2,7 @@
 echo ""
 echo "=== Subagent Type Verification ==="
 
-_SAT_TOTAL=$(grep -h 'subagent_type.*vbw:' "${TRACKED_COMMAND_REFERENCE_FILES[@]}" 2>/dev/null | wc -l | tr -d ' ')
+_SAT_TOTAL=$(grep -h 'subagent_type.*vbw:' "${TRACKED_COMMAND_REFERENCE_FILES[@]}" 2>/dev/null | wc -l | tr -d ' ' || true)
 
 if [ "$_SAT_TOTAL" -ge 16 ]; then
   pass "subagent_type: ${_SAT_TOTAL} spawn points specify subagent_type (>= 16 expected)"
@@ -163,7 +163,7 @@ else
   fail "execute-protocol.md: missing skill follow-up read nudge"
 fi
 
-_EP_NUDGE_COUNT=$(grep -c 'scan entire skill folders or read unrelated references\|not entire skill folders or unrelated references' "$PROTOCOL")
+_EP_NUDGE_COUNT=$(grep -c 'scan entire skill folders or read unrelated references\|not entire skill folders or unrelated references' "$PROTOCOL" || true)
 if [ "$_EP_NUDGE_COUNT" -ge 2 ]; then
   pass "execute-protocol.md: follow-up read nudge in both loci ($_EP_NUDGE_COUNT sites)"
 else
@@ -208,7 +208,7 @@ for agent_file in "${AGENT_SKILL_CONTRACT_FILES[@]}"; do
   fi
 done
 
-_DEBUG_NUDGE_COUNT=$(grep -ci 'do not scan entire skill folders or read unrelated references' "$DEBUG_CMD")
+_DEBUG_NUDGE_COUNT=$(grep -ci 'do not scan entire skill folders or read unrelated references' "$DEBUG_CMD" || true)
 if [ "$_DEBUG_NUDGE_COUNT" -ge 3 ]; then
   pass "debug.md: follow-up read nudge present across the 3 debug skill sites (raw occurrences: $_DEBUG_NUDGE_COUNT)"
 else

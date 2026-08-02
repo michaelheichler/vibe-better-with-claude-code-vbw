@@ -129,20 +129,39 @@ run_runtime_guard_helper() {
   local project_dir="$1"
   shift
   HOME="$RUNTIME_GUARD_HOME_DIR" CLAUDE_CONFIG_DIR="$RUNTIME_GUARD_HOME_DIR/.claude" \
-    bash "$RUNTIME_GUARD_HELPER" --project-dir "$project_dir" "$@" 2>/dev/null || true
+    bash "$RUNTIME_GUARD_HELPER" --project-dir "$project_dir" "$@" 2>/dev/null
+}
+
+capture_runtime_guard_output() {
+  local output_name="$1"
+  local context="$2"
+  shift 2
+  local captured_output
+  if ! captured_output=$(run_runtime_guard_helper "$@"); then
+    fail "$context: helper exited nonzero"
+    return 1
+  fi
+  printf -v "$output_name" '%s' "$captured_output"
 }
 
 verify_runtime_traversal_guards() {
   local project_output global_output mixed_output
-  project_output=$(run_runtime_guard_helper "$RUNTIME_GUARD_PROJECT_DIR" ../../.agents/skills/swiftdata ../../.pi/skills/swiftdata)
+  capture_runtime_guard_output project_output \
+    "scripts/extract-skill-follow-up-files.sh: project traversal guard helper failed" \
+    "$RUNTIME_GUARD_PROJECT_DIR" ../../.agents/skills/swiftdata ../../.pi/skills/swiftdata || return 1
+
   assert_empty_output "$project_output" \
     "scripts/extract-skill-follow-up-files.sh: rejects traversal into project lookalike roots at runtime" \
     "scripts/extract-skill-follow-up-files.sh: traversal into project lookalike roots still produces runtime output"
-  global_output=$(run_runtime_guard_helper "$RUNTIME_GUARD_PROJECT_DIR" ../../.agents/skills/swiftdata)
+  capture_runtime_guard_output global_output \
+    "scripts/extract-skill-follow-up-files.sh: global traversal guard helper failed" \
+    "$RUNTIME_GUARD_PROJECT_DIR" ../../.agents/skills/swiftdata || return 1
   assert_empty_output "$global_output" \
     "scripts/extract-skill-follow-up-files.sh: rejects traversal into HOME/.agents at runtime" \
     "scripts/extract-skill-follow-up-files.sh: traversal into HOME/.agents still produces runtime output"
-  mixed_output=$(run_runtime_guard_helper "$RUNTIME_GUARD_PROJECT_DIR" "swiftdata ../../.agents/skills/swiftdata")
+  capture_runtime_guard_output mixed_output \
+    "scripts/extract-skill-follow-up-files.sh: mixed traversal guard helper failed" \
+    "$RUNTIME_GUARD_PROJECT_DIR" "swiftdata ../../.agents/skills/swiftdata" || return 1
   assert_output_contains "$mixed_output" "$RUNTIME_GUARD_PROJECT_DIR/.claude/skills/swiftdata/references/local-good.md" \
     "scripts/extract-skill-follow-up-files.sh: preserves valid skills alongside invalid traversal tokens" \
     "scripts/extract-skill-follow-up-files.sh: mixed valid+invalid runtime input lost the valid skill"
@@ -154,7 +173,9 @@ verify_runtime_traversal_guards() {
 
 verify_project_confinement() {
   local output
-  output=$(run_runtime_guard_helper "$RUNTIME_GUARD_PROJECT_DIR" confined-skill)
+  capture_runtime_guard_output output \
+    "scripts/extract-skill-follow-up-files.sh: project confinement helper failed" \
+    "$RUNTIME_GUARD_PROJECT_DIR" confined-skill || return 1
   assert_output_contains "$output" "$RUNTIME_GUARD_PROJECT_DIR/.claude/skills/confined-skill/references/local-good.md" \
     "scripts/extract-skill-follow-up-files.sh: keeps in-tree project follow-up links" \
     "scripts/extract-skill-follow-up-files.sh: lost an in-tree project follow-up link"
@@ -169,7 +190,9 @@ verify_project_confinement() {
 
 verify_global_confinement() {
   local output
-  output=$(run_runtime_guard_helper "$RUNTIME_GUARD_GLOBAL_PROJECT_DIR" global-skill)
+  capture_runtime_guard_output output \
+    "scripts/extract-skill-follow-up-files.sh: global confinement helper failed" \
+    "$RUNTIME_GUARD_GLOBAL_PROJECT_DIR" global-skill || return 1
   assert_output_contains "$output" "$RUNTIME_GUARD_HOME_DIR/.claude/skills/global-skill/references/global-good.md" \
     "scripts/extract-skill-follow-up-files.sh: keeps in-tree global follow-up links" \
     "scripts/extract-skill-follow-up-files.sh: lost an in-tree global follow-up link"
@@ -184,7 +207,9 @@ verify_global_confinement() {
 
 verify_runtime_no_links() {
   local output
-  output=$(run_runtime_guard_helper "$RUNTIME_GUARD_PROJECT_DIR" no-links-skill)
+  capture_runtime_guard_output output \
+    "scripts/extract-skill-follow-up-files.sh: no-links helper failed" \
+    "$RUNTIME_GUARD_PROJECT_DIR" no-links-skill || return 1
   assert_empty_output "$output" \
     "scripts/extract-skill-follow-up-files.sh: skills with no markdown links exit cleanly with no output" \
     "scripts/extract-skill-follow-up-files.sh: no-link skills should emit no output"
@@ -192,7 +217,9 @@ verify_runtime_no_links() {
 
 verify_project_symlink_guard() {
   local output
-  output=$(run_runtime_guard_helper "$RUNTIME_GUARD_PROJECT_DIR" symlink-skill)
+  capture_runtime_guard_output output \
+    "scripts/extract-skill-follow-up-files.sh: project symlink helper failed" \
+    "$RUNTIME_GUARD_PROJECT_DIR" symlink-skill || return 1
   assert_output_contains "$output" symlink-skill/references/local-good.md \
     "scripts/extract-skill-follow-up-files.sh: project symlink fixture still emits safe in-tree files" \
     "scripts/extract-skill-follow-up-files.sh: project symlink fixture lost the safe in-tree file"
@@ -204,7 +231,9 @@ verify_project_symlink_guard() {
 
 verify_global_symlink_guard() {
   local output
-  output=$(run_runtime_guard_helper "$RUNTIME_GUARD_GLOBAL_PROJECT_DIR" global-symlink-skill)
+  capture_runtime_guard_output output \
+    "scripts/extract-skill-follow-up-files.sh: global symlink helper failed" \
+    "$RUNTIME_GUARD_GLOBAL_PROJECT_DIR" global-symlink-skill || return 1
   assert_output_contains "$output" global-symlink-skill/references/global-good.md \
     "scripts/extract-skill-follow-up-files.sh: global symlink fixture still emits safe in-tree files" \
     "scripts/extract-skill-follow-up-files.sh: global symlink fixture lost the safe in-tree file"

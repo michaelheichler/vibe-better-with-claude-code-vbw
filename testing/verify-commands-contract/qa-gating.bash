@@ -340,14 +340,14 @@ else
   fail "vibe: missing execute invariant for real-team vs explicit fallback"
 fi
 
-_vibe_gate_count=$(grep -c 'qa-result-gate\.sh' "$VIBE_FILE" 2>/dev/null || echo 0)
+_vibe_gate_count=$(grep -c 'qa-result-gate\.sh' "$VIBE_FILE" 2>/dev/null || true)
 if [ "$_vibe_gate_count" -ge 2 ]; then
   pass "vibe: references qa-result-gate.sh at $_vibe_gate_count call sites"
 else
   fail "vibe: expected >=2 qa-result-gate.sh references, found $_vibe_gate_count"
 fi
 
-_ep_gate_count=$(grep -c 'qa-result-gate\.sh' "$EXECUTE_QA_GATE_REF" 2>/dev/null || echo 0)
+_ep_gate_count=$(grep -c 'qa-result-gate\.sh' "$EXECUTE_QA_GATE_REF" 2>/dev/null || true)
 if [ "$_ep_gate_count" -ge 2 ]; then
   pass "execute-protocol: references qa-result-gate.sh at $_ep_gate_count call sites"
 else
