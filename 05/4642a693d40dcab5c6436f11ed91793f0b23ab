@@ -1,0 +1,28 @@
+scripts/delegated-workflow.sh
+  s_cd1b09f61d7e13::t_269ad4150e84d8 167
+  s_cd1b09f61d7e13::t_32e9af1480c1d1 128
+  s_cd1b09f61d7e13::t_237e56e1bcec39 76-81
+  s_cd1b09f61d7e13::t_5bce22917b8f91 141,144
+  s_cd1b09f61d7e13::t_2697a11ddafc70 154
+scripts/agent-spawn-guard.sh
+  s_cd1b09f61d7e13::t_4c538c64f6d874 127
+  s_cd1b09f61d7e13::t_96f8373cef2884 124-126,128-131
+  s_cd1b09f61d7e13::t_b66d79e692b94f 157,160,163
+  s_cd1b09f61d7e13::t_ebf1a13cf974d9 208
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "054642a693d40dcab5c6436f11ed91793f0b23ab",
+  "prompts": {},
+  "sessions": {
+    "s_cd1b09f61d7e13": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "0db3ebad-be67-42c6-8ceb-4ce835618e98",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
