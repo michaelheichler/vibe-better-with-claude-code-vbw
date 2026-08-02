@@ -1,0 +1,31 @@
+.vbw-planning/phases/04-shared-contract-dedup/04-02-PLAN.md
+  s_27ea496ab5a93e::t_c62bdb60a39e33 40-42,165-167
+  s_27ea496ab5a93e::t_cdbe5c0a65cb82 12-39
+  s_27ea496ab5a93e::t_6e2e23b1176a8d 9-11
+  s_521d263a636447::t_f3fe6f213533ea 1-8,43-164
+  s_27ea496ab5a93e::t_2ece96fa7204ec 168-171
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "87deae9207d94f8507fb7640b9e8e408fcb21675",
+  "prompts": {},
+  "sessions": {
+    "s_27ea496ab5a93e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4452c98a-815b-4051-9652-732944fc8275",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    },
+    "s_521d263a636447": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a6ba9d519ba8135c1",
+        "model": "unknown"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
