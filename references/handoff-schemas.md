@@ -151,7 +151,7 @@ If no pre-existing issues were found, omit the field or pass an empty array.
 
 ## `debugger_report` (Debugger -> Lead)
 
-Diagnostic investigation report from the Debugger agent. Used in Teammate Mode when the Debugger is assigned a single hypothesis to investigate. Distinct from `blocker_report` — the Debugger's payload uses diagnostic fields, not escalation fields.
+Diagnostic investigation report from the Debugger agent. Used in Teammate Mode when the Debugger is assigned a single hypothesis to investigate. It is distinct from `blocker_report`. The Debugger's payload uses diagnostic fields, not escalation fields.
 
 ```json
 {
@@ -176,7 +176,7 @@ Diagnostic investigation report from the Debugger agent. Used in Teammate Mode w
   }
 }
 ```
-`resolution_observation` is analysis-scoped and must be one of `already_fixed`, `needs_change`, or `inconclusive`. Use `already_fixed` only when evidence shows the current branch already contains the fix and no new code change is needed. Use `needs_change` when a code change was required or would still be required. Use `inconclusive` when the diagnosis is not yet strong enough. This field informs the orchestrator's synthesis; it does not let the Debugger own final session state.
+`resolution_observation` is analysis-scoped and must be one of `already_fixed`, `needs_change`, or `inconclusive`. Use `already_fixed` only when evidence shows the current branch already contains the fix and no new code change is needed. Use `needs_change` when a code change was required or would still be required. Use `inconclusive` when the diagnosis is not yet strong enough. This field informs the orchestrator's synthesis. It does not let the Debugger own final session state.
 For `pre_existing_issues`, if no pre-existing issues were found, omit the field or pass an empty array.
 
 ## `qa_verdict` (QA -> Lead)
@@ -333,13 +333,13 @@ Follow the team-shutdown contract in `references/subagent-contracts.md`.
 
 Shutdown invariant: acknowledge every `shutdown_request` by calling SendMessage with `shutdown_response`, then stop.
 
-> **Conditional refusal:** The schema allows `approved: false` with `pending_work` describing what remains. Currently all agents are instructed to always approve. If a future agent needs to delay shutdown (for example, during a disk write), update its Shutdown Handling section to allow conditional refusal with `approved: false`.
+> **Conditional refusal:** The schema allows `approved: false` with `pending_work` describing what remains. Currently all agents are instructed to always approve. The orchestrator retries up to 3 times on rejection before proceeding. If a future agent needs to delay shutdown (for example, during a disk write), update its Shutdown Handling section to allow conditional refusal with `approved: false`.
 
 ## Backward Compatibility
 
-The `v2_typed_protocol` flag is a graduated feature flag — it has been always-on since v1.20 and is stripped from configs by `migrate-config.sh`. `validate-message.sh` always validates messages against the V2 schema; there is no fail-open bypass.
+The `v2_typed_protocol` flag is a graduated feature flag. It has been always-on since v1.20 and is stripped from configs by `migrate-config.sh`. `validate-message.sh` always validates messages against the V2 schema. There is no fail-open bypass.
 
-Flat shutdown messages (without the full V2 envelope) are handled via **normalization**: `validate-message.sh` detects flat `shutdown_request`/`shutdown_response` messages (no `payload` key) and wraps them into V2 envelope shape before validation. This means simplified inbox delivery works — agents do not need to construct a full envelope.
+Flat shutdown messages (without the full V2 envelope) are handled via **normalization**: `validate-message.sh` detects flat `shutdown_request`/`shutdown_response` messages (no `payload` key) and wraps them into V2 envelope shape before validation. This means simplified inbox delivery works. Agents do not need to construct a full envelope.
 
 When receiving messages, agents should:
 1. Try to parse as V2 typed message (full envelope)
