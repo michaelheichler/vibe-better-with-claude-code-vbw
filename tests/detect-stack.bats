@@ -23,9 +23,20 @@ create_bash_project() {
 
 top_level_keys_are_unique() {
   jq --stream -s -e '
-    [.[] | .[0][0] | select(. != null)] |
-    reduce .[] as $key ([]; if (.[-1] // null) == $key then . else . + [$key] end) |
-    length == (unique | length)
+    reduce .[] as $event (
+      {group_keys: [], at_group_boundary: true};
+      ($event[0][0] // null) as $key |
+      if $key != null and ($event | length) == 2 and
+          ((.group_keys | length) == 0 or .group_keys[-1] != $key or .at_group_boundary)
+      then .group_keys += [$key]
+      else .
+      end |
+      .at_group_boundary = (
+        (($event | length) == 1 and ($event[0] | length) == 2) or
+        (($event | length) == 2 and ($event[0] | length) == 1)
+      )
+    ) |
+    .group_keys | length == (unique | length)
   ' "$1" >/dev/null
 }
 
@@ -76,12 +87,22 @@ top_level_keys_are_unique() {
   [ "$status" -eq 0 ]
 }
 
-@test "top-level category integrity check rejects a duplicate fixture copy" {
+@test "top-level category integrity check rejects a non-adjacent duplicate fixture copy" {
   local fixture mapping mapping_json
   fixture="$TEST_TEMP_DIR/duplicate-stack-mappings.json"
   mapping="$SCRIPTS_DIR/../config/stack-mappings.json"
   mapping_json=$(jq -c '.' "$mapping")
   printf '{"mobile":{},%s\n' "${mapping_json:1}" > "$fixture"
+
+  run top_level_keys_are_unique "$fixture"
+
+  [ "$status" -ne 0 ]
+}
+
+@test "top-level category integrity check rejects adjacent duplicate objects" {
+  local fixture
+  fixture="$TEST_TEMP_DIR/adjacent-duplicate-stack-mappings.json"
+  printf '%s\n' '{"mobile":{"android-kotlin":{}},"mobile":{"flutter":{}}}' > "$fixture"
 
   run top_level_keys_are_unique "$fixture"
 
