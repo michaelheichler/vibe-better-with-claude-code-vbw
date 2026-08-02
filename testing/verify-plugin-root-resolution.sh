@@ -199,9 +199,10 @@ chmod +x "$TEST_DIR/bin/ps"
 make_root() {
   local name="$1"
   local root="$TEST_DIR/roots/$name"
-  mkdir -p "$root/scripts" "$root/commands"
+  mkdir -p "$root/scripts" "$root/commands" "$root/.claude-plugin"
   : > "$root/scripts/hook-wrapper.sh"
   : > "$root/commands/vibe.md"
+  printf '%s\n' '{"name":"vbw"}' > "$root/.claude-plugin/plugin.json"
   cp "$ENSURE_LINK" "$root/scripts/ensure-plugin-root-link.sh"
   (cd "$root" && pwd -P)
 }
