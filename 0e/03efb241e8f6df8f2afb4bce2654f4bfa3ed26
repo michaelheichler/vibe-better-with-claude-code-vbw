@@ -1,0 +1,71 @@
+.vbw-planning/phases/05-adversarial-review-and-fix/remediation/qa/round-01/R01-PLAN.md
+  s_d2686ed9c0b94b::t_5d6488a5888bac 51,54
+  s_d2686ed9c0b94b::t_44e3d90950d2a0 66
+  s_d2686ed9c0b94b::t_8e4173d9996f4a 1-12,14-41,43-50,52-53,55-65,67-68,70-97
+  s_d2686ed9c0b94b::t_6c710995938bba 69
+  s_d2686ed9c0b94b::t_218002355de667 13
+  s_d2686ed9c0b94b::t_8856db536ccc87 42
+.vbw-planning/phases/05-adversarial-review-and-fix/05-RESEARCH.md
+  s_d2686ed9c0b94b::t_2a9f0ba77e9afe 1-66
+.vbw-planning/phases/04-shared-contract-dedup/remediation/qa/round-02/R02-PLAN.md
+  s_27ea496ab5a93e::t_4610c4641fe0dc 28-34
+  s_27ea496ab5a93e::t_388f7f72704436 1-27,35-48,50,52,54,57-86
+  s_27ea496ab5a93e::t_ad5bccf2e29657 51
+  s_27ea496ab5a93e::t_566eb97ec39ac6 53
+  s_27ea496ab5a93e::t_33a6b2e6507b75 49
+  s_27ea496ab5a93e::t_d9a7d10c9c7c09 55-56
+.vbw-planning/phases/04-shared-contract-dedup/remediation/qa/round-02/R02-SUMMARY.md
+  s_27ea496ab5a93e::t_1ef96f0bca81b0 1-29
+.vbw-planning/phases/05-adversarial-review-and-fix/remediation/qa/round-01/R01-SUMMARY.md
+  s_d2686ed9c0b94b::t_d30eeb419fc9c4 1-55
+.vbw-planning/phases/04-shared-contract-dedup/remediation/qa/round-01/R01-SUMMARY.md
+  s_27ea496ab5a93e::t_f30aa756ef29d4 1-86
+.vbw-planning/phases/05-adversarial-review-and-fix/05-01-SUMMARY.md
+  s_d2686ed9c0b94b::t_2d4b2544840486 1-73
+.vbw-planning/phases/04-shared-contract-dedup/remediation/qa/round-01/R01-KNOWN-ISSUES.json
+  s_27ea496ab5a93e::t_c9ddac5e35f32d 1-17
+.vbw-planning/phases/04-shared-contract-dedup/remediation/qa/round-01/R01-VERIFICATION.md
+  s_27ea496ab5a93e::t_c5590943eac898 1-60
+.vbw-planning/phases/04-shared-contract-dedup/remediation/qa/round-02/R02-VERIFICATION.md
+  s_27ea496ab5a93e::t_ac9ca4dfe6bdb0 1-44
+.vbw-planning/phases/05-adversarial-review-and-fix/05-VERIFICATION.md
+  s_d2686ed9c0b94b::t_c6962c0dcd36fe 1-80
+.vbw-planning/phases/05-adversarial-review-and-fix/remediation/qa/round-01/R01-KNOWN-ISSUES.json
+  s_d2686ed9c0b94b::t_3f386d776145f4 1-39
+.vbw-planning/phases/05-adversarial-review-and-fix/remediation/qa/round-01/R01-VERIFICATION.md
+  s_d2686ed9c0b94b::t_eb527ce3297b80 1-51
+.vbw-planning/phases/04-shared-contract-dedup/remediation/qa/round-01/R01-PLAN.md
+  s_43c368b691393b::t_7708db56558b4b 1-127
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "0e03efb241e8f6df8f2afb4bce2654f4bfa3ed26",
+  "prompts": {},
+  "sessions": {
+    "s_27ea496ab5a93e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4452c98a-815b-4051-9652-732944fc8275",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    },
+    "s_43c368b691393b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a6fde3e64d4861dba",
+        "model": "unknown"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    },
+    "s_d2686ed9c0b94b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a924c903-92a9-4f1f-aaea-ba6a7f724e8e",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
