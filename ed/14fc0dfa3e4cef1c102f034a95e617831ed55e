@@ -1,0 +1,31 @@
+tests/detect-stack.bats
+  s_d2686ed9c0b94b::t_82b82305ae8df2 90,102-104
+  s_d2686ed9c0b94b::t_f39d519f09f2be 105
+  s_d2686ed9c0b94b::t_b113a61da2a3f1 26-39
+  s_d2686ed9c0b94b::t_19b15a63e9ed6b 106-108
+  s_6da1a94dc0bec3::t_4f0239a98754d2 109-111
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "ed14fc0dfa3e4cef1c102f034a95e617831ed55e",
+  "prompts": {},
+  "sessions": {
+    "s_6da1a94dc0bec3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ab0ad0e58e4a5273d",
+        "model": "unknown"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    },
+    "s_d2686ed9c0b94b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a924c903-92a9-4f1f-aaea-ba6a7f724e8e",
+        "model": "unknown"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
