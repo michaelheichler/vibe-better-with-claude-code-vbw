@@ -48,9 +48,7 @@ MARKER_LABELS=(
 )
 
 PAYLOAD_VERBATIM_ALLOWLIST=(
-  'commands/vibe.md:    Spawn one Dev for the current plan task using the non-team spawn shape: omit `team_name`, `run_in_background`, `isolation`'
-  'commands/vibe.md:If `research_path` is empty, spawn Scout (with `subagent_type: "vbw:vbw-scout"`; non-team spawn shape: omit `team_name`, `run_in_background`, `isolation`'
-  'commands/vibe.md:6. **Problem research (conditional):** If $ARGUMENTS contain a problem description, spawn Scout (with `subagent_type: "vbw:vbw-scout"`; non-team spawn shape: omit `team_name`, `run_in_background`, `isolation`'
+  'references/vibe-uat-remediation.md:    Spawn one Dev for the current plan task using the non-team spawn shape: omit `team_name`, `run_in_background`, `isolation`, and worktree cwd fields (`cwd`, `working_dir`, `workingDirectory`, `workdir`). `name` is optional label-only metadata. Never use it for routing, lifecycle state, or team semantics. Include absolute artifacts exactly as returned by state metadata:'
 )
 
 TRACKED_FILES=()
@@ -104,7 +102,7 @@ payload_verbatim_allowed() {
   local allowed
 
   for allowed in "${PAYLOAD_VERBATIM_ALLOWLIST[@]}"; do
-    if [[ "$candidate" == "$allowed"* ]]; then
+    if [[ "$candidate" == "$allowed" ]]; then
       return 0
     fi
   done
