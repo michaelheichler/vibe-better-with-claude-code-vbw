@@ -7,9 +7,10 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 PASS_COUNT=0
 FAIL_COUNT=0
+VIBE_UAT_REMEDIATION="$SCRIPT_DIR/references/vibe-uat-remediation.md"
 VIBE_FILES=(
   "$SCRIPT_DIR/commands/vibe.md"
-  "$SCRIPT_DIR/references/vibe-uat-remediation.md"
+  "$VIBE_UAT_REMEDIATION"
 )
 
 pass() { echo "PASS: $1"; PASS_COUNT=$((PASS_COUNT + 1)); }
@@ -113,26 +114,26 @@ else
   fail "vibe.md missing per-test priority ranking"
 fi
 
-# Test 12b: vibe.md distinguishes active UAT round from remediation round
-if grep -q 'active_uat_round' "${VIBE_FILES[@]}" && grep -q 'less than `RR`' "${VIBE_FILES[@]}"; then
-  pass "vibe.md distinguishes active UAT round from remediation round"
+# Test 12b: A prior UAT can feed a later remediation round, so the reference must distinguish them.
+if grep -q 'active_uat_round' "$VIBE_UAT_REMEDIATION" && grep -q 'less than `RR`' "$VIBE_UAT_REMEDIATION"; then
+  pass "vibe-uat-remediation.md distinguishes active UAT round from remediation round"
 else
-  fail "vibe.md should distinguish active UAT round from remediation round"
+  fail "vibe-uat-remediation.md should distinguish active UAT round from remediation round"
 fi
 
-# Test 12c: recurrence scanning excludes the active step-2 artifact and never defaults to RR
-if grep -q 'exclude the active step-2 UAT artifact itself from the scan' "${VIBE_FILES[@]}" \
-  && grep -q 'never.*default to `RR`' "${VIBE_FILES[@]}"; then
-  pass "vibe.md excludes the active UAT artifact from recurrence scan"
+# Test 12c: Counting the active artifact twice or defaulting to RR inflates recurrence.
+if grep -q 'exclude the active step-2 UAT artifact itself from the scan' "$VIBE_UAT_REMEDIATION" \
+  && grep -q 'never.*default to `RR`' "$VIBE_UAT_REMEDIATION"; then
+  pass "vibe-uat-remediation.md excludes the active UAT artifact from recurrence scan"
 else
-  fail "vibe.md should exclude the active UAT artifact from recurrence scan"
+  fail "vibe-uat-remediation.md should exclude the active UAT artifact from recurrence scan"
 fi
 
-# Test 13: vibe.md has RECURRING annotation for failure_count >= 2
-if grep -q 'RECURRING' "${VIBE_FILES[@]}" && grep -q 'failure_count >= 2' "${VIBE_FILES[@]}"; then
-  pass "vibe.md has RECURRING annotation for failure_count >= 2"
+# Test 13: Repeated failures need an annotation once failure_count reaches 2.
+if grep -q 'RECURRING' "$VIBE_UAT_REMEDIATION" && grep -q 'failure_count >= 2' "$VIBE_UAT_REMEDIATION"; then
+  pass "vibe-uat-remediation.md has RECURRING annotation for failure_count >= 2"
 else
-  fail "vibe.md missing RECURRING annotation logic"
+  fail "vibe-uat-remediation.md missing RECURRING annotation logic"
 fi
 
 # Test 14: vibe.md Scout prompt includes prior-fix investigation directive
