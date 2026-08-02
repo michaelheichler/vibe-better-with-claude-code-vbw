@@ -1,0 +1,29 @@
+.vbw-planning/phases/05-adversarial-review-and-fix/05-01-PLAN.md
+  s_d2686ed9c0b94b::t_bb9f13004803ee 1-14,16-32,34-51,57-58,60-71,77-78,80-91,97-101,104-112,119-123,126-158
+  s_d2686ed9c0b94b::t_b9eadd3170cf5d 15
+  s_d2686ed9c0b94b::t_9d8b9c43d60728 59
+  s_d2686ed9c0b94b::t_3fe5b677060b78 102-103
+  s_d2686ed9c0b94b::t_9e3d6a42ed39e6 52-56
+  s_d2686ed9c0b94b::t_b86e001c26ef35 79
+  s_d2686ed9c0b94b::t_b3cb358e8c3c7d 33
+  s_d2686ed9c0b94b::t_ff95a1353c6e1c 92-96
+  s_d2686ed9c0b94b::t_e60d3cc56ec5ef 72-76
+  s_d2686ed9c0b94b::t_97af4168227dca 113-118
+  s_d2686ed9c0b94b::t_69e5fa5934db6d 124-125
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "e37a7d7178b520595a0fad6930ba7b2d5db463bb",
+  "prompts": {},
+  "sessions": {
+    "s_d2686ed9c0b94b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a924c903-92a9-4f1f-aaea-ba6a7f724e8e",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
