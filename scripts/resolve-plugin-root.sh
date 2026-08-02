@@ -93,7 +93,7 @@ if [ -z "$resolved_root" ]; then
       continue
     fi
     name="${candidate##*/}"
-    if [[ "$name" =~ ^[0-9]+(\.[0-9]+)*$ ]]; then
+    if [[ "$name" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
       numeric_names+=("$name")
     fi
   done
@@ -114,7 +114,10 @@ if [ -z "$resolved_root" ]; then
   # Invariant: generic_names equals the cache entries examined. Variant: unexamined cache entries decrease.
   for candidate in "$cache_root"/*; do
     if [ -e "$candidate" ] || [ -L "$candidate" ]; then
-      generic_names+=("${candidate##*/}")
+      name="${candidate##*/}"
+      if [[ ! "$name" =~ ^[0-9]+(\.[0-9]+)*$ ]]; then
+        generic_names+=("$name")
+      fi
     fi
   done
   if [ "${#generic_names[@]}" -gt 0 ]; then

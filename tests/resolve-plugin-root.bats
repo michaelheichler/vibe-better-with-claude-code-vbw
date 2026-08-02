@@ -106,6 +106,18 @@ assert_resolved() {
   [ ! -e "$SESSION_LINK" ]
 }
 
+@test "four-component numeric cache names are rejected" {
+  local root
+  root=$(make_root numeric-four-component)
+  ln -s "$root" "$VBW_CACHE_ROOT/1.38.9.11"
+
+  run bash "$RESOLVER"
+
+  [ "$status" -eq 1 ]
+  [ "$output" = "VBW: plugin root unavailable. Restart this session to recreate $SESSION_LINK." ]
+  [ ! -e "$SESSION_LINK" ]
+}
+
 @test "lexically last generic cache entry resolves without numeric entries" {
   local alpha zulu
   alpha=$(make_root generic-alpha)
