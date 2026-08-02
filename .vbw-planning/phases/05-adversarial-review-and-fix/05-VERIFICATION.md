@@ -20,7 +20,7 @@ plans_verified:
 | 2 | MH-02 | Marketplace and process-derived roots accepted only when .claude-plugin/plugin.json identifies the plugin as vbw | PASS | valid_vbw_root (lines 48-53) requires the manifest and jq name equals vbw; applied at the marketplace loop (line 135) and the process fallback (line 171). Explicit CLAUDE_PLUGIN_ROOT and cache sources keep the unchanged valid_root trust model per plan. Collision BATS cases 9 (marketplace) and 15 (process) skip a non-VBW candidate with hook-wrapper.sh and vibe.md and resolve the real VBW root. |
 | 3 | MH-03 | A --plugin-dir path containing spaces is recovered intact by the process fallback | PASS | Line 176 regex matches double-quoted, single-quoted, and unquoted forms after --plugin-dir; lines 161-170 strip surrounding quotes before valid_vbw_root. BATS cases 13 and 14 resolve space-containing mock-ps paths exactly and repair the session link to them. |
 | 4 | MH-04 | jq mobile keys list android-kotlin, flutter, react-native, ios-swift, and swiftui in one object | PASS | jq -c .mobile keys returns exactly [android-kotlin,flutter,ios-swift,react-native,swiftui]; top-level keys show a single mobile category. Swift profile content preserved. |
-| 5 | MH-05 | SessionStart cache cleanup orders versions correctly on BSD sort without -V support | PASS | scripts/session-start.sh lines 569-570 use sort -V with stderr suppressed, falling back to a zero-padded awk numeric key sort, matching the documented portable pattern. tests/session-start.bats shadows sort with a stub that rejects -V (exit 2) and asserts 1.9.0 is removed while 1.10.0 is retained; the case passes. |
+| 5 | MH-05 | SessionStart cache operations order versions correctly on BSD sort without -V support | PASS | `sort_cache_versions` at scripts/session-start.sh lines 548-554 provides the GNU and BSD paths. Cache cleanup, integrity checking, and marketplace auto-sync all call it at current lines 579, 594, and 611. tests/session-start.bats covers all three callers with a sort stub that rejects -V. |
 
 ## Artifact Checks
 
@@ -29,7 +29,7 @@ plans_verified:
 | 1 | ART-01 | scripts/resolve-plugin-root.sh provides candidate iteration and identity validation | Yes | plugin.json | PASS |
 | 2 | ART-02 | tests/resolve-plugin-root.bats provides regression coverage for findings 1-3 | Yes | invalid | PASS |
 | 3 | ART-03 | config/stack-mappings.json provides a single merged mobile category | Yes | android-kotlin | PASS |
-| 4 | ART-04 | scripts/session-start.sh provides portable version sort in cache cleanup | Yes | sort -V with fallback | PASS |
+| 4 | ART-04 | scripts/session-start.sh provides shared portable version sorting for cache operations | Yes | sort_cache_versions | PASS |
 
 ## Key Link Checks
 
@@ -44,7 +44,7 @@ plans_verified:
 |---|-----|---------|--------|----------|
 | 1 | AP-01 | Dijkstra correctness evidence for flagged tasks 1 and 3 | PASS | Each scan loop carries a stated invariant (every higher-ranked candidate already rejected) and variant (unexamined candidates decrease); termination follows from finite candidate lists; guard coverage complete since every source is gated on empty resolved_root and the final guard fails resolution when all sources miss. SUMMARY carries the required Grounding bullet (d04, d05, d08). |
 | 2 | AP-02 | Resolver source precedence order unchanged | PASS | Code order matches the documented CLAUDE.md command cascade exactly: explicit root, cache local, numeric cache, generic cache, marketplace scan, exact session link, generic link glob, process extraction, fail. Only within-source selection and fallback identity changed, per success criteria. |
-| 3 | AP-03 | Excluded escaped-unquoted-space form documented with named ceiling; no undeclared deviations | PASS | Line 175 ponytail comment names the ceiling and upgrade path, satisfying the plan allowance. Undeclared deviation scan: commit range touches only the four files_modified plus tests/detect-stack.bats and tests/session-start.bats (both in files_touched) plus the DEVN-02 fixture file; no undeclared plan-vs-code mismatch found beyond the two declared deviations. Residual note: session-start.sh lines 585 and 602 keep bare sort -V (out of plan scope, listed in Pre-existing Issues). |
+| 3 | AP-03 | Excluded escaped-unquoted-space form documented with named ceiling, with no undeclared deviations | PASS | Line 178 ponytail comment names the ceiling and upgrade path, satisfying the plan allowance. The undeclared deviation scan covers the four files_modified, tests/detect-stack.bats and tests/session-start.bats (both in files_touched), and the DEVN-02 fixture file. It found no undeclared plan-vs-code mismatch beyond the two declared deviations. Follow-up commit ce969141 routes all three SessionStart cache-version callers through `sort_cache_versions`. |
 
 ## Convention Compliance
 
@@ -70,7 +70,6 @@ plans_verified:
 | Test | File | Error |
 |------|------|-------|
 | testing/run-all.sh full BATS suite | commands/vibe.md, references/vibe-input-parsing.md, references/vibe-uat-remediation.md, scripts/resolve-phase-state.sh (uncommitted) | DEVN-03: dev reported 10 BATS failures from a concurrent uncommitted vibe phase-state refactor. Repo owner confirms it is separate, intentional, already-completed Phase 06 work outside Phase 05 scope and instructed focused-suite verification instead. Focused re-run of vibe-touched suites (auto-uat, discovered-issues-surfacing, planning-git-callsites, template-nesting) and all vibe-touched contract scripts shows zero failures in the current tree. |
-| session-start cache integrity and auto-sync version pick | scripts/session-start.sh lines 585 and 602 | Residual observation outside plan scope: two later call sites still use bare sort -V without the BSD fallback added at line 569, so cache integrity check and marketplace auto-sync silently no-op on stock macOS. Finding 5 named only line 569, so this is not a Phase 05 defect, but the same defect class remains nearby. |
 
 ## Summary
 
