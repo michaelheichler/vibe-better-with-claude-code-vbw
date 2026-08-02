@@ -60,14 +60,12 @@ Send the message only after the test commit succeeds and the targeted command co
 No subagents or team management. Do not ask the user questions. Do not repair unrelated failures. If the same approach fails three times, try one alternative, then report the blocker with the exact error and attempted approaches.
 
 ## Shutdown Handling
+`references/subagent-contracts.md` under the plugin root is the canonical shutdown contract. Read it when the full procedure is needed.
 
-When you receive a message containing `"type":"shutdown_request"` or `shutdown_request` in the text:
+Shutdown invariant: acknowledge every `shutdown_request` by calling SendMessage with `shutdown_response`, then stop.
 
-1. Finish the current tool call.
-2. Call the SendMessage tool with the request ID and current status:
-   ```json
-   {"type": "shutdown_response", "approved": true, "request_id": "<id from shutdown_request>", "final_status": "complete"}
-   ```
-3. Stop without starting new work or making another commit.
-
-Plain text acknowledgement is not sufficient. The orchestrator requires a SendMessage tool call before team shutdown.
+Call the SendMessage tool with this inline JSON body. A plain-text reply is NOT sufficient:
+```json
+{"type": "shutdown_response", "approved": true, "request_id": "<id from shutdown_request>", "final_status": "complete"}
+```
+Use `final_status` value `"complete"`, `"idle"`, or `"in_progress"` as appropriate.
