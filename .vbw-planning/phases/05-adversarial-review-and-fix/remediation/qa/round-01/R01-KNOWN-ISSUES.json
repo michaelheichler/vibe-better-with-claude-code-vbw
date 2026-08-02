@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "phase": "05",
+  "issues": [
+    {
+      "test": "session-start cache integrity and auto-sync version pick",
+      "file": "scripts/session-start.sh lines 585 and 602",
+      "error": "Residual observation outside plan scope: two later call sites still use bare sort -V without the BSD fallback added at line 569, so cache integrity check and marketplace auto-sync silently no-op on stock macOS. Finding 5 named only line 569, so this is not a Phase 05 defect, but the same defect class remains nearby.",
+      "first_seen_in": "05-VERIFICATION.md",
+      "last_seen_in": "05-VERIFICATION.md",
+      "first_seen_round": 0,
+      "last_seen_round": 0,
+      "times_seen": 1,
+      "source_kind": "registry"
+    },
+    {
+      "test": "testing/run-all.sh full BATS suite",
+      "file": "commands/vibe.md, references/vibe-input-parsing.md, references/vibe-uat-remediation.md, scripts/resolve-phase-state.sh (uncommitted)",
+      "error": "DEVN-03: dev reported 10 BATS failures from a concurrent uncommitted vibe phase-state refactor. Repo owner confirms it is separate Phase 6 work outside Phase 05 scope. Focused re-run of vibe-touched suites (auto-uat, discovered-issues-surfacing, planning-git-callsites, template-nesting) and all vibe-touched contract scripts shows zero failures in the current tree.",
+      "first_seen_in": "05-VERIFICATION.md",
+      "last_seen_in": "05-VERIFICATION.md",
+      "first_seen_round": 0,
+      "last_seen_round": 0,
+      "times_seen": 1,
+      "source_kind": "registry"
+    },
+    {
+      "test": "testing/run-all.sh full BATS suite",
+      "file": "commands/vibe.md, references/vibe-input-parsing.md, references/vibe-uat-remediation.md, scripts/resolve-phase-state.sh (uncommitted)",
+      "error": "DEVN-03: dev reported 10 BATS failures from a concurrent uncommitted vibe phase-state refactor. Repo owner confirms it is separate, intentional, already-completed Phase 06 work outside Phase 05 scope and instructed focused-suite verification instead. Focused re-run of vibe-touched suites (auto-uat, discovered-issues-surfacing, planning-git-callsites, template-nesting) and all vibe-touched contract scripts shows zero failures in the current tree.",
+      "first_seen_in": "05-VERIFICATION.md",
+      "last_seen_in": "05-VERIFICATION.md",
+      "first_seen_round": 0,
+      "last_seen_round": 0,
+      "times_seen": 1,
+      "source_kind": "registry"
+    }
+  ]
+}
