@@ -1,11 +1,6 @@
 #!/usr/bin/env bash
 set -u
 
-# collect-metrics.sh <event> <phase> [plan] [key=value ...]
-# Appends a JSON line to .vbw-planning/.metrics/run-metrics.jsonl
-# Events: cache_hit, cache_miss, compile_context, execute_task, execute_plan,
-#         execute_phase_start, execute_phase_complete
-# Exit 0 always — metrics must never block execution.
 
 if [ $# -lt 2 ]; then
   echo "Usage: collect-metrics.sh <event> <phase> [plan] [key=value ...]" >&2
@@ -18,7 +13,6 @@ shift 2
 
 PLANNING_DIR="${VBW_PLANNING_DIR:-.vbw-planning}"
 
-# Check metrics flag — if disabled, exit silently
 CONFIG_PATH="$PLANNING_DIR/config.json"
 if [ -f "$CONFIG_PATH" ] && command -v jq &>/dev/null; then
   METRICS_ENABLED=$(jq -r 'if .metrics != null then .metrics elif .v3_metrics != null then .v3_metrics else true end' "$CONFIG_PATH" 2>/dev/null || echo "true")
@@ -30,11 +24,9 @@ fi
 PLAN=""
 DATA_PAIRS=""
 
-# Parse remaining args: first non-key=value arg is plan number
 for arg in "$@"; do
   case "$arg" in
     *=*)
-      # key=value pair
       KEY=$(echo "$arg" | cut -d'=' -f1)
       VALUE=$(echo "$arg" | cut -d'=' -f2-)
       if [ -n "$DATA_PAIRS" ]; then
@@ -44,7 +36,6 @@ for arg in "$@"; do
       fi
       ;;
     *)
-      # Plan number
       if [ -z "$PLAN" ]; then
         PLAN="$arg"
       fi
@@ -55,10 +46,8 @@ done
 METRICS_DIR="$PLANNING_DIR/.metrics"
 METRICS_FILE="${METRICS_DIR}/run-metrics.jsonl"
 
-# Create dir if needed
 mkdir -p "$METRICS_DIR" 2>/dev/null || { exit 0; }
 
-# Build JSON line
 TS=$(date -u +"%Y-%m-%dT%H:%M:%SZ" 2>/dev/null || echo "unknown")
 
 PLAN_FIELD=""

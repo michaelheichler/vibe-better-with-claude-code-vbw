@@ -1,15 +1,11 @@
 #!/bin/bash
 set -u
-# SubagentStart hook: Record active agent type for cost attribution.
-# Active-agent state is session-local when a safe session id is available; root
-# .active-agent* files are rebuilt as aggregate display/legacy fallback state.
 
 INPUT=$(cat)
 PLANNING_DIR="${VBW_PLANNING_DIR:-.vbw-planning}"
 [ ! -d "$PLANNING_DIR" ] && exit 0
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 if [ -f "$SCRIPT_DIR/lib/active-agent-state.sh" ]; then
-  # shellcheck source=lib/active-agent-state.sh
   . "$SCRIPT_DIR/lib/active-agent-state.sh"
 else
   exit 0
@@ -18,7 +14,6 @@ fi
 NATIVE_AGENT_TYPE=$(echo "$INPUT" | jq -r '.agent_type // ""' 2>/dev/null)
 LEGACY_AGENT_ROLE_SOURCE=$(echo "$INPUT" | jq -r '.agent_name // .agentName // .name // ""' 2>/dev/null)
 
-# Only track VBW agents; maintain reference count for concurrent agents
 COUNT_FILE="$PLANNING_DIR/.active-agent-count"
 
 normalize_agent_role() {
@@ -121,15 +116,12 @@ fi
 if [ -n "$ROLE" ]; then
   vbw_active_agent_start "$PLANNING_DIR" "$INPUT" "$ROLE" "$AGENT_PID"
 
-  # Register agent PID for tmux cleanup
   if [ -n "$AGENT_PID" ] && [ -f "$SCRIPT_DIR/agent-pid-tracker.sh" ]; then
     bash "$SCRIPT_DIR/agent-pid-tracker.sh" register "$AGENT_PID" 2>/dev/null || true
   fi
 
-  # Record tmux pane for auto-close on stop
   if [ -n "${TMUX:-}" ] && [ -n "$AGENT_PID" ]; then
     PANE_MAP="$PLANNING_DIR/.agent-panes"
-    # Walk agent PID's parent chain to find which tmux pane owns it
     PANE_LIST=$(tmux list-panes -a -F '#{pane_pid} #{pane_id}' 2>/dev/null) || PANE_LIST=""
     if [ -n "$PANE_LIST" ]; then
       _pid="$AGENT_PID"

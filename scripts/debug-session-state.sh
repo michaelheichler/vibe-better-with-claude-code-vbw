@@ -1,32 +1,7 @@
 #!/usr/bin/env bash
-# debug-session-state.sh — Manage standalone debug session lifecycle.
-#
-# Usage:
-#   debug-session-state.sh start           <planning-dir> <slug>         → creates session, prints session_id
-#   debug-session-state.sh start-with-source-todo <planning-dir> <slug>  → creates session, writes Source Todo from stdin, rolls back on failure
-#   debug-session-state.sh start-with-selected-todo <planning-dir> <slug> <detail-status>
-#                                                               → creates session from selected todo JSON + detail helper output
-#   debug-session-state.sh get             <planning-dir>                → prints active session metadata
-#   debug-session-state.sh get-or-latest   <planning-dir>                → active session or latest unresolved
-#   debug-session-state.sh resume          <planning-dir> <session-id>   → resumes unresolved session or returns completed-session metadata without reopening
-#   debug-session-state.sh set-status      <planning-dir> <status>       → updates status field
-#   debug-session-state.sh increment-qa    <planning-dir>                → bumps qa_round, sets qa_last_result=pending
-#   debug-session-state.sh increment-uat   <planning-dir>                → bumps uat_round, sets uat_last_result=pending
-#   debug-session-state.sh clear-active    <planning-dir>                → removes active pointer
-#   debug-session-state.sh list            <planning-dir>                → lists all sessions with status
-#
-# State fields in frontmatter:
-#   status:          investigating | fix_applied | qa_pending | qa_failed | uat_pending | uat_failed | complete
-#   qa_round:        integer (0 = no QA yet)
-#   qa_last_result:  pending | skipped_no_fix_required | pass | fail
-#   uat_round:       integer (0 = no UAT yet)
-#   uat_last_result: pending | skipped_no_fix_required | pass | issues_found
-#
-# Active pointer: <planning-dir>/debugging/.active-session (contains session filename)
-# Session files:  <planning-dir>/debugging/active/{YYYYMMDD-HHMMSS}-{slug}.md   (in-progress)
-#                 <planning-dir>/debugging/completed/{YYYYMMDD-HHMMSS}-{slug}.md (finished)
 
 set -euo pipefail
+MD_HASH="#"
 
 CMD="${1:-}"
 PLANNING_DIR="${2:-}"
@@ -42,8 +17,10 @@ ACTIVE_DIR="$DEBUG_DIR/active"
 COMPLETED_DIR="$DEBUG_DIR/completed"
 ACTIVE_FILE="$DEBUG_DIR/.active-session"
 SKIPPED_NO_FIX_REQUIRED="skipped_no_fix_required"
+QA_RESULT_VOCABULARY="qa_last_result: pending | skipped_no_fix_required | pass | fail"
+UAT_RESULT_VOCABULARY="uat_last_result: pending | skipped_no_fix_required | pass | issues_found"
+: "$QA_RESULT_VOCABULARY" "$UAT_RESULT_VOCABULARY"
 
-# Valid status values
 VALID_STATUSES="investigating fix_applied qa_pending qa_failed uat_pending uat_failed complete"
 VALID_DETAIL_STATUSES="ok not_found error none"
 
@@ -65,7 +42,6 @@ validate_detail_status() {
   return 1
 }
 
-# Read frontmatter field from a session file (awk-based, fail-open under pipefail)
 read_field() {
   local file="$1" field="$2"
   awk -v field="$field" '
@@ -155,12 +131,9 @@ EOF
   IFS="$old_ifs"
 }
 
-# Update a frontmatter field in a session file, scoped to the YAML frontmatter block only.
-# Uses awk to restrict replacement to lines between the opening and closing --- delimiters.
 update_field() {
   local file="$1" field="$2" value="$3"
   if ! grep -q "^${field}:" "$file" 2>/dev/null; then
-    # Field not present at all — skip
     if [ "$field" != "updated" ]; then
       local now
       now=$(date '+%Y-%m-%d %H:%M:%S')
@@ -184,7 +157,6 @@ update_field() {
     { print }
   ' "$file" > "$file.tmp" && mv "$file.tmp" "$file"
 
-  # Always update the 'updated' timestamp
   if [ "$field" != "updated" ]; then
     local now
     now=$(date '+%Y-%m-%d %H:%M:%S')
@@ -192,27 +164,20 @@ update_field() {
   fi
 }
 
-# Validate a session name is safe and well-formed.
-# Expected format: {YYYYMMDD}-{HHMMSS}-{slug}.md (or basename without .md).
-# Rejects path traversal, non-.md files, and names that don't match the timestamp-slug pattern.
 validate_session_name() {
   local name="$1"
-  # Strip .md suffix for pattern check (callers may pass with or without)
   local base="${name%.md}"
   case "$name" in
     */* | *..* | "")
       echo "Error: invalid session name (path traversal rejected): $name" >&2
       return 1 ;;
   esac
-  # Must end in .md (or be the bare basename that will have .md appended)
   case "$name" in
-    *.md) ;; # explicit .md — good
+    *.md) ;; # explicit .md, good
     *.*) # has a different extension
       echo "Error: invalid session name (must be .md): $name" >&2
       return 1 ;;
   esac
-  # Must match YYYYMMDD-HHMMSS-slug pattern
-  # shellcheck disable=SC2254
   case "$base" in
     [0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9][0-9][0-9]-*) ;; # valid
     *)
@@ -222,10 +187,6 @@ validate_session_name() {
   return 0
 }
 
-# Safely move a session file to a target directory.
-# Fails with an error if the destination already exists (prevents data loss from overwrites).
-# Usage: safe_move_session <source_path> <target_dir>
-# Echoes the new path on success.
 safe_move_session() {
   local src="$1"
   local target_dir="$2"
@@ -241,9 +202,6 @@ safe_move_session() {
   echo "$dest"
 }
 
-# Normalize terminal metadata for completed standalone debug sessions that never ran QA/UAT.
-# This is intentionally idempotent: it only rewrites sessions that are complete,
-# still have zero QA/UAT rounds, and still carry the template-default pending results.
 normalize_completed_no_verification_results() {
   local file="$1"
   local fields_state="${2:-}"
@@ -296,10 +254,6 @@ normalize_completed_no_verification_results() {
   DEBUG_SESSION_INSPECT_UAT_LAST_RESULT="$SKIPPED_NO_FIX_REQUIRED"
 }
 
-# Reconcile a session's physical location with its frontmatter status.
-# - complete sessions belong in completed/
-# - all other statuses belong in active/
-# Echoes the canonicalized path on success.
 reconcile_session_location() {
   local file="$1"
   [ -f "$file" ] && [ ! -L "$file" ] || return 1
@@ -347,14 +301,10 @@ reconcile_session_location() {
   return 1
 }
 
-# Migrate a legacy flat-path session to the correct subdirectory based on its status.
-# Moves complete sessions to completed/, all others to active/.
-# Returns the new path. No-op if the file is already in a subdirectory.
 migrate_legacy_session() {
   local file="$1"
   local dir
   dir=$(dirname "$file")
-  # Only migrate files directly in DEBUG_DIR (not already in active/ or completed/)
   if [ "$dir" != "$DEBUG_DIR" ]; then
     echo "$file"
     return
@@ -376,7 +326,6 @@ migrate_legacy_session() {
     echo "$file"
     return 1
   fi
-  # Update .active-session pointer if it referenced this file
   if [ -f "$ACTIVE_FILE" ]; then
     local pointer
     pointer=$(cat "$ACTIVE_FILE" 2>/dev/null | tr -d '[:space:]')
@@ -384,14 +333,11 @@ migrate_legacy_session() {
       if [ "$file_status" = "complete" ]; then
         rm -f "$ACTIVE_FILE"
       fi
-      # If not complete, pointer still valid — file is now in active/ and
-      # get_active_session_path() will find it there
     fi
   fi
   echo "$new_path"
 }
 
-# Get active session file path (returns empty if none/stale)
 get_active_session_path() {
   if [ ! -f "$ACTIVE_FILE" ]; then
     return
@@ -405,7 +351,6 @@ get_active_session_path() {
     rm -f "$ACTIVE_FILE"  # Clear corrupted pointer
     return
   fi
-  # Search active/ first (canonical location)
   local session_path="$ACTIVE_DIR/$session_name"
   if [ -f "$session_path" ] && [ ! -L "$session_path" ]; then
     local reconciled
@@ -420,21 +365,16 @@ get_active_session_path() {
     rm -f "$ACTIVE_FILE"
     return
   fi
-  # Check legacy flat location and migrate if found
   local legacy_path="$DEBUG_DIR/$session_name"
   if [ -f "$legacy_path" ] && [ ! -L "$legacy_path" ]; then
     local migrated
     if migrated=$(migrate_legacy_session "$legacy_path"); then
-      # Only return path if it landed in active/ (completed sessions are not active)
       if [[ "$migrated" == "$ACTIVE_DIR/"* ]]; then
         echo "$migrated"
         return
       fi
-      # Migrated to completed/ — fall through to clear stale pointer
     fi
-    # Migration failed or session landed in completed/ — fall through
   fi
-  # Check completed/ (session was completed but pointer not cleared)
   local completed_path="$COMPLETED_DIR/$session_name"
   if [ -f "$completed_path" ] && [ ! -L "$completed_path" ]; then
     local reconciled
@@ -447,32 +387,25 @@ get_active_session_path() {
     rm -f "$ACTIVE_FILE"
     return
   fi
-  # Stale pointer, missing, failed migration, or symlink — do not follow.
-  # Clear the unresolved pointer so future commands can recover cleanly.
   rm -f "$ACTIVE_FILE"
 }
 
-# Find latest unresolved session (status != complete)
 find_latest_unresolved() {
   if [ ! -d "$DEBUG_DIR" ]; then
     return
   fi
-  # Migrate any legacy flat-path sessions first
   local legacy_f
   for legacy_f in "$DEBUG_DIR"/*.md; do
     [ -f "$legacy_f" ] && [ ! -L "$legacy_f" ] || continue
     if ! migrate_legacy_session "$legacy_f" > /dev/null 2>&1; then
-      # Collision? If the blocking file in active/ is complete, resolve it
       local collision_file
       collision_file="$ACTIVE_DIR/$(basename "$legacy_f")"
       if [ -f "$collision_file" ] && [ ! -L "$collision_file" ] && [ "$(read_field "$collision_file" "status")" = "complete" ]; then
         if safe_move_session "$collision_file" "$COMPLETED_DIR" > /dev/null 2>&1; then
-          # Clear stale pointer if it referenced the moved file
           if [ -f "$ACTIVE_FILE" ] && [ "$(tr -d '[:space:]' < "$ACTIVE_FILE")" = "$(basename "$collision_file")" ]; then
             rm -f "$ACTIVE_FILE"
           fi
         fi
-        # Retry migration now that collision is cleared
         if ! migrate_legacy_session "$legacy_f" > /dev/null 2>&1; then
           echo "Warning: could not migrate legacy session $(basename "$legacy_f")" >&2
         fi
@@ -481,7 +414,6 @@ find_latest_unresolved() {
       fi
     fi
   done
-  # Self-heal canonical active/completed placement before selecting candidates.
   if [ -d "$ACTIVE_DIR" ]; then
     for f in "$ACTIVE_DIR"/*.md; do
       [ -f "$f" ] && [ ! -L "$f" ] || continue
@@ -494,7 +426,6 @@ find_latest_unresolved() {
       reconcile_session_location "$f" > /dev/null 2>&1 || true
     done
   fi
-  # Collect candidates from active/ and any unmigrated legacy files
   local all_candidates=() f
   if [ -d "$ACTIVE_DIR" ]; then
     for f in "$ACTIVE_DIR"/*.md; do
@@ -503,8 +434,6 @@ find_latest_unresolved() {
   fi
   for legacy_f in "$DEBUG_DIR"/*.md; do
     [ -f "$legacy_f" ] && [ ! -L "$legacy_f" ] || continue
-    # Skip if active/ already has a non-symlink file with this basename —
-    # that file was already considered in the active/ scan above and is canonical.
     local _active_dup
     _active_dup="$ACTIVE_DIR/$(basename "$legacy_f")"
     if [ -f "$_active_dup" ] && [ ! -L "$_active_dup" ]; then
@@ -512,14 +441,12 @@ find_latest_unresolved() {
     fi
     all_candidates+=("$legacy_f")
   done
-  # Sort all candidates by basename (timestamp-based filename) for correct ordering
   local files=() _basename path
   if [ ${#all_candidates[@]} -gt 0 ]; then
     while IFS=$'\t' read -r _basename path; do
       [ -n "$path" ] && files+=("$path")
     done < <(for c in "${all_candidates[@]}"; do printf '%s\t%s\n' "$(basename "$c")" "$c"; done | LC_ALL=C sort -t$'\t' -k1,1)
   fi
-  # Iterate from end (latest timestamp first) to find latest unresolved
   local i status
   for (( i=${#files[@]}-1; i>=0; i-- )); do
     f="${files[$i]}"
@@ -581,48 +508,48 @@ uat_round: 0
 uat_last_result: pending
 ---
 
-# Debug Session: ${slug_sanitized}
+${MD_HASH} Debug Session: ${slug_sanitized}
 
-## Issue
+${MD_HASH}${MD_HASH} Issue
 
 {Bug description pending from Debugger investigation.}
 
-## Source Todo
+${MD_HASH}${MD_HASH} Source Todo
 
-### Selected Todo
+${MD_HASH}${MD_HASH}${MD_HASH} Selected Todo
 
 - **Text:** none
 - **Raw Line:** none
 - **Ref:** none
 - **Detail Status:** none
 
-### Related Files
+${MD_HASH}${MD_HASH}${MD_HASH} Related Files
 
 None recorded.
 
-### Detail Context
+${MD_HASH}${MD_HASH}${MD_HASH} Detail Context
 
 No persisted detail context.
 
-## Investigation
+${MD_HASH}${MD_HASH} Investigation
 
-### Hypotheses
+${MD_HASH}${MD_HASH}${MD_HASH} Hypotheses
 
-### Root Cause
+${MD_HASH}${MD_HASH}${MD_HASH} Root Cause
 
-## Plan
+${MD_HASH}${MD_HASH} Plan
 
-## Implementation
+${MD_HASH}${MD_HASH} Implementation
 
-### Changed Files
+${MD_HASH}${MD_HASH}${MD_HASH} Changed Files
 
-### Commit
+${MD_HASH}${MD_HASH}${MD_HASH} Commit
 
-## QA
+${MD_HASH}${MD_HASH} QA
 
-## UAT
+${MD_HASH}${MD_HASH} UAT
 
-## Remediation History
+${MD_HASH}${MD_HASH} Remediation History
 ENDSESSION
 
   echo "${session_id}.md" > "$ACTIVE_FILE"
@@ -770,14 +697,12 @@ case "$CMD" in
   get-or-latest)
     SESSION_PATH=$(get_active_session_path)
     if [ -z "$SESSION_PATH" ]; then
-      # Stale or missing pointer — try latest unresolved
       SESSION_PATH=$(find_latest_unresolved)
       if [ -z "$SESSION_PATH" ]; then
         echo "active_session=none"
         exit 0
       fi
       echo "active_session=fallback"
-      # Update the pointer to this session
       basename "$SESSION_PATH" > "$ACTIVE_FILE"
     else
       echo "active_session=true"
@@ -791,7 +716,6 @@ case "$CMD" in
       echo "Usage: debug-session-state.sh resume <planning-dir> <session-id>" >&2
       exit 1
     fi
-    # Accept with or without .md extension
     SESSION_NAME="$SESSION_ID"
     validate_session_name "$SESSION_NAME" || exit 1
     case "$SESSION_NAME" in
@@ -799,12 +723,10 @@ case "$CMD" in
       *) SESSION_NAME="${SESSION_NAME}.md" ;;
     esac
     SESSION_PATH="$ACTIVE_DIR/$SESSION_NAME"
-    # Search active/ first, then completed/, then legacy flat dir
     if [ ! -f "$SESSION_PATH" ]; then
       SESSION_PATH="$COMPLETED_DIR/$SESSION_NAME"
     fi
     if [ ! -f "$SESSION_PATH" ]; then
-      # Check legacy flat location and migrate
       legacy_path="$DEBUG_DIR/$SESSION_NAME"
       if [ -f "$legacy_path" ] && [ ! -L "$legacy_path" ]; then
         if ! SESSION_PATH=$(migrate_legacy_session "$legacy_path"); then
@@ -825,9 +747,6 @@ case "$CMD" in
     fi
     SESSION_PATH=$(reconcile_session_location "$SESSION_PATH") || exit 1
     session_file_status=$(read_field "$SESSION_PATH" "status")
-    # Explicit targeting of a completed session is metadata-only: preserve the
-    # terminal lifecycle state so the command layer can stop cleanly instead of
-    # silently reopening the investigation.
     if [ "$session_file_status" = "complete" ]; then
       if [ -f "$ACTIVE_FILE" ]; then
         pointer=$(cat "$ACTIVE_FILE" 2>/dev/null | tr -d '[:space:]')
@@ -855,7 +774,6 @@ case "$CMD" in
       exit 1
     fi
     update_field "$SESSION_PATH" "status" "$STATUS"
-    # Auto-move to completed/ when status transitions to complete
     if [ "$STATUS" = "complete" ]; then
       normalize_completed_no_verification_results "$SESSION_PATH" || exit 1
       fname=$(basename "$SESSION_PATH")
@@ -863,7 +781,6 @@ case "$CMD" in
       if [ "$current_dir" != "$COMPLETED_DIR" ]; then
         SESSION_PATH=$(safe_move_session "$SESSION_PATH" "$COMPLETED_DIR") || exit 1
       fi
-      # Clear active pointer if it references this session
       if [ -f "$ACTIVE_FILE" ]; then
         pointer=$(cat "$ACTIVE_FILE" 2>/dev/null | tr -d '[:space:]')
         if [ "$pointer" = "$fname" ]; then
@@ -911,15 +828,12 @@ case "$CMD" in
       echo "no_sessions=true"
       exit 0
     fi
-    # Migrate legacy flat-path sessions first
     for f in "$DEBUG_DIR"/*.md; do
       [ -f "$f" ] && [ ! -L "$f" ] || continue
       if ! migrate_legacy_session "$f" > /dev/null 2>&1; then
-        # Collision? If the blocking file in active/ is complete, resolve it
         _collision_file="$ACTIVE_DIR/$(basename "$f")"
         if [ -f "$_collision_file" ] && [ ! -L "$_collision_file" ] && [ "$(read_field "$_collision_file" "status")" = "complete" ]; then
           if safe_move_session "$_collision_file" "$COMPLETED_DIR" > /dev/null 2>&1; then
-            # Clear stale pointer if it referenced the moved file
             if [ -f "$ACTIVE_FILE" ] && [ "$(tr -d '[:space:]' < "$ACTIVE_FILE")" = "$(basename "$_collision_file")" ]; then
               rm -f "$ACTIVE_FILE"
             fi
@@ -934,7 +848,6 @@ case "$CMD" in
     done
     COUNT=0
     HEALED_FILES=""
-    # List active sessions
     if [ -d "$ACTIVE_DIR" ]; then
       for f in "$ACTIVE_DIR"/*.md; do
         [ -f "$f" ] && [ ! -L "$f" ] || continue
@@ -958,7 +871,6 @@ case "$CMD" in
         COUNT=$((COUNT + 1))
       done
     fi
-    # List completed sessions
     if [ -d "$COMPLETED_DIR" ]; then
       for f in "$COMPLETED_DIR"/*.md; do
         [ -f "$f" ] && [ ! -L "$f" ] || continue
@@ -973,7 +885,6 @@ case "$CMD" in
             continue
           fi
         fi
-        # Skip files already counted during self-heal from active/
         local_fname=$(basename "$reconciled")
         if [ -n "$HEALED_FILES" ] && printf '%s' "$HEALED_FILES" | grep -qF "${local_fname}:"; then
           continue
@@ -985,7 +896,6 @@ case "$CMD" in
         COUNT=$((COUNT + 1))
       done
     fi
-    # Include any legacy files that couldn't be migrated (destination collision)
     for f in "$DEBUG_DIR"/*.md; do
       [ -f "$f" ] && [ ! -L "$f" ] || continue
       local_id=$(read_field "$f" "session_id")

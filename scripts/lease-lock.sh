@@ -1,12 +1,6 @@
 #!/usr/bin/env bash
 set -u
 
-# lease-lock.sh <action> <task-id> [claimed-files... | --ttl=N]
-# Lease-based lock upgrade to lock-lite with TTL/heartbeat support.
-# action: acquire (create lock with TTL), renew (extend lease), release (remove),
-#         check (detect conflicts + expired leases)
-# Lock files: .vbw-planning/.locks/{task-id}.lock (JSON with ttl/expires_at)
-# Fail-open: exit 0 always. Conflicts are logged to metrics, never blocking.
 
 if [ $# -lt 2 ]; then
   echo "Usage: lease-lock.sh <acquire|renew|release|check> <task-id> [--ttl=N] [files...]" >&2
@@ -23,8 +17,6 @@ LOCK_FILE="${LOCKS_DIR}/${TASK_ID}.lock"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG_PATH="${PLANNING_DIR}/config.json"
 
-# Check lease_locks flag — if disabled, skip
-# Legacy fallback: honor v3_lease_locks if unprefixed key missing (pre-migration brownfield)
 if [ -f "$CONFIG_PATH" ] && command -v jq &>/dev/null; then
   LEASE_LOCKS=$(jq -r 'if .lease_locks != null then .lease_locks elif .v3_lease_locks != null then .v3_lease_locks else false end' "$CONFIG_PATH" 2>/dev/null || echo "false")
   if [ "$LEASE_LOCKS" != "true" ]; then
@@ -39,10 +31,8 @@ if [ -f "$CONFIG_PATH" ] && command -v jq &>/dev/null; then
   fi
 fi
 
-# v2_hard_gates graduated (always true)
 HARD_GATES=true
 
-# Parse --ttl=N from args, collect remaining as files
 DEFAULT_TTL=300
 TTL="$DEFAULT_TTL"
 FILES_ARGS=()
@@ -101,16 +91,13 @@ case "$ACTION" in
   acquire)
     mkdir -p "$LOCKS_DIR" 2>/dev/null || exit 0
 
-    # Clean up expired locks first
     cleanup_expired
 
-    # Build files JSON array
     FILES_JSON="[]"
     if [ ${#FILES_ARGS[@]} -gt 0 ]; then
       FILES_JSON=$(printf '%s\n' "${FILES_ARGS[@]}" | jq -R '.' | jq -s '.' 2>/dev/null) || FILES_JSON="[]"
     fi
 
-    # Check for conflicts
     ACQUIRE_CONFLICTS=0
     for EXISTING_LOCK in "$LOCKS_DIR"/*.lock; do
       [ ! -f "$EXISTING_LOCK" ] && continue
@@ -131,13 +118,11 @@ case "$ACTION" in
       done
     done
 
-    # Hard enforcement: exit non-zero on conflict when v2_hard_gates=true (REQ-04)
     if [ "$ACQUIRE_CONFLICTS" -gt 0 ] && [ "$HARD_GATES" = "true" ]; then
       echo "conflict_blocked"
       exit 1
     fi
 
-    # Write lock file with TTL
     TS=$(date -u +"%Y-%m-%dT%H:%M:%SZ" 2>/dev/null || echo "unknown")
     NOW=$(now_epoch)
     EXPIRES_AT=$((NOW + TTL))
@@ -162,7 +147,6 @@ case "$ACTION" in
     fi
 
     NOW=$(now_epoch)
-    # Read existing TTL or use default
     EXISTING_TTL=$(jq -r '.ttl // 300' "$LOCK_FILE" 2>/dev/null) || EXISTING_TTL="$DEFAULT_TTL"
     NEW_EXPIRES=$((NOW + EXISTING_TTL))
     TS=$(date -u +"%Y-%m-%dT%H:%M:%SZ" 2>/dev/null || echo "unknown")
@@ -187,7 +171,6 @@ case "$ACTION" in
   check)
     [ ! -d "$LOCKS_DIR" ] && exit 0
 
-    # Clean expired first
     cleanup_expired
 
     CONFLICTS=0
@@ -212,7 +195,6 @@ case "$ACTION" in
 
     if [ "$CONFLICTS" -gt 0 ]; then
       echo "conflicts:${CONFLICTS}"
-      # Hard enforcement: exit non-zero on conflict when v2_hard_gates=true (REQ-04)
       if [ "$HARD_GATES" = "true" ]; then
         exit 1
       fi
@@ -222,7 +204,6 @@ case "$ACTION" in
     ;;
 
   query)
-    # Read-only lock inspection — no cleanup, no modifications (REQ-04)
     if [ -f "$LOCK_FILE" ]; then
       cat "$LOCK_FILE"
     else

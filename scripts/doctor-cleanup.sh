@@ -1,22 +1,13 @@
 #!/bin/bash
 set -euo pipefail
-# doctor-cleanup.sh — Runtime health scan and cleanup
-#
-# Usage:
-#   doctor-cleanup.sh scan     # Report stale teams, orphans, dangling PIDs, stale markers
-#   doctor-cleanup.sh cleanup  # Clean up reported issues
-#
-# Output format: {category}|{item}|{detail}
 
 ACTION="${1:-scan}"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PLANNING_DIR="${VBW_PLANNING_DIR:-$(pwd)/.vbw-planning}"
 LOG_FILE="$PLANNING_DIR/.hook-errors.log"
 
-# Resolve CLAUDE_DIR
 . "$SCRIPT_DIR/resolve-claude-dir.sh"
 if [ -f "$SCRIPT_DIR/lib/active-agent-state.sh" ]; then
-  # shellcheck source=lib/active-agent-state.sh
   . "$SCRIPT_DIR/lib/active-agent-state.sh"
 fi
 
@@ -24,7 +15,6 @@ TEAMS_DIR="$CLAUDE_DIR/teams"
 TASKS_DIR="$CLAUDE_DIR/tasks"
 STALE_THRESHOLD_SECONDS=7200  # 2 hours
 
-# Platform-specific stat command for modification time
 get_mtime() {
   local file="$1"
   if [[ "$OSTYPE" == "darwin"* ]]; then
@@ -34,7 +24,6 @@ get_mtime() {
   fi
 }
 
-# Logging helper (fail-silent)
 log_action() {
   local msg="$1"
   local timestamp
@@ -42,7 +31,6 @@ log_action() {
   echo "[$timestamp] Doctor cleanup: $msg" >> "$LOG_FILE" 2>/dev/null || true
 }
 
-# --- SCAN MODE ---
 scan_stale_teams() {
   [ ! -d "$TEAMS_DIR" ] && return 0
 
@@ -55,8 +43,6 @@ scan_stale_teams() {
     local team_name
     team_name=$(basename "$team_dir")
 
-    # Check for orphaned/configless team directories (no config.json = corrupted residual)
-    # Only report VBW-owned teams — non-VBW configless dirs may belong to other plugins
     if [ ! -f "$team_dir/config.json" ]; then
       case "$team_name" in vbw-*)
         echo "orphaned_team|$team_name|no config.json (ghost team residual)"
@@ -65,14 +51,12 @@ scan_stale_teams() {
       continue
     fi
 
-    # Only scan VBW-owned teams for staleness — consistent with cleanup scope
     case "$team_name" in vbw-*) ;; *) continue ;; esac
 
     local inbox_dir="$team_dir/inboxes"
 
     [ ! -d "$inbox_dir" ] && continue
 
-    # Get most recent file in inboxes
     local inbox_mtime=0
     for inbox_file in "$inbox_dir"/*; do
       [ ! -e "$inbox_file" ] && continue
@@ -81,11 +65,9 @@ scan_stale_teams() {
       [ "$file_mtime" -gt "$inbox_mtime" ] && inbox_mtime=$file_mtime
     done
 
-    # Check if stale
     local age=$((now - inbox_mtime))
     [ "$age" -lt "$STALE_THRESHOLD_SECONDS" ] && continue
 
-    # Calculate age display
     local hours=$((age / 3600))
     local minutes=$(((age % 3600) / 60))
     echo "stale_team|$team_name|age: ${hours}h ${minutes}m"
@@ -94,7 +76,6 @@ scan_stale_teams() {
 }
 
 scan_orphaned_processes() {
-  # Find processes with PPID=1 and comm containing "claude"
   ps -eo pid,ppid,comm 2>/dev/null | awk '$2 == 1 && $3 ~ /claude/ {print "orphan_process|" $1 "|" $3}' || true
 }
 
@@ -104,9 +85,7 @@ scan_dangling_pids() {
 
   while IFS= read -r pid; do
     [ -z "$pid" ] && continue
-    # Validate numeric
     echo "$pid" | grep -qE '^[0-9]+$' || continue
-    # Check if process exists
     if ! kill -0 "$pid" 2>/dev/null; then
       echo "dangling_pid|$pid|dead"
     fi
@@ -114,7 +93,6 @@ scan_dangling_pids() {
 }
 
 scan_stale_markers() {
-  # Check watchdog PID
   local watchdog_pid_file="$PLANNING_DIR/.watchdog-pid"
   if [ -f "$watchdog_pid_file" ]; then
     local watchdog_pid
@@ -124,7 +102,6 @@ scan_stale_markers() {
     fi
   fi
 
-  # Check compaction marker age
   local compaction_marker="$PLANNING_DIR/.compaction-marker"
   if [ -f "$compaction_marker" ]; then
     local marker_mtime
@@ -137,9 +114,6 @@ scan_stale_markers() {
     fi
   fi
 
-  # Check legacy/root active agent marker. When session-local state exists,
-  # root .active-agent is aggregate display state; stale session dirs below are
-  # the authoritative cleanup target.
   local active_agent_file="$PLANNING_DIR/.active-agent"
   if [ -f "$active_agent_file" ] && [ ! -d "$PLANNING_DIR/.active-agents" ]; then
     echo "stale_marker|.active-agent|potentially stale"
@@ -173,7 +147,6 @@ scan_stale_worktrees() {
   done
 }
 
-# --- CLEANUP MODE ---
 cleanup_stale_teams() {
   bash "$SCRIPT_DIR/clean-stale-teams.sh" 2>&1 | while IFS= read -r line; do
     log_action "$line"
@@ -191,17 +164,14 @@ cleanup_orphaned_processes() {
   echo "$orphans" | while IFS='|' read -r _category _pid _comm; do
     [ -z "$_pid" ] && continue
 
-    # SIGTERM first
     if kill -TERM "$_pid" 2>/dev/null; then
       log_action "sent SIGTERM to orphan process $_pid ($_comm)"
       count=$((count + 1))
     fi
   done
 
-  # Wait 2 seconds
   sleep 2
 
-  # SIGKILL survivors
   echo "$orphans" | while IFS='|' read -r _category _pid _comm; do
     [ -z "$_pid" ] && continue
     if kill -0 "$_pid" 2>/dev/null; then
@@ -246,7 +216,6 @@ cleanup_stale_markers() {
   for marker in "${markers[@]}"; do
     local marker_file="$PLANNING_DIR/$marker"
     if [ -f "$marker_file" ]; then
-      # Check if marker is actually stale (reuse scan logic)
       local is_stale=false
 
       case "$marker" in
@@ -297,7 +266,6 @@ cleanup_stale_worktrees() {
   local _category _wt_name _detail
   echo "$stale" | while IFS='|' read -r _category _wt_name _detail; do
     [ -z "$_wt_name" ] && continue
-    # Parse phase and plan from name (format: {phase}-{plan})
     local wt_phase wt_plan
     wt_phase=$(echo "$_wt_name" | cut -d'-' -f1)
     wt_plan=$(echo "$_wt_name" | cut -d'-' -f2)
@@ -309,7 +277,6 @@ cleanup_stale_worktrees() {
   log_action "stale worktrees cleanup completed"
 }
 
-# --- MAIN ---
 case "$ACTION" in
   scan)
     scan_stale_teams
@@ -321,7 +288,6 @@ case "$ACTION" in
   cleanup)
     log_action "cleanup started"
 
-    # Collect counts before cleanup
     teams_count=$(scan_stale_teams | wc -l | tr -d ' ')
     orphan_count=$(scan_orphaned_processes | wc -l | tr -d ' ')
     pid_count=$(scan_dangling_pids | wc -l | tr -d ' ')

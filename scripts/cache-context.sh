@@ -1,11 +1,6 @@
 #!/usr/bin/env bash
 set -u
 
-# cache-context.sh <phase> <role> [config-path] [plan-path]
-# Computes deterministic cache key for compiled context and checks cache.
-# Output: "hit <hash> <cached-path>" or "miss <hash>"
-# Exit 0 always (caller decides what to do).
-# Uses set -u only (not -e) — this script must never fail fatally.
 
 if [ $# -lt 2 ]; then
   echo "Usage: cache-context.sh <phase> <role> [config-path] [plan-path]" >&2
@@ -19,7 +14,6 @@ PLAN_PATH_INPUT="${4:-}"
 TARGET_SCOPE_EXPLICIT=0
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# shellcheck source=scripts/lib/vbw-target-root.sh
 . "${SCRIPT_DIR}/lib/vbw-target-root.sh"
 
 if [ -n "${VBW_PLANNING_DIR:-}" ] || [ $# -ge 3 ] || [ $# -ge 4 ]; then
@@ -102,16 +96,13 @@ resolve_phase_dir_for_cache() {
   find "$PLANNING_DIR/phases" -maxdepth 1 -type d -name "${padded_phase}-*" 2>/dev/null | head -1
 }
 
-# --- Build hash input from deterministic sources ---
 HASH_INPUT="phase=${PHASE}:role=${ROLE}"
 
-# Plan content checksum (if plan exists)
 if [ -n "$PLAN_PATH" ] && [ -f "$PLAN_PATH" ]; then
   PLAN_SUM=$(shasum -a 256 "$PLAN_PATH" 2>/dev/null | cut -d' ' -f1 || echo "noplan")
   HASH_INPUT="${HASH_INPUT}:plan=${PLAN_SUM}"
 fi
 
-# Changed files list (git diff for delta awareness)
 if [ -n "$TARGET_GIT_ROOT" ]; then
   CHANGED_SUM=$({
     if [ -n "$WORKSPACE_SUBPATH" ]; then
@@ -119,7 +110,6 @@ if [ -n "$TARGET_GIT_ROOT" ]; then
     else
       git -C "$TARGET_GIT_ROOT" diff HEAD 2>/dev/null || true
     fi
-    # Hash untracked files separately to avoid labeling diff output as UNTRACKED
     if [ -n "$WORKSPACE_SUBPATH" ]; then
       git -C "$TARGET_GIT_ROOT" ls-files --others --exclude-standard -- "$WORKSPACE_SUBPATH" 2>/dev/null
     else
@@ -135,7 +125,6 @@ if [ -n "$TARGET_GIT_ROOT" ]; then
   HASH_INPUT="${HASH_INPUT}:changed=${CHANGED_SUM}"
 fi
 
-# Core planning artifact fingerprints
 ROADMAP_SUM=$(fingerprint_file "$PLANNING_DIR/ROADMAP.md" "noroadmap")
 HASH_INPUT="${HASH_INPUT}:roadmap=${ROADMAP_SUM}"
 
@@ -154,7 +143,6 @@ if [[ "$ROLE" =~ ^(dev|qa|scout|debugger|architect)$ ]]; then
   HASH_INPUT="${HASH_INPUT}:conventions=${CONVENTIONS_SUM}"
 fi
 
-# Codebase mapping fingerprint (roles with mapping hints need cache invalidation)
 if [[ "$ROLE" =~ ^(debugger|dev|qa|lead|architect)$ ]] && [ -d "$PLANNING_DIR/codebase" ]; then
   MAP_SUM=$(find "$PLANNING_DIR/codebase" -maxdepth 1 -name '*.md' -print 2>/dev/null | sort | while IFS= read -r map_file; do
     [ -n "$map_file" ] || continue
@@ -164,7 +152,6 @@ if [[ "$ROLE" =~ ^(debugger|dev|qa|lead|architect)$ ]] && [ -d "$PLANNING_DIR/co
   HASH_INPUT="${HASH_INPUT}:codebase=${MAP_SUM}"
 fi
 
-# Research file fingerprint (roles that include Research Findings)
 if [[ "$ROLE" =~ ^(lead|dev|scout|debugger|architect)$ ]]; then
   PHASE_DIR_CACHE=$(resolve_phase_dir_for_cache)
   if [ -n "$PHASE_DIR_CACHE" ] && [ -d "$PHASE_DIR_CACHE" ]; then
@@ -182,7 +169,6 @@ if [[ "$ROLE" =~ ^(lead|dev|scout|debugger|architect)$ ]]; then
   fi
 fi
 
-# Delta fingerprint (roles that include changed files / code slices)
 if [[ "$ROLE" =~ ^(dev|scout|debugger)$ ]] && [ -f "${SCRIPT_DIR}/delta-files.sh" ]; then
   PHASE_DIR_CACHE=$(resolve_phase_dir_for_cache)
   if [ -n "$PHASE_DIR_CACHE" ] && [ -d "$PHASE_DIR_CACHE" ]; then
@@ -207,7 +193,6 @@ if [[ "$ROLE" =~ ^(dev|scout|debugger)$ ]] && [ -f "${SCRIPT_DIR}/delta-files.sh
   fi
 fi
 
-# Rolling summary fingerprint
 ROLLING_PATH="$PLANNING_DIR/ROLLING-CONTEXT.md"
 if command -v jq &>/dev/null && [ -f "$CONFIG_PATH" ]; then
   ROLLING_ENABLED=$(jq -r 'if .rolling_summary != null then .rolling_summary elif .v3_rolling_summary != null then .v3_rolling_summary else false end' "$CONFIG_PATH" 2>/dev/null || echo "false")
@@ -217,27 +202,23 @@ if command -v jq &>/dev/null && [ -f "$CONFIG_PATH" ]; then
   fi
 fi
 
-# Milestone context fingerprint
 MILESTONE_CONTEXT_PATH="$PLANNING_DIR/CONTEXT.md"
 if [ -f "$MILESTONE_CONTEXT_PATH" ]; then
   MILESTONE_SUM=$(shasum -a 256 "$MILESTONE_CONTEXT_PATH" 2>/dev/null | cut -d' ' -f1 || echo "nomilestone")
   HASH_INPUT="${HASH_INPUT}:milestone=${MILESTONE_SUM}"
 fi
 
-# Caveman config fingerprint (invalidate cache when caveman settings change)
 if command -v jq &>/dev/null && [ -f "$CONFIG_PATH" ]; then
   _caveman_style=$(jq -r '.caveman_style // "none"' "$CONFIG_PATH" 2>/dev/null || echo "none")
   _caveman_commit=$(jq -r 'if .caveman_commit == null then false else .caveman_commit end' "$CONFIG_PATH" 2>/dev/null || echo "false")
   _caveman_review=$(jq -r 'if .caveman_review == null then false else .caveman_review end' "$CONFIG_PATH" 2>/dev/null || echo "false")
   HASH_INPUT="${HASH_INPUT}:caveman=${_caveman_style}:caveman_commit=${_caveman_commit}:caveman_review=${_caveman_review}"
-  # Auto mode resolves level from .context-usage — include its content in cache hash
   if [ "$_caveman_style" = "auto" ]; then
     _context_usage_sum=$(fingerprint_file "$PLANNING_DIR/.context-usage" "nousage")
     HASH_INPUT="${HASH_INPUT}:context_usage=${_context_usage_sum}"
   fi
 fi
 
-# --- Compute final hash ---
 HASH=$(printf '%s' "$HASH_INPUT" | shasum -a 256 2>/dev/null | cut -d' ' -f1 || echo "")
 
 if [ -z "$HASH" ]; then
@@ -245,12 +226,10 @@ if [ -z "$HASH" ]; then
   exit 0
 fi
 
-# Truncate to 16 chars for shorter filenames
 HASH="${HASH:0:16}"
 
 CACHED_FILE="${CACHE_DIR}/${HASH}.md"
 
-# --- Check cache ---
 if [ -f "$CACHED_FILE" ]; then
   echo "hit ${HASH} ${CACHED_FILE}"
 else

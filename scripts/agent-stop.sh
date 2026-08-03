@@ -1,17 +1,11 @@
 #!/bin/bash
 set -u
-# SubagentStop hook: Decrement active agent count and unregister PID.
-# Active-agent state is session-local when a safe session id is available; root
-# .active-agent* files are aggregate display/legacy fallback state.
-# Unregisters agent PID from tmux watchdog tracking.
-# Final cleanup happens in session-stop.sh.
 
 INPUT=$(cat)
 LAST_MESSAGE=$(echo "$INPUT" | jq -r '.last_assistant_message // ""' 2>/dev/null)
 PLANNING_DIR="${VBW_PLANNING_DIR:-.vbw-planning}"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 if [ -f "$SCRIPT_DIR/lib/active-agent-state.sh" ]; then
-  # shellcheck source=lib/active-agent-state.sh
   . "$SCRIPT_DIR/lib/active-agent-state.sh"
 else
   exit 0
@@ -101,7 +95,6 @@ should_process_stop() {
     return 1
   fi
 
-  # Legacy callers/tests may not provide identity fields at all.
   return 0
 }
 
@@ -118,39 +111,29 @@ fi
 
 vbw_active_agent_stop "$PLANNING_DIR" "$INPUT" "$ROLE" "$AGENT_PID"
 
-# Unregister agent PID
 if [ -n "$AGENT_PID" ] && [ -f "$SCRIPT_DIR/agent-pid-tracker.sh" ]; then
   bash "$SCRIPT_DIR/agent-pid-tracker.sh" unregister "$AGENT_PID" 2>/dev/null || true
 fi
 
-# Capture last_assistant_message for crash recovery (REQ-07)
-# If agent exited without SUMMARY.md, preserve final output for debugging
 if [ -n "$LAST_MESSAGE" ] && [ -n "$AGENT_PID" ]; then
-  # Detect current phase from execution state
   EXEC_STATE="$PLANNING_DIR/.execution-state.json"
   if [ -f "$EXEC_STATE" ]; then
     PHASE_NUM=$(jq -r '.phase // ""' "$EXEC_STATE" 2>/dev/null)
     if [ -n "$PHASE_NUM" ]; then
       PHASE_DIR=$(ls -d "$PLANNING_DIR/phases/${PHASE_NUM}-"* 2>/dev/null | head -1)
       if [ -n "$PHASE_DIR" ] && [ -d "$PHASE_DIR" ]; then
-        # Check if any SUMMARY.md exists for this phase.
-        # If phase directory cannot be read, treat summary existence as unknown
-        # and skip last-words write (avoid false crash fallback artifacts).
         SUMMARY_COUNT=""
         if [ -r "$PHASE_DIR" ]; then
           SUMMARY_COUNT=$(find "$PHASE_DIR" -maxdepth 1 -type f -name '*-SUMMARY.md' 2>/dev/null | wc -l | tr -d ' ') || SUMMARY_COUNT=""
         fi
 
         if [ -n "$SUMMARY_COUNT" ] && [ "$SUMMARY_COUNT" -eq 0 ]; then
-          # No SUMMARY.md found — write last words for crash recovery
           LAST_WORDS_DIR="$PLANNING_DIR/.agent-last-words"
           LAST_WORDS_FILE="$LAST_WORDS_DIR/${AGENT_PID}.txt"
           LAST_WORDS_LOCK="$LAST_WORDS_DIR/.${AGENT_PID}.lock"
           mkdir -p "$LAST_WORDS_DIR" 2>/dev/null || true
           TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ" 2>/dev/null || date)
 
-          # Serialize writes per PID to avoid clobber when multiple stop events
-          # race for the same agent identifier.
           _lw_attempts=0
           while [ "$_lw_attempts" -lt 100 ]; do
             if mkdir "$LAST_WORDS_LOCK" 2>/dev/null; then
@@ -178,7 +161,6 @@ if [ -n "$LAST_MESSAGE" ] && [ -n "$AGENT_PID" ]; then
             } >> "$LAST_WORDS_FILE" 2>/dev/null || true
             rmdir "$LAST_WORDS_LOCK" 2>/dev/null || true
           else
-            # Best-effort fallback without lock if contention persists.
             {
               echo "# Agent Last Words (Crash Recovery)"
               echo "Timestamp: $TIMESTAMP"
@@ -194,7 +176,6 @@ if [ -n "$LAST_MESSAGE" ] && [ -n "$AGENT_PID" ]; then
   fi
 fi
 
-# Log agent shutdown event with last_message metadata
 if [ -n "$AGENT_PID" ] && [ -f "$SCRIPT_DIR/log-event.sh" ]; then
   LAST_MSG_LEN=$(echo -n "$LAST_MESSAGE" | wc -c | tr -d ' ')
   bash "$SCRIPT_DIR/log-event.sh" agent_shutdown \
@@ -203,15 +184,12 @@ if [ -n "$AGENT_PID" ] && [ -f "$SCRIPT_DIR/log-event.sh" ]; then
     2>/dev/null || true
 fi
 
-# Auto-close tmux pane if recorded at start
 PANE_MAP="$PLANNING_DIR/.agent-panes"
 if [ -n "${TMUX:-}" ] && [ -n "$AGENT_PID" ] && [ -f "$PANE_MAP" ]; then
   PANE_ID=$(awk -v p="$AGENT_PID" '$1 == p { print $2; exit }' "$PANE_MAP" 2>/dev/null)
   if [ -n "$PANE_ID" ]; then
-    # Remove entry from map
     grep -v "^${AGENT_PID} " "$PANE_MAP" > "${PANE_MAP}.tmp" 2>/dev/null || true
     mv "${PANE_MAP}.tmp" "$PANE_MAP" 2>/dev/null || true
-    # Kill pane (delay briefly so agent process exits cleanly first)
     (sleep 1 && tmux kill-pane -t "$PANE_ID" 2>/dev/null || true) &
   fi
 fi

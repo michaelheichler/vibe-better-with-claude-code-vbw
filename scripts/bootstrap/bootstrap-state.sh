@@ -1,13 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# bootstrap-state.sh — Generate STATE.md for a VBW project
-#
-# Usage: bootstrap-state.sh OUTPUT_PATH PROJECT_NAME MILESTONE_NAME PHASE_COUNT
-#   OUTPUT_PATH      Path to write STATE.md
-#   PROJECT_NAME     Name of the project
-#   MILESTONE_NAME   Name of the current milestone
-#   PHASE_COUNT      Number of phases in the roadmap
 
 if [[ $# -lt 4 ]]; then
   echo "Usage: bootstrap-state.sh OUTPUT_PATH PROJECT_NAME MILESTONE_NAME PHASE_COUNT" >&2
@@ -278,7 +271,6 @@ fi
   echo "- ${STARTED}: Created ${MILESTONE_NAME} milestone (${PHASE_COUNT} phases)"
 } > "$OUTPUT_PATH"
 
-# Initialize empty todo-details.json alongside STATE.md
 DETAILS_PATH="$(dirname "$OUTPUT_PATH")/todo-details.json"
 if [ ! -f "$DETAILS_PATH" ]; then
   printf '{"schema_version":1,"items":{}}\n' > "$DETAILS_PATH"

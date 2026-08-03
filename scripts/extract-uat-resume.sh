@@ -1,28 +1,10 @@
 #!/usr/bin/env bash
-# extract-uat-resume.sh — Extract UAT resume metadata from a phase directory.
-# Usage: extract-uat-resume.sh <phase-dir>
-#
-# Outputs compact resume metadata so the LLM doesn't need to scan-parse
-# the UAT file to find the resume point.
-#
-# Output formats:
-#   uat_resume=none                           — no UAT file exists
-#   uat_resume=all_done uat_completed=N uat_total=N — all tests have results
-#   uat_resume=<test-id> uat_completed=N uat_total=N — resume at <test-id>
-#     uat_resume_scenario=...                 — active product checkpoint scenario, when present
-#     uat_resume_expected=...                 — active product checkpoint expected result, when present
-#     uat_resume_deviation=...                — active summary-deviation review text, when present
-#     uat_resume_source_plan=...              — active summary-deviation source plan, when present
-#     uat_resume_source_summary=...           — active summary-deviation source summary, when present
-#     uat_resume_deviation_signature=...      — active summary-deviation identity, when present
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Source shared UAT helpers if available
 if [ -f "$SCRIPT_DIR/uat-utils.sh" ]; then
-  # shellcheck source=uat-utils.sh
   source "$SCRIPT_DIR/uat-utils.sh"
 fi
 
@@ -33,10 +15,6 @@ if [ ! -d "$PHASE_DIR" ]; then
   exit 0
 fi
 
-# Round-aware guard: when remediation state indicates a current round,
-# check ONLY that round's UAT file. Do NOT fall back to previous rounds —
-# stale resume data (e.g. all_done from round 01) would cause the model to
-# STOP instead of generating fresh tests for round 02.
 _state_file=""
 if [ -f "${PHASE_DIR%/}/remediation/uat/.uat-remediation-stage" ]; then
   _state_file="${PHASE_DIR%/}/remediation/uat/.uat-remediation-stage"
@@ -71,7 +49,6 @@ if [ -f "$_state_file" ]; then
       if [ -f "$_round_uat" ]; then
         UAT_FILE="$_round_uat"
       else
-        # Current round has no UAT yet — new round, not stale data
         echo "uat_resume=none"
         exit 0
       fi
@@ -79,8 +56,6 @@ if [ -f "$_state_file" ]; then
   fi
 fi
 
-# Find the active UAT file (round-dir first, then phase-root fallback)
-# Skipped when the round-dir guard above already resolved UAT_FILE.
 if [ -z "${UAT_FILE:-}" ]; then
   if type current_uat &>/dev/null; then
     UAT_FILE=$(current_uat "$PHASE_DIR")
@@ -96,8 +71,6 @@ if [ -z "$UAT_FILE" ] || [ ! -f "$UAT_FILE" ]; then
   exit 0
 fi
 
-# Parse all test entries: count total, find first without a result, and emit
-# deterministic prompt-critical context for the active checkpoint.
 awk '
   BEGIN {
     total=0
@@ -128,8 +101,6 @@ awk '
 
   function normalize_result(raw,    val, upper, lower, i, c, pos, lval) {
     val = trim(raw)
-    # Strip common decorators while preserving the literal template placeholder
-    # {pass|skip|issue}, which must remain incomplete.
     gsub(/^[^a-zA-Z{]+/, "", val)
     gsub(/[^a-zA-Z}]+$/, "", val)
 
@@ -191,9 +162,7 @@ awk '
   }
 
   /^### (P[0-9]+(-T[0-9]+)?|PR[0-9]+-T[0-9]+|D[0-9]+)(:|[[:space:]])/ {
-    # Before starting new test, check if previous test was incomplete
     check_prev()
-    # Extract test ID: "### P01-T2: title" or "### D1: title"
     cur_id = $2
     sub(/:$/, "", cur_id)
     total++
@@ -253,7 +222,6 @@ awk '
     next
   }
   /^## / {
-    # End of tests section — check last test
     check_prev()
     cur_id = ""
     cur_has_result = 0
@@ -270,7 +238,6 @@ awk '
     append_to_last($0)
   }
   END {
-    # Check last test if file ends without ## section
     check_prev()
     if (total == 0) {
       printf "uat_resume=none\n"

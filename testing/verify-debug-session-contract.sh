@@ -3,7 +3,6 @@ set -euo pipefail
 
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-EM_DASH=$'\xE2\x80\x94'
 
 PASS=0
 FAIL=0
@@ -191,7 +190,7 @@ for mode in qa uat; do
   fi
 done
 
-if grep -Fq "skipped ${EM_DASH} no fix required" "$COMPILER" 2>/dev/null; then
+if grep -Fq 'skipped \xE2\x80\x94 no fix required' "$COMPILER" 2>/dev/null; then
   pass "context compiler has friendly label for skipped no-fix-required results"
 else
   fail "context compiler missing friendly label for skipped no-fix-required results"

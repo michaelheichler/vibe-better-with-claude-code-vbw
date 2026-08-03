@@ -1,25 +1,5 @@
 #!/bin/bash
 set -u
-# delegated-workflow.sh — Manage delegated workflow markers for delegated paths
-#
-# Sets/clears/checks .vbw-planning/.delegated-workflow.json so runtime guards
-# can enforce actual delegation semantics for execute/fix/debug flows.
-#
-# Usage:
-#   delegated-workflow.sh set <mode> [effort] [delegation_mode] [team_name]
-#   delegated-workflow.sh clear
-#   delegated-workflow.sh check
-#   delegated-workflow.sh status-json
-#
-# Actions:
-#   set   — Write marker with mode (execute|fix|debug), optional effort
-#           (default: balanced), optional delegation_mode
-#           (team|subagent|direct), and optional team_name
-#   clear — Remove marker file
-#   check — Exit 0 if active, 1 if not active
-#   status-json — Emit marker status JSON including live execute validation
-#
-# The marker file is transient (gitignored via planning-git.sh).
 
 PLANNING_DIR="${VBW_PLANNING_DIR:-.vbw-planning}"
 MARKER_FILE="$PLANNING_DIR/.delegated-workflow.json"
@@ -279,7 +259,6 @@ case "$ACTION" in
         exit 0
       fi
     else
-      # Fallback: file exists = active
       exit 0
     fi
     exit 1

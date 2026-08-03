@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# vbw-cache-key.sh — shared helpers for workspace-scoped /tmp cache paths.
 
 vbw_hash_path() {
   local root="$1"

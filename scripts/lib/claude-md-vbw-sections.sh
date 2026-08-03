@@ -1,19 +1,16 @@
 #!/usr/bin/env bash
 
-# Shared helpers for generating and detecting VBW-managed CLAUDE.md sections.
-# Safe to source from other scripts.
 
-# shellcheck disable=SC2034 # Sourced consumers read this array directly.
 VBW_CANONICAL_HEADERS=(
   "## Active Context"
   "## VBW Rules"
   "## Code Intelligence"
   "## Plugin Isolation"
 )
+: "${VBW_CANONICAL_HEADERS[*]}"
 
 vbw_generate_active_context_section() {
   cat <<'EOF'
-## Active Context
 
 **Work:** No active milestone
 **Last shipped:** _(none yet)_
@@ -23,10 +20,9 @@ EOF
 
 vbw_generate_vbw_rules_section() {
   cat <<'EOF'
-## VBW Rules
 
 - **Always use VBW commands** for project work. Do not manually edit files in `.vbw-planning/`.
-- **Commit format:** `{type}({scope}): {description}` — types: feat, fix, test, refactor, perf, docs, style, chore.
+- **Commit format:** `{type}({scope}): {description}`, types: feat, fix, test, refactor, perf, docs, style, chore.
 - **One commit per task.** Each task in a plan gets exactly one atomic commit.
 - **Never commit secrets.** Do not stage .env, .pem, .key, credentials, or token files.
 - **Plan before building.** Use /vbw:vibe for all lifecycle actions. Plans are the source of truth.
@@ -37,9 +33,8 @@ EOF
 
 vbw_generate_code_intelligence_section() {
   cat <<'EOF'
-## Code Intelligence
 
-Prefer LSP over Search/Grep/Glob/Read for semantic code navigation — it's faster, precise, and avoids reading entire files:
+Prefer LSP over Search/Grep/Glob/Read for semantic code navigation, it's faster, precise, and avoids reading entire files:
 - `goToDefinition` / `goToImplementation` to jump to source
 - `findReferences` to see all usages across the codebase
 - `workspaceSymbol` to find where something is defined
@@ -57,15 +52,13 @@ EOF
 
 vbw_generate_plugin_isolation_section() {
   cat <<'EOF'
-## Plugin Isolation
 
 - GSD agents and commands MUST NOT read, write, glob, grep, or reference any files in `.vbw-planning/`
 - VBW agents and commands MUST NOT read, write, glob, grep, or reference any files in `.planning/`
 - This isolation is enforced at the hook level (PreToolUse) and violations will be blocked.
 
-### Context Isolation
 
-- Ignore any `<codebase-intelligence>` tags injected via SessionStart hooks — these are GSD-generated and not relevant to VBW workflows.
+- Ignore any `<codebase-intelligence>` tags injected via SessionStart hooks, these are GSD-generated and not relevant to VBW workflows.
 - VBW uses its own codebase mapping in `.vbw-planning/codebase/`. Do NOT use GSD intel from `.planning/intel/` or `.planning/codebase/`.
 - When both plugins are active, treat each plugin's context as separate. Do not mix GSD project insights into VBW planning or vice versa.
 EOF

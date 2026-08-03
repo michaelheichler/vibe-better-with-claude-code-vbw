@@ -1,9 +1,6 @@
 #!/bin/bash
 set -euo pipefail
 
-# extract-skill-follow-up-files.sh — Resolve exact follow-up file paths from
-# Claude Code-loaded skills so spawned payloads can pass deterministic paths
-# instead of forcing agents to rediscover skill directories.
 
 usage() {
   cat <<'EOF'
@@ -75,7 +72,6 @@ done
 [ "${#NORMALIZED_SKILLS[@]}" -gt 0 ] || exit 0
 SKILLS=("${NORMALIZED_SKILLS[@]}")
 
-# shellcheck source=resolve-claude-dir.sh
 . "$(dirname "$0")/resolve-claude-dir.sh"
 
 resolve_skill_dir() {

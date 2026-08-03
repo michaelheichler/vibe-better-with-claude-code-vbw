@@ -1,10 +1,6 @@
 #!/usr/bin/env bash
 set -u
 
-# generate-incidents.sh <phase-number>
-# Auto-generates {phase}-INCIDENTS.md from task_blocked and task_completion_rejected events.
-# Output: path to generated file, or empty if no incidents found.
-# Exit: 0 always — incident generation must never block execution.
 
 PHASE="${1:-}"
 
@@ -17,12 +13,10 @@ PLANNING_DIR="${VBW_PLANNING_DIR:-.vbw-planning}"
 EVENTS_FILE="${PLANNING_DIR}/.events/event-log.jsonl"
 PHASES_DIR="${PLANNING_DIR}/phases"
 
-# Check event log exists
 if [ ! -f "$EVENTS_FILE" ]; then
   exit 0
 fi
 
-# Find phase directory
 PADDED=$(printf "%02d" "$PHASE" 2>/dev/null || echo "$PHASE")
 PHASE_DIR=$(find "$PHASES_DIR" -maxdepth 1 -type d -name "${PADDED}-*" 2>/dev/null | head -1)
 if [ -z "$PHASE_DIR" ]; then
@@ -32,7 +26,6 @@ if [ -z "$PHASE_DIR" ]; then
   exit 0
 fi
 
-# Extract incidents for this phase
 BLOCKED=$(jq -s --argjson p "$PHASE" '[.[] | select(.event == "task_blocked" and .phase == $p)]' "$EVENTS_FILE" 2>/dev/null || echo "[]")
 REJECTED=$(jq -s --argjson p "$PHASE" '[.[] | select(.event == "task_completion_rejected" and .phase == $p)]' "$EVENTS_FILE" 2>/dev/null || echo "[]")
 
