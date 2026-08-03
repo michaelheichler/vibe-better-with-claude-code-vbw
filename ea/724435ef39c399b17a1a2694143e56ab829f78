@@ -1,0 +1,28 @@
+tests/active-agent-state.bats
+  s_396441278312df::t_979f74242a9d47 92,94-95,98-101,106-124
+scripts/lib/active-agent-state.sh
+  s_396441278312df::t_158ae99f062be6 290-295,297-299,303,308,312,317-318,320
+  s_396441278312df::t_26631b58364af7 241-246,251,255-258,261
+  s_396441278312df::t_9296f0a2d146ec 296
+  s_396441278312df::t_a14795479a3c31 265,271-274,276-277
+  s_396441278312df::t_403af021abd56c 399-403
+  s_396441278312df::t_b39d995a65d29a 409,418
+tests/active-agent-lifecycle.bats
+  s_396441278312df::t_828f3048cab1e4 98
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "ea724435ef39c399b17a1a2694143e56ab829f78",
+  "prompts": {},
+  "sessions": {
+    "s_396441278312df": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8b693812-fc94-4ea6-be47-0ddb22b766f3",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
