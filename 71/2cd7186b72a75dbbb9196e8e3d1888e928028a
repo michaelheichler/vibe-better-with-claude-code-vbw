@@ -1,0 +1,28 @@
+tests/worktree-boundary.bats
+  s_396441278312df::t_9c1c3da27605d3 9-10
+  s_396441278312df::t_4661e56d0cb1f5 128,133-134
+scripts/file-guard.sh
+  s_396441278312df::t_c9cee32d98c2aa 87
+  s_396441278312df::t_0581bc3a2df43f 274-286,304,311
+  s_396441278312df::t_0f8ee010ae2379 330-341,343-345,347-362,367
+tests/file-guard-plan-pattern-matching.bats
+  s_396441278312df::t_f5473de5d480e0 76-87
+tests/test_helper.bash
+  s_396441278312df::t_5abb8ddc971c96 182
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "712cd7186b72a75dbbb9196e8e3d1888e928028a",
+  "prompts": {},
+  "sessions": {
+    "s_396441278312df": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8b693812-fc94-4ea6-be47-0ddb22b766f3",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
