@@ -15,8 +15,8 @@ vbw_orchestrator_instance_id() {
   [ -f "$marker" ] || return 1
   [ ! -L "$marker" ] || return 1
   current_uid=$(id -u 2>/dev/null) || return 1
-  owner=$(stat -f %u "$marker" 2>/dev/null || stat -c %u "$marker" 2>/dev/null || true)
-  mode=$(stat -f %Lp "$marker" 2>/dev/null || stat -c %a "$marker" 2>/dev/null || true)
+  owner=$(stat -c %u "$marker" 2>/dev/null || stat -f %u "$marker" 2>/dev/null || true)
+  mode=$(stat -c %a "$marker" 2>/dev/null || stat -f %Lp "$marker" 2>/dev/null || true)
   [ "$owner" = "$current_uid" ] || return 1
   [ "$mode" = "600" ] || return 1
   instance_id=$(head -n 1 "$marker" | tr -d '[:space:]')
