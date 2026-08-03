@@ -1,0 +1,25 @@
+VERSION
+  s_6ef0e951f7d046::t_1b9a62af5a18ef 1
+.claude-plugin/marketplace.json
+  s_6ef0e951f7d046::t_1b9a62af5a18ef 18
+.claude-plugin/plugin.json
+  s_6ef0e951f7d046::t_1b9a62af5a18ef 3
+marketplace.json
+  s_6ef0e951f7d046::t_1b9a62af5a18ef 18
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "06db5ee4434ed70ecca5dc4c9c03f36b49aa290f",
+  "prompts": {},
+  "sessions": {
+    "s_6ef0e951f7d046": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "32b96d9e-2f7c-4f57-88c2-54535491e857",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
