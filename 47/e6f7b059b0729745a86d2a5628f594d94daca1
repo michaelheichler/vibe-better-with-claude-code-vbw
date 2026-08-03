@@ -1,0 +1,28 @@
+.vbw-planning/phases/01-guard-state-correctness/remediation/qa/round-02/R02-PLAN.md
+  s_396441278312df::t_e36c1c02f0f3eb 110,112-116
+  s_396441278312df::t_8aef451c142093 131
+  s_396441278312df::t_36536dd098e4a6 119
+  s_396441278312df::t_214d51155288b1 1-13,18-55,57-66,68-79,81-94,96-109,111,117-118,120-130,132-133,135-162
+  s_396441278312df::t_af0f39672b77d3 56
+  s_396441278312df::t_826d2ec3a56699 67
+  s_396441278312df::t_7e41bf6ce1be08 134
+  s_396441278312df::t_917415254a318b 95
+  s_396441278312df::t_1cd65abe53e46b 14-17
+  s_396441278312df::t_887b501faf66f9 80
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "47e6f7b059b0729745a86d2a5628f594d94daca1",
+  "prompts": {},
+  "sessions": {
+    "s_396441278312df": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8b693812-fc94-4ea6-be47-0ddb22b766f3",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
