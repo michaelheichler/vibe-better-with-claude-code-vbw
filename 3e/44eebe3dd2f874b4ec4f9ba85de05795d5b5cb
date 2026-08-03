@@ -1,0 +1,32 @@
+testing/verify-discussion-engine-contract.sh
+  s_6ef0e951f7d046::t_7ab3700154659a 225,230,233,235,237-239,241,243
+  s_6ef0e951f7d046::t_c4c53505a4eedc 169-170
+  s_6ef0e951f7d046::t_bc71905c5bdf72 231
+  s_6ef0e951f7d046::t_6b92b1788b83e1 234,242
+  s_6ef0e951f7d046::t_0bafce64054a2e 171-174,188,194,228,245-249
+  s_6ef0e951f7d046::t_00e80562e32a5b 131,141,149,157,165
+references/discussion-engine.md
+  s_6ef0e951f7d046::t_a0da85dc909877 152
+  s_6ef0e951f7d046::t_07f528662bbfc1 386
+  s_6ef0e951f7d046::t_d27c502668b3db 21,68,218,225
+  s_6ef0e951f7d046::t_1d368c23a3a4f4 357
+  s_6ef0e951f7d046::t_0f6ecad30e4b4c 15-17,25,45-46,53,63,85-87,94,110-111,142,164,179,189,217,219-221,229,234,236,249,263-265,270,276,339,351,353,363,371,383-384
+  s_6ef0e951f7d046::t_ad3ee9efcfe43d 112
+  s_6ef0e951f7d046::t_e4c09271ce06d5 120
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "3e44eebe3dd2f874b4ec4f9ba85de05795d5b5cb",
+  "prompts": {},
+  "sessions": {
+    "s_6ef0e951f7d046": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "32b96d9e-2f7c-4f57-88c2-54535491e857",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
