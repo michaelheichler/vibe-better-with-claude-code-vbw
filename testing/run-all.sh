@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# run-all.sh — Single entrypoint for repo verification checks
+# run-all.sh, Single entrypoint for repo verification checks
 # Launches shared lint, contract checks, and bats workers concurrently, then collects results.
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -98,11 +98,11 @@ fi
 BATS_WORKERS="${BATS_WORKERS:-8}"
 case "$BATS_WORKERS" in
   ''|*[!0-9]*)
-    echo "Invalid BATS_WORKERS=$BATS_WORKERS — falling back to CI shard count (4 workers)."
+    echo "Invalid BATS_WORKERS=$BATS_WORKERS, falling back to CI shard count (4 workers)."
     BATS_WORKERS=4
     ;;
   0)
-    echo "Invalid BATS_WORKERS=0 — falling back to CI shard count (4 workers)."
+    echo "Invalid BATS_WORKERS=0, falling back to CI shard count (4 workers)."
     BATS_WORKERS=4
     ;;
 esac

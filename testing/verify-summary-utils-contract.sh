@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# verify-summary-utils-contract.sh — Tests for scripts/summary-utils.sh
+# verify-summary-utils-contract.sh, Tests for scripts/summary-utils.sh
 #
 # Verifies the runtime functions that all runtime scripts now source:
 # - is_summary_complete (complete|completed only)
@@ -519,7 +519,7 @@ for script in phase-detect.sh state-updater.sh recover-state.sh qa-gate.sh file-
 done
 
 # Verify no consumer script overrides extract_summary_status() after sourcing summary-utils.sh.
-# Fallback stubs in else-blocks (for when summary-utils.sh is missing) are allowed — only
+# Fallback stubs in else-blocks (for when summary-utils.sh is missing) are allowed, only
 # definitions that coexist with the sourced helper create split-brain parsing.
 for script in phase-detect.sh state-updater.sh recover-state.sh qa-gate.sh file-guard.sh session-start.sh verify-state-consistency.sh; do
   # Count function definitions of extract_summary_status()

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# verify-exec-state-reconciliation.sh — Tests for execution-state reconciliation
+# verify-exec-state-reconciliation.sh, Tests for execution-state reconciliation
 #
 # Verifies that statusline and session-start correctly reconcile
 # .execution-state.json plan statuses against actual SUMMARY.md files on disk.
@@ -254,7 +254,7 @@ phase: 3
 plan: 02
 status: partial
 ---
-# Plan 2 Summary (partial — crash during execution)
+# Plan 2 Summary (partial, crash during execution)
 SUMMARY
 
 # Reconciliation should count both complete and partial as "done"
@@ -313,7 +313,7 @@ SL_PROJECT="$TMPDIR_BASE/sl-project/.vbw-planning"
 SL_PHASE="$SL_PROJECT/phases/02-core"
 mkdir -p "$SL_PHASE"
 
-# 3 plans in JSON, 2 marked complete — but only 1 complete SUMMARY + 1 partial SUMMARY on disk
+# 3 plans in JSON, 2 marked complete, but only 1 complete SUMMARY + 1 partial SUMMARY on disk
 cat > "$SL_PROJECT/.execution-state.json" <<'EXECJSON'
 {
   "phase": 2, "status": "running",
@@ -512,7 +512,7 @@ else
   fail "phase parsing: standard format '1 of 3' parsed correctly (got ph='$_std_ph' tt='$_std_tt')"
 fi
 
-# Test single-phase (no "of") — graceful degradation
+# Test single-phase (no "of"), graceful degradation
 _single_line="Phase: 1 (01-monolith)"
 _single_ph=$(echo "$_single_line" | sed -n 's/^Phase:[[:space:]]*\([0-9][0-9]*\).*/\1/p')
 _single_tt=$(echo "$_single_line" | sed -n 's/.*[[:space:]]of[[:space:]]*\([0-9][0-9]*\).*/\1/p')

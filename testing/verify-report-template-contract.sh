@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# verify-report-template-contract.sh — Verify /vbw:report template alignment,
+# verify-report-template-contract.sh, Verify /vbw:report template alignment,
 # classification criteria, and label routing.
 #
 # Guards against structural drift between commands/report.md and the GitHub
@@ -70,13 +70,13 @@ fi
 if [ -n "$bug_block" ]; then
   pass "report: bug example block extracted (non-empty)"
 else
-  fail "report: bug example block is empty — <example> with 'Classification: bug' may be missing or malformed"
+  fail "report: bug example block is empty, <example> with 'Classification: bug' may be missing or malformed"
 fi
 
 if [ -n "$feature_block" ]; then
   pass "report: feature example block extracted (non-empty)"
 else
-  fail "report: feature example block is empty — <example> with 'Classification: feature' may be missing or malformed"
+  fail "report: feature example block is empty, <example> with 'Classification: feature' may be missing or malformed"
 fi
 
 # --- Bug report section header alignment ---
@@ -97,7 +97,7 @@ bug_header_count=$(grep -cE '\*\*[^*]+\*\*' "$BUG_TEMPLATE" || true)
 if [ "$bug_header_count" -ge 1 ]; then
   pass "bug template: has $bug_header_count section headers (non-empty)"
 else
-  fail "bug template: no section headers found in bug_report.md — template may be empty"
+  fail "bug template: no section headers found in bug_report.md, template may be empty"
 fi
 
 # --- Feature request section header alignment ---
@@ -118,7 +118,7 @@ feature_header_count=$(grep -cE '\*\*[^*]+\*\*' "$FEATURE_TEMPLATE" || true)
 if [ "$feature_header_count" -ge 1 ]; then
   pass "feature template: has $feature_header_count section headers (non-empty)"
 else
-  fail "feature template: no section headers found in feature_request.md — template may be empty"
+  fail "feature template: no section headers found in feature_request.md, template may be empty"
 fi
 
 # --- Classification criteria presence ---
@@ -131,7 +131,7 @@ report_body=$(awk '/^---$/{d++; next} d>=2' "$REPORT")
 # Extract the classification criteria block: the numbered step that begins
 # with "Classify the issue" through the next numbered step.  Searching a
 # bounded section (rather than per-line grep) keeps the check resilient to
-# line wrapping and reformatting — per Copilot review feedback.
+# line wrapping and reformatting, per Copilot review feedback.
 classify_section=$(printf '%s\n' "$report_body" | awk '
   /^[0-9]+\..*[Cc]lassify/ { found=1 }
   found && /^[0-9]+\./ && !/[Cc]lassify/ { exit }
