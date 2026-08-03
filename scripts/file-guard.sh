@@ -271,6 +271,37 @@ normalize_path() {
   echo "$input_path"
 }
 
+# shellcheck disable=SC2254 # Because quoting would disable lexical glob matching.
+path_matches_pattern() {
+  local target="$1" pattern="$2"
+  local prefix alternatives suffix alternative expanded_pattern
+  local -a brace_alternatives
+
+  [ "$target" = "$pattern" ] && return 0
+
+  case "$pattern" in
+    *"{"*"}"*)
+      prefix="${pattern%%\{*}"
+      alternatives="${pattern#*\{}"
+      alternatives="${alternatives%%\}*}"
+      suffix="${pattern#*\{*\}}"
+      IFS=',' read -r -a brace_alternatives <<< "$alternatives"
+      for alternative in "${brace_alternatives[@]}"; do
+        expanded_pattern="${prefix}${alternative}${suffix}"
+        case "$target" in
+          $expanded_pattern) return 0 ;;
+        esac
+      done
+      ;;
+    *"*"*|*"?"*|*"["*)
+      case "$target" in
+        $pattern) return 0 ;;
+      esac
+      ;;
+  esac
+  return 1
+}
+
 NORM_TARGET=$(normalize_path "$FILE_PATH")
 
 CONFIG_PATH="$PROJECT_ROOT/.vbw-planning/config.json"
@@ -332,7 +363,7 @@ if [ -d "$CONTRACT_DIR" ]; then
           while IFS= read -r allowed; do
             [ -z "$allowed" ] && continue
             NORM_ALLOWED="${allowed#./}"
-            if [ "$NORM_TARGET" = "$NORM_ALLOWED" ]; then
+            if path_matches_pattern "$NORM_TARGET" "$NORM_ALLOWED"; then
               IN_SCOPE=true
               break
             fi
@@ -520,7 +551,7 @@ DECLARED_FILES=$(awk '
 while IFS= read -r declared; do
   [ -z "$declared" ] && continue
   NORM_DECLARED=$(normalize_path "$declared")
-  if [ "$NORM_TARGET" = "$NORM_DECLARED" ]; then
+  if path_matches_pattern "$NORM_TARGET" "$NORM_DECLARED"; then
     exit 0
   fi
 done <<< "$DECLARED_FILES"
