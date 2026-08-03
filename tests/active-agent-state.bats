@@ -36,3 +36,58 @@ teardown() {
   [ "$status" -eq 1 ]
   [ "$(cat "$stderr_file")" = "session_id unresolvable, role detection skipped (fail-closed)" ]
 }
+
+@test "start stores one registration file per live pid" {
+  local session_id="session-files"
+  local first_pid second_pid third_pid
+  sleep 30 & first_pid=$!
+  sleep 30 & second_pid=$!
+  sleep 30 & third_pid=$!
+
+  bash -c 'source "$1"; vbw_active_agent_start "$2" "{\"session_id\":\"session-files\",\"agent_id\":\"agent-1\"}" dev "$3"' _ \
+    "$SCRIPTS_DIR/lib/active-agent-state.sh" "$PLANNING_DIR" "$first_pid"
+  bash -c 'source "$1"; vbw_active_agent_start "$2" "{\"session_id\":\"session-files\",\"agent_id\":\"agent-2\"}" scout "$3"' _ \
+    "$SCRIPTS_DIR/lib/active-agent-state.sh" "$PLANNING_DIR" "$second_pid"
+  bash -c 'source "$1"; vbw_active_agent_start "$2" "{\"session_id\":\"session-files\",\"agent_id\":\"agent-3\"}" qa "$3"' _ \
+    "$SCRIPTS_DIR/lib/active-agent-state.sh" "$PLANNING_DIR" "$third_pid"
+
+  [ "$(find "$PLANNING_DIR/.active-agents/$session_id/agents" -type f -name '*.json' | wc -l | tr -d ' ')" -eq 3 ]
+  run jq -r '.role + ":" + .key' "$PLANNING_DIR/.active-agents/$session_id/agents/$first_pid.json"
+  [ "$output" = "dev:agent-1" ]
+
+  kill "$first_pid" "$second_pid" "$third_pid" 2>/dev/null || true
+}
+
+@test "stop removes only the matching pid registration" {
+  local session_id="session-stop"
+  local first_pid second_pid
+  sleep 30 & first_pid=$!
+  sleep 30 & second_pid=$!
+  bash -c 'source "$1"; vbw_active_agent_start "$2" "{\"session_id\":\"session-stop\",\"agent_id\":\"agent-1\"}" dev "$3"' _ \
+    "$SCRIPTS_DIR/lib/active-agent-state.sh" "$PLANNING_DIR" "$first_pid"
+  bash -c 'source "$1"; vbw_active_agent_start "$2" "{\"session_id\":\"session-stop\",\"agent_id\":\"agent-2\"}" dev "$3"' _ \
+    "$SCRIPTS_DIR/lib/active-agent-state.sh" "$PLANNING_DIR" "$second_pid"
+
+  bash -c 'source "$1"; vbw_active_agent_stop "$2" "{\"session_id\":\"session-stop\"}" dev "$3"' _ \
+    "$SCRIPTS_DIR/lib/active-agent-state.sh" "$PLANNING_DIR" "$first_pid"
+
+  [ ! -f "$PLANNING_DIR/.active-agents/$session_id/agents/$first_pid.json" ]
+  [ -f "$PLANNING_DIR/.active-agents/$session_id/agents/$second_pid.json" ]
+  kill "$first_pid" "$second_pid" 2>/dev/null || true
+}
+
+@test "start migrates legacy files into a session source once" {
+  local session_id="session-migration"
+  local live_pid
+  sleep 30 & live_pid=$!
+  printf '1\n' > "$PLANNING_DIR/.active-agent-count"
+  printf 'dev 1\n' > "$PLANNING_DIR/.active-agent-roles"
+  printf '%s dev\n' "$live_pid" > "$PLANNING_DIR/.active-agent-role-pids"
+
+  bash -c 'source "$1"; vbw_active_agent_start "$2" "{\"session_id\":\"session-migration\",\"agent_id\":\"new-agent\"}" scout "$3"' _ \
+    "$SCRIPTS_DIR/lib/active-agent-state.sh" "$PLANNING_DIR" "$live_pid"
+
+  [ -f "$PLANNING_DIR/.active-agents/__vbw_legacy_global/agents/$live_pid.json" ]
+  [ -f "$PLANNING_DIR/.active-agents/$session_id/agents/$live_pid.json" ]
+  kill "$live_pid" 2>/dev/null || true
+}
