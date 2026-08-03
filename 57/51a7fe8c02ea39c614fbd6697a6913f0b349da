@@ -1,0 +1,23 @@
+tests/qa-file-guard.bats
+  s_396441278312df::t_390e2aeeaf02b7 94,96
+  s_396441278312df::t_b1337dd283ef3e 10-13,17,22-23,25,27-28,30,32-33,38-40,42
+scripts/lib/orchestrator-identity.sh
+  s_396441278312df::t_20f0c3b3f3f3c7 21,23,28,32-35,38
+  s_396441278312df::t_56a0bab0e725ba 13,16-20
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "5751a7fe8c02ea39c614fbd6697a6913f0b349da",
+  "prompts": {},
+  "sessions": {
+    "s_396441278312df": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8b693812-fc94-4ea6-be47-0ddb22b766f3",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
