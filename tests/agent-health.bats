@@ -19,7 +19,6 @@ run_health_via_wrapper() {
   run bash -c "cd '$TEST_TEMP_DIR' && printf '%s' '$payload' | CLAUDE_PLUGIN_ROOT='$PROJECT_ROOT' bash '$SCRIPTS_DIR/hook-wrapper.sh' agent-health.sh '$cmd'"
 }
 
-# Test 1: start creates health file
 @test "agent-health: start creates health file" {
   cd "$TEST_TEMP_DIR"
   run bash -c "echo '{\"pid\":\"12345\",\"agent_type\":\"vbw-dev\"}' | bash '$SCRIPTS_DIR/agent-health.sh' start"
@@ -88,7 +87,6 @@ run_health_via_wrapper() {
   [ -z "$output" ]
 }
 
-# Test 2: idle increments count
 @test "agent-health: idle increments count" {
   cd "$TEST_TEMP_DIR"
   local live_pid
@@ -96,15 +94,12 @@ run_health_via_wrapper() {
   kill -0 "$live_pid" 2>/dev/null || fail "live pid fixture is not alive"
   echo "{\"pid\":\"$live_pid\",\"agent_type\":\"vbw-qa\"}" | bash "$SCRIPTS_DIR/agent-health.sh" start >/dev/null
 
-  # Run idle
-  echo '{"agent_type":"vbw-qa"}' | bash "$SCRIPTS_DIR/agent-health.sh" idle >/dev/null
+    echo '{"agent_type":"vbw-qa"}' | bash "$SCRIPTS_DIR/agent-health.sh" idle >/dev/null
 
-  # Check idle count
-  run jq -r '.idle_count' "$HEALTH_DIR/qa.json"
+    run jq -r '.idle_count' "$HEALTH_DIR/qa.json"
   [ "$output" = "1" ]
 }
 
-# Test 3: idle stuck advisory at count >= 3
 @test "agent-health: idle stuck advisory" {
   cd "$TEST_TEMP_DIR"
   local live_pid
@@ -112,22 +107,18 @@ run_health_via_wrapper() {
   kill -0 "$live_pid" 2>/dev/null || fail "live pid fixture is not alive"
   echo "{\"pid\":\"$live_pid\",\"agent_type\":\"vbw-scout\"}" | bash "$SCRIPTS_DIR/agent-health.sh" start >/dev/null
 
-  # Run idle 3 times
-  for i in 1 2 3; do
+    for i in 1 2 3; do
     echo '{"agent_type":"vbw-scout"}' | bash "$SCRIPTS_DIR/agent-health.sh" idle >/dev/null
   done
 
-  # Fourth call should have stuck advisory
-  run bash -c "echo '{\"agent_type\":\"vbw-scout\"}' | bash '$SCRIPTS_DIR/agent-health.sh' idle | jq -r '.hookSpecificOutput.additionalContext'"
+    run bash -c "echo '{\"agent_type\":\"vbw-scout\"}' | bash '$SCRIPTS_DIR/agent-health.sh' idle | jq -r '.hookSpecificOutput.additionalContext'"
   [[ "$output" == *"stuck"* ]]
   [[ "$output" == *"idle_count=4"* ]]
 }
 
-# Test 4: orphan recovery clears owner
 @test "agent-health: orphan recovery clears owner" {
   cd "$TEST_TEMP_DIR"
-  # Setup isolated mock tasks directory
-  TASKS_DIR="$CLAUDE_CONFIG_DIR/tasks/test-team-$$"
+    TASKS_DIR="$CLAUDE_CONFIG_DIR/tasks/test-team-$$"
   mkdir -p "$TASKS_DIR"
 
   cat > "$TASKS_DIR/task-test.json" <<EOF
@@ -139,22 +130,18 @@ run_health_via_wrapper() {
 }
 EOF
 
-  # Create health file with dead PID
-  local dead_pid
+    local dead_pid
   dead_pid=$(get_dead_pid) || fail "get_dead_pid failed"
   echo "{\"pid\":\"$dead_pid\",\"agent_type\":\"vbw-dev\"}" | bash "$SCRIPTS_DIR/agent-health.sh" start >/dev/null
 
-  # Run idle — should detect dead PID and clear owner
-  run bash -c "echo '{\"agent_type\":\"vbw-dev\"}' | bash '$SCRIPTS_DIR/agent-health.sh' idle | jq -r '.hookSpecificOutput.additionalContext'"
+    run bash -c "echo '{\"agent_type\":\"vbw-dev\"}' | bash '$SCRIPTS_DIR/agent-health.sh' idle | jq -r '.hookSpecificOutput.additionalContext'"
   [[ "$output" == *"Orphan recovery"* ]]
   [[ "$output" == *"task-test"* ]]
 
-  # Check task owner cleared
-  run jq -r '.owner' "$TASKS_DIR/task-test.json"
+    run jq -r '.owner' "$TASKS_DIR/task-test.json"
   [ "$output" = "" ]
 
-  # Cleanup
-  rm -rf "$TASKS_DIR"
+    rm -rf "$TASKS_DIR"
 }
 
 @test "agent-health: stop orphan recovery still uses role when key comes from agent_id" {
@@ -234,7 +221,6 @@ EOF
   [ ! -f "$HEALTH_DIR/agent-stop-nopid.json" ]
 }
 
-# Test 5: stop removes health file
 @test "agent-health: stop removes health file" {
   cd "$TEST_TEMP_DIR"
   local live_pid
@@ -242,16 +228,13 @@ EOF
   kill -0 "$live_pid" 2>/dev/null || fail "live pid fixture is not alive"
   echo "{\"pid\":\"$live_pid\",\"agent_type\":\"vbw-qa\"}" | bash "$SCRIPTS_DIR/agent-health.sh" start >/dev/null
 
-  # Verify file exists
-  [ -f "$HEALTH_DIR/qa.json" ]
+    [ -f "$HEALTH_DIR/qa.json" ]
 
-  # Stop
-  run bash -c "echo '{\"agent_type\":\"vbw-qa\"}' | bash '$SCRIPTS_DIR/agent-health.sh' stop"
+    run bash -c "echo '{\"agent_type\":\"vbw-qa\"}' | bash '$SCRIPTS_DIR/agent-health.sh' stop"
   [ "$status" -eq 0 ]
   [ -z "$output" ]
 
-  # Verify file removed
-  [ ! -f "$HEALTH_DIR/qa.json" ]
+    [ ! -f "$HEALTH_DIR/qa.json" ]
 }
 
 @test "agent-health: start ignores bare native agent_type even in a VBW session" {
@@ -373,20 +356,198 @@ EOF
   [ "$output" = "dev" ]
 }
 
-# Test 6: cleanup removes directory
 @test "agent-health: cleanup removes directory" {
   cd "$TEST_TEMP_DIR"
-  # Create health files
-  mkdir -p "$HEALTH_DIR"
+    mkdir -p "$HEALTH_DIR"
   echo '{"pid":"1","role":"dev"}' > "$HEALTH_DIR/dev.json"
   echo '{"pid":"2","role":"qa"}' > "$HEALTH_DIR/qa.json"
 
-  # Verify directory exists
-  [ -d "$HEALTH_DIR" ]
+    [ -d "$HEALTH_DIR" ]
 
-  # Cleanup
-  bash "$SCRIPTS_DIR/agent-health.sh" cleanup
+    bash "$SCRIPTS_DIR/agent-health.sh" cleanup
 
-  # Verify directory removed
-  [ ! -d "$HEALTH_DIR" ]
+    [ ! -d "$HEALTH_DIR" ]
+}
+
+@test "agent-health: session store keeps same-role teammates distinct" {
+  cd "$TEST_TEMP_DIR"
+  unset HEALTH_DIR
+  local first_pid second_pid
+  sleep 30 & first_pid=$!
+  sleep 30 & second_pid=$!
+
+  printf '{"session_id":"session-one","agent_id":"agent-one","agent_type":"vbw-dev","pid":"%s"}' "$first_pid" |
+    VBW_PLANNING_DIR="$TEST_TEMP_DIR/.vbw-planning" bash "$SCRIPTS_DIR/agent-health.sh" start
+  printf '{"session_id":"session-one","agent_id":"agent-two","agent_type":"vbw-dev","pid":"%s"}' "$second_pid" |
+    VBW_PLANNING_DIR="$TEST_TEMP_DIR/.vbw-planning" bash "$SCRIPTS_DIR/agent-health.sh" start
+
+  [ "$(find "$TEST_TEMP_DIR/.vbw-planning/.active-agents/session-one/agents" -type f -name '*.json' | wc -l | tr -d ' ')" -eq 2 ]
+  run jq -r '.key' "$TEST_TEMP_DIR/.vbw-planning/.active-agents/session-one/agents/$first_pid.json"
+  [ "$output" = "agent-one" ]
+  run jq -r '.key' "$TEST_TEMP_DIR/.vbw-planning/.active-agents/session-one/agents/$second_pid.json"
+  [ "$output" = "agent-two" ]
+
+  kill "$first_pid" "$second_pid" 2>/dev/null || true
+}
+
+@test "agent-health: session health state does not cross sessions" {
+  cd "$TEST_TEMP_DIR"
+  unset HEALTH_DIR
+  local first_pid second_pid
+  sleep 30 & first_pid=$!
+  sleep 30 & second_pid=$!
+
+  printf '{"session_id":"session-one","agent_id":"same-key","agent_type":"vbw-dev","pid":"%s"}' "$first_pid" |
+    VBW_PLANNING_DIR="$TEST_TEMP_DIR/.vbw-planning" bash "$SCRIPTS_DIR/agent-health.sh" start >/dev/null
+  printf '{"session_id":"session-two","agent_id":"same-key","agent_type":"vbw-dev","pid":"%s"}' "$second_pid" |
+    VBW_PLANNING_DIR="$TEST_TEMP_DIR/.vbw-planning" bash "$SCRIPTS_DIR/agent-health.sh" start >/dev/null
+  echo '{"session_id":"session-one","agent_id":"same-key","agent_type":"vbw-dev"}' |
+    VBW_PLANNING_DIR="$TEST_TEMP_DIR/.vbw-planning" bash "$SCRIPTS_DIR/agent-health.sh" idle >/dev/null
+
+  run jq -r '.idle_count' "$TEST_TEMP_DIR/.vbw-planning/.active-agents/session-one/agents/$first_pid.json"
+  [ "$output" = "1" ]
+  run jq -r '.idle_count' "$TEST_TEMP_DIR/.vbw-planning/.active-agents/session-two/agents/$second_pid.json"
+  [ "$output" = "0" ]
+
+  kill "$first_pid" "$second_pid" 2>/dev/null || true
+}
+
+@test "agent-health: slugged teammate names normalize to their base role" {
+  cd "$TEST_TEMP_DIR"
+  unset HEALTH_DIR
+  echo session > "$TEST_TEMP_DIR/.vbw-planning/.vbw-session"
+  echo '{"session_id":"session-slug","name":"scout-active-agent-lifecycle-2","pid":"$$"}' |
+    VBW_PLANNING_DIR="$TEST_TEMP_DIR/.vbw-planning" bash "$SCRIPTS_DIR/agent-health.sh" start >/dev/null
+  run jq -r '.role' "$TEST_TEMP_DIR/.vbw-planning/.active-agents/session-slug/agents/scout-active-agent-lifecycle-2.json"
+  [ "$output" = "scout" ]
+}
+
+@test "agent-health: activity resets the idle nudge streak" {
+  cd "$TEST_TEMP_DIR"
+  unset HEALTH_DIR
+  local live_pid
+  sleep 30 & live_pid=$!
+  printf '{"session_id":"session-reset","agent_id":"reset-agent","agent_type":"vbw-dev","pid":"%s"}' "$live_pid" |
+    VBW_PLANNING_DIR="$TEST_TEMP_DIR/.vbw-planning" bash "$SCRIPTS_DIR/agent-health.sh" start >/dev/null
+
+  for _ in 1 2 3; do
+    echo '{"session_id":"session-reset","agent_id":"reset-agent","agent_type":"vbw-dev"}' |
+      VBW_PLANNING_DIR="$TEST_TEMP_DIR/.vbw-planning" bash "$SCRIPTS_DIR/agent-health.sh" idle >/dev/null
+  done
+  echo '{"session_id":"session-reset","agent_id":"reset-agent","agent_type":"vbw-dev","activity":"working"}' |
+    VBW_PLANNING_DIR="$TEST_TEMP_DIR/.vbw-planning" bash "$SCRIPTS_DIR/agent-health.sh" idle >/dev/null
+
+  run jq -r '.idle_count' "$TEST_TEMP_DIR/.vbw-planning/.active-agents/session-reset/agents/$live_pid.json"
+  [ "$output" = "1" ]
+  run jq -r '.nudge_sent' "$TEST_TEMP_DIR/.vbw-planning/.active-agents/session-reset/agents/$live_pid.json"
+  [ "$output" = "false" ]
+  kill "$live_pid" 2>/dev/null || true
+}
+
+@test "agent-health: delivered artifact terminates a live agent immediately" {
+  cd "$TEST_TEMP_DIR"
+  unset HEALTH_DIR
+  export VBW_AGENT_STOP_GRACE_SECONDS=0
+  local live_pid termination_marker="$TEST_TEMP_DIR/artifact-terminated"
+  (
+    trap 'printf terminated > "$termination_marker"; exit 0' TERM
+    while true; do sleep 1; done
+  ) & live_pid=$!
+  printf '{"session_id":"session-artifact","agent_id":"artifact-agent","agent_type":"vbw-dev","pid":"%s"}' "$live_pid" |
+    VBW_PLANNING_DIR="$TEST_TEMP_DIR/.vbw-planning" bash "$SCRIPTS_DIR/agent-health.sh" start >/dev/null
+  mkdir -p "$TEST_TEMP_DIR/.vbw-planning/phases/01-artifact"
+  printf '# complete\n' > "$TEST_TEMP_DIR/.vbw-planning/phases/01-artifact/01-01-SUMMARY.md"
+
+  run bash -c "echo '{\"session_id\":\"session-artifact\",\"agent_id\":\"artifact-agent\",\"agent_type\":\"vbw-dev\",\"pid\":\"$live_pid\"}' | VBW_PLANNING_DIR='$TEST_TEMP_DIR/.vbw-planning' VBW_AGENT_STOP_GRACE_SECONDS=1 bash '$SCRIPTS_DIR/agent-health.sh' idle"
+  [ "$status" -eq 0 ]
+  ! kill -0 "$live_pid" 2>/dev/null
+  [ -f "$termination_marker" ]
+  [ ! -f "$TEST_TEMP_DIR/.vbw-planning/.active-agents/session-artifact/agents/$live_pid.json" ]
+  wait "$live_pid" 2>/dev/null || true
+}
+
+@test "agent-health: artifact suffixes terminate all artifact-producing roles" {
+  cd "$TEST_TEMP_DIR"
+  unset HEALTH_DIR
+  export VBW_AGENT_STOP_GRACE_SECONDS=1
+  local role suffix pid marker session payload
+  for role in lead dev scout qa; do
+    case "$role" in
+      lead) suffix=PLAN.md ;;
+      dev) suffix=SUMMARY.md ;;
+      scout) suffix=RESEARCH.md ;;
+      qa) suffix=VERIFICATION.md ;;
+    esac
+    session="session-$role"
+    marker="$TEST_TEMP_DIR/$role-terminated"
+    (
+      trap 'printf terminated > "$marker"; exit 0' TERM
+      while true; do sleep 1; done
+    ) & pid=$!
+    payload="{\"session_id\":\"$session\",\"agent_id\":\"$role-agent\",\"agent_type\":\"vbw-$role\",\"pid\":\"$pid\"}"
+    printf '%s' "$payload" | VBW_PLANNING_DIR="$TEST_TEMP_DIR/.vbw-planning" bash "$SCRIPTS_DIR/agent-health.sh" start >/dev/null
+    mkdir -p "$TEST_TEMP_DIR/.vbw-planning/phases/01-artifact-roles"
+    sleep 1
+    printf '# complete\n' > "$TEST_TEMP_DIR/.vbw-planning/phases/01-artifact-roles/01-01-$suffix"
+    printf '%s' "$payload" | VBW_PLANNING_DIR="$TEST_TEMP_DIR/.vbw-planning" VBW_AGENT_STOP_GRACE_SECONDS=1 bash "$SCRIPTS_DIR/agent-health.sh" idle >/dev/null
+    [ -f "$marker" ]
+    ! kill -0 "$pid" 2>/dev/null
+    [ ! -f "$TEST_TEMP_DIR/.vbw-planning/.active-agents/$session/agents/$pid.json" ]
+    wait "$pid" 2>/dev/null || true
+  done
+}
+
+@test "agent-health: pre-existing artifact does not terminate a live agent" {
+  cd "$TEST_TEMP_DIR"
+  unset HEALTH_DIR
+  export VBW_AGENT_STOP_GRACE_SECONDS=0
+  mkdir -p "$TEST_TEMP_DIR/.vbw-planning/phases/01-artifact"
+  printf '# old\n' > "$TEST_TEMP_DIR/.vbw-planning/phases/01-artifact/01-01-SUMMARY.md"
+  sleep 1
+  local live_pid termination_marker="$TEST_TEMP_DIR/old-artifact-terminated"
+  (
+    trap 'printf terminated > "$termination_marker"; exit 0' TERM
+    while true; do sleep 1; done
+  ) & live_pid=$!
+  printf '{"session_id":"session-old-artifact","agent_id":"old-artifact-agent","agent_type":"vbw-dev","pid":"%s"}' "$live_pid" |
+    VBW_PLANNING_DIR="$TEST_TEMP_DIR/.vbw-planning" bash "$SCRIPTS_DIR/agent-health.sh" start >/dev/null
+  echo '{"session_id":"session-old-artifact","agent_id":"old-artifact-agent","agent_type":"vbw-dev"}' |
+    VBW_PLANNING_DIR="$TEST_TEMP_DIR/.vbw-planning" VBW_AGENT_STOP_GRACE_SECONDS=0 bash "$SCRIPTS_DIR/agent-health.sh" idle >/dev/null
+
+  kill -0 "$live_pid" 2>/dev/null
+  [ ! -f "$termination_marker" ]
+  kill -TERM "$live_pid" 2>/dev/null || true
+  sleep 0.1
+  wait "$live_pid" 2>/dev/null || true
+}
+
+@test "agent-health: idle sends one nudge before terminating on the next strike" {
+  cd "$TEST_TEMP_DIR"
+  unset HEALTH_DIR
+  export VBW_AGENT_STOP_GRACE_SECONDS=0
+  local live_pid termination_marker="$TEST_TEMP_DIR/idle-terminated"
+  (
+    trap 'printf terminated > "$termination_marker"; exit 0' TERM
+    while true; do sleep 1; done
+  ) & live_pid=$!
+  printf '{"session_id":"session-idle","agent_id":"idle-agent","agent_type":"vbw-dev","pid":"%s"}' "$live_pid" |
+    VBW_PLANNING_DIR="$TEST_TEMP_DIR/.vbw-planning" bash "$SCRIPTS_DIR/agent-health.sh" start >/dev/null
+
+  for _ in 1 2; do
+    echo '{"session_id":"session-idle","agent_id":"idle-agent","agent_type":"vbw-dev"}' |
+      VBW_PLANNING_DIR="$TEST_TEMP_DIR/.vbw-planning" bash "$SCRIPTS_DIR/agent-health.sh" idle >/dev/null
+  done
+  run bash -c "echo '{\"session_id\":\"session-idle\",\"agent_id\":\"idle-agent\",\"agent_type\":\"vbw-dev\"}' | VBW_PLANNING_DIR='$TEST_TEMP_DIR/.vbw-planning' bash '$SCRIPTS_DIR/agent-health.sh' idle"
+  [[ "$output" == *"nudge"* ]]
+  kill -0 "$live_pid" 2>/dev/null
+
+  run bash -c "echo '{\"session_id\":\"session-idle\",\"agent_id\":\"idle-agent\",\"agent_type\":\"vbw-dev\"}' | VBW_PLANNING_DIR='$TEST_TEMP_DIR/.vbw-planning' VBW_AGENT_STOP_GRACE_SECONDS=1 bash '$SCRIPTS_DIR/agent-health.sh' idle"
+  [[ "$output" == *"respawn"* ]]
+  ! kill -0 "$live_pid" 2>/dev/null
+  [ -f "$termination_marker" ]
+  echo '{"session_id":"session-idle","agent_id":"idle-agent","agent_type":"vbw-dev"}' |
+    VBW_PLANNING_DIR="$TEST_TEMP_DIR/.vbw-planning" bash "$SCRIPTS_DIR/agent-health.sh" idle >/dev/null
+  run jq -r '.respawn_cycle_done' "$TEST_TEMP_DIR/.vbw-planning/.active-agents/session-idle/agents/$live_pid.json"
+  [ "$output" = "true" ]
+  wait "$live_pid" 2>/dev/null || true
 }

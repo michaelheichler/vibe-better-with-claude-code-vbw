@@ -34,13 +34,13 @@ vbw_active_agent_normalize_role() {
   lower="${lower#@}"
   lower="${lower#vbw:}"
   case "$lower" in
-    vbw-lead|vbw-lead-[0-9]*|lead|lead-[0-9]*|team-lead|team-lead-[0-9]*) printf 'lead'; return 0 ;;
-    vbw-dev|vbw-dev-[0-9]*|dev|dev-[0-9]*|team-dev|team-dev-[0-9]*) printf 'dev'; return 0 ;;
-    vbw-qa|vbw-qa-[0-9]*|qa|qa-[0-9]*|team-qa|team-qa-[0-9]*) printf 'qa'; return 0 ;;
-    vbw-scout|vbw-scout-[0-9]*|scout|scout-[0-9]*|team-scout|team-scout-[0-9]*) printf 'scout'; return 0 ;;
-    vbw-debugger|vbw-debugger-[0-9]*|debugger|debugger-[0-9]*|team-debugger|team-debugger-[0-9]*) printf 'debugger'; return 0 ;;
-    vbw-architect|vbw-architect-[0-9]*|architect|architect-[0-9]*|team-architect|team-architect-[0-9]*) printf 'architect'; return 0 ;;
-    vbw-docs|vbw-docs-[0-9]*|docs|docs-[0-9]*|team-docs|team-docs-[0-9]*) printf 'docs'; return 0 ;;
+    vbw-lead|vbw-lead-*|lead|lead-*|team-lead|team-lead-*) printf 'lead'; return 0 ;;
+    vbw-dev|vbw-dev-*|dev|dev-*|team-dev|team-dev-*) printf 'dev'; return 0 ;;
+    vbw-qa|vbw-qa-*|qa|qa-*|team-qa|team-qa-*) printf 'qa'; return 0 ;;
+    vbw-scout|vbw-scout-*|scout|scout-*|team-scout|team-scout-*) printf 'scout'; return 0 ;;
+    vbw-debugger|vbw-debugger-*|debugger|debugger-*|team-debugger|team-debugger-*) printf 'debugger'; return 0 ;;
+    vbw-architect|vbw-architect-*|architect|architect-*|team-architect|team-architect-*) printf 'architect'; return 0 ;;
+    vbw-docs|vbw-docs-*|docs|docs-*|team-docs|team-docs-*) printf 'docs'; return 0 ;;
   esac
   return 1
 }
@@ -93,11 +93,14 @@ _vbw_active_agent_read_count_file() {
   case "$raw" in ''|*[!0-9]*) printf '0\n' ;; *) printf '%s\n' "$raw" ;; esac
 }
 _vbw_active_agent_valid_pid() { printf '%s' "${1:-}" | grep -Eq '^[0-9]+$'; }
+vbw_active_agent_pid_is_live() {
+  _vbw_active_agent_valid_pid "${1:-}" && kill -0 "$1" 2>/dev/null
+}
 _vbw_active_agent_file_is_live() {
   local file pid
   file="$1"
   pid=$(basename "$file" .json)
-  _vbw_active_agent_valid_pid "$pid" && kill -0 "$pid" 2>/dev/null
+  vbw_active_agent_pid_is_live "$pid"
 }
 _vbw_active_agent_file_role() {
   local role
@@ -358,7 +361,7 @@ _vbw_active_agent_session_has_live_pid() {
   agents="$dir/agents"
   if [ -d "$agents" ]; then [ -n "$(_vbw_active_agent_live_files "$agents")" ]; return; fi
   [ -f "$dir/active-agent-role-pids" ] || return 1
-  while read -r pid _role; do _vbw_active_agent_valid_pid "$pid" && kill -0 "$pid" 2>/dev/null && return 0; done < "$dir/active-agent-role-pids"
+  while read -r pid _role; do vbw_active_agent_pid_is_live "$pid" && return 0; done < "$dir/active-agent-role-pids"
   return 1
 }
 
