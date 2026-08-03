@@ -1,0 +1,25 @@
+docs/vbw-vs-gsd-source-validated.md
+  s_6ef0e951f7d046::t_743959319fa8f8 82-84
+  s_6ef0e951f7d046::t_dd7f27a7fa3a73 85-86
+  s_6ef0e951f7d046::t_8ffbcadda69799 1,27,37,39,76,104,106,118,137,200,231,244,280,288,290,337,377,394,423,437-442,446-452,486-487
+  s_6ef0e951f7d046::t_21d4e11b16e082 13
+docs/database-safety-guard.md
+  s_6ef0e951f7d046::t_be1ac13f411815 106
+  s_6ef0e951f7d046::t_8ffbcadda69799 3,9,42,82,84,86,100
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "8c9d91dee98a8d417d1e6df9bd6f229a6121e015",
+  "prompts": {},
+  "sessions": {
+    "s_6ef0e951f7d046": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "32b96d9e-2f7c-4f57-88c2-54535491e857",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
