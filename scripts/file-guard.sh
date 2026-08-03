@@ -84,7 +84,7 @@ normalize_agent_role() {
 }
 
 _FG_PAYLOAD_AGENT_TYPE=$(printf '%s' "$INPUT" | jq -r '.agent_type // ""' 2>/dev/null) || _FG_PAYLOAD_AGENT_TYPE=""
-_FG_PAYLOAD_AGENT_ID=$(printf '%s' "$INPUT" | jq -r '.agent_id // ""' 2>/dev/null) || _FG_PAYLOAD_AGENT_ID=""
+_FG_PAYLOAD_AGENT_ID=$(printf '%s' "$INPUT" | jq -r '.agent_id // .agent_name // .agentName // ""' 2>/dev/null) || _FG_PAYLOAD_AGENT_ID=""
 _FG_PAYLOAD_HAS_AGENT=false
 if [ -n "$_FG_PAYLOAD_AGENT_TYPE" ] || [ -n "$_FG_PAYLOAD_AGENT_ID" ]; then
   _FG_PAYLOAD_HAS_AGENT=true
@@ -271,6 +271,19 @@ normalize_path() {
   echo "$input_path"
 }
 
+path_pattern_component_count_matches() {
+  local target="$1" pattern="$2" target_count=1 pattern_count=1
+  while [[ "$target" == */* ]]; do
+    target="${target#*/}"
+    target_count=$((target_count + 1))
+  done
+  while [[ "$pattern" == */* ]]; do
+    pattern="${pattern#*/}"
+    pattern_count=$((pattern_count + 1))
+  done
+  [ "$target_count" -eq "$pattern_count" ]
+}
+
 # shellcheck disable=SC2254 # Because quoting would disable lexical glob matching.
 path_matches_pattern() {
   local target="$1" pattern="$2"
@@ -288,12 +301,14 @@ path_matches_pattern() {
       IFS=',' read -r -a brace_alternatives <<< "$alternatives"
       for alternative in "${brace_alternatives[@]}"; do
         expanded_pattern="${prefix}${alternative}${suffix}"
+        [[ "$expanded_pattern" == *"**"* ]] || path_pattern_component_count_matches "$target" "$expanded_pattern" || continue
         case "$target" in
           $expanded_pattern) return 0 ;;
         esac
       done
       ;;
     *"*"*|*"?"*|*"["*)
+      [[ "$pattern" == *"**"* ]] || path_pattern_component_count_matches "$target" "$pattern" || return 1
       case "$target" in
         $pattern) return 0 ;;
       esac
@@ -312,27 +327,43 @@ fi
 if [ "$WORKTREE_ISOLATION" != "off" ] && [ -n "$ACTIVE_AGENT_ROLE" ]; then
   case "$ACTIVE_AGENT_ROLE" in
     dev|debugger)
-      AGENT_NAME_SHORT=$(echo "${VBW_AGENT_NAME:-}" | sed 's/.*vbw-//')
-      WORKTREE_MAP_FILE="$PROJECT_ROOT/.vbw-planning/.agent-worktrees/${AGENT_NAME_SHORT}.json"
-      if [ -f "$WORKTREE_MAP_FILE" ]; then
-        WORKTREE_PATH=$(jq -r '.worktree_path // ""' "$WORKTREE_MAP_FILE" 2>/dev/null) || WORKTREE_PATH=""
-        if [ -n "$WORKTREE_PATH" ]; then
-          WORKTREE_ABS=$(to_abs_path "$WORKTREE_PATH")
-          TARGET_ABS=$(to_abs_path "$FILE_PATH")
-          case "$TARGET_ABS" in
-            "$WORKTREE_ABS"/*|"$WORKTREE_ABS")
-              :
-              ;;
-            *)
-              echo "Blocked: write outside worktree boundary (expected prefix: $WORKTREE_ABS, got: $TARGET_ABS)" >&2
-              exit 2
-              ;;
-          esac
-        fi
+      AGENT_NAME_SHORT="${VBW_AGENT_NAME:-${_FG_PAYLOAD_AGENT_ID:-}}"
+      case "$AGENT_NAME_SHORT" in
+        @vbw:*) AGENT_NAME_SHORT="${AGENT_NAME_SHORT#@vbw:}" ;;
+        vbw:*) AGENT_NAME_SHORT="${AGENT_NAME_SHORT#vbw:}" ;;
+      esac
+      case "$AGENT_NAME_SHORT" in
+        *vbw-*) AGENT_NAME_SHORT="${AGENT_NAME_SHORT##*vbw-}" ;;
+      esac
+      if [ -z "$AGENT_NAME_SHORT" ]; then
+        echo "Blocked: worktree mapping cannot be resolved for role '$ACTIVE_AGENT_ROLE'" >&2
+        exit 2
       fi
+      WORKTREE_MAP_FILE="$PROJECT_ROOT/.vbw-planning/.agent-worktrees/${AGENT_NAME_SHORT}.json"
+      if [ ! -f "$WORKTREE_MAP_FILE" ]; then
+        echo "Blocked: worktree mapping missing for agent '$AGENT_NAME_SHORT'" >&2
+        exit 2
+      fi
+      WORKTREE_PATH=$(jq -r '.worktree_path // ""' "$WORKTREE_MAP_FILE" 2>/dev/null) || WORKTREE_PATH=""
+      if [ -z "$WORKTREE_PATH" ]; then
+        echo "Blocked: worktree mapping has no path for agent '$AGENT_NAME_SHORT'" >&2
+        exit 2
+      fi
+      WORKTREE_ABS=$(to_abs_path "$WORKTREE_PATH")
+      TARGET_ABS=$(to_abs_path "$FILE_PATH")
+      case "$TARGET_ABS" in
+        "$WORKTREE_ABS"/*|"$WORKTREE_ABS")
+          :
+          ;;
+        *)
+          echo "Blocked: write outside worktree boundary (expected prefix: $WORKTREE_ABS, got: $TARGET_ABS)" >&2
+          exit 2
+          ;;
+      esac
       ;;
   esac
 fi
+
 
 CONTRACT_DIR="$PROJECT_ROOT/.vbw-planning/.contracts"
 if [ -d "$CONTRACT_DIR" ]; then

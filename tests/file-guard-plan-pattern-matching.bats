@@ -73,6 +73,18 @@ run_file_guard() {
   [[ "$output" == *"not in active plan's files_modified"* ]]
 }
 
+@test "single-star globs stay within one path component" {
+  write_plan 'crates/*/Cargo.toml'
+  mark_execution_running
+
+  run_file_guard 'crates/core/Cargo.toml'
+  [ "$status" -eq 0 ]
+
+  run_file_guard 'crates/core/src/Cargo.toml'
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"not in active plan's files_modified"* ]]
+}
+
 @test "contract allowed_paths matches a glob and rejects outside paths" {
   write_plan 'README.md'
   jq -n '{allowed_paths:["crates/phenprocoumon-core/**"],forbidden_paths:[]}' \
