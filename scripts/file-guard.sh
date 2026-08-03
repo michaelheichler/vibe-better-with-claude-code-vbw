@@ -10,6 +10,9 @@ _FG_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 if [ -f "$_FG_SCRIPT_DIR/lib/active-agent-state.sh" ]; then
   . "$_FG_SCRIPT_DIR/lib/active-agent-state.sh"
 fi
+if [ -f "$_FG_SCRIPT_DIR/lib/orchestrator-identity.sh" ]; then
+  . "$_FG_SCRIPT_DIR/lib/orchestrator-identity.sh"
+fi
 _FG_SHARED_ROOT_RESOLVED=false
 if [ -f "$_FG_SCRIPT_DIR/lib/vbw-config-root.sh" ]; then
   if source "$_FG_SCRIPT_DIR/lib/vbw-config-root.sh" 2>/dev/null; then
@@ -95,7 +98,7 @@ fi
 
 # Environment roles take precedence because VBW exports them for spawned agents.
 detect_agent_role() {
-  local candidate role planning_dir
+  local candidate role
   for candidate in "${VBW_AGENT_ROLE:-}" "${VBW_ACTIVE_AGENT:-}"; do
     [ -z "$candidate" ] && continue
     role=$(normalize_agent_role "$candidate") || continue
@@ -108,23 +111,27 @@ detect_agent_role() {
     printf '%s' "$role"
     return 0
   done
-  [ "$_FG_PAYLOAD_HAS_AGENT" = true ] || return 1
-  [ -n "$PROJECT_ROOT" ] || return 1
-  planning_dir="$PROJECT_ROOT/.vbw-planning"
-  command -v vbw_active_agent_current_scout >/dev/null 2>&1 \
-    && vbw_active_agent_current_scout "$planning_dir" "$INPUT" \
-    && { printf 'scout'; return 0; }
-  command -v vbw_active_agent_current_qa >/dev/null 2>&1 \
-    && vbw_active_agent_current_qa "$planning_dir" "$INPUT" \
-    && { printf 'qa'; return 0; }
-  return 1
+  if [ "$_FG_PAYLOAD_HAS_AGENT" != true ]; then
+    _FG_SESSION_ID=$(vbw_active_agent_session_id "$INPUT" 2>/dev/null) || _FG_SESSION_ID="${CLAUDE_SESSION_ID:-}"
+    if vbw_orchestrator_instance_id "$_FG_SESSION_ID" >/dev/null 2>&1; then
+      printf 'orchestrator'
+      return 0
+    fi
+    return 1
+  fi
+  printf 'Blocked: unrecognized agent evidence (agent_type=%s, agent_id=%s); role cannot be confirmed.\n' "$_FG_PAYLOAD_AGENT_TYPE" "$_FG_PAYLOAD_AGENT_ID" >&2
+  return 2
 }
 
 ACTIVE_AGENT_ROLE=""
 if ACTIVE_AGENT_ROLE=$(detect_agent_role); then
   :
 else
+  _FG_ROLE_STATUS=$?
   ACTIVE_AGENT_ROLE=""
+  if [ "$_FG_ROLE_STATUS" -eq 2 ]; then
+    exit 2
+  fi
 fi
 
 _FG_NORMALIZED=$(echo "$FILE_PATH" | sed 's#/[^/]*/\.\./#/#g')
@@ -271,8 +278,8 @@ WORKTREE_ISOLATION="off"
 if command -v jq >/dev/null 2>&1 && [ -f "$CONFIG_PATH" ]; then
   WORKTREE_ISOLATION=$(jq -r '.worktree_isolation // "off"' "$CONFIG_PATH" 2>/dev/null) || WORKTREE_ISOLATION="off"
 fi
-if [ "$WORKTREE_ISOLATION" != "off" ] && [ -n "${VBW_AGENT_ROLE:-}" ]; then
-  case "${VBW_AGENT_ROLE:-}" in
+if [ "$WORKTREE_ISOLATION" != "off" ] && [ -n "$ACTIVE_AGENT_ROLE" ]; then
+  case "$ACTIVE_AGENT_ROLE" in
     dev|debugger)
       AGENT_NAME_SHORT=$(echo "${VBW_AGENT_NAME:-}" | sed 's/.*vbw-//')
       WORKTREE_MAP_FILE="$PROJECT_ROOT/.vbw-planning/.agent-worktrees/${AGENT_NAME_SHORT}.json"

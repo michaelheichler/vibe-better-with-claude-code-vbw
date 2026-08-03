@@ -168,11 +168,15 @@ case "$DELEGATION_MODE" in
       exit 2
     fi
     if [ "$TOOL_NAME" = "TaskCreate" ]; then
+      if ! SPAWN_SESSION_ID=$(vbw_active_agent_session_id "$INPUT" 2>/dev/null); then
+        echo "Blocked: execute delegation mode '$DELEGATION_MODE' must serialize non-team TaskCreate spawns. Wait for the current teammate to finish before starting another." >&2
+        exit 2
+      fi
       ACTIVE_COUNT=0
       if command -v vbw_active_agent_current_count >/dev/null 2>&1; then
         ACTIVE_COUNT=$(vbw_active_agent_current_count "$PROJECT_ROOT/.vbw-planning" "$INPUT")
-      elif [ -f "$PROJECT_ROOT/.vbw-planning/.active-agent-count" ]; then
-        ACTIVE_COUNT=$(cat "$PROJECT_ROOT/.vbw-planning/.active-agent-count" 2>/dev/null | tr -d '[:space:]')
+      elif [ -f "$PROJECT_ROOT/.vbw-planning/.active-agents/$SPAWN_SESSION_ID/active-agent-count" ]; then
+        ACTIVE_COUNT=$(cat "$PROJECT_ROOT/.vbw-planning/.active-agents/$SPAWN_SESSION_ID/active-agent-count" 2>/dev/null | tr -d '[:space:]')
       fi
       if ! printf '%s' "$ACTIVE_COUNT" | grep -Eq '^[0-9]+$'; then
         ACTIVE_COUNT=0

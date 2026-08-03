@@ -28,6 +28,9 @@ LOCAL_PATTERNS="$PLANNING_DIR/destructive-commands.local.txt"
 if [ -f "$SCRIPT_DIR/lib/active-agent-state.sh" ]; then
   . "$SCRIPT_DIR/lib/active-agent-state.sh"
 fi
+if [ -f "$SCRIPT_DIR/lib/orchestrator-identity.sh" ]; then
+  . "$SCRIPT_DIR/lib/orchestrator-identity.sh"
+fi
 
 _BG_PAYLOAD_AGENT_TYPE=$(printf '%s' "$INPUT" | jq -r '.agent_type // ""' 2>/dev/null) || _BG_PAYLOAD_AGENT_TYPE=""
 _BG_PAYLOAD_AGENT_ID=$(printf '%s' "$INPUT" | jq -r '.agent_id // ""' 2>/dev/null) || _BG_PAYLOAD_AGENT_ID=""
@@ -50,21 +53,27 @@ detect_agent_role() {
     printf '%s' "$role"
     return 0
   done
-  [ "$_BG_PAYLOAD_HAS_AGENT" = true ] || return 1
-  command -v vbw_active_agent_current_scout >/dev/null 2>&1 \
-    && vbw_active_agent_current_scout "$PLANNING_DIR" "$INPUT" \
-    && { printf 'scout'; return 0; }
-  command -v vbw_active_agent_current_qa >/dev/null 2>&1 \
-    && vbw_active_agent_current_qa "$PLANNING_DIR" "$INPUT" \
-    && { printf 'qa'; return 0; }
-  return 1
+  if [ "$_BG_PAYLOAD_HAS_AGENT" != true ]; then
+    _BG_SESSION_ID=$(vbw_active_agent_session_id "$INPUT" 2>/dev/null) || _BG_SESSION_ID="${CLAUDE_SESSION_ID:-}"
+    if vbw_orchestrator_instance_id "$_BG_SESSION_ID" >/dev/null 2>&1; then
+      printf 'orchestrator'
+      return 0
+    fi
+    return 1
+  fi
+  printf 'Blocked: unrecognized agent evidence (agent_type=%s, agent_id=%s); role cannot be confirmed.\n' "$_BG_PAYLOAD_AGENT_TYPE" "$_BG_PAYLOAD_AGENT_ID" >&2
+  return 2
 }
 
 ACTIVE_AGENT_ROLE=""
 if ACTIVE_AGENT_ROLE=$(detect_agent_role); then
   :
 else
+  _BG_ROLE_STATUS=$?
   ACTIVE_AGENT_ROLE=""
+  if [ "$_BG_ROLE_STATUS" -eq 2 ]; then
+    exit 2
+  fi
 fi
 
 PATTERNS=""
