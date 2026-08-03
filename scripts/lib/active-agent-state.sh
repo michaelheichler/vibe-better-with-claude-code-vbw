@@ -107,8 +107,6 @@ _vbw_active_agent_file_role() {
   role=$(jq -r '.role // empty' "$1" 2>/dev/null) || return 1
   vbw_active_agent_normalize_role "$role"
 }
-_vbw_active_agent_file_key() { jq -r '.key // empty' "$1" 2>/dev/null; }
-
 _vbw_active_agent_live_files() {
   local dir="$1" file
   [ -d "$dir" ] || return 0
@@ -240,29 +238,43 @@ _vbw_active_agent_root_files_remove() {
   rm -f "$1/.active-agent" "$1/.active-agent-count" "$1/.active-agent-roles" "$1/.active-agent-role-pids"
 }
 
-vbw_active_agent_rebuild_aggregate() { _vbw_active_agent_rebuild_aggregate_unlocked "$1"; }
+vbw_active_agent_rebuild_aggregate() {
+  local planning_dir="$1"
+  vbw_active_agent_acquire_lock "$planning_dir" || return 0
+  _vbw_active_agent_rebuild_aggregate_unlocked "$planning_dir"
+  vbw_active_agent_release_lock "$planning_dir"
+}
 
 vbw_active_agent_start() {
   local planning_dir="$1" input="${2:-}" role="$3" pid="${4:-}" sid key
   [ -n "$role" ] || return 0
+  vbw_active_agent_acquire_lock "$planning_dir" || return 0
   sid=$(vbw_active_agent_session_id "$input" 2>/dev/null) || sid=$(_vbw_active_agent_legacy_source_id)
   key=$(_vbw_active_agent_extract_key "$input" "$role" "$pid")
   _vbw_active_agent_migrate_legacy_root_to_source_unlocked "$planning_dir"
-  _vbw_active_agent_write_registration "$planning_dir" "$sid" "$role" "$pid" "$key" || return 0
+  _vbw_active_agent_write_registration "$planning_dir" "$sid" "$role" "$pid" "$key" || {
+    vbw_active_agent_release_lock "$planning_dir"
+    return 0
+  }
   _vbw_active_agent_sync_session_aggregate "$planning_dir" "$sid"
   _vbw_active_agent_rebuild_aggregate_unlocked "$planning_dir"
+  vbw_active_agent_release_lock "$planning_dir"
 }
 
 vbw_active_agent_find_session_by_pid() {
-  local planning_dir="$1" pid="${2:-}" dir source file
+  local planning_dir="$1" pid="${2:-}" dir source file match="" matches=0
   _vbw_active_agent_valid_pid "$pid" || return 1
   for dir in "$planning_dir/.active-agents"/*; do
     [ -d "$dir" ] || continue
     source=$(basename "$dir"); _vbw_active_agent_is_aggregate_source_id "$source" || continue
     file=$(_vbw_active_agent_agent_file "$planning_dir" "$source" "$pid")
-    [ -f "$file" ] && { printf '%s\n' "$source"; return 0; }
+    if [ -f "$file" ]; then
+      match="$source"
+      matches=$((matches + 1))
+    fi
   done
-  return 1
+  [ "$matches" -eq 1 ] || return 1
+  printf '%s\n' "$match"
 }
 
 _vbw_active_agent_remove_registration() {
@@ -275,23 +287,37 @@ _vbw_active_agent_remove_registration() {
 
 vbw_active_agent_stop() {
   local planning_dir="$1" input="${2:-}" role="${3:-}" pid="${4:-}" sid
-  sid=$(vbw_active_agent_session_id "$input" 2>/dev/null) || sid=$(vbw_active_agent_find_session_by_pid "$planning_dir" "$pid" 2>/dev/null) || sid=$(_vbw_active_agent_legacy_source_id)
+  vbw_active_agent_acquire_lock "$planning_dir" || return 0
+  if sid=$(vbw_active_agent_session_id "$input" 2>/dev/null); then
+    :
+  elif sid=$(vbw_active_agent_find_session_by_pid "$planning_dir" "$pid" 2>/dev/null); then
+    :
+  else
+    _vbw_active_agent_rebuild_aggregate_unlocked "$planning_dir"
+    vbw_active_agent_release_lock "$planning_dir"
+    return 0
+  fi
   _vbw_active_agent_remove_registration "$planning_dir" "$sid" "$pid" || true
   _vbw_active_agent_sync_session_aggregate "$planning_dir" "$sid"
   _vbw_active_agent_rebuild_aggregate_unlocked "$planning_dir"
+  vbw_active_agent_release_lock "$planning_dir"
 }
 
 vbw_active_agent_remove_current_session() {
   local planning_dir="$1" input="${2:-}" sid
+  vbw_active_agent_acquire_lock "$planning_dir" || return 0
   sid=$(vbw_active_agent_session_id "$input" 2>/dev/null) || sid=$(_vbw_active_agent_legacy_source_id)
   rm -rf "$(vbw_active_agent_session_dir "$planning_dir" "$sid")"
   _vbw_active_agent_rebuild_aggregate_unlocked "$planning_dir"
+  vbw_active_agent_release_lock "$planning_dir"
 }
 
 vbw_active_agent_clear_all() {
   local planning_dir="$1"
-  rm -rf "$planning_dir/.active-agents" "$(_vbw_active_agent_lock_dir "$planning_dir")"
+  vbw_active_agent_acquire_lock "$planning_dir" || return 0
+  rm -rf "$planning_dir/.active-agents"
   _vbw_active_agent_root_files_remove "$planning_dir"
+  vbw_active_agent_release_lock "$planning_dir"
 }
 
 _vbw_active_agent_marker_role_matches() {
@@ -370,13 +396,17 @@ vbw_active_agent_scan_stale_sessions() {
   for dir in "$planning_dir/.active-agents"/*; do
     [ -d "$dir" ] || continue
     source=$(basename "$dir"); _vbw_active_agent_is_aggregate_source_id "$source" || continue
-    [ "$(_vbw_active_agent_read_count "$planning_dir" "$source")" -gt 0 ] || continue
-    _vbw_active_agent_session_has_live_pid "$dir" || printf 'stale_marker|.active-agents/%s|dead session-local PIDs\n' "$source"
+    if [ -d "$dir/agents" ]; then
+      _vbw_active_agent_session_has_live_pid "$dir" || printf 'stale_marker|.active-agents/%s|dead session-local PIDs\n' "$source"
+    elif [ "$(_vbw_active_agent_read_count "$planning_dir" "$source")" -gt 0 ]; then
+      _vbw_active_agent_session_has_live_pid "$dir" || printf 'stale_marker|.active-agents/%s|dead session-local PIDs\n' "$source"
+    fi
   done
 }
 
 vbw_active_agent_cleanup_stale_sessions() {
   local planning_dir="$1" stale ref source
+  vbw_active_agent_acquire_lock "$planning_dir" || return 0
   stale=$(vbw_active_agent_scan_stale_sessions "$planning_dir" || true)
   while IFS='|' read -r _category ref _detail; do
     [ -n "$ref" ] || continue
@@ -385,4 +415,5 @@ vbw_active_agent_cleanup_stale_sessions() {
     rm -rf "$(vbw_active_agent_session_dir "$planning_dir" "$source")"
   done <<< "$stale"
   _vbw_active_agent_rebuild_aggregate_unlocked "$planning_dir"
+  vbw_active_agent_release_lock "$planning_dir"
 }

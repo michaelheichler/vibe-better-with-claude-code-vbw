@@ -95,7 +95,7 @@ load test_helper
 @test "agent-start ignores dead per-pid registrations" {
   setup_temp_dir
   mkdir -p "$TEST_TEMP_DIR/.vbw-planning"
-  dead_pid=$(get_dead_pid)
+  dead_pid=$(get_dead_pid) || fail "get_dead_pid failed"
   echo "{\"agent_type\":\"vbw-scout\",\"pid\":\"$dead_pid\"}" | bash -c "cd '$TEST_TEMP_DIR' && bash '$SCRIPTS_DIR/agent-start.sh'"
   [ "$(cat "$TEST_TEMP_DIR/.vbw-planning/.active-agent-count" 2>/dev/null || true)" = "" ]
   [ ! -f "$TEST_TEMP_DIR/.vbw-planning/.active-agent" ]
