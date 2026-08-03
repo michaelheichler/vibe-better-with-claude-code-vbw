@@ -307,7 +307,7 @@ _vbw_active_agent_live_role_in_files() {
 }
 
 vbw_active_agent_current_role_is() {
-  local planning_dir="$1" input="${2:-}" target_role="$3" sid roles marker agents
+  local planning_dir="$1" input="${2:-}" target_role="$3" sid roles count marker agents
   [ -n "$target_role" ] || return 1
   if ! sid=$(vbw_active_agent_session_id "$input"); then
     printf '%s\n' 'session_id unresolvable, role detection skipped (fail-closed)' >&2
@@ -315,9 +315,11 @@ vbw_active_agent_current_role_is() {
   fi
   agents=$(_vbw_active_agent_agents_dir "$planning_dir" "$sid")
   roles=$(_vbw_active_agent_roles_file "$planning_dir" "$sid")
+  count=$(_vbw_active_agent_count_file "$planning_dir" "$sid")
   marker=$(_vbw_active_agent_marker_file "$planning_dir" "$sid")
   if [ -d "$agents" ]; then _vbw_active_agent_live_role_in_files "$agents" "$target_role"; return $?; fi
   if [ -f "$roles" ]; then awk -v r="$target_role" '$1 == r && $2 ~ /^[0-9]+$/ && $2 > 0 { found=1 } END { exit found ? 0 : 1 }' "$roles"; return $?; fi
+  [ -f "$count" ] && return 1
   _vbw_active_agent_marker_role_matches "$marker" "$target_role"
 }
 

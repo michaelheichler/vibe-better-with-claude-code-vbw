@@ -26,6 +26,18 @@ teardown() {
   [ "$status" -eq 1 ]
 }
 
+@test "current role rejects marker when session count is zero without role file" {
+  local session_id="session-count-zero"
+  mkdir -p "$PLANNING_DIR/.active-agents/$session_id"
+  printf '0\n' > "$PLANNING_DIR/.active-agents/$session_id/active-agent-count"
+  printf 'scout\n' > "$PLANNING_DIR/.active-agents/$session_id/active-agent"
+
+  run bash -c 'source "$1"; vbw_active_agent_current_scout "$2" "{\"session_id\":\"session-count-zero\"}"' _ \
+    "$SCRIPTS_DIR/lib/active-agent-state.sh" "$PLANNING_DIR"
+
+  [ "$status" -eq 1 ]
+}
+
 @test "current role fails closed when session id is unresolvable" {
   printf 'scout\n' > "$PLANNING_DIR/.active-agent"
   local stderr_file="$TEST_TEMP_DIR/stderr"
