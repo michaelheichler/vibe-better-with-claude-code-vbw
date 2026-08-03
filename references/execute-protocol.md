@@ -304,13 +304,18 @@ After evaluating, state the skill outcome in your response so the user has visib
 
 After calling `Skill(...)`, read any relevant files named by its instructions. Do not scan unrelated skill folders. When preselected skills expose local follow-up docs, resolve them with `extract-skill-follow-up-files.sh` and paste the emitted `<skill_follow_up_files>` block immediately after the follow-up-read sentence in the spawned payload.
 
-**Spawn-shape rule:** This applies to non-team and true-team spawns. On every live teammate spawn call, use `Agent` or `TaskCreate` without Claude-side `isolation:"worktree"`. Do not pass a `cwd` pointing into `.claude/worktrees/...` or `.vbw-worktrees/...`.
+**Spawn-shape rule (applies to both non-team and true-team spawns):** For every live teammate spawn call, check whether the live tool is `Agent` or `TaskCreate`.
+The rule is to never set Claude-side `isolation:"worktree"` or pass a `cwd` pointing into `.claude/worktrees/...` or `.vbw-worktrees/...`.
+`agent-spawn-guard.sh` validates these isolation/cwd fields before it branches on delegation mode. It rejects either field with a hard `cross-worktree spawn` error.
 
-`agent-spawn-guard.sh` validates these fields before branching on delegation mode. The rule therefore applies to true-team and non-team spawns. Passing either field produces a hard `cross-worktree spawn` rejection.
+Prepared VBW worktree targeting means the `Working directory:` and `Worktree targeting:` lines in the task description.
+The target comes from `.execution-state.json` `worktree_path` and `scripts/worktree-target.sh`.
+The spawn call does not carry that targeting. This means it is not an `isolation` or `cwd` field on the spawn call.
+Claude-side `isolation:"worktree"` can create unmanaged `.claude/worktrees/agent-*` sidechains with different tool/artifact assumptions.
+VBW's current isolation uses its own `.vbw-worktrees` git worktrees.
 
-Prepared VBW worktree targeting means the `Working directory:` and `Worktree targeting:` lines in the task description, derived from `.execution-state.json` `worktree_path` and `scripts/worktree-target.sh`. It is not an `isolation` or `cwd` field on the spawn call. Claude-side `isolation:"worktree"` can create unmanaged `.claude/worktrees/agent-*` sidechains with different tool and artifact assumptions. VBW's current isolation uses its own `.vbw-worktrees` git worktrees.
-
-Non-team spawns must omit `team_name` and `run_in_background`. `name` is optional label-only metadata and must never be used for routing, lifecycle state, or team semantics. In true team mode, every spawn/TaskCreate after the marker is set must include the selected `TEAM_NAME` and teammate `name`.
+In addition, non-team spawns must omit `team_name` and `run_in_background`. `name` is optional label-only metadata and must never be used for routing, lifecycle state, or team semantics.
+In true team mode, every spawn/TaskCreate after the marker is set must include the selected `TEAM_NAME` and teammate `name`.
 
 For each runnable plan in the current segment, create the teammate task using the live teammate spawn tool (for example `TaskCreate` or `Agent`). In non-team mode, spawn exactly one Dev and wait for its result before spawning the next runnable plan. In true team mode, every spawn/TaskCreate after the marker is set must include the selected `TEAM_NAME` and teammate `name`.
 
