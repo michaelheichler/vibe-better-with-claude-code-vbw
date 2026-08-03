@@ -64,15 +64,15 @@ fi
 
 
 
-_AGENT_START="$ROOT/scripts/agent-start.sh"
+_ACTIVE_AGENT_STATE="$ROOT/scripts/lib/active-agent-state.sh"
 
-_ROLES_AGENT_START=$(sed -n '/normalize_agent_role/,/^}/p' "$_AGENT_START" | grep "printf '" | sed "s/.*printf '\\([^']*\\)'.*/\\1/" | sort)
+_ROLES_ACTIVE_AGENT_STATE=$(sed -n '/vbw_active_agent_normalize_role/,/^}/p' "$_ACTIVE_AGENT_STATE" | grep "printf '" | sed "s/.*printf '\\([^']*\\)'.*/\\1/" | sort || true)
 
 for _role in architect debugger dev docs lead qa scout; do
-  if grep -q "^${_role}$" <<< "$_ROLES_AGENT_START"; then
-    pass "agent-start.sh: normalize handles '$_role' role"
+  if grep -q "^${_role}$" <<< "$_ROLES_ACTIVE_AGENT_STATE"; then
+    pass "active-agent-state.sh: normalize handles '$_role' role"
   else
-    fail "agent-start.sh: normalize missing '$_role' role"
+    fail "active-agent-state.sh: normalize missing '$_role' role"
   fi
 done
 
