@@ -1,0 +1,38 @@
+scripts/agent-health.sh
+  s_396441278312df::t_aed361d47b3929 286
+  s_396441278312df::t_0d55d350e23835 269-276
+  s_396441278312df::t_10d8adc88b9ac6 56,61-64,66-69,86
+  s_396441278312df::t_309391523abc9d 71-81,83-85,87-89,91,93
+  s_396441278312df::t_b0cbdf0702d57d 262,264-268
+  s_396441278312df::t_32efba2656d7dc 396
+  s_396441278312df::t_7f342f9c127383 444-446
+  s_396441278312df::t_1726b0d240576a 235,238-239,241-244,247-248,252-261,263,280,284-285,287-294,299,342,345,351-353
+  s_396441278312df::t_74c43ff0ddd4f9 312
+  s_396441278312df::t_8d01f0ab1ee211 387,389
+  s_396441278312df::t_9f02e7124f6e63 354-356
+  s_d95a874da3d4ff::t_220f02b09a18d5 97,357-362
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "2c0d9591e18e15c70033618e1406b509f93308ac",
+  "prompts": {},
+  "sessions": {
+    "s_396441278312df": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8b693812-fc94-4ea6-be47-0ddb22b766f3",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    },
+    "s_d95a874da3d4ff": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a8240816f77c2926e",
+        "model": "unknown"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
