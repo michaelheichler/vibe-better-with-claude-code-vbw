@@ -135,3 +135,41 @@ spawn_input() {
   [ "$status" -eq 0 ]
   [ "$(printf '%s' "$output" | jq -r '.hookSpecificOutput.updatedInput.model')" = "resolved-qa" ]
 }
+
+@test "agent-spawn-guard injects configured reasoning effort" {
+  local input
+  input=$(spawn_input)
+
+  run_spawn_guard "$input"
+
+  [ "$status" -eq 0 ]
+  [ "$(printf '%s' "$output" | jq -r '.hookSpecificOutput.updatedInput.effort')" = "xhigh" ]
+}
+
+@test "agent-spawn-guard overwrites wrong reasoning effort" {
+  local input
+  jq '.reasoning_overrides = {dev:"low"}' \
+    "$TEST_TEMP_DIR/.vbw-planning/config.json" > "$TEST_TEMP_DIR/.vbw-planning/config.json.tmp"
+  mv "$TEST_TEMP_DIR/.vbw-planning/config.json.tmp" "$TEST_TEMP_DIR/.vbw-planning/config.json"
+  input=$(spawn_input | jq '.tool_input += {isolation:"worktree",effort:"high"}')
+
+  run_spawn_guard "$input"
+
+  [ "$status" -eq 0 ]
+  [ "$(printf '%s' "$output" | jq -r '.hookSpecificOutput.updatedInput.effort')" = "low" ]
+  [ "$(printf '%s' "$output" | jq -r '.hookSpecificOutput.updatedInput.isolation')" = "null" ]
+}
+
+@test "agent-spawn-guard removes unsupported reasoning effort" {
+  local input
+  jq '.model_matrix.dev.balanced = ["haiku"]' \
+    "$TEST_TEMP_DIR/.vbw-planning/config.json" > "$TEST_TEMP_DIR/.vbw-planning/config.json.tmp"
+  mv "$TEST_TEMP_DIR/.vbw-planning/config.json.tmp" "$TEST_TEMP_DIR/.vbw-planning/config.json"
+  printf '%s\n' resolved-dev resolved-qa haiku > "$TEST_TEMP_DIR/model-catalog"
+  input=$(spawn_input | jq '.tool_input.effort = "high"')
+
+  run_spawn_guard "$input"
+
+  [ "$status" -eq 0 ]
+  [ "$(printf '%s' "$output" | jq -r '.hookSpecificOutput.updatedInput | has("effort")')" = "false" ]
+}

@@ -163,6 +163,39 @@ if is_teammate_spawn_tool; then
           STRIP_REASON="enforced resolved model for $SUBAGENT_TYPE"
         fi
       fi
+
+      REASONING_PROFILES_PATH="$SCRIPT_DIR/../config/reasoning-profiles.json"
+      if [ -f "$REASONING_PROFILES_PATH" ]; then
+        if RESOLVED_REASONING=$(bash "$SCRIPT_DIR/resolve-agent-reasoning.sh" "$MODEL_ROLE" "$PROJECT_ROOT/.vbw-planning/config.json" "$REASONING_PROFILES_PATH" "$RESOLVED_MODEL" "$SCRIPT_DIR/../config/model-pricing.json" 2>/dev/null); then
+          CURRENT_INPUT="${STRIPPED_INPUT:-}"
+          if [ -z "$CURRENT_INPUT" ] || [ "$CURRENT_INPUT" = "null" ]; then
+            CURRENT_INPUT=$(echo "$INPUT" | jq '.tool_input' 2>/dev/null) || exit 0
+          fi
+          CURRENT_EFFORT=$(echo "$CURRENT_INPUT" | jq -r '.effort // empty' 2>/dev/null) || CURRENT_EFFORT=""
+          CURRENT_EFFORT_PRESENT=false
+          if echo "$CURRENT_INPUT" | jq -e 'has("effort")' >/dev/null 2>&1; then
+            CURRENT_EFFORT_PRESENT=true
+          fi
+
+          if [ -n "$RESOLVED_REASONING" ]; then
+            if [ "$CURRENT_EFFORT" != "$RESOLVED_REASONING" ]; then
+              if [ -n "${STRIPPED_INPUT:-}" ] && [ "${STRIPPED_INPUT:-}" != "null" ]; then
+                STRIPPED_INPUT=$(echo "$STRIPPED_INPUT" | jq --arg effort "$RESOLVED_REASONING" '.effort = $effort' 2>/dev/null) || exit 0
+              else
+                STRIPPED_INPUT=$(echo "$INPUT" | jq --arg effort "$RESOLVED_REASONING" '.tool_input | .effort = $effort' 2>/dev/null) || exit 0
+              fi
+              STRIP_REASON="${STRIP_REASON:+$STRIP_REASON; }enforced resolved reasoning for $SUBAGENT_TYPE"
+            fi
+          elif [ "$CURRENT_EFFORT_PRESENT" = true ]; then
+            if [ -n "${STRIPPED_INPUT:-}" ] && [ "${STRIPPED_INPUT:-}" != "null" ]; then
+              STRIPPED_INPUT=$(echo "$STRIPPED_INPUT" | jq 'del(.effort)' 2>/dev/null) || exit 0
+            else
+              STRIPPED_INPUT=$(echo "$INPUT" | jq '.tool_input | del(.effort)' 2>/dev/null) || exit 0
+            fi
+            STRIP_REASON="${STRIP_REASON:+$STRIP_REASON; }removed unsupported reasoning for $SUBAGENT_TYPE"
+          fi
+        fi
+      fi
     else
       echo "VBW guard: could not resolve model for $SUBAGENT_TYPE, passing spawn through unchanged" >&2
       STRIPPED_INPUT=""
