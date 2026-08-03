@@ -358,17 +358,16 @@ EOF
 
 @test "agent-health: cleanup removes directory" {
   cd "$TEST_TEMP_DIR"
-    mkdir -p "$HEALTH_DIR"
+  mkdir -p "$HEALTH_DIR"
   echo '{"pid":"1","role":"dev"}' > "$HEALTH_DIR/dev.json"
   echo '{"pid":"2","role":"qa"}' > "$HEALTH_DIR/qa.json"
 
-    [ -d "$HEALTH_DIR" ]
+  [ -d "$HEALTH_DIR" ]
 
-    bash "$SCRIPTS_DIR/agent-health.sh" cleanup
+  bash "$SCRIPTS_DIR/agent-health.sh" cleanup
 
-    [ ! -d "$HEALTH_DIR" ]
+  [ ! -d "$HEALTH_DIR" ]
 }
-
 @test "agent-health: session store keeps same-role teammates distinct" {
   cd "$TEST_TEMP_DIR"
   unset HEALTH_DIR
@@ -447,18 +446,18 @@ EOF
 @test "agent-health: delivered artifact terminates a live agent immediately" {
   cd "$TEST_TEMP_DIR"
   unset HEALTH_DIR
-  export VBW_AGENT_STOP_GRACE_SECONDS=0
-  local live_pid termination_marker="$TEST_TEMP_DIR/artifact-terminated"
+  local live_pid termination_marker="$TEST_TEMP_DIR/artifact-terminated" artifact_path
+  artifact_path="$TEST_TEMP_DIR/.vbw-planning/phases/01-artifact/01-01-SUMMARY.md"
   (
     trap 'printf terminated > "$termination_marker"; exit 0' TERM
     while true; do sleep 1; done
   ) & live_pid=$!
-  printf '{"session_id":"session-artifact","agent_id":"artifact-agent","agent_type":"vbw-dev","pid":"%s"}' "$live_pid" |
+  printf '{"session_id":"session-artifact","agent_id":"artifact-agent","agent_type":"vbw-dev","pid":"%s","artifact_path":"%s"}' "$live_pid" "$artifact_path" |
     VBW_PLANNING_DIR="$TEST_TEMP_DIR/.vbw-planning" bash "$SCRIPTS_DIR/agent-health.sh" start >/dev/null
-  mkdir -p "$TEST_TEMP_DIR/.vbw-planning/phases/01-artifact"
-  printf '# complete\n' > "$TEST_TEMP_DIR/.vbw-planning/phases/01-artifact/01-01-SUMMARY.md"
+  mkdir -p "$(dirname "$artifact_path")"
+  printf '# complete\n' > "$artifact_path"
 
-  run bash -c "echo '{\"session_id\":\"session-artifact\",\"agent_id\":\"artifact-agent\",\"agent_type\":\"vbw-dev\",\"pid\":\"$live_pid\"}' | VBW_PLANNING_DIR='$TEST_TEMP_DIR/.vbw-planning' VBW_AGENT_STOP_GRACE_SECONDS=1 bash '$SCRIPTS_DIR/agent-health.sh' idle"
+  run bash -c "echo '{\"session_id\":\"session-artifact\",\"agent_id\":\"artifact-agent\",\"agent_type\":\"vbw-dev\",\"pid\":\"$live_pid\",\"artifact_path\":\"$artifact_path\"}' | VBW_PLANNING_DIR='$TEST_TEMP_DIR/.vbw-planning' VBW_AGENT_STOP_GRACE_SECONDS=1 bash '$SCRIPTS_DIR/agent-health.sh' idle"
   [ "$status" -eq 0 ]
   ! kill -0 "$live_pid" 2>/dev/null
   [ -f "$termination_marker" ]
@@ -470,7 +469,7 @@ EOF
   cd "$TEST_TEMP_DIR"
   unset HEALTH_DIR
   export VBW_AGENT_STOP_GRACE_SECONDS=1
-  local role suffix pid marker session payload
+  local role suffix pid marker session payload artifact_path
   for role in lead dev scout qa; do
     case "$role" in
       lead) suffix=PLAN.md ;;
@@ -480,11 +479,12 @@ EOF
     esac
     session="session-$role"
     marker="$TEST_TEMP_DIR/$role-terminated"
+    artifact_path="$TEST_TEMP_DIR/.vbw-planning/phases/01-artifact-roles/01-01-$suffix"
     (
       trap 'printf terminated > "$marker"; exit 0' TERM
       while true; do sleep 1; done
     ) & pid=$!
-    payload="{\"session_id\":\"$session\",\"agent_id\":\"$role-agent\",\"agent_type\":\"vbw-$role\",\"pid\":\"$pid\"}"
+    payload="{\"session_id\":\"$session\",\"agent_id\":\"$role-agent\",\"agent_type\":\"vbw-$role\",\"pid\":\"$pid\",\"artifact_path\":\"$artifact_path\"}"
     printf '%s' "$payload" | VBW_PLANNING_DIR="$TEST_TEMP_DIR/.vbw-planning" bash "$SCRIPTS_DIR/agent-health.sh" start >/dev/null
     mkdir -p "$TEST_TEMP_DIR/.vbw-planning/phases/01-artifact-roles"
     sleep 1
@@ -495,6 +495,43 @@ EOF
     [ ! -f "$TEST_TEMP_DIR/.vbw-planning/.active-agents/$session/agents/$pid.json" ]
     wait "$pid" 2>/dev/null || true
   done
+}
+
+@test "agent-health: non-positive recorded PID cannot be terminated" {
+  cd "$TEST_TEMP_DIR"
+  local artifact_file="$TEST_TEMP_DIR/.vbw-planning/phases/01-zero/01-01-SUMMARY.md"
+  mkdir -p "$(dirname "$artifact_file")"
+  printf '# complete\n' > "$artifact_file"
+  local epoch
+  epoch=$(date +%s)
+  mkdir -p "$HEALTH_DIR"
+  jq -n --arg artifact "$artifact_file" --argjson epoch "$epoch" \
+    '{pid:"0",key:"zero-agent",role:"dev",started_epoch:$epoch,artifact_path:$artifact}' \
+    > "$HEALTH_DIR/zero-agent.json"
+
+  run bash -c "echo '{\"session_id\":\"session-zero\",\"agent_id\":\"zero-agent\",\"agent_type\":\"vbw-dev\"}' | VBW_PLANNING_DIR='$TEST_TEMP_DIR/.vbw-planning' HEALTH_DIR='$HEALTH_DIR' bash '$SCRIPTS_DIR/agent-health.sh' idle"
+  [ "$status" -eq 0 ]
+  [ -f "$HEALTH_DIR/zero-agent.json" ]
+}
+
+@test "agent-health: PID start identity must match before termination" {
+  cd "$TEST_TEMP_DIR"
+  unset HEALTH_DIR
+  local live_pid
+  sleep 999 & live_pid=$!
+  printf '{"session_id":"session-identity","agent_id":"identity-agent","agent_type":"vbw-dev","pid":"%s"}' "$live_pid" |
+    VBW_PLANNING_DIR="$TEST_TEMP_DIR/.vbw-planning" bash "$SCRIPTS_DIR/agent-health.sh" start >/dev/null
+  local health_file="$TEST_TEMP_DIR/.vbw-planning/.active-agents/session-identity/agents/$live_pid.json"
+  jq '.pid_identity = "not-the-live-process"' "$health_file" > "$health_file.tmp"
+  mv "$health_file.tmp" "$health_file"
+
+  for _ in 1 2 3 4; do
+    echo '{"session_id":"session-identity","agent_id":"identity-agent","agent_type":"vbw-dev"}' |
+      VBW_PLANNING_DIR="$TEST_TEMP_DIR/.vbw-planning" VBW_AGENT_STOP_GRACE_SECONDS=0 bash "$SCRIPTS_DIR/agent-health.sh" idle >/dev/null
+  done
+
+  kill -0 "$live_pid" 2>/dev/null
+  kill "$live_pid" 2>/dev/null || true
 }
 
 @test "agent-health: pre-existing artifact does not terminate a live agent" {
