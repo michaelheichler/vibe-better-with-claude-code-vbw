@@ -107,8 +107,12 @@ EOF
 @test "file-guard: session-local Scout marker never classifies payload-less orchestrator" {
   cd "$TEST_TEMP_DIR"
   create_plan_with_files
-  printf '%s\n' '{"session_id":"session-A","agent_type":"vbw:vbw-scout","pid":"10101"}' | \
+  local scout_pid
+  sleep 30 >/dev/null 2>&1 & scout_pid=$!
+  LIVE_PIDS+=("$scout_pid")
+  printf '%s\n' "{\"session_id\":\"session-A\",\"agent_type\":\"vbw:vbw-scout\",\"pid\":\"$scout_pid\"}" | \
     VBW_PLANNING_DIR="$TEST_TEMP_DIR/.vbw-planning" bash "$SCRIPTS_DIR/agent-start.sh"
+  kill -0 "$scout_pid" 2>/dev/null || fail "live scout fixture is not alive"
 
   for sid in session-A session-B; do
     INPUT=$(jq -n --arg sid "$sid" '{session_id:$sid,tool_name:"Write",tool_input:{file_path:"CLAUDE.md",content:"ok"}}')
