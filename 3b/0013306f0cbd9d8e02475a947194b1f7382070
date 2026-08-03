@@ -1,0 +1,54 @@
+docs/vbw-1-0-99-vs-stock-teams-token-analysis.md
+  s_6ef0e951f7d046::t_66d0803f9db5de 6,11
+  s_6ef0e951f7d046::t_ff5680d300041d 228
+  s_6ef0e951f7d046::t_e86a833bb8fe92 22,51,76,94,111,130,135,179,219,548
+  s_6ef0e951f7d046::t_a5e681aac19e77 3,5,8,10
+  s_6ef0e951f7d046::t_72106cd2f0bcc1 9,73,500,515
+  s_6ef0e951f7d046::t_f17bad11776f74 221
+docs/vbw-1-21-30-full-spec-token-analysis.md
+  s_6ef0e951f7d046::t_72106cd2f0bcc1 12,103,130,139,168,253,256,259,322,328,332,344,349,363,374
+  s_6ef0e951f7d046::t_a5e681aac19e77 3,6,8,11,13,15
+  s_6ef0e951f7d046::t_24ea710e2128f4 23
+  s_6ef0e951f7d046::t_66d0803f9db5de 5,10,16
+docs/vbw-1-20-0-full-spec-token-analysis.md
+  s_6ef0e951f7d046::t_72106cd2f0bcc1 12,111,146,182,184,196,213,265,322,326,423,463,466,604,606,628,631-632,635,639-640,651
+  s_6ef0e951f7d046::t_a5e681aac19e77 3,6,8,11,13,15
+  s_6ef0e951f7d046::t_cf39431b806f25 23
+  s_6ef0e951f7d046::t_310f2c07b5e368 353-355
+  s_6ef0e951f7d046::t_66d0803f9db5de 5,10,16
+docs/vbw-1-30-0-full-spec-token-analysis.md
+  s_6ef0e951f7d046::t_bdff5b47a3d03b 23
+  s_6ef0e951f7d046::t_a5e681aac19e77 3,6,8,11,13
+  s_6ef0e951f7d046::t_66d0803f9db5de 5,10
+  s_6ef0e951f7d046::t_72106cd2f0bcc1 12,17,27,36,132,138,154,180,196,289,292,295,329,374
+  s_6ef0e951f7d046::t_c88a74c6740bca 112-114
+  s_6ef0e951f7d046::t_f36dcf8a2da2fa 116
+  s_6ef0e951f7d046::t_d7dcbdaa0d088c 15-16,115
+docs/vbw-1-10-2-vs-stock-agent-teams-token-analysis.md
+  s_6ef0e951f7d046::t_66d0803f9db5de 6,10,15
+  s_6ef0e951f7d046::t_b3efb2b5c3bcc3 274
+  s_6ef0e951f7d046::t_a5e681aac19e77 3,5,8,11,13
+  s_6ef0e951f7d046::t_72106cd2f0bcc1 67,484,508-510
+  s_6ef0e951f7d046::t_e86a833bb8fe92 14,21,31,33,55,222,249,255-256,282,496,521,527,529,569-577
+docs/vbw-1-10-7-context-compiler-token-analysis.md
+  s_6ef0e951f7d046::t_72106cd2f0bcc1 17,23,35,66,102,135,149,153,212,222,285,409,468,476-480,488-490,501,505,509,578
+  s_6ef0e951f7d046::t_66d0803f9db5de 5,10,16
+  s_6ef0e951f7d046::t_a5e681aac19e77 3,6,8,11,13,15
+  s_6ef0e951f7d046::t_12069047c43021 499
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "3b0013306f0cbd9d8e02475a947194b1f7382070",
+  "prompts": {},
+  "sessions": {
+    "s_6ef0e951f7d046": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "32b96d9e-2f7c-4f57-88c2-54535491e857",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
