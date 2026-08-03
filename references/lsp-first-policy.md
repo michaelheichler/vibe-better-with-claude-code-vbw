@@ -5,13 +5,13 @@ Repo-wide rule for all LSP-capable agents (Scout, Architect, Lead, Dev, QA, Debu
 ## When to use LSP
 
 Use LSP **first** for any semantic code navigation:
-- `goToDefinition` / `goToImplementation` — jump to source
-- `findReferences` — all usages across the codebase
-- `workspaceSymbol` — find where something is defined
-- `documentSymbol` — list all symbols in a file
-- `hover` — type info without reading the file
-- `incomingCalls` / `outgoingCalls` — call hierarchy
-- `diagnostics` — type errors, missing imports
+- `goToDefinition` / `goToImplementation` : jump to source
+- `findReferences` : all usages across the codebase
+- `workspaceSymbol` : find where something is defined
+- `documentSymbol` : list all symbols in a file
+- `hover` : type info without reading the file
+- `incomingCalls` / `outgoingCalls` : call hierarchy
+- `diagnostics` : type errors, missing imports
 
 These cover: tracing call sites, navigating type hierarchies, following data flow, verifying wiring, cross-file dependencies, and targeted validation of known symbols.
 
@@ -27,7 +27,7 @@ Use Search/Grep/Glob (not LSP) for:
 
 ## Fallback rule
 
-If LSP is unavailable or returns an error on a semantic query, fall back **immediately** to Grep/Glob. Do not retry LSP — treat the failure as permanent for the session and switch tools.
+If LSP is unavailable or returns an error on a semantic query, fall back **immediately** to Grep/Glob. Do not retry LSP : treat the failure as permanent for the session and switch tools.
 
 ## Agent-specific guidance
 

@@ -6,22 +6,22 @@ Write code review comments terse and actionable. One line per finding. Location,
 
 ## Format
 
-`L<line>: <problem>. <fix>.` — or `<file>:L<line>: ...` when reviewing multi-file diffs.
+`L<line>: <problem>. <fix>.` : or `<file>:L<line>: ...` when reviewing multi-file diffs.
 
 **Severity prefix (when mixed findings):**
-- `🔴 bug:` — broken behavior, will cause incident
-- `🟡 risk:` — works but fragile (race, missing null check, swallowed error)
-- `🔵 nit:` — style, naming, micro-optim. Author can ignore
-- `❓ q:` — genuine question, not a suggestion
+- `🔴 bug:` : broken behavior, will cause incident
+- `🟡 risk:` : works but fragile (race, missing null check, swallowed error)
+- `🔵 nit:` : style, naming, micro-optim. Author can ignore
+- `❓ q:` : genuine question, not a suggestion
 
 ## Rules
 
 **Drop:**
 - "I noticed that...", "It seems like...", "You might want to consider..."
-- "This is just a suggestion but..." — use `nit:` instead
-- "Great work!", "Looks good overall but..." — say it once at the top, not per comment
-- Restating what the line does — the reviewer can read the diff
-- Hedging ("perhaps", "maybe", "I think") — if unsure use `q:`
+- "This is just a suggestion but..." : use `nit:` instead
+- "Great work!", "Looks good overall but..." : say it once at the top, not per comment
+- Restating what the line does : the reviewer can read the diff
+- Hedging ("perhaps", "maybe", "I think") : if unsure use `q:`
 
 **Keep:**
 - Exact line numbers
