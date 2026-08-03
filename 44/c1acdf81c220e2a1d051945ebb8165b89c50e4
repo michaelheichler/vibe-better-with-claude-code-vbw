@@ -1,0 +1,51 @@
+references/execute-protocol.md
+  s_c0f92ef2984ddd::t_29626c7d79dd7b 429-430
+  s_c0f92ef2984ddd::t_f88416e4f5dffe 659-661
+  s_c0f92ef2984ddd::t_af53aa3c8c76fb 306
+  s_c0f92ef2984ddd::t_dd8694fe4d7ae2 286
+  s_c0f92ef2984ddd::t_e9f5efce29acd9 277-279
+  s_c0f92ef2984ddd::t_b27bd543db03a5 181
+  s_c0f92ef2984ddd::t_fbecfccd2a4242 154
+  s_c0f92ef2984ddd::t_d0e1447524cace 283
+  s_c0f92ef2984ddd::t_5111cd76ffc14c 269
+  s_c0f92ef2984ddd::t_5012c829f692bb 299-305,310-313
+  s_c0f92ef2984ddd::t_0266e6fd71ac61 307-309
+scripts/agent-spawn-guard.sh
+  s_c0f92ef2984ddd::t_ccafca9c1a4041 106-107,109,117
+  s_c0f92ef2984ddd::t_c2fe34fc679e1b 168-170
+  s_c0f92ef2984ddd::t_3c9a1856eb0b1e 138-167,171
+  s_c0f92ef2984ddd::t_f78baec9be5848 172
+tests/agent-spawn-guard.bats
+  s_c0f92ef2984ddd::t_874dab12ec5df9 8,10-14
+  s_c0f92ef2984ddd::t_180eee7145726b 30
+  s_c0f92ef2984ddd::t_fb14323456315a 75-107,109-137
+  s_c0f92ef2984ddd::t_952f164e4c8052 108
+  s_c0f92ef2984ddd::t_e7faafc2c7e4d4 3
+  s_c0f92ef2984ddd::t_a899718d33a50a 25-29,31
+AGENTS.md
+  s_148ae53cf16113::t_cf50230bc3c498 334,336,338,346-347,353
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "44c1acdf81c220e2a1d051945ebb8165b89c50e4",
+  "prompts": {},
+  "sessions": {
+    "s_148ae53cf16113": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "82bc467d-d72d-428e-97b7-1f3f33916f5e",
+        "model": "terra"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    },
+    "s_c0f92ef2984ddd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8012f178-1459-46c6-a4cb-070ecf187c4c",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
