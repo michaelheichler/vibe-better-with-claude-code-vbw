@@ -1,0 +1,71 @@
+testing/verify-dev-recovery-guidance.sh
+  s_6ef0e951f7d046::t_c47fc33ddfd605 4
+testing/list-bats-files.sh
+  s_6ef0e951f7d046::t_c47fc33ddfd605 4
+testing/verify-pipefail-safety.sh
+  s_6ef0e951f7d046::t_c47fc33ddfd605 4
+testing/verify-uat-remediation-orchestration.sh
+  s_6ef0e951f7d046::t_c47fc33ddfd605 4
+testing/measure-shard-weights.sh
+  s_6ef0e951f7d046::t_c47fc33ddfd605 4
+testing/verify-research-storage-contract.sh
+  s_6ef0e951f7d046::t_c47fc33ddfd605 2
+testing/verify-agent-spawn-guard.sh
+  s_6ef0e951f7d046::t_c47fc33ddfd605 4
+testing/verify-lsp-first-policy.sh
+  s_6ef0e951f7d046::t_c47fc33ddfd605 4,72
+testing/verify-permission-mode-contract.sh
+  s_6ef0e951f7d046::t_c47fc33ddfd605 4,89
+testing/run-lint.sh
+  s_6ef0e951f7d046::t_c47fc33ddfd605 4
+testing/verify-human-only-uat-contract.sh
+  s_6ef0e951f7d046::t_c47fc33ddfd605 4,90
+testing/verify-prefer-teams-canonicalization.sh
+  s_6ef0e951f7d046::t_c47fc33ddfd605 4
+testing/verify-claude-md-staleness.sh
+  s_6ef0e951f7d046::t_c47fc33ddfd605 4
+testing/verify-no-inline-exec-spans.sh
+  s_6ef0e951f7d046::t_c47fc33ddfd605 4,110
+testing/verify-run-all-execution-contract.sh
+  s_6ef0e951f7d046::t_c47fc33ddfd605 4,26
+testing/verify-hook-event-name.sh
+  s_6ef0e951f7d046::t_c47fc33ddfd605 4
+testing/verify-issue-157-migration-contract.sh
+  s_6ef0e951f7d046::t_c47fc33ddfd605 4
+testing/verify-bash-scripts-contract.sh
+  s_6ef0e951f7d046::t_c47fc33ddfd605 4
+testing/run-bats-shard.sh
+  s_6ef0e951f7d046::t_c47fc33ddfd605 4
+testing/verify-statusline-429-backoff.sh
+  s_6ef0e951f7d046::t_c47fc33ddfd605 4,37
+testing/verify-codex-agent-assets-contract.sh
+  s_6ef0e951f7d046::t_c47fc33ddfd605 4
+testing/run-all-state-utils.sh
+  s_6ef0e951f7d046::t_c47fc33ddfd605 3
+testing/verify-readme-config-reference.sh
+  s_6ef0e951f7d046::t_c47fc33ddfd605 4
+testing/verify-statusline-qa-lifecycle.sh
+  s_6ef0e951f7d046::t_c47fc33ddfd605 4
+testing/verify-lsp-setup.sh
+  s_6ef0e951f7d046::t_c47fc33ddfd605 4
+testing/verify-ci-workflow-contract.sh
+  s_6ef0e951f7d046::t_c47fc33ddfd605 4
+testing/verify-live-validation-policy.sh
+  s_6ef0e951f7d046::t_c47fc33ddfd605 4
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "352e77b6eaaf142d1590bc166b383f5658623835",
+  "prompts": {},
+  "sessions": {
+    "s_6ef0e951f7d046": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "32b96d9e-2f7c-4f57-88c2-54535491e857",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
