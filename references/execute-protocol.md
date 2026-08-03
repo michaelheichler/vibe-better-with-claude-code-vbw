@@ -296,13 +296,13 @@ QA_MAX_TURNS=$(bash "${VBW_PLUGIN_ROOT}/scripts/resolve-agent-max-turns.sh" qa .
 if [ $? -ne 0 ]; then echo "$QA_MAX_TURNS" >&2; exit 1; fi
 ```
 
-**Skill activation for Dev/QA tasks:** Before composing task descriptions, evaluate installed skills visible in your system context. Read each skill's description and select all materially helpful skills for the tasks, including adjacent support skills surfaced by the prompt, logs, errors, related files, or stack context.
+**Skill activation for Dev/QA tasks:** Before composing task descriptions, evaluate installed skills visible in your system context. Read each skill's description and select all materially helpful skills for the tasks, including adjacent support skills surfaced by the prompt, logs, errors, related files, or stack context, not just the single most direct skill.
 
 Every spawned prompt that performs this evaluation MUST begin with exactly one explicit outcome block. Use `<skill_activation>` as the FIRST line when skills are preselected at orchestration time. Use `<skill_no_activation>` as the FIRST line when none are preselected. Silent omission of both blocks is invalid.
 
 After evaluating, state the skill outcome in your response so the user has visibility before the agent is spawned. Example: `Skills: activating {skill-name}` or `Skills: none preselected: {reason}`. If the prompt or error mentions SwiftData, include `swiftdata` with relevant test, build, or debug skills.
 
-After calling `Skill(...)`, read any relevant files named by its instructions. Do not scan unrelated skill folders. When preselected skills expose local follow-up docs, resolve them with `extract-skill-follow-up-files.sh` and paste the emitted `<skill_follow_up_files>` block immediately after the follow-up-read sentence in the spawned payload.
+After calling `Skill(...)`, read any relevant files named by its instructions. Do not scan entire skill folders or read unrelated references. When preselected skills expose local follow-up docs, resolve them with `extract-skill-follow-up-files.sh` and paste the emitted `<skill_follow_up_files>` block immediately after the follow-up-read sentence in the spawned payload.
 
 **Spawn-shape rule (applies to both non-team and true-team spawns):** For every live teammate spawn call, check whether the live tool is `Agent` or `TaskCreate`.
 The rule is to never set Claude-side `isolation:"worktree"` or pass a `cwd` pointing into `.claude/worktrees/...` or `.vbw-worktrees/...`.
