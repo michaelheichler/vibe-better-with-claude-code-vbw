@@ -1,23 +1,4 @@
 #!/usr/bin/env bash
-# write-debug-session.sh — Deterministic writer for debug session markdown.
-#
-# Single writer for all debug-session updates. Modes:
-#   investigation  — writes Issue, Investigation, Plan, Implementation sections
-#   source-todo    — writes the fixed top-level Source Todo section
-#   qa             — appends a QA round entry under ## QA
-#   uat            — appends a UAT round entry under ## UAT
-#   status         — updates frontmatter status and optional title
-#
-# Usage:
-#   echo '{"mode":"investigation","issue":"...","hypotheses":[...],...}' | write-debug-session.sh <session-file>
-#   echo '{"mode":"source-todo","text":"...","raw_line":"...","ref":"abcd1234","detail_status":"ok","related_files":["..."],"detail_context":"..."}' | write-debug-session.sh <session-file>
-#   echo '{"mode":"qa","round":1,"result":"PASS|FAIL|PARTIAL","checks":{...},"details":[...]}' | write-debug-session.sh <session-file>
-#   echo '{"mode":"uat","round":1,"result":"pass|issues_found","checkpoints":[...],"issues":[...]}' | write-debug-session.sh <session-file>
-#   echo '{"mode":"status","status":"qa_pending","title":"optional new title"}' | write-debug-session.sh <session-file>
-#
-# Input: JSON on stdin
-# Output: Updates the session file in-place
-# Exit 1 on invalid JSON or missing required fields
 
 set -euo pipefail
 
@@ -37,7 +18,6 @@ if ! command -v jq &>/dev/null; then
   exit 1
 fi
 
-# Read stdin
 json=$(cat)
 
 if ! echo "$json" | jq empty 2>/dev/null; then
@@ -52,9 +32,8 @@ if [ -z "$MODE" ]; then
 fi
 
 NOW=$(date '+%Y-%m-%d %H:%M:%S')
+EM_DASH=$'\xE2\x80\x94'
 
-# Update frontmatter field, scoped to the YAML frontmatter block only.
-# Uses awk to restrict replacement to lines between the opening and closing --- delimiters.
 update_frontmatter() {
   local field="$1" value="$2"
   if ! grep -q "^${field}:" "$SESSION_FILE" 2>/dev/null; then
@@ -77,13 +56,9 @@ update_frontmatter() {
   ' "$SESSION_FILE" > "$SESSION_FILE.tmp" && mv "$SESSION_FILE.tmp" "$SESSION_FILE"
 }
 
-# Known top-level session section headings (used as boundaries by replace/append/extract).
-# Only these lines are treated as section delimiters — user-pasted ## headings inside
-# section content are preserved verbatim and do not prematurely end a section.
 KNOWN_SECTIONS_RE='^## (Issue|Source Todo|Investigation|Plan|Implementation|QA|UAT|Remediation History)$'
 BLANK_LINE_RE='^[[:space:]]*$'
 
-# Strip leading and trailing blank lines while preserving intentional internal spacing.
 normalize_content() {
   printf '%s' "$1" | awk -v blank_re="$BLANK_LINE_RE" '
     function is_blank(line) {
@@ -105,12 +80,10 @@ write_normalized_content_file() {
   normalize_content "$content" > "$file"
 }
 
-# Normalize free-form block bodies before embedding them under nested markdown headings.
 normalize_block_body() {
   normalize_content "$1"
 }
 
-# Escape multiline values for markdown tables without relying on sed implementation quirks.
 escape_table_cell() {
   awk '
     BEGIN { first = 1 }
@@ -124,7 +97,6 @@ escape_table_cell() {
   '
 }
 
-# Replace content of a section (from ## Heading to next known top-level section or EOF)
 replace_section() {
   local heading="$1" content="$2"
   local tmpfile content_file
@@ -155,7 +127,6 @@ replace_section() {
     !in_section { print }
     END {
       if (in_section && !printed) {
-        # Section was last in file — content already printed after heading
       }
     }
   ' "$SESSION_FILE" > "$tmpfile"
@@ -163,7 +134,6 @@ replace_section() {
   mv "$tmpfile" "$SESSION_FILE"
 }
 
-# Append content under a section heading (before the next known top-level section or at EOF)
 append_to_section() {
   local heading="$1" content="$2"
   local current_section normalized_new combined_content
@@ -183,9 +153,6 @@ append_to_section() {
   replace_section "$heading" "$combined_content"
 }
 
-# Extract content of a section (from ## Heading to next known top-level section or EOF),
-# excluding the heading itself.
-# Strips leading and trailing blank lines (BSD-compatible)
 extract_section() {
   local heading="$1" file="$2"
   awk -v heading="$heading" -v bre="$KNOWN_SECTIONS_RE" -v blank_re="$BLANK_LINE_RE" '
@@ -197,11 +164,9 @@ extract_section() {
       if ($0 == "## " heading) { in_section = 1; next }
     }
     in_section {
-      # Buffer lines, only print non-trailing-blank content
       buf[++n] = $0
     }
     END {
-      # Find first and last non-empty lines
       start = 0; end = 0
       for (i = 1; i <= n; i++) { if (!is_blank(buf[i])) { start = i; break } }
       for (i = n; i >= 1; i--) { if (!is_blank(buf[i])) { end = i; break } }
@@ -210,22 +175,17 @@ extract_section() {
   ' "$file"
 }
 
-# Archive current Investigation/Plan/Implementation to Remediation History
-# Called before overwriting during remediation rounds (qa_round > 0)
 archive_remediation_round() {
   local qa_round
   qa_round=$(awk '/^---$/{c++; next} c==1 && /^qa_round:/{sub(/^qa_round:[[:space:]]*/, ""); print; exit}' "$SESSION_FILE")
   qa_round="${qa_round:-0}"
   [ "$qa_round" -gt 0 ] 2>/dev/null || return 0
 
-  # Extract current sections
   local inv plan impl
   inv=$(extract_section "Investigation" "$SESSION_FILE")
   plan=$(extract_section "Plan" "$SESSION_FILE")
   impl=$(extract_section "Implementation" "$SESSION_FILE")
 
-  # Only archive if there's substantive content beyond template headings/placeholders.
-  # Strip markdown headings and blank lines; check if anything remains.
   local has_content=false
   for _sec in "$inv" "$plan" "$impl"; do
     _stripped=$(printf '%s\n' "$_sec" | grep -v '^#\|^[[:space:]]*$' || true)
@@ -233,9 +193,8 @@ archive_remediation_round() {
   done
   $has_content || return 0
 
-  # Build archive entry
   local archive_entry
-  archive_entry="### Round $qa_round — $NOW"$'\n'
+  archive_entry="### Round $qa_round ${EM_DASH} $NOW"$'\n'
   [ -n "$inv" ] && archive_entry+=$'\n'"#### Investigation"$'\n\n'"$inv"$'\n'
   [ -n "$plan" ] && archive_entry+=$'\n'"#### Plan"$'\n\n'"$plan"$'\n'
   [ -n "$impl" ] && archive_entry+=$'\n'"#### Implementation"$'\n\n'"$impl"$'\n'
@@ -286,14 +245,12 @@ case "$MODE" in
     ;;
 
   investigation)
-    # Required: issue
     ISSUE=$(echo "$json" | jq -r '.issue // empty')
     if [ -z "$ISSUE" ]; then
       echo "Error: investigation mode requires 'issue' field" >&2
       exit 1
     fi
 
-    # Build Investigation section from hypotheses
     INVESTIGATION=""
     HYPO_COUNT=$(echo "$json" | jq '.hypotheses | length // 0')
     if [ "$HYPO_COUNT" -gt 0 ]; then
@@ -322,7 +279,6 @@ case "$MODE" in
     IMPL=$(echo "$json" | jq -r '.implementation // empty')
     IMPL=$(normalize_block_body "$IMPL")
 
-    # Build Changed Files list
     CHANGED_FILES=""
     CF_COUNT=$(echo "$json" | jq '.changed_files | length // 0')
     if [ "$CF_COUNT" -gt 0 ]; then
@@ -334,16 +290,12 @@ case "$MODE" in
 
     COMMIT=$(echo "$json" | jq -r '.commit // "No commit yet."')
 
-    # Archive current sections to Remediation History if this is a remediation round
     archive_remediation_round
 
-    # Write sections — always replace Investigation and Plan to prevent stale content
-    # after remediation archival (even if the new payload omits them, clear the section)
     replace_section "Issue" "$ISSUE"
     replace_section "Investigation" "${INVESTIGATION:-_No investigation details provided._}"
     replace_section "Plan" "${PLAN:-_No plan provided._}"
 
-    # Build implementation section
     IMPL_CONTENT=""
     [ -n "$IMPL" ] && IMPL_CONTENT="$IMPL"$'\n'
     IMPL_CONTENT+=$'\n'"### Changed Files"$'\n\n'
@@ -356,7 +308,6 @@ case "$MODE" in
 
     replace_section "Implementation" "$IMPL_CONTENT"
 
-    # Update title if provided
     TITLE=$(echo "$json" | jq -r '.title // empty')
     [ -n "$TITLE" ] && update_frontmatter "title" "$TITLE"
 
@@ -373,7 +324,6 @@ case "$MODE" in
       exit 1
     fi
 
-    # Validate result
     case "$RESULT" in
       PASS|FAIL|PARTIAL) ;;
       *)
@@ -382,14 +332,11 @@ case "$MODE" in
         ;;
     esac
 
-    # Build QA round entry
-    QA_ENTRY="### Round $ROUND — $RESULT"$'\n'
+    QA_ENTRY="### Round $ROUND ${EM_DASH} $RESULT"$'\n'
 
-    # Detect checks format: array of objects OR summary object
     CHECKS_TYPE=$(echo "$json" | jq -r '.checks | type // "null"')
 
     if [ "$CHECKS_TYPE" = "array" ]; then
-      # Array format from qa.md: [{id, description, status, evidence}, ...]
       CHECKS_TOTAL=$(echo "$json" | jq '.checks | length')
       CHECKS_PASSED=$(echo "$json" | jq '[.checks[] | select(.status == "PASS" or .status == "pass")] | length')
       CHECKS_FAILED=$((CHECKS_TOTAL - CHECKS_PASSED))
@@ -400,20 +347,18 @@ case "$MODE" in
       fi
       QA_ENTRY+=$'\n'
 
-      # Build details table from checks array
       if [ "$CHECKS_TOTAL" -gt 0 ]; then
         QA_ENTRY+=$'\n'"| Check | Status | Evidence |"$'\n'
         QA_ENTRY+="| ----- | ------ | -------- |"$'\n'
         for i in $(seq 0 $((CHECKS_TOTAL - 1))); do
           D_ID=$(echo "$json" | jq -r ".checks[$i].id // \"C$((i+1))\"" | escape_table_cell)
           D_DESC=$(echo "$json" | jq -r ".checks[$i].description // \"Check $((i+1))\"" | escape_table_cell)
-          D_STATUS=$(echo "$json" | jq -r ".checks[$i].status // \"—\"" | escape_table_cell)
-          D_EVIDENCE=$(echo "$json" | jq -r ".checks[$i].evidence // \"—\"" | escape_table_cell)
+          D_STATUS=$(echo "$json" | jq -r ".checks[$i].status // \"${EM_DASH}\"" | escape_table_cell)
+          D_EVIDENCE=$(echo "$json" | jq -r ".checks[$i].evidence // \"${EM_DASH}\"" | escape_table_cell)
           QA_ENTRY+="| $D_ID: $D_DESC | $D_STATUS | $D_EVIDENCE |"$'\n'
         done
       fi
     elif [ "$CHECKS_TYPE" = "object" ]; then
-      # Legacy summary object format: {passed, failed, total}
       CHECKS_PASSED=$(echo "$json" | jq -r '.checks.passed // 0')
       CHECKS_FAILED=$(echo "$json" | jq -r '.checks.failed // 0')
       CHECKS_TOTAL=$(echo "$json" | jq -r '.checks.total // 0')
@@ -424,15 +369,14 @@ case "$MODE" in
       fi
       QA_ENTRY+=$'\n'
 
-      # Add details from .details array if present (legacy format)
       DETAIL_COUNT=$(echo "$json" | jq '.details | length // 0')
       if [ "$DETAIL_COUNT" -gt 0 ]; then
         QA_ENTRY+=$'\n'"| Check | Status | Detail |"$'\n'
         QA_ENTRY+="| ----- | ------ | ------ |"$'\n'
         for i in $(seq 0 $((DETAIL_COUNT - 1))); do
           D_NAME=$(echo "$json" | jq -r ".details[$i].name // \"Check $((i+1))\"" | escape_table_cell)
-          D_STATUS=$(echo "$json" | jq -r ".details[$i].status // \"—\"" | escape_table_cell)
-          D_DETAIL=$(echo "$json" | jq -r ".details[$i].detail // \"—\"" | escape_table_cell)
+          D_STATUS=$(echo "$json" | jq -r ".details[$i].status // \"${EM_DASH}\"" | escape_table_cell)
+          D_DETAIL=$(echo "$json" | jq -r ".details[$i].detail // \"${EM_DASH}\"" | escape_table_cell)
           QA_ENTRY+="| $D_NAME | $D_STATUS | $D_DETAIL |"$'\n'
         done
       fi
@@ -446,7 +390,6 @@ case "$MODE" in
 
     append_to_section "QA" "$QA_ENTRY"
 
-    # Update frontmatter
     update_frontmatter "qa_round" "$ROUND"
     case "$RESULT" in
       PASS) update_frontmatter "qa_last_result" "pass" ;;
@@ -477,9 +420,8 @@ case "$MODE" in
         ;;
     esac
 
-    UAT_ENTRY="### Round $ROUND — ${RESULT}"$'\n'
+    UAT_ENTRY="### Round $ROUND ${EM_DASH} ${RESULT}"$'\n'
 
-    # Add checkpoints if present
     CP_COUNT=$(echo "$json" | jq '.checkpoints | length // 0')
     if [ "$CP_COUNT" -gt 0 ]; then
       UAT_ENTRY+=$'\n'"**Checkpoints:**"$'\n'
@@ -499,12 +441,10 @@ case "$MODE" in
       done
     fi
 
-    # Add issues if present
     ISSUE_COUNT=$(echo "$json" | jq '.issues | length // 0')
     if [ "$ISSUE_COUNT" -gt 0 ]; then
       UAT_ENTRY+=$'\n'"**Issues found:**"$'\n'
       for i in $(seq 0 $((ISSUE_COUNT - 1))); do
-        # Handle both object format {id, description, severity} and plain string format
         ISSUE_TYPE=$(echo "$json" | jq -r ".issues[$i] | type")
         if [ "$ISSUE_TYPE" = "object" ]; then
           ISSUE_DESC=$(echo "$json" | jq -r ".issues[$i].description // \"Issue $((i+1))\"")
@@ -529,7 +469,6 @@ case "$MODE" in
 
     append_to_section "UAT" "$UAT_ENTRY"
 
-    # Update frontmatter
     update_frontmatter "uat_round" "$ROUND"
     update_frontmatter "uat_last_result" "$RESULT"
     update_frontmatter "updated" "$NOW"
@@ -547,7 +486,6 @@ case "$MODE" in
       exit 1
     fi
 
-    # Validate status
     VALID="investigating fix_applied qa_pending qa_failed uat_pending uat_failed complete"
     FOUND=false
     for v in $VALID; do

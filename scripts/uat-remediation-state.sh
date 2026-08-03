@@ -1,54 +1,13 @@
 #!/usr/bin/env bash
-# uat-remediation-state.sh — Track UAT remediation chain progress on disk.
-#
-# Persists the current stage of the research → plan → execute chain so that
-# the orchestrator can resume correctly after compaction or session restart.
-#
-# Usage:
-#   uat-remediation-state.sh get         <phase-dir>             → prints current stage
-#   uat-remediation-state.sh advance     <phase-dir>             → advances to next stage
-#   uat-remediation-state.sh reset       <phase-dir>             → removes state file
-#   uat-remediation-state.sh init        <phase-dir> <severity>  → initializes for severity
-#   uat-remediation-state.sh get-or-init <phase-dir> <severity>  → returns existing stage or initializes
-#   uat-remediation-state.sh needs-round    <phase-dir>             → starts a new remediation round
-#   uat-remediation-state.sh current-round <phase-dir>             → prints current round number (read-only)
-#
-# get-or-init is the preferred entry point for orchestrators:
-#   - If a stage file already exists (resume case), returns the persisted stage — no init side effects.
-#   - If no stage file exists (first entry), runs full init (CONTEXT pre-seeding, etc.) and returns
-#     the stage + ---CONTEXT--- block — identical to calling init directly.
-#   - Both paths emit plan metadata after the stage line:
-#       round=RR              — zero-padded current round number
-#       round_dir=<path>      — absolute path to the current host round directory
-#       research_path=<path>  — absolute path to existing RESEARCH.md (empty if none)
-#       plan_path=<path>      — absolute path to existing PLAN.md (empty if none)
-#       summary_path=<path>   — absolute path where SUMMARY.md must be written
-#     Stage-aware: for plan/execute stages, uses file presence to find
-#     the correct working state (handles session-death-before-advance).
-#     This eliminates Search/Glob tool calls the orchestrator would otherwise need.
-#   This eliminates the two-step get→init pattern that wastes a tool call and forces
-#   the LLM to reason about the intermediate "none" value.
-#
-# Stages (major/critical path): research → plan → execute → done
-#   (discuss is skipped — the UAT report serves as the scoping document)
-# Stages (minor-only path):     fix → done
-#
-# Remediation artifacts live in {phase-dir}/remediation/uat/round-{RR}/ with
-# R{RR}-RESEARCH.md, R{RR}-PLAN.md, R{RR}-SUMMARY.md, R{RR}-UAT.md naming.
-# State file: {phase-dir}/remediation/uat/.uat-remediation-stage (key=value pairs).
-#   layout=round-dir  — artifacts in round dir only (fresh init / needs-round)
-#   layout=legacy     — phase-root artifacts are current round (migrated from old format)
-# Legacy fallback: reads {phase-dir}/.uat-remediation-stage (single word) for
-# projects bootstrapped before round-dir support.
 
 set -eo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+EM_DASH=$'\xE2\x80\x94'
 if [ -f "$SCRIPT_DIR/uat-utils.sh" ]; then
   source "$SCRIPT_DIR/uat-utils.sh"
 fi
 if [ -f "$SCRIPT_DIR/lib/vbw-config-root.sh" ]; then
-  # shellcheck source=scripts/lib/vbw-config-root.sh
   source "$SCRIPT_DIR/lib/vbw-config-root.sh"
 fi
 
@@ -64,8 +23,6 @@ fi
 reject_milestone_phase_dir() {
   local phase_dir="$1"
 
-  # Milestone path guard: refuse to init/advance remediation in archived milestones.
-  # Archived milestones are read-only; remediation must happen in active phases.
   case "$phase_dir" in
     */.vbw-planning/milestones/*|.vbw-planning/milestones/*)
       echo "Error: refusing to operate on archived milestone path: $phase_dir" >&2
@@ -154,8 +111,12 @@ canonicalize_phase_dir() {
   fi
 
   case "$raw_phase_dir" in
-    /*) candidate="$raw_phase_dir" ;;
-    *)  candidate="${VBW_CONFIG_ROOT:-$(pwd -P)}/$raw_phase_dir" ;;
+    /*)
+      candidate="$raw_phase_dir"
+      ;;
+    *)
+      candidate="${VBW_CONFIG_ROOT:-$(pwd -P)}/$raw_phase_dir"
+      ;;
   esac
 
   candidate=$(canonicalize_existing_or_parent "$candidate")
@@ -249,7 +210,6 @@ migrate_legacy_remediation_state_if_needed() {
 
   mkdir -p "$PHASE_DIR/remediation/uat"
   cp "$LEGACY_REMED_STATE_FILE" "$STATE_FILE"
-  # Migrate existing round dirs
   for _mig_rd in "$PHASE_DIR/remediation"/round-*/; do
     [ -d "$_mig_rd" ] || continue
     _mig_name=$(basename "$_mig_rd")
@@ -292,16 +252,11 @@ preflight_legacy_remediation_needs_round() {
   fi
 }
 
-# Auto-migrate: if old-location state file exists but new doesn't, migrate.
-# `needs-round` defers this until after read-only validation so rejected calls
-# remain side-effect-free for brownfield old-location remediation layouts.
 if [ "$CMD" != "needs-round" ]; then
   migrate_legacy_remediation_state_if_needed
 fi
 
-# Major/critical chain order (UAT report serves as discussion — no separate discuss step)
 MAJOR_STAGES=("research" "plan" "execute" "done")
-# Minor-only chain order
 MINOR_STAGES=("fix" "done")
 
 extract_phase_num() {
@@ -319,17 +274,14 @@ resolve_legacy_round() {
 
 get_stage() {
   if [ -f "$STATE_FILE" ]; then
-    # New format: key=value pairs — extract stage value
     local _val
     _val=$(grep '^stage=' "$STATE_FILE" 2>/dev/null | head -1 | cut -d= -f2 | tr -d '[:space:]')
     if [ -n "$_val" ]; then
       echo "$_val"
     else
-      # Fallback: treat as single-word (shouldn't happen, but safe)
       tr -d '[:space:]' < "$STATE_FILE"
     fi
   elif [ -f "$LEGACY_STATE_FILE" ]; then
-    # Legacy format: single word file at phase root, or brownfield key=value file
     local _val
     _val=$(grep '^stage=' "$LEGACY_STATE_FILE" 2>/dev/null | head -1 | cut -d= -f2 | tr -d '[:space:]' || true)
     if [ -n "$_val" ]; then
@@ -369,16 +321,11 @@ get_round() {
 }
 
 get_layout() {
-  # Returns "legacy" when phase-root artifacts belong to the current round
-  # (migrated from legacy single-word state file), "round-dir" otherwise.
-  # Only legacy layout enables fallback to phase-root plan/research files.
   if [ -f "$STATE_FILE" ]; then
     local _val
     _val=$(grep '^layout=' "$STATE_FILE" 2>/dev/null | head -1 | cut -d= -f2 | tr -d '[:space:]')
     echo "${_val:-round-dir}"
   else
-    # Legacy state file at phase root — artifacts are legacy unless the file
-    # explicitly opts into round-dir layout via key=value metadata.
     if [ -f "$LEGACY_STATE_FILE" ]; then
       local _val
       _val=$(grep '^layout=' "$LEGACY_STATE_FILE" 2>/dev/null | head -1 | cut -d= -f2 | tr -d '[:space:]' || true)
@@ -395,8 +342,6 @@ get_round_dir() {
   echo "$PHASE_DIR/remediation/uat/round-${round}"
 }
 
-# Start a new remediation round: increment round, create dir, reset to research.
-# Shared by advance-from-verify and needs-round commands.
 start_new_round() {
   local current_round next_round next_round_padded
   current_round=$(get_round)
@@ -418,7 +363,6 @@ next_stage() {
   local current="$1"
   local -a stages
 
-  # Determine which chain we're on based on current stage
   case "$current" in
     research|plan|execute) stages=("${MAJOR_STAGES[@]}") ;;
     fix)                  stages=("${MINOR_STAGES[@]}") ;;
@@ -437,7 +381,6 @@ next_stage() {
     fi
   done
 
-  # If current stage not found in chain, return done
   echo "done"
 }
 
@@ -450,13 +393,10 @@ do_init() {
     *)              initial_stage="research" ;;
   esac
 
-  # Create remediation directory and first round dir
   mkdir -p "$PHASE_DIR/remediation/uat/round-01"
 
-  # Write key=value state file (layout=round-dir: fresh round, no legacy fallback)
   printf 'stage=%s\nround=01\nlayout=round-dir\n' "$initial_stage" > "$STATE_FILE"
 
-  # Remove legacy state files if they exist (migrated to new location)
   rm -f "$LEGACY_STATE_FILE"
   rm -f "$LEGACY_REMED_STATE_FILE"
 
@@ -464,15 +404,6 @@ do_init() {
 
   echo "$initial_stage"
 
-  # Pre-seed the phase CONTEXT.md with UAT report content so the
-  # require_phase_discussion gate sees pre_seeded: true and skips
-  # discussion naturally — matching how milestone-level remediation
-  # works via create-remediation-phase.sh.
-  #
-  # Appends UAT issues to the existing CONTEXT (preserving original
-  # discussion context) and adds pre_seeded: true to frontmatter.
-  #
-  # Sets _init_context_file for emit_init_context() to use.
   local context_file uat_file uat_content _already_seeded
   _init_emit_context=false
   _init_context_file=""
@@ -486,8 +417,6 @@ do_init() {
 
   if [ -n "$uat_file" ] && [ -f "$uat_file" ]; then
     uat_content=$(cat "$uat_file")
-    # Normalize quoted numeric values in YAML frontmatter
-    # LLM sometimes writes phase: "03" instead of phase: 03
     uat_content=$(printf '%s\n' "$uat_content" | sed -E '/^---[[:space:]]*$/,/^---[[:space:]]*$/{
       s/^([[:space:]]*(phase|round)[[:space:]]*:[[:space:]]*)"([0-9]+)"/\1\3/
     }')
@@ -553,7 +482,7 @@ do_init() {
         echo "pre_seeded: true"
         echo "---"
         echo ""
-        echo "# Phase ${phase_num}: UAT Remediation — Context"
+        echo "# Phase ${phase_num}: UAT Remediation ${EM_DASH} Context"
         echo ""
         echo "## UAT Remediation Issues"
         echo ""
@@ -573,11 +502,6 @@ emit_init_context() {
 }
 
 emit_plan_metadata() {
-  # Emit round-dir metadata for orchestrators.
-  # Reports the current round, round directory, and paths to existing
-  # research/plan files within the round dir. Legacy phase-root fallback
-  # only applies when layout=legacy (migrated from old single-word state file),
-  # preventing stale artifacts from previous rounds being returned as current.
   local round round_dir layout research_path="" plan_path="" summary_path=""
 
   round=$(get_round)
@@ -585,16 +509,13 @@ emit_plan_metadata() {
   layout=$(get_layout)
   summary_path="${round_dir}/R${round}-SUMMARY.md"
 
-  # Check for existing research in round dir first, then legacy phase root
   local rr_research="${round_dir}/R${round}-RESEARCH.md"
   if [ -f "$rr_research" ]; then
     research_path="$rr_research"
   elif [ "$layout" = "legacy" ]; then
-    # Legacy fallback: per-plan research at phase root (brownfield migration only)
     local phase_prefix
     phase_prefix=$(extract_phase_num)
     local legacy_per_plan legacy_phase_level
-    # Scan for highest per-plan research in phase root
     legacy_per_plan=$(find "$PHASE_DIR" -maxdepth 1 -name "${phase_prefix}-*-RESEARCH.md" ! -name '.*' 2>/dev/null | sort | tail -1)
     legacy_phase_level="${PHASE_DIR}/${phase_prefix}-RESEARCH.md"
     if [ -n "$legacy_per_plan" ] && [ -f "$legacy_per_plan" ]; then
@@ -604,12 +525,10 @@ emit_plan_metadata() {
     fi
   fi
 
-  # Check for existing plan in round dir first, then legacy phase root
   local rr_plan="${round_dir}/R${round}-PLAN.md"
   if [ -f "$rr_plan" ]; then
     plan_path="$rr_plan"
   elif [ "$layout" = "legacy" ]; then
-    # Legacy fallback: highest plan file at phase root (brownfield migration only)
     local phase_prefix
     phase_prefix=$(extract_phase_num)
     local legacy_plan
@@ -636,10 +555,8 @@ case "$CMD" in
     if [ "$current" = "none" ]; then
       echo "$current"
     elif [ "$current" = "verify" ]; then
-      # Verification found issues — start a new remediation round
       start_new_round
     elif [ "$current" = "verified" ]; then
-      # Verification passed — no-op (nothing to remediate)
       echo "$current"
     else
       new_stage=$(next_stage "$current")
@@ -647,7 +564,6 @@ case "$CMD" in
       layout=$(get_layout)
       mkdir -p "$(dirname "$STATE_FILE")"
       printf 'stage=%s\nround=%s\nlayout=%s\n' "$new_stage" "$round" "$layout" > "$STATE_FILE"
-      # Remove legacy state file if we migrated to new location
       [ -f "$LEGACY_STATE_FILE" ] && rm -f "$LEGACY_STATE_FILE"
       reconcile_uat_state "$STATE_FILE"
       echo "$new_stage"
@@ -661,16 +577,12 @@ case "$CMD" in
     ;;
 
   needs-round)
-    # Start a new remediation round: increment round, create dir, reset to research.
-    # Guard: requires an existing state file — can't advance to "next round" if
-    # remediation was never initialized. Without this guard, get_round() defaults
-    # to "01" and start_new_round() creates round-02 from a phantom round-01.
     if [ ! -f "$STATE_FILE" ] && [ -f "$LEGACY_REMED_STATE_FILE" ]; then
       preflight_legacy_remediation_needs_round
       migrate_legacy_remediation_state_if_needed
     fi
     if [ ! -f "$STATE_FILE" ] && [ ! -f "$LEGACY_STATE_FILE" ]; then
-      echo "Error: no UAT remediation state exists for $PHASE_DIR — cannot advance to next round without prior init" >&2
+      echo "Error: no UAT remediation state exists for $PHASE_DIR ${EM_DASH} cannot advance to next round without prior init" >&2
       exit 1
     fi
     current_stage=$(get_stage)
@@ -738,11 +650,9 @@ case "$CMD" in
     fi
     existing=$(get_stage)
     if [ "$existing" != "none" ]; then
-      # If resuming from legacy state file, migrate to new format
       if [ ! -f "$STATE_FILE" ] && [ -f "$LEGACY_STATE_FILE" ]; then
         _resume_round=$(get_round)
         mkdir -p "$PHASE_DIR/remediation/uat/round-${_resume_round}"
-        # layout=legacy: phase-root artifacts are current work (migrated from old format)
         printf 'stage=%s\nround=%s\nlayout=legacy\n' "$existing" "$_resume_round" > "$STATE_FILE"
         rm -f "$LEGACY_STATE_FILE"
         reconcile_uat_state "$STATE_FILE"
@@ -751,7 +661,6 @@ case "$CMD" in
       emit_plan_metadata
     else
       do_init "$SEVERITY_ARG"
-      # Init always sets research or fix — read back for stage-aware metadata
       emit_plan_metadata
       emit_init_context
     fi
