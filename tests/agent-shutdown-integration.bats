@@ -32,7 +32,7 @@ teardown() {
 }
 
 next_live_pid() {
-  sleep 30 >/dev/null 2>&1 &
+  sleep 999 >/dev/null 2>&1 &
   NEXT_PID=$!
   LIVE_PIDS+=("$NEXT_PID")
 }

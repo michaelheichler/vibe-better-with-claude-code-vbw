@@ -318,8 +318,12 @@ vbw_active_agent_remove_current_session() {
 }
 
 vbw_active_agent_clear_all() {
-  local planning_dir="$1"
-  vbw_active_agent_acquire_lock "$planning_dir" || return 0
+  local planning_dir="$1" lock_dir
+  lock_dir=$(_vbw_active_agent_lock_dir "$planning_dir")
+  if ! vbw_active_agent_acquire_lock "$planning_dir"; then
+    rm -rf "$lock_dir"
+    vbw_active_agent_acquire_lock "$planning_dir" || return 0
+  fi
   rm -rf "$planning_dir/.active-agents"
   _vbw_active_agent_root_files_remove "$planning_dir"
   vbw_active_agent_release_lock "$planning_dir"

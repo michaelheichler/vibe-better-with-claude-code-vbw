@@ -108,7 +108,7 @@ EOF
   cd "$TEST_TEMP_DIR"
   create_plan_with_files
   local scout_pid
-  sleep 30 >/dev/null 2>&1 & scout_pid=$!
+  sleep 999 >/dev/null 2>&1 & scout_pid=$!
   LIVE_PIDS+=("$scout_pid")
   printf '%s\n' "{\"session_id\":\"session-A\",\"agent_type\":\"vbw:vbw-scout\",\"pid\":\"$scout_pid\"}" | \
     VBW_PLANNING_DIR="$TEST_TEMP_DIR/.vbw-planning" bash "$SCRIPTS_DIR/agent-start.sh"
@@ -246,9 +246,9 @@ JSON
   cd "$TEST_TEMP_DIR"
   create_plan_with_files
   local scout_pid dev_pid
-  sleep 30 >/dev/null 2>&1 & scout_pid=$!
+  sleep 999 >/dev/null 2>&1 & scout_pid=$!
   LIVE_PIDS+=("$scout_pid")
-  sleep 30 >/dev/null 2>&1 & dev_pid=$!
+  sleep 999 >/dev/null 2>&1 & dev_pid=$!
   LIVE_PIDS+=("$dev_pid")
   printf '%s\n' "{\"agent_type\":\"vbw-scout\",\"pid\":\"$scout_pid\"}" | \
     VBW_PLANNING_DIR="$TEST_TEMP_DIR/.vbw-planning" bash "$SCRIPTS_DIR/agent-start.sh"
