@@ -88,6 +88,18 @@ teardown() {
   kill "$first_pid" "$second_pid" 2>/dev/null || true
 }
 
+@test "current role resolves from a live per-pid registration" {
+  local live_pid
+  sleep 30 & live_pid=$!
+  bash -c 'source "$1"; vbw_active_agent_start "$2" "{\"session_id\":\"session-live-role\",\"agent_id\":\"agent-live\"}" scout "$3"' _ \
+    "$SCRIPTS_DIR/lib/active-agent-state.sh" "$PLANNING_DIR" "$live_pid"
+
+  run bash -c 'source "$1"; vbw_active_agent_current_scout "$2" "{\"session_id\":\"session-live-role\"}"' _ \
+    "$SCRIPTS_DIR/lib/active-agent-state.sh" "$PLANNING_DIR"
+  [ "$status" -eq 0 ]
+  kill "$live_pid" 2>/dev/null || true
+}
+
 @test "start migrates legacy files into a session source once" {
   local session_id="session-migration"
   local live_pid

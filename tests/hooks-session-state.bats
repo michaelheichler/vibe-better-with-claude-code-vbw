@@ -73,14 +73,17 @@ load test_helper
 
 @test "security-filter ignores root aggregate active-agent for other safe session" {
   setup_temp_dir
-  local REPO="$TEST_TEMP_DIR/repo"
+  local REPO="$TEST_TEMP_DIR/repo" scout_pid
   mkdir -p "$REPO/.planning" "$REPO/.vbw-planning"
-  printf '%s\n' '{"session_id":"session-A","agent_type":"vbw-scout","pid":"10101"}' | \
+  sleep 30 & scout_pid=$!
+  printf '%s\n' "{\"session_id\":\"session-A\",\"agent_type\":\"vbw-scout\",\"pid\":\"$scout_pid\"}" | \
     VBW_PLANNING_DIR="$REPO/.vbw-planning" bash "$SCRIPTS_DIR/agent-start.sh"
+  kill -0 "$scout_pid" 2>/dev/null || fail "live scout fixture is not alive"
 
   INPUT=$(jq -n --arg sid 'session-B' --arg fp "$REPO/.planning/STATE.md" '{session_id:$sid,tool_input:{file_path:$fp}}')
   run bash -c "cd '$REPO' && printf '%s\n' '$INPUT' | bash '$SCRIPTS_DIR/security-filter.sh'"
   [ "$status" -eq 0 ]
+  kill "$scout_pid" 2>/dev/null || true
   teardown_temp_dir
 }
 
@@ -125,12 +128,14 @@ load test_helper
 
 @test "session-stop preserves .vbw-session and removes transient agent markers" {
   setup_temp_dir
+  local dead_pid
+  dead_pid=$(get_dead_pid) || fail "get_dead_pid failed"
   mkdir -p "$TEST_TEMP_DIR/.vbw-planning"
   echo "session" > "$TEST_TEMP_DIR/.vbw-planning/.vbw-session"
   echo "scout" > "$TEST_TEMP_DIR/.vbw-planning/.active-agent"
   echo "2" > "$TEST_TEMP_DIR/.vbw-planning/.active-agent-count"
   echo "scout 2" > "$TEST_TEMP_DIR/.vbw-planning/.active-agent-roles"
-  echo "12345 scout" > "$TEST_TEMP_DIR/.vbw-planning/.active-agent-role-pids"
+  echo "$dead_pid scout" > "$TEST_TEMP_DIR/.vbw-planning/.active-agent-role-pids"
   run bash -c "cd '$TEST_TEMP_DIR' && echo '{}' | bash '$SCRIPTS_DIR/session-stop.sh'"
   [ "$status" -eq 0 ]
   [ -f "$TEST_TEMP_DIR/.vbw-planning/.vbw-session" ]

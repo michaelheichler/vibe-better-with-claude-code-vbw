@@ -261,15 +261,17 @@ load test_helper
 
 @test "doctor-cleanup reports and removes stale active-agent session directories" {
   setup_temp_dir
+  local dead_pid
+  dead_pid=$(get_dead_pid) || fail "get_dead_pid failed"
   mkdir -p "$TEST_TEMP_DIR/.vbw-planning/.active-agents/session-A"
   echo "1" > "$TEST_TEMP_DIR/.vbw-planning/.active-agents/session-A/active-agent-count"
   echo "scout" > "$TEST_TEMP_DIR/.vbw-planning/.active-agents/session-A/active-agent"
   echo "scout 1" > "$TEST_TEMP_DIR/.vbw-planning/.active-agents/session-A/active-agent-roles"
-  echo "999999 scout" > "$TEST_TEMP_DIR/.vbw-planning/.active-agents/session-A/active-agent-role-pids"
+  echo "$dead_pid scout" > "$TEST_TEMP_DIR/.vbw-planning/.active-agents/session-A/active-agent-role-pids"
   echo "1" > "$TEST_TEMP_DIR/.vbw-planning/.active-agent-count"
   echo "scout" > "$TEST_TEMP_DIR/.vbw-planning/.active-agent"
   echo "scout 1" > "$TEST_TEMP_DIR/.vbw-planning/.active-agent-roles"
-  echo "999999 scout" > "$TEST_TEMP_DIR/.vbw-planning/.active-agent-role-pids"
+  echo "$dead_pid scout" > "$TEST_TEMP_DIR/.vbw-planning/.active-agent-role-pids"
 
   run env VBW_PLANNING_DIR="$TEST_TEMP_DIR/.vbw-planning" CLAUDE_CONFIG_DIR="$TEST_TEMP_DIR/claude" \
     bash "$SCRIPTS_DIR/doctor-cleanup.sh" scan
@@ -289,15 +291,17 @@ load test_helper
 
 @test "doctor-cleanup reports and removes stale legacy active-agent source" {
   setup_temp_dir
+  local dead_pid
+  dead_pid=$(get_dead_pid) || fail "get_dead_pid failed"
   mkdir -p "$TEST_TEMP_DIR/.vbw-planning/.active-agents/__vbw_legacy_global"
   echo "1" > "$TEST_TEMP_DIR/.vbw-planning/.active-agents/__vbw_legacy_global/active-agent-count"
   echo "scout" > "$TEST_TEMP_DIR/.vbw-planning/.active-agents/__vbw_legacy_global/active-agent"
   echo "scout 1" > "$TEST_TEMP_DIR/.vbw-planning/.active-agents/__vbw_legacy_global/active-agent-roles"
-  echo "999999 scout" > "$TEST_TEMP_DIR/.vbw-planning/.active-agents/__vbw_legacy_global/active-agent-role-pids"
+  echo "$dead_pid scout" > "$TEST_TEMP_DIR/.vbw-planning/.active-agents/__vbw_legacy_global/active-agent-role-pids"
   echo "1" > "$TEST_TEMP_DIR/.vbw-planning/.active-agent-count"
   echo "scout" > "$TEST_TEMP_DIR/.vbw-planning/.active-agent"
   echo "scout 1" > "$TEST_TEMP_DIR/.vbw-planning/.active-agent-roles"
-  echo "999999 scout" > "$TEST_TEMP_DIR/.vbw-planning/.active-agent-role-pids"
+  echo "$dead_pid scout" > "$TEST_TEMP_DIR/.vbw-planning/.active-agent-role-pids"
 
   run env VBW_PLANNING_DIR="$TEST_TEMP_DIR/.vbw-planning" CLAUDE_CONFIG_DIR="$TEST_TEMP_DIR/claude" \
     bash "$SCRIPTS_DIR/doctor-cleanup.sh" scan
@@ -395,9 +399,11 @@ EOF
 
 @test "agent-stop leaves no stale root aggregate after cleanup" {
   setup_temp_dir
+  local dead_pid
+  dead_pid=$(get_dead_pid) || fail "get_dead_pid failed"
   mkdir -p "$TEST_TEMP_DIR/.vbw-planning"
   echo "dev 1" > "$TEST_TEMP_DIR/.vbw-planning/.active-agent-roles"
-  echo "12345 dev" > "$TEST_TEMP_DIR/.vbw-planning/.active-agent-role-pids"
+  echo "$dead_pid dev" > "$TEST_TEMP_DIR/.vbw-planning/.active-agent-role-pids"
   run bash -c "cd '$TEST_TEMP_DIR' && echo '{}' | bash '$SCRIPTS_DIR/agent-stop.sh'"
   [ "$status" -eq 0 ]
   [ ! -f "$TEST_TEMP_DIR/.vbw-planning/.active-agent-roles" ]

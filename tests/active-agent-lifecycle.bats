@@ -1,5 +1,6 @@
 #!/usr/bin/env bats
 
+bats_require_minimum_version 1.5.0
 load test_helper
 @test "agent-start handles vbw: prefixed agent_type" {
   setup_temp_dir
@@ -150,7 +151,7 @@ load test_helper
 
   echo "{\"agent_type\":\"vbw-dev\",\"pid\":\"$dev_pid\"}" | bash -c "cd '$TEST_TEMP_DIR' && bash '$SCRIPTS_DIR/agent-stop.sh'"
   grep -Fqx 'scout 1' "$TEST_TEMP_DIR/.vbw-planning/.active-agent-roles"
-  ! grep -q '^dev ' "$TEST_TEMP_DIR/.vbw-planning/.active-agent-roles"
+  run ! grep -q '^dev ' "$TEST_TEMP_DIR/.vbw-planning/.active-agent-roles"
 
   echo "{\"agent_type\":\"vbw-scout\",\"pid\":\"$scout_two\"}" | bash -c "cd '$TEST_TEMP_DIR' && bash '$SCRIPTS_DIR/agent-stop.sh'"
   [ ! -f "$TEST_TEMP_DIR/.vbw-planning/.active-agent-roles" ]
@@ -194,9 +195,9 @@ load test_helper
   [ "$status" -eq 0 ]
   [ "$(cat "$TEST_TEMP_DIR/.vbw-planning/.active-agent-count")" = "1" ]
   grep -Fqx 'dev 1' "$TEST_TEMP_DIR/.vbw-planning/.active-agent-roles"
-  ! grep -q '^scout ' "$TEST_TEMP_DIR/.vbw-planning/.active-agent-roles"
+  run ! grep -q '^scout ' "$TEST_TEMP_DIR/.vbw-planning/.active-agent-roles"
   grep -Fqx "$dev_pid dev" "$TEST_TEMP_DIR/.vbw-planning/.active-agent-role-pids"
-  ! grep -q "^$scout_pid " "$TEST_TEMP_DIR/.vbw-planning/.active-agent-role-pids"
+  run ! grep -q "^$scout_pid " "$TEST_TEMP_DIR/.vbw-planning/.active-agent-role-pids"
   [ "$(cat "$TEST_TEMP_DIR/.vbw-planning/.active-agent")" = "dev" ]
   kill "$scout_pid" "$dev_pid" 2>/dev/null || true
   teardown_temp_dir
@@ -205,7 +206,9 @@ load test_helper
 @test "agent-stop ignores an unknown pid" {
   setup_temp_dir
   mkdir -p "$TEST_TEMP_DIR/.vbw-planning"
-  run bash -c "cd '$TEST_TEMP_DIR' && echo '{\"pid\":\"999999\"}' | bash '$SCRIPTS_DIR/agent-stop.sh'"
+  local dead_pid
+  dead_pid=$(get_dead_pid) || fail "get_dead_pid failed"
+  run bash -c "cd '$TEST_TEMP_DIR' && echo '{\"pid\":\"$dead_pid\"}' | bash '$SCRIPTS_DIR/agent-stop.sh'"
   [ "$status" -eq 0 ]
   [ ! -f "$TEST_TEMP_DIR/.vbw-planning/.active-agent-count" ]
   teardown_temp_dir
@@ -250,9 +253,9 @@ load test_helper
   [ -f "$TEST_TEMP_DIR/.vbw-planning/.active-agents/session-B/agents/$dev_pid.json" ]
   [ "$(cat "$TEST_TEMP_DIR/.vbw-planning/.active-agent-count")" = "1" ]
   grep -Fqx 'dev 1' "$TEST_TEMP_DIR/.vbw-planning/.active-agent-roles"
-  ! grep -q '^scout ' "$TEST_TEMP_DIR/.vbw-planning/.active-agent-roles"
+  run ! grep -q '^scout ' "$TEST_TEMP_DIR/.vbw-planning/.active-agent-roles"
   grep -Fqx "$dev_pid dev" "$TEST_TEMP_DIR/.vbw-planning/.active-agent-role-pids"
-  ! grep -q "^$scout_pid " "$TEST_TEMP_DIR/.vbw-planning/.active-agent-role-pids"
+  run ! grep -q "^$scout_pid " "$TEST_TEMP_DIR/.vbw-planning/.active-agent-role-pids"
   [ "$(cat "$TEST_TEMP_DIR/.vbw-planning/.active-agent")" = "dev" ]
   kill "$scout_pid" "$dev_pid" 2>/dev/null || true
   teardown_temp_dir

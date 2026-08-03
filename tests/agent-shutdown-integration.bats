@@ -8,7 +8,7 @@ setup() {
   setup_temp_dir
   create_test_config
 
-  cd "$TEST_TEMP_DIR"
+  cd "$TEST_TEMP_DIR" || return 1
 
   git init -q
   git config user.email "test@test.com"
@@ -31,7 +31,7 @@ teardown() {
   teardown_temp_dir
 }
 
-next_fake_pid() {
+next_live_pid() {
   sleep 30 >/dev/null 2>&1 &
   NEXT_PID=$!
   LIVE_PIDS+=("$NEXT_PID")
@@ -59,7 +59,7 @@ simulate_session_stop() {
 @test "agent-start creates .active-agent and sets count to 1" {
   cd "$TEST_TEMP_DIR"
   local pid
-  next_fake_pid
+  next_live_pid
   pid="$NEXT_PID"
 
   simulate_agent_start "vbw-dev" "$pid"
@@ -73,9 +73,9 @@ simulate_session_stop() {
 @test "two agent-starts increment count to 2" {
   cd "$TEST_TEMP_DIR"
   local pid1 pid2
-  next_fake_pid
+  next_live_pid
   pid1="$NEXT_PID"
-  next_fake_pid
+  next_live_pid
   pid2="$NEXT_PID"
 
   simulate_agent_start "vbw-dev" "$pid1"
@@ -88,9 +88,9 @@ simulate_session_stop() {
 @test "agent-stop decrements count from 2 to 1 - markers preserved" {
   cd "$TEST_TEMP_DIR"
   local pid1 pid2
-  next_fake_pid
+  next_live_pid
   pid1="$NEXT_PID"
-  next_fake_pid
+  next_live_pid
   pid2="$NEXT_PID"
 
   simulate_agent_start "vbw-dev" "$pid1"
@@ -107,7 +107,7 @@ simulate_session_stop() {
 @test "agent-stop decrements count from 1 to 0 - markers removed" {
   cd "$TEST_TEMP_DIR"
   local pid1
-  next_fake_pid
+  next_live_pid
   pid1="$NEXT_PID"
 
   simulate_agent_start "vbw-dev" "$pid1"
@@ -120,9 +120,9 @@ simulate_session_stop() {
 @test "two starts then two stops - all markers cleaned" {
   cd "$TEST_TEMP_DIR"
   local pid1 pid2
-  next_fake_pid
+  next_live_pid
   pid1="$NEXT_PID"
-  next_fake_pid
+  next_live_pid
   pid2="$NEXT_PID"
 
   simulate_agent_start "vbw-dev" "$pid1"
@@ -136,9 +136,11 @@ simulate_session_stop() {
 
 @test "agent-stop with no count file but active-agent marker - removes marker" {
   cd "$TEST_TEMP_DIR"
+  local dead_pid
+  dead_pid=$(get_dead_pid) || fail "get_dead_pid failed"
   echo "dev" > ".vbw-planning/.active-agent"
 
-  echo '{"pid":"99999"}' | bash "$SCRIPTS_DIR/agent-stop.sh"
+  echo "{\"pid\":\"$dead_pid\"}" | bash "$SCRIPTS_DIR/agent-stop.sh"
 
   [ ! -f ".vbw-planning/.active-agent" ]
 }
@@ -153,7 +155,7 @@ simulate_session_stop() {
 @test "agent-start registers PID - agent-stop unregisters it" {
   cd "$TEST_TEMP_DIR"
   local pid
-  next_fake_pid
+  next_live_pid
   pid="$NEXT_PID"
 
   simulate_agent_start "vbw-dev" "$pid"
@@ -279,13 +281,14 @@ simulate_session_stop() {
 
 @test "session-stop removes transient markers" {
   cd "$TEST_TEMP_DIR"
-
+  local dead_pid
+  dead_pid=$(get_dead_pid) || fail "get_dead_pid failed"
   echo "dev" > ".vbw-planning/.active-agent"
   echo "2" > ".vbw-planning/.active-agent-count"
   echo "scout 1" > ".vbw-planning/.active-agent-roles"
-  echo "12345 scout" > ".vbw-planning/.active-agent-role-pids"
+  echo "$dead_pid scout" > ".vbw-planning/.active-agent-role-pids"
   mkdir -p ".vbw-planning/.active-agent-count.lock"
-  echo "12345 %1" > ".vbw-planning/.agent-panes"
+  echo "$dead_pid %1" > ".vbw-planning/.agent-panes"
 
   simulate_session_stop
 
@@ -300,9 +303,9 @@ simulate_session_stop() {
 @test "session-stop with session id removes only that session active-agent state" {
   cd "$TEST_TEMP_DIR"
   local pid_a pid_b
-  next_fake_pid
+  next_live_pid
   pid_a="$NEXT_PID"
-  next_fake_pid
+  next_live_pid
   pid_b="$NEXT_PID"
 
   printf '%s\n' "{\"session_id\":\"session-A\",\"agent_type\":\"vbw-scout\",\"pid\":\"$pid_a\"}" | \
@@ -389,7 +392,7 @@ EOF
   echo "$dead_pid scout" > ".vbw-planning/.active-agents/session-A/active-agent-role-pids"
   echo "$dead_pid" > ".vbw-planning/.agent-pids"
   echo "$dead_pid %1" > ".vbw-planning/.agent-panes"
-  echo '{"pid":999999,"started_at":1,"agent_name":"stale"}' > ".vbw-planning/.compacting/stale.json"
+  echo "{\"pid\":$dead_pid,\"started_at\":1,\"agent_name\":\"stale\"}" > ".vbw-planning/.compacting/stale.json"
 
   run env PATH="$fakebin:$PATH" VBW_PLANNING_DIR="$TEST_TEMP_DIR/.vbw-planning" bash "$SCRIPTS_DIR/tmux-watchdog.sh" test-session
   [ "$status" -eq 0 ]
@@ -490,7 +493,7 @@ EOF
   [ ! -f ".vbw-planning/.task-verify-seen" ]
 
   local pid
-  next_fake_pid
+  next_live_pid
   pid="$NEXT_PID"
   simulate_agent_start "vbw-dev" "$pid"
   simulate_agent_stop "$pid"
@@ -506,9 +509,9 @@ EOF
   cd "$TEST_TEMP_DIR"
 
   local pid1 pid2
-  next_fake_pid
+  next_live_pid
   pid1="$NEXT_PID"
-  next_fake_pid
+  next_live_pid
   pid2="$NEXT_PID"
   simulate_agent_start "vbw-dev" "$pid1"
   simulate_agent_start "vbw-dev" "$pid2"
