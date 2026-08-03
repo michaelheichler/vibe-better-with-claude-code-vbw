@@ -424,6 +424,80 @@ shell_visible_tokens() {
   fi
 }
 
+command_segments_without_quoted_text() {
+  local command="$1"
+  local masked
+
+  masked=$(command_without_quoted_text "$command")
+  printf '%s' "$masked" | tr ';|&' '\n'
+}
+
+segment_command_token() {
+  local segment="$1"
+  local token
+
+  while IFS= read -r token; do
+    [ -n "$token" ] || continue
+    case "$token" in
+      [0-9]*'>'*|[0-9]*'<'*|'>'*|'<'*|[[:alnum:]_]*=*)
+        continue
+        ;;
+      sudo|env|command|exec|nice)
+        continue
+        ;;
+    esac
+    printf '%s' "${token##*/}"
+    return 0
+  done <<< "$(shell_visible_tokens "$segment")"
+
+  return 1
+}
+
+command_has_filesystem_mutation() {
+  local command="$1"
+  local segment command_token
+
+  while IFS= read -r segment; do
+    command_token=$(segment_command_token "$segment") || continue
+    case "$command_token" in
+      rm|mv|cp|mkdir|rmdir|touch|chmod|chown|ln|install|truncate)
+        return 0
+        ;;
+    esac
+  done <<< "$(command_segments_without_quoted_text "$command")"
+
+  return 1
+}
+
+command_matches_patterns() {
+  local command="$1"
+  local segment COMMAND
+
+  while IFS= read -r segment; do
+    COMMAND="$segment"
+    if echo "$COMMAND" | grep -iqE "$PATTERNS"; then
+      return 0
+    fi
+  done <<< "$(command_segments_without_quoted_text "$command")"
+
+  return 1
+}
+
+command_pattern_match() {
+  local command="$1"
+  local segment
+
+  while IFS= read -r segment; do
+    if printf '%s\n' "$segment" | grep -iqE "$PATTERNS"; then
+      printf '%s\n' "$segment" | grep -ioE "$PATTERNS" | head -1
+      return 0
+    fi
+  done <<< "$(command_segments_without_quoted_text "$command")"
+
+  return 1
+}
+
+
 token_has_shell_c_option() {
   case "$1" in
     -c|--command|--command=*)
@@ -630,8 +704,8 @@ check_readonly_agent_command() {
   local command="$1"
   local matched=""
 
-  if [ -n "$PATTERNS" ] && echo "$command" | grep -iqE "$PATTERNS"; then
-    matched=$(echo "$command" | grep -ioE "$PATTERNS" | head -1)
+  if [ -n "$PATTERNS" ] && command_matches_patterns "$command"; then
+    matched=$(command_pattern_match "$command")
     block_readonly_agent_command "destructive command detected: $matched"
   fi
 
@@ -663,7 +737,7 @@ check_readonly_agent_command() {
     block_readonly_agent_command "package or dependency mutation command"
   fi
 
-  if echo "$command" | grep -iqE '(^|[[:space:];|&])(rm|mv|cp|mkdir|rmdir|touch|chmod|chown|ln|install|truncate)([[:space:]]|$)'; then
+  if command_has_filesystem_mutation "$command"; then
     block_readonly_agent_command "filesystem mutation command"
   fi
 
@@ -739,8 +813,8 @@ fi
 
 [ -z "$PATTERNS" ] && exit 0
 
-if echo "$COMMAND" | grep -iqE "$PATTERNS"; then
-  MATCHED=$(echo "$COMMAND" | grep -ioE "$PATTERNS" | head -1)
+if command_matches_patterns "$COMMAND"; then
+  MATCHED=$(command_pattern_match "$COMMAND")
   echo "Blocked: destructive command detected ($MATCHED)" >&2
   echo "Hint: Use VBW_ALLOW_DESTRUCTIVE=1 to override, or run outside VBW." >&2
   echo "See: config/destructive-commands.txt for the full blocklist." >&2
