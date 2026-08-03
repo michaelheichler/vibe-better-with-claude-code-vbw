@@ -29,7 +29,7 @@ known_issue_outcomes:
 - `{file-path}` -- {action}: {purpose}
 
 ### Known Issue Outcomes
-- `{test-name}` (`{file-path}`) — `{resolved|accepted-process-exception|unresolved}`: {rationale}
+- `{test-name}` (`{file-path}`) : `{resolved|accepted-process-exception|unresolved}`: {rationale}
 
 ### Deviations
 - {deviation-description}

@@ -6,7 +6,7 @@ confidence: {high|medium|low}
 date: {YYYY-MM-DD}
 ---
 
-# Phase {phase_number}: {phase_name} — Research
+# Phase {phase_number}: {phase_name} : Research
 
 ## Findings
 

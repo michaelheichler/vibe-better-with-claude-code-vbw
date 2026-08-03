@@ -28,7 +28,7 @@ must_haves:
 @{context-file}
 </context>
 <tasks>
-<!-- Tasks are executed sequentially — task N+1 sees the results of task N.
+<!-- Tasks are executed sequentially : task N+1 sees the results of task N.
      Order matters: place foundational fixes before dependent ones. -->
 <task type="auto">
   <name>{task-name}</name>

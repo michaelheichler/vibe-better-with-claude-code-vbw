@@ -34,5 +34,5 @@ Defined: {date} | Core value: {one-liner}
 
 ## Out of Scope
 
-- Social sharing features (deliberately excluded — adds privacy complexity)
-- Third-party integrations (deliberately excluded — increases maintenance burden)
+- Social sharing features (deliberately excluded : adds privacy complexity)
+- Third-party integrations (deliberately excluded : increases maintenance burden)
