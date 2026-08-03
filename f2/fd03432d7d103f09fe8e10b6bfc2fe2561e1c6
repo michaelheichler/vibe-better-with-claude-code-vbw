@@ -1,0 +1,36 @@
+tests/hooks-session-state.bats
+  s_148ae53cf16113::t_1d3b26bdac932a 131-132,138
+  s_148ae53cf16113::t_c2775bbb40fd86 76,78-79,81,86
+tests/active-agent-lifecycle-legacy.bats
+  s_148ae53cf16113::t_b78b671e461a8c 294-295,300,304
+  s_148ae53cf16113::t_53e2083bf25de8 402-403,406
+  s_148ae53cf16113::t_8b2bbc6b26930c 264-265,270,274
+tests/active-agent-lifecycle.bats
+  s_148ae53cf16113::t_9fe3a4bc487c88 3
+  s_148ae53cf16113::t_97882430eefc57 154,198,200,256,258
+  s_148ae53cf16113::t_981de01e95b8dd 209-211
+tests/active-agent-state.bats
+  s_148ae53cf16113::t_fece2dab01d71d 91-102
+tests/agent-shutdown-integration.bats
+  s_148ae53cf16113::t_8681c23e8f10ae 395
+  s_148ae53cf16113::t_1bad96ffe96c70 34,62,76,78,91,93,110,123,125,158,306,308,496,512,514
+  s_148ae53cf16113::t_40de0fd50c160d 139-140,143
+  s_148ae53cf16113::t_1b95dcb790a417 11
+  s_148ae53cf16113::t_7ddef08641f434 284-285,289,291
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "f2fd03432d7d103f09fe8e10b6bfc2fe2561e1c6",
+  "prompts": {},
+  "sessions": {
+    "s_148ae53cf16113": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "82bc467d-d72d-428e-97b7-1f3f33916f5e",
+        "model": "terra"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
