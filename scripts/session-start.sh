@@ -518,8 +518,14 @@ if [ -d "$MKT_DIR/.git" ] && [ -d "$CACHE_DIR" ]; then
   fi
   if [ -d "$MKT_DIR/commands" ] && [ -d "$CACHE_DIR" ]; then
     if [ -n "$_CACHE_LATEST" ] && [ -d "${_CACHE_LATEST}commands" ] && [ ! -L "${_CACHE_LATEST%/}" ]; then
-      MKT_CMD_COUNT=$(find "$MKT_DIR/commands" -maxdepth 1 -type f -name '*.md' -print 2>/dev/null | wc -l | tr -d ' ')
-      CACHE_CMD_COUNT=$(find "${_CACHE_LATEST}commands" -maxdepth 1 -type f -name '*.md' -print 2>/dev/null | wc -l | tr -d ' ')
+      MKT_CMD_COUNT=0
+      for _cmd_file in "$MKT_DIR/commands"/*.md; do
+        [ -f "$_cmd_file" ] && MKT_CMD_COUNT=$((MKT_CMD_COUNT + 1))
+      done
+      CACHE_CMD_COUNT=0
+      for _cmd_file in "${_CACHE_LATEST}commands"/*.md; do
+        [ -f "$_cmd_file" ] && CACHE_CMD_COUNT=$((CACHE_CMD_COUNT + 1))
+      done
       if [ "${MKT_CMD_COUNT:-0}" -ne "${CACHE_CMD_COUNT:-0}" ]; then
         echo "VBW cache stale, marketplace has ${MKT_CMD_COUNT} commands, cache has ${CACHE_CMD_COUNT}" >&2
         rm -rf "$CACHE_DIR"
