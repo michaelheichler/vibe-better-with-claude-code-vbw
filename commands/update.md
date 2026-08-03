@@ -26,11 +26,16 @@ Store the plugin root path output above as `{plugin-root}` for use in file/scrip
 
 Read the **cached** version (what user actually has installed):
 ```bash
-for _d in "${CLAUDE_CONFIG_DIR:-}" "$HOME/.config/claude-code" "$HOME/.claude"; do [ -z "$_d" ] && continue; v=$(cat "$_d"/plugins/cache/vbw-marketplace/vbw/*/VERSION 2>/dev/null | sort -V | tail -1 || true); [ -n "$v" ] && echo "$v" && break; done
+for _d in "${CLAUDE_CONFIG_DIR:-}" "$HOME/.config/claude-code" "$HOME/.claude"
+do
+  [ -z "$_d" ] && continue
+  v=$(cat "$_d"/plugins/cache/vbw-marketplace/vbw/*/VERSION 2>/dev/null | sort -V | tail -1 || true)
+  [ -n "$v" ] && echo "$v" && break
+done
 ```
 Store as `old_version`. If empty, fall back to `{plugin-root}/VERSION`.
 
-**CRITICAL:** Do NOT read `{plugin-root}/VERSION` as primary — in dev sessions it resolves to source repo (may be ahead), causing false "already up to date."
+**CRITICAL:** Do NOT read `{plugin-root}/VERSION` as primary, in dev sessions it resolves to source repo (may be ahead), causing false "already up to date."
 
 ### Step 2: Handle --check
 
@@ -55,13 +60,13 @@ Removes CLAUDE_DIR/plugins/cache/vbw-marketplace/vbw/, CLAUDE_DIR/commands/vbw/,
 
 Same version: "Refreshing VBW v{old_version} cache..." Different: "Updating VBW v{old_version}..."
 
-**CRITICAL: All `claude plugin` commands MUST be prefixed with `unset CLAUDECODE &&`** — without this, Claude Code detects the parent session's env var and blocks with "cannot be launched inside another Claude Code session."
+**CRITICAL: All `claude plugin` commands MUST be prefixed with `unset CLAUDECODE &&`**, without this, Claude Code detects the parent session's env var and blocks with "cannot be launched inside another Claude Code session."
 
 **Refresh marketplace FIRST** (stale checkout → plugin update re-caches old code):
 ```bash
 unset CLAUDECODE && claude plugin marketplace update vbw-marketplace 2>&1
 ```
-If fails: "⚠ Marketplace refresh failed — trying update anyway..."
+If fails: "⚠ Marketplace refresh failed, trying update anyway..."
 
 Try in order (stop at first success):
 - **A) Platform update:** `unset CLAUDECODE && claude plugin update vbw@vbw-marketplace 2>&1`
@@ -70,7 +75,11 @@ Try in order (stop at first success):
 
 **Clean stale global commands** (after A or B succeeds):
 ```bash
-for _d in "${CLAUDE_CONFIG_DIR:-}" "$HOME/.config/claude-code" "$HOME/.claude"; do [ -z "$_d" ] && continue; rm -rf "$_d/commands/vbw" 2>/dev/null; done
+for _d in "${CLAUDE_CONFIG_DIR:-}" "$HOME/.config/claude-code" "$HOME/.claude"
+do
+  [ -z "$_d" ] && continue
+  rm -rf "$_d/commands/vbw" 2>/dev/null
+done
 ```
 This removes stale copies that break `{plugin-root}` resolution. Commands load from the plugin cache where the resolved plugin root is guaranteed.
 
@@ -78,14 +87,19 @@ This removes stale copies that break `{plugin-root}` resolution. Commands load f
 
 Read `CLAUDE_DIR/settings.json`, check `statusLine` (string or object .command). If contains `vbw-statusline`: skip. Otherwise update to:
 ```json
-{"type": "command", "command": "bash -c 'for _d in \"${CLAUDE_CONFIG_DIR:-}\" \"$HOME/.config/claude-code\" \"$HOME/.claude\"; do [ -z \"$_d\" ] && continue; f=$(ls -1 \"$_d\"/plugins/cache/vbw-marketplace/vbw/*/scripts/vbw-statusline.sh 2>/dev/null | sort -V | tail -1 || true); [ -f \"$f\" ] && exec bash \"$f\"; done'"}
+{"type": "command", "command": "bash -c 'for _d in \"${CLAUDE_CONFIG_DIR:-}\" \"$HOME/.config/claude-code\" \"$HOME/.claude\"\\n do\\n   [ -z \"$_d\" ] && continue\\n   f=$(ls -1 \"$_d\"/plugins/cache/vbw-marketplace/vbw/*/scripts/vbw-statusline.sh 2>/dev/null | sort -V | tail -1 || true)\\n   [ -f \"$f\" ] && exec bash \"$f\"\\n done'"}
 ```
 Use jq to write (backup, update, restore on failure). Display `✓ Statusline restored (restart to activate)` if changed.
 
 ### Step 6: Verify update
 
 ```bash
-NEW_CACHED=$(for _d in "${CLAUDE_CONFIG_DIR:-}" "$HOME/.config/claude-code" "$HOME/.claude"; do [ -z "$_d" ] && continue; v=$(cat "$_d"/plugins/cache/vbw-marketplace/vbw/*/VERSION 2>/dev/null | sort -V | tail -1 || true); [ -n "$v" ] && echo "$v" && break; done)
+NEW_CACHED=$(for _d in "${CLAUDE_CONFIG_DIR:-}" "$HOME/.config/claude-code" "$HOME/.claude"
+do
+  [ -z "$_d" ] && continue
+  v=$(cat "$_d"/plugins/cache/vbw-marketplace/vbw/*/VERSION 2>/dev/null | sort -V | tail -1 || true)
+  [ -n "$v" ] && echo "$v" && break
+done)
 ```
 Use NEW_CACHED as authoritative version. If empty or equals old_version when it shouldn't: "⚠ Update may not have applied. Try /vbw:update again after restart."
 
@@ -97,4 +111,4 @@ Use NEW_CACHED for all display. Same version = "VBW Cache Refreshed" banner + "C
 
 ## Output Format
 
-Follow @${CLAUDE_PLUGIN_ROOT}/references/vbw-brand-essentials.md — double-line box, ✓ success, ⚠ fallback warning, Next Up, no ANSI.
+Follow @${CLAUDE_PLUGIN_ROOT}/references/vbw-brand-essentials.md, double-line box, ✓ success, ⚠ fallback warning, Next Up, no ANSI.

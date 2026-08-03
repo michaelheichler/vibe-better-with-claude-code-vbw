@@ -58,4 +58,4 @@ Built-in: "⚠ Cannot delete built-in profile." Not found: "⚠ Profile not foun
 
 ## Output Format
 
-Follow @${CLAUDE_PLUGIN_ROOT}/references/vbw-brand-essentials.md — single-line box, ✓ success, ⚠ errors, ➜ transitions, no ANSI.
+Follow @${CLAUDE_PLUGIN_ROOT}/references/vbw-brand-essentials.md , single-line box, ✓ success, ⚠ errors, ➜ transitions, no ANSI.

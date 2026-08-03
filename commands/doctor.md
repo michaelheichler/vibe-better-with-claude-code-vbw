@@ -88,7 +88,7 @@ If `.vbw-planning/` exists (project initialized):
 - Run `bash "{plugin-root}/scripts/check-claude-md-staleness.sh" --json 2>/dev/null`
 - Parse JSON output: `stale`, `missing_sections`, `version_mismatch`, `installed_version`, `marker_version`
 - PASS if `stale` is false
-- WARN if `stale` is true — show missing sections and/or version mismatch detail
+- WARN if `stale` is true, show missing sections and/or version mismatch detail
 - SKIP if no `.vbw-planning/` directory (not bootstrapped)
 
 If user invoked with `--cleanup`: run `bash "{plugin-root}/scripts/check-claude-md-staleness.sh" --fix 2>&1` and report result. The fix must refresh only VBW-owned sections in place, preserve all other `CLAUDE.md` content verbatim, and add `## Code Intelligence` only when no Code Intelligence heading/guidance already exists.
@@ -98,7 +98,7 @@ If `.vbw-planning/` exists:
 - Run `bash "{plugin-root}/scripts/verify-state-consistency.sh" .vbw-planning --mode advisory 2>/dev/null`
 - Parse JSON output with jq: `.verdict`
 - PASS if verdict is `"pass"`
-- WARN if verdict is `"fail"` — show `.failed_checks` array
+- WARN if verdict is `"fail"`, show `.failed_checks` array
 - SKIP if no `.vbw-planning/` directory (not bootstrapped)
 
 ### 18. RTK integration
@@ -106,9 +106,9 @@ Run `bash "{plugin-root}/scripts/rtk-manager.sh" doctor-json 2>/dev/null`.
 - Parse JSON output: `doctor_status`, `doctor_detail`, `compatibility`, `compatibility_basis`, `updated_input_risk`, `proof_source`, `diagnostic_caveat`, `upstream_issue`
 - SKIP only when RTK is absent and helper JSON reports no local/global RTK artifacts, no VBW RTK receipt, and no partial install evidence
 - WARN when binary-only, hook-active-unverified, artifact-only, missing/error config, settings are unreadable, or a cached explicit update check says RTK is outdated
-- PASS when `compatibility` is `"verified"` with a concrete `proof_source`, even if `updated_input_risk=true`; the runtime proof verifies this local RTK/VBW hook setup
+- PASS when `compatibility` is `"verified"` with a concrete `proof_source`, even if `updated_input_risk=true`, the runtime proof verifies this local RTK/VBW hook setup
 - In normal output, do not warn solely because anthropics/claude-code#15897 still exists after proof. When invoked with `--verbose`, include `diagnostic_caveat`/`upstream_issue` as detail so the upstream caveat remains visible without downgrading health.
-- Doctor must not query the network, run RTK history/stats, or run runtime smoke; runtime smoke requires explicit Claude Code Bash-tool orchestration and belongs in `/vbw:rtk verify`. Update availability may only come from cached explicit `/vbw:rtk status --check-updates` or `/vbw:rtk update` data.
+- Doctor must not query the network, run RTK history/stats, or run runtime smoke, runtime smoke requires explicit Claude Code Bash-tool orchestration and belongs in `/vbw:rtk verify`. Update availability may only come from cached explicit `/vbw:rtk status --check-updates` or `/vbw:rtk update` data.
 
 ## Output Format
 

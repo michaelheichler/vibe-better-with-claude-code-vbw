@@ -25,7 +25,7 @@ Store the plugin root path output above as `{plugin-root}` for use in command lo
 Run the help output script and display the result exactly as-is (pre-formatted terminal output):
 
 ```
-!`L="/tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}"; i=0; while [ ! -L "$L" ] && [ $i -lt 20 ]; do sleep 0.1; i=$((i+1)); done; bash "$L/scripts/help-output.sh" || echo "VBW: help-output.sh failed — run /vbw:doctor for diagnostics"`
+!`L="/tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}"; i=0; while [ ! -L "$L" ] && [ $i -lt 20 ]; do sleep 0.1; i=$((i+1)); done; bash "$L/scripts/help-output.sh" || echo "VBW: help-output.sh failed , run /vbw:doctor for diagnostics"`
 ```
 
 Display the output above verbatim. Do not reformat, summarize, or add commentary. The script dynamically reads all command files and generates grouped output.

@@ -61,7 +61,8 @@ _refresh_phase_detect() {
   printf '%s' "$PD" > "$P"
   return 0
 }
-if ! _refresh_phase_detect; then
+if ! _refresh_phase_detect
+then
   PD="phase_detect_error=true"
   printf '%s\n' "$PD" > "$P"
 fi
@@ -154,6 +155,6 @@ Per @${CLAUDE_PLUGIN_ROOT}/references/vbw-brand-essentials.md:
     Cache hit rate: {percent}%
 ```
 
-  **RTK external metrics** (only when `--metrics` is explicit): run `bash /tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}/scripts/rtk-manager.sh status --json --stats`. If RTK is absent, show nothing. If RTK is present, show one compact line labeled external, for example `RTK external: verified by runtime smoke proof, 47% avg savings`, `RTK external: active, 47% avg savings`, or `RTK external: hook active, compatibility unverified`. Use compatibility-unverified wording only for `risk` or `hook_active_unverified` states without proof. RTK savings are external RTK savings, not VBW savings. Default `/vbw:status` avoids RTK history, stats, network, and smoke work to prevent recurring overhead; it must not advertise RTK when absent.
+  **RTK external metrics** (only when `--metrics` is explicit): run `bash /tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}/scripts/rtk-manager.sh status --json --stats`. If RTK is absent, show nothing. If RTK is present, show one compact line labeled external, for example `RTK external: verified by runtime smoke proof, 47% avg savings`, `RTK external: active, 47% avg savings`, or `RTK external: hook active, compatibility unverified`. Use compatibility-unverified wording only for `risk` or `hook_active_unverified` states without proof. RTK savings are external RTK savings, not VBW savings. Default `/vbw:status` avoids RTK history, stats, network, and smoke work to prevent recurring overhead, it must not advertise RTK when absent.
 
 **Next Up:** Run `bash /tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}/scripts/suggest-next.sh status` and display.
