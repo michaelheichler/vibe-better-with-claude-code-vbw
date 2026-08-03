@@ -1,0 +1,19 @@
+scripts/bash-guard.sh
+  s_148ae53cf16113::t_0d04c9a915bac7 43,49
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "7c3e54a37fb294b1334fb5d5e3f8dc32b1ada6e6",
+  "prompts": {},
+  "sessions": {
+    "s_148ae53cf16113": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "82bc467d-d72d-428e-97b7-1f3f33916f5e",
+        "model": "kimi3"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
