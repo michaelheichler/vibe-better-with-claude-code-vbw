@@ -7,35 +7,39 @@ setup() {
   create_test_config
   mkdir -p "$TEST_TEMP_DIR/.vbw-planning/phases"
   cd "$TEST_TEMP_DIR"
+  MARKER_SESSION_A="qa-$(basename "$TEST_TEMP_DIR")-a"
+  MARKER_SESSION_B="qa-$(basename "$TEST_TEMP_DIR")-b"
+  MARKER_A="/tmp/.vbw-orchestrator-instance-${MARKER_SESSION_A}"
+  MARKER_B="/tmp/.vbw-orchestrator-instance-${MARKER_SESSION_B}"
 }
 
 teardown() {
-  rm -f /tmp/.vbw-orchestrator-instance-session-A /tmp/.vbw-orchestrator-instance-session-B
+  rm -f "$MARKER_A" "$MARKER_B"
   teardown_temp_dir
 }
 
 @test "session-start writes distinct orchestrator markers per session" {
-  local marker_a marker_b first second
-  marker_a="/tmp/.vbw-orchestrator-instance-session-A"
-  marker_b="/tmp/.vbw-orchestrator-instance-session-B"
-  rm -f "$marker_a" "$marker_b"
+  local first second
+  rm -f "$MARKER_A" "$MARKER_B"
 
-  run bash -c "printf '%s\n' '{\"session_id\":\"session-A\"}' | CLAUDE_CONFIG_DIR='$TEST_TEMP_DIR/claude' bash '$SCRIPTS_DIR/session-start.sh'"
+  run bash -c "printf '%s\n' '{\"session_id\":\"$MARKER_SESSION_A\"}' | CLAUDE_CONFIG_DIR='$TEST_TEMP_DIR/claude' bash '$SCRIPTS_DIR/session-start.sh'"
   [ "$status" -eq 0 ]
-  [ -s "$marker_a" ]
-  first=$(cat "$marker_a")
+  [ -s "$MARKER_A" ]
+  first=$(cat "$MARKER_A")
 
-  run bash -c "printf '%s\n' '{\"session_id\":\"session-B\"}' | CLAUDE_CONFIG_DIR='$TEST_TEMP_DIR/claude' bash '$SCRIPTS_DIR/session-start.sh'"
+  run bash -c "printf '%s\n' '{\"session_id\":\"$MARKER_SESSION_B\"}' | CLAUDE_CONFIG_DIR='$TEST_TEMP_DIR/claude' bash '$SCRIPTS_DIR/session-start.sh'"
   [ "$status" -eq 0 ]
-  [ -s "$marker_b" ]
-  second=$(cat "$marker_b")
+  [ -s "$MARKER_B" ]
+  second=$(cat "$MARKER_B")
   [ "$first" != "$second" ]
 }
 
 @test "bash-guard recognizes marker-backed orchestrator payload" {
-  printf 'instance-A\n' > /tmp/.vbw-orchestrator-instance-session-A
+  run bash -c 'source "$1"; vbw_orchestrator_write_marker "$2"' _ \
+    "$PROJECT_ROOT/scripts/lib/orchestrator-identity.sh" "$MARKER_SESSION_A"
+  [ "$status" -eq 0 ]
   local input
-  input=$(jq -n '{session_id:"session-A",tool_input:{command:"rm -rf build/"}}')
+  input=$(jq -n --arg sid "$MARKER_SESSION_A" '{session_id:$sid,tool_input:{command:"rm -rf build/"}}')
 
   run bash -c 'unset VBW_AGENT_ROLE VBW_ACTIVE_AGENT; printf "%s\n" "$1" | bash "$2"' _ \
     "$input" "$SCRIPTS_DIR/bash-guard.sh"
@@ -87,9 +91,9 @@ teardown() {
 }
 
 @test "file-guard keeps payload-less calls unrestricted without a marker" {
-  rm -f /tmp/.vbw-orchestrator-instance-session-A
+  rm -f "$MARKER_A"
   local input
-  input=$(jq -n '{session_id:"session-A",tool_name:"Write",tool_input:{file_path:"src/product.js",content:"ok"}}')
+  input=$(jq -n --arg sid "$MARKER_SESSION_A" '{session_id:$sid,tool_name:"Write",tool_input:{file_path:"src/product.js",content:"ok"}}')
 
   run bash -c 'unset VBW_AGENT_ROLE VBW_ACTIVE_AGENT; printf "%s\n" "$1" | bash "$2"' _ \
     "$input" "$SCRIPTS_DIR/file-guard.sh"
