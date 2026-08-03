@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# verify-discussion-engine-contract.sh — Verify discussion engine structural contracts
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 
@@ -129,7 +128,7 @@ echo "=== Discussion Engine Contract Verification ==="
 
 ENGINE="$ROOT/references/discussion-engine.md"
 
-# --- Confidence indicators in A5 presentation ---
+
 
 for indicator in "✓ confirmed" "⚡ validated" "? resolved" "✗ corrected" "○ expanded"; do
   if grep -q "$indicator" "$ENGINE"; then
@@ -139,7 +138,7 @@ for indicator in "✓ confirmed" "⚡ validated" "? resolved" "✗ corrected" "�
   fi
 done
 
-# --- A5 has user-facing presentation instruction ---
+
 
 if grep -q "present a summary" "$ENGINE"; then
   pass "engine: A5 has user-facing presentation instruction"
@@ -147,7 +146,7 @@ else
   fail "engine: A5 missing user-facing presentation instruction"
 fi
 
-# --- Step 1.7 exists ---
+
 
 if grep -q "Step 1.7" "$ENGINE"; then
   pass "engine: Step 1.7 (Assumptions Path) exists"
@@ -155,7 +154,7 @@ else
   fail "engine: Step 1.7 (Assumptions Path) missing"
 fi
 
-# --- Codebase map guard ---
+
 
 if grep -q "META.md" "$ENGINE"; then
   pass "engine: codebase map guard references META.md"
@@ -163,16 +162,16 @@ else
   fail "engine: codebase map guard missing META.md reference"
 fi
 
-# --- Shared AskUserQuestion contract and local structured/freeform boundary ---
+
 
 SHARED_BLOCK="$(extract_heading_block "$ENGINE" "## Shared interaction contract" '^## ' || true)"
 INTERACTION_BLOCK="$(extract_heading_block "$ENGINE" "## Interaction Boundary" '^## ' || true)"
-STEP_2_BLOCK="$(extract_heading_block "$ENGINE" "## Step 2: Orient" '^## ' || true)"
-STEP_3_BLOCK="$(extract_heading_block "$ENGINE" "## Step 3: Explore" '^## ' || true)"
-FRESH_STRUCTURED_BLOCK="$(extract_bullet_block "$STEP_2_BLOCK" "Fresh 1–4 gray areas" || true)"
-FRESH_FREEFORM_BLOCK="$(extract_bullet_block "$STEP_2_BLOCK" "Fresh 5–6 gray areas" || true)"
-CONTINUATION_STRUCTURED_BLOCK="$(extract_bullet_block "$STEP_2_BLOCK" "Continuation 1–3 uncovered gray areas" || true)"
-CONTINUATION_FREEFORM_BLOCK="$(extract_bullet_block "$STEP_2_BLOCK" "Continuation 4–6 uncovered gray areas" || true)"
+DISCUSSION_SELECTION_TEXT="$(extract_heading_block "$ENGINE" "## Step ""2: Orient" '^## ' || true)"
+DISCUSSION_EXPLORATION_TEXT="$(extract_heading_block "$ENGINE" "## Step ""3: Explore" '^## ' || true)"
+FRESH_STRUCTURED_BLOCK="$(extract_bullet_block "$DISCUSSION_SELECTION_TEXT" "Fresh 1 to 4 gray areas" || true)"
+FRESH_FREEFORM_BLOCK="$(extract_bullet_block "$DISCUSSION_SELECTION_TEXT" "Fresh 5 to 6 gray areas" || true)"
+CONTINUATION_STRUCTURED_BLOCK="$(extract_bullet_block "$DISCUSSION_SELECTION_TEXT" "Continuation 1 to 3 uncovered gray areas" || true)"
+CONTINUATION_FREEFORM_BLOCK="$(extract_bullet_block "$DISCUSSION_SELECTION_TEXT" "Continuation 4 to 6 uncovered gray areas" || true)"
 
 if [ -n "$SHARED_BLOCK" ]; then
   pass "engine: shared interaction contract block extracted"
@@ -186,13 +185,13 @@ else
   fail "engine: interaction boundary block extracted"
 fi
 
-if [ -n "$STEP_2_BLOCK" ]; then
+if [ -n "$DISCUSSION_SELECTION_TEXT" ]; then
   pass "engine: Step 2 block extracted"
 else
   fail "engine: Step 2 block extracted"
 fi
 
-if [ -n "$STEP_3_BLOCK" ]; then
+if [ -n "$DISCUSSION_EXPLORATION_TEXT" ]; then
   pass "engine: Step 3 block extracted"
 else
   fail "engine: Step 3 block extracted"
@@ -223,31 +222,31 @@ else
 fi
 
 require_text_literal "engine: shared block points to ask-user-question reference" "references/ask-user-question.md" "$SHARED_BLOCK"
-require_text_literal "engine: boundary documents structured 1–4 visible choices" "Use structured AskUserQuestion for bounded discussion decisions with 1–4 visible choices" "$INTERACTION_BLOCK"
+require_text_literal "engine: boundary documents structured 1 to 4 visible choices" "Use structured AskUserQuestion for bounded discussion decisions with 1 to 4 visible choices" "$INTERACTION_BLOCK"
 require_text_literal "engine: boundary documents larger selections as freeform/no-options" "Use intentional freeform/no-options input" "$INTERACTION_BLOCK"
 require_text_literal "engine: boundary forbids options array for high-cardinality paths" 'do NOT use `options` array' "$INTERACTION_BLOCK"
-require_text_literal "engine: continuation selection keeps explicit no-op path" 'Continuation discussions must always offer an explicit `None — discussion is complete` no-op path' "$STEP_2_BLOCK"
+require_text_literal "engine: continuation selection keeps explicit no-op path" 'Continuation discussions must always offer an explicit `None: discussion is complete` no-op path' "$DISCUSSION_SELECTION_TEXT"
 
-require_text_literal "engine: fresh 1–4 branch uses structured multi-select" "Use structured AskUserQuestion multi-select" "$FRESH_STRUCTURED_BLOCK"
-require_text_literal "engine: fresh 1–4 branch requires selected area" "require at least one selected area" "$FRESH_STRUCTURED_BLOCK"
+require_text_literal "engine: fresh 1 to 4 branch uses structured multi-select" "Use structured AskUserQuestion multi-select" "$FRESH_STRUCTURED_BLOCK"
+require_text_literal "engine: fresh 1 to 4 branch requires selected area" "require at least one selected area" "$FRESH_STRUCTURED_BLOCK"
 
-require_text_literal "engine: fresh 5–6 branch uses freeform/no-options" "intentional freeform/no-options selection" "$FRESH_FREEFORM_BLOCK"
-require_text_literal "engine: fresh 5–6 branch requires selected area" "require at least one selected area" "$FRESH_FREEFORM_BLOCK"
-require_text_literal "engine: fresh 5–6 branch forbids options array" 'do NOT use `options` array' "$FRESH_FREEFORM_BLOCK"
+require_text_literal "engine: fresh 5 to 6 branch uses freeform/no-options" "intentional freeform/no-options selection" "$FRESH_FREEFORM_BLOCK"
+require_text_literal "engine: fresh 5 to 6 branch requires selected area" "Require at least one selected area" "$FRESH_FREEFORM_BLOCK"
+require_text_literal "engine: fresh 5 to 6 branch forbids options array" 'do NOT use `options` array' "$FRESH_FREEFORM_BLOCK"
 
-require_text_literal "engine: continuation 1–3 branch uses structured multi-select" "Use structured AskUserQuestion multi-select" "$CONTINUATION_STRUCTURED_BLOCK"
-require_text_literal "engine: continuation 1–3 branch includes None option" 'None — discussion is complete' "$CONTINUATION_STRUCTURED_BLOCK"
-require_text_literal "engine: continuation 1–3 branch accounts for four visible choices" "four visible choices" "$CONTINUATION_STRUCTURED_BLOCK"
+require_text_literal "engine: continuation 1 to 3 branch uses structured multi-select" "Use structured AskUserQuestion multi-select" "$CONTINUATION_STRUCTURED_BLOCK"
+require_text_literal "engine: continuation 1 to 3 branch includes None option" 'None: discussion is complete' "$CONTINUATION_STRUCTURED_BLOCK"
+require_text_literal "engine: continuation 1 to 3 branch accounts for four visible choices" "four visible choices" "$CONTINUATION_STRUCTURED_BLOCK"
 
-require_text_literal "engine: continuation 4–6 branch uses freeform/no-options" "intentional freeform/no-options selection" "$CONTINUATION_FREEFORM_BLOCK"
-require_text_literal "engine: continuation 4–6 branch accepts both no-op spellings" 'accept `none` / `None — discussion is complete`' "$CONTINUATION_FREEFORM_BLOCK"
-require_text_literal "engine: continuation 4–6 branch forbids options array" 'do NOT use `options` array' "$CONTINUATION_FREEFORM_BLOCK"
+require_text_literal "engine: continuation 4 to 6 branch uses freeform/no-options" "intentional freeform/no-options selection" "$CONTINUATION_FREEFORM_BLOCK"
+require_text_literal "engine: continuation 4 to 6 branch accepts both no-op spellings" 'Accept `none` / `None: discussion is complete`' "$CONTINUATION_FREEFORM_BLOCK"
+require_text_literal "engine: continuation 4 to 6 branch forbids options array" 'do NOT use `options` array' "$CONTINUATION_FREEFORM_BLOCK"
 
-require_text_literal "engine: Step 3 early exit requires no selected areas" "Step 2 produced no selected areas" "$STEP_3_BLOCK"
-require_text_literal "engine: Step 3 early exit covers structured None" 'structured `None — discussion is complete`' "$STEP_3_BLOCK"
-require_text_literal "engine: Step 3 early exit covers freeform none" 'freeform `none`' "$STEP_3_BLOCK"
-require_text_literal "engine: Step 3 early exit covers freeform None phrase" 'freeform `none` / `None — discussion is complete`' "$STEP_3_BLOCK"
-require_text_literal "engine: Step 3 early exit skips to Step 4" "skip directly to Step 4" "$STEP_3_BLOCK"
+require_text_literal "engine: Step 3 early exit requires no selected areas" "Step 2 produced no selected areas" "$DISCUSSION_EXPLORATION_TEXT"
+require_text_literal "engine: Step 3 early exit covers structured None" 'structured `None: discussion is complete`' "$DISCUSSION_EXPLORATION_TEXT"
+require_text_literal "engine: Step 3 early exit covers freeform none" 'freeform `none`' "$DISCUSSION_EXPLORATION_TEXT"
+require_text_literal "engine: Step 3 early exit covers freeform None phrase" 'freeform `none` / `None: discussion is complete`' "$DISCUSSION_EXPLORATION_TEXT"
+require_text_literal "engine: Step 3 early exit skips to Step 4" "skip directly to Step 4" "$DISCUSSION_EXPLORATION_TEXT"
 require_file_literal "engine: Let me explain stops AskUserQuestion" 'stop using AskUserQuestion' "$ENGINE"
 require_file_regex "engine: Let me explain asks plain-text follow-up and waits" 'plain-text follow-up, wait for the response' "$ENGINE"
 require_file_literal "engine: Builder sample is clearly marked as an example" '<example label="Builder mode gray-area prompt">' "$ENGINE"
