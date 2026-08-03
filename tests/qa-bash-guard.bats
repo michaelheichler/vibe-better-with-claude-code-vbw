@@ -69,6 +69,42 @@ new_test_project() {
   [[ "$output" == *"shell file write/redirection"* ]]
 }
 
+@test "bash-guard: qa allows quoted or piped mutation words in data" {
+  TEST_PROJECT=$(new_test_project qa-mutation-evidence)
+
+  run_qa_bash_guard "$TEST_PROJECT" 'echo "JSON payload: mv file done"'
+  [ "$status" -eq 0 ]
+
+  run_qa_bash_guard "$TEST_PROJECT" "printf '%s\\n' 'JSON payload: mv file done' | cat"
+  [ "$status" -eq 0 ]
+}
+
+@test "bash-guard: qa allows file-descriptor redirects without writes" {
+  TEST_PROJECT=$(new_test_project qa-fd-redirect)
+
+  for command in "git status 2>/dev/null" "git status >/dev/null" "git status 2>&1"; do
+    run_qa_bash_guard "$TEST_PROJECT" "$command"
+    [ "$status" -eq 0 ]
+  done
+
+  run_qa_bash_guard "$TEST_PROJECT" "git status > out.txt"
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"shell file write/redirection"* ]]
+}
+
+@test "bash-guard: qa blocks bare filesystem mutation commands" {
+  TEST_PROJECT=$(new_test_project qa-mv-mutate)
+  run_qa_bash_guard "$TEST_PROJECT" "mv old.txt new.txt"
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"filesystem mutation command"* ]]
+}
+
+@test "bash-guard: quoted destructive evidence does not trigger the pattern blocklist" {
+  TEST_PROJECT=$(new_test_project destructive-evidence)
+  run_role_bash_guard dev "$TEST_PROJECT" 'echo "artisan migrate:fresh output"'
+  [ "$status" -eq 0 ]
+}
+
 @test "bash-guard: qa blocks tee" {
   TEST_PROJECT=$(new_test_project qa-tee)
   run_qa_bash_guard "$TEST_PROJECT" "echo bad | tee out.txt"
