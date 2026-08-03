@@ -1,0 +1,23 @@
+tests/agent-shutdown-integration.bats
+  s_396441278312df::t_b70e85c9e422b1 35
+scripts/lib/active-agent-state.sh
+  s_396441278312df::t_41adf29e227005 321-326
+tests/role-isolation-runtime.bats
+  s_396441278312df::t_2f8dd4d6b2b3b4 111,249,251
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "208c6f84fc1a0c9221cef08893e553a5bc290bcb",
+  "prompts": {},
+  "sessions": {
+    "s_396441278312df": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8b693812-fc94-4ea6-be47-0ddb22b766f3",
+        "model": "unknown"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
