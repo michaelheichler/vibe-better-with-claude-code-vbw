@@ -1,17 +1,10 @@
 #!/bin/bash
 set -u
-# Update the Phase: total in STATE.md after phase add/insert/remove.
-# Usage: update-phase-total.sh <planning_root> [--inserted N | --removed N]
-#   --inserted N: a phase was inserted at position N (adjust current if >= N)
-#   --removed N:  a phase was removed at position N (adjust current if > N)
-# Always recalculates total from filesystem.
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 if [ -f "$SCRIPT_DIR/summary-utils.sh" ]; then
-  # shellcheck source=summary-utils.sh
   source "$SCRIPT_DIR/summary-utils.sh"
 else
-  # F-06: inline minimal terminal summary parser instead of always returning 0
   count_complete_summaries() {
     local dir="$1" count=0
     for f in "$dir"/*-SUMMARY.md "$dir"/SUMMARY.md; do
@@ -38,7 +31,6 @@ else
   }
 fi
 if [ -f "$SCRIPT_DIR/phase-state-utils.sh" ]; then
-  # shellcheck source=phase-state-utils.sh
   source "$SCRIPT_DIR/phase-state-utils.sh"
 else
   list_canonical_phase_dirs() {
@@ -94,7 +86,6 @@ phases_dir="${planning_root}/phases"
 [ -f "$state_md" ] || exit 0
 [ -d "$phases_dir" ] || exit 0
 
-# Parse optional flags
 shift || true
 action=""
 position=0
@@ -116,7 +107,6 @@ while [ $# -gt 0 ]; do
   esac
 done
 
-# Validate position is a positive integer when provided
 if [ -n "$action" ] && ! echo "$position" | grep -qE '^[1-9][0-9]*$'; then
   exit 0
 fi
@@ -166,8 +156,6 @@ if [ -f "$roadmap_md" ] && type roadmap_numbering_scheme >/dev/null 2>&1 && type
   fi
 fi
 
-# F-02: handle zero-phase state — remove stale current-phase section and clear
-# stale Phase Status bullets so STATE.md no longer claims an active phase.
 if [ "$total" -eq 0 ]; then
   if grep -q '^## Current Phase' "$state_md" 2>/dev/null; then
     tmp_current_zero="${state_md}.tmpcurrent.$$"
@@ -195,7 +183,6 @@ if [ "$total" -eq 0 ]; then
   exit 0
 fi
 
-# Extract current phase number from Phase: line
 current_line=$(grep -m1 '^Phase: ' "$state_md" 2>/dev/null)
 if [ -z "$current_line" ]; then
   rm -f "$sorted_dirs_file" 2>/dev/null
@@ -208,7 +195,6 @@ if [ -z "$current" ]; then
   exit 0
 fi
 
-# Adjust current phase number for insert/remove
 case "$action" in
   inserted)
     if [ "$current" -ge "$position" ]; then
@@ -222,12 +208,9 @@ case "$action" in
     ;;
 esac
 
-# Clamp current to valid range
 [ "$current" -gt "$display_total" ] && current="$display_total"
 [ "$current" -lt 1 ] && current=1
 
-# F-11: Resolve phase name using the selected display-numbering scheme so
-# the Phase: line and Phase Status bullets always agree on numbering.
 phase_name=""
 case "$display_numbering_scheme" in
   prefix)
@@ -244,19 +227,16 @@ if [ -n "$phase_dir" ]; then
   phase_name=$(basename "$phase_dir" | sed 's/^[0-9]*-//' | tr '-' ' ' | awk '{for(i=1;i<=NF;i++) $i=toupper(substr($i,1,1)) substr($i,2)}1')
 fi
 
-# Build replacement
 if [ -n "$phase_name" ]; then
   replacement="Phase: ${current} of ${display_total} (${phase_name})"
 else
   replacement="Phase: ${current} of ${display_total}"
 fi
 
-# Update STATE.md Phase: line
 tmp="${state_md}.tmp.$$"
 sed "s/^Phase: .*/${replacement}/" "$state_md" > "$tmp" 2>/dev/null && \
   mv "$tmp" "$state_md" 2>/dev/null || rm -f "$tmp" 2>/dev/null
 
-# Rebuild ## Phase Status section to match current phase directories
 new_status_file="${state_md}.newstatus.$$"
 phase_idx=0
 : > "$new_status_file"
@@ -285,7 +265,6 @@ fi
 
 rm -f "$sorted_dirs_file" 2>/dev/null
 
-# Replace existing ## Phase Status section if present
 if [ -s "$new_status_file" ] && grep -q '^## Phase Status' "$state_md" 2>/dev/null; then
   tmp2="${state_md}.tmp2.$$"
   NSF="$new_status_file" awk '

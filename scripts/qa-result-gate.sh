@@ -1,36 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# qa-result-gate.sh — Deterministic QA result evaluator
-#
-# Reads VERIFICATION.md and outputs an unambiguous routing directive.
-# The orchestrator follows the directive literally — no judgment, no rationalization.
-#
-# Usage: qa-result-gate.sh <phase-dir> [verif-name]
-#   phase-dir:  path to the phase directory (required)
-#   verif-name: VERIFICATION.md filename (optional, defaults to VERIFICATION.md)
-#
-# Output (key=value, always exits 0):
-#   qa_gate_writer=<value>           — writer field from frontmatter (or "missing")
-#   qa_gate_result=<value>           — result field from frontmatter (or "missing"/"unreadable")
-#   qa_gate_fail_count=<N>           — count of FAIL rows in body
-#   qa_gate_deviation_count=<N>      — count of non-placeholder deviations across SUMMARY.md files
-#   qa_gate_known_issue_count=<N>    — unresolved phase known issues tracked on disk
-#   qa_gate_plan_count=<N>           — count of *-PLAN.md files in phase dir
-#   qa_gate_plans_verified_count=<N> — count of plans_verified entries in VERIFICATION.md frontmatter
-#   qa_gate_routing=<DIRECTIVE>      — the routing decision
-#
-# Optional override diagnostics (only present when an override fires):
-#   qa_gate_deviation_override=true  — PASS overridden because deviations exist but no FAIL checks
-#   qa_gate_metadata_only_override=true — PASS overridden because remediation round changed only metadata
-#   qa_gate_known_issues_override=true — PASS overridden because unresolved known issues remain
-#   qa_gate_phase_deviation_count=<N> — deviations in phase-root SUMMARYs (metadata-only override)
-#   qa_gate_plan_coverage=N/M        — plans verified vs plans expected
-#
-# Routing values:
-#   PROCEED_TO_UAT       — QA passed cleanly, safe to enter UAT
-#   REMEDIATION_REQUIRED — code has failures, needs plan→execute→verify cycle
-#   QA_RERUN_REQUIRED    — no trustworthy QA result, re-spawn QA (not code remediation)
 
 PHASE_DIR="${1:-}"
 VERIF_NAME="${2:-}"
@@ -41,19 +11,14 @@ fi
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 RESOLVE_VERIF_SCRIPT="$SCRIPT_DIR/resolve-verification-path.sh"
 if [ -f "$SCRIPT_DIR/summary-utils.sh" ]; then
-  # shellcheck source=summary-utils.sh
   . "$SCRIPT_DIR/summary-utils.sh"
 fi
 TRACK_UAT_DEVIATIONS_SCRIPT="$SCRIPT_DIR/track-uat-deviations.sh"
 : "$TRACK_UAT_DEVIATIONS_SCRIPT"
 
-# shellcheck source=lib/qa-result-gate-path-evidence.sh
 . "$SCRIPT_DIR/lib/qa-result-gate-path-evidence.sh"
-# shellcheck source=lib/qa-result-gate-fail-classifications.sh
 . "$SCRIPT_DIR/lib/qa-result-gate-fail-classifications.sh"
-# shellcheck source=lib/qa-result-gate-known-issues.sh
 . "$SCRIPT_DIR/lib/qa-result-gate-known-issues.sh"
-# shellcheck source=lib/qa-result-gate-summary-deviations.sh
 . "$SCRIPT_DIR/lib/qa-result-gate-summary-deviations.sh"
 
 if [ -z "$PHASE_DIR" ]; then
@@ -67,9 +32,6 @@ if [ -z "$PHASE_DIR" ]; then
   exit 0
 fi
 
-# Auto-resolve VERIFICATION.md filename using the same convention as
-# phase-detect.sh and hard-gate.sh: {NN}-VERIFICATION.md is the primary
-# convention, with plain VERIFICATION.md as a brownfield fallback.
 if [ -z "$VERIF_NAME" ]; then
   VERIF_PATH=$(bash "$RESOLVE_VERIF_SCRIPT" phase "$PHASE_DIR" 2>/dev/null || true)
   if [ -n "$VERIF_PATH" ]; then
@@ -83,8 +45,6 @@ else
   VERIF_PATH="$PHASE_DIR/$VERIF_NAME"
 fi
 
-# Detect active QA remediation — deviation override is suppressed during remediation
-# because SUMMARY.md deviations are historical (the code has been fixed)
 IN_REMEDIATION="false"
 PLAN_SCOPE_DIR="$PHASE_DIR"  # Default: phase-level plans
 SUMMARY_SCOPE_DIR="$PHASE_DIR"  # Default: phase-level summaries
@@ -97,11 +57,9 @@ if [ -f "$PHASE_DIR/remediation/qa/.qa-remediation-stage" ]; then
   esac
   _gate_round=$(grep '^round=' "$PHASE_DIR/remediation/qa/.qa-remediation-stage" 2>/dev/null | head -1 | cut -d= -f2 | tr -d '[:space:]' || true)
   _gate_round="${_gate_round:-01}"
-  # Defensive: ensure round is numeric before arithmetic
   if ! [[ "$_gate_round" =~ ^[0-9]+$ ]]; then
     _gate_round="01"
   fi
-  # Defensive zero-padding (consistent with phase-detect.sh)
   _gate_round=$(printf '%02d' "$((10#${_gate_round}))")
   _gate_round_dir="$PHASE_DIR/remediation/qa/round-${_gate_round}"
   _gate_round_verif="${_gate_round_dir}/R${_gate_round}-VERIFICATION.md"
@@ -180,7 +138,6 @@ if [ "$KNOWN_ISSUES_STATUS" = "probe_error" ]; then
   esac
 fi
 
-# 1. File doesn't exist
 if [ ! -f "$VERIF_PATH" ]; then
   echo "qa_gate_writer=missing"
   echo "qa_gate_result=missing"
@@ -193,7 +150,6 @@ if [ ! -f "$VERIF_PATH" ]; then
   exit 0
 fi
 
-# 2. File unreadable
 if [ ! -r "$VERIF_PATH" ]; then
   echo "qa_gate_writer=missing"
   echo "qa_gate_result=unreadable"
@@ -206,7 +162,6 @@ if [ ! -r "$VERIF_PATH" ]; then
   exit 0
 fi
 
-# Parse frontmatter fields
 WRITER=$(awk '
   BEGIN { in_fm=0 }
   NR==1 && /^---[[:space:]]*$/ { in_fm=1; next }
@@ -241,10 +196,8 @@ RESULT=$(awk '
   }
 ' "$VERIF_PATH" 2>/dev/null)
 
-# Body FAIL count (defense-in-depth cross-check)
 FAIL_COUNT=$(count_fail_rows_in_verification "$VERIF_PATH")
 
-# Deviation count — scan SUMMARY.md files for non-placeholder deviations
 DEVIATION_COUNT=$(count_deviations_in_dir "$PHASE_DIR" "$SUMMARY_SCOPE_DIR")
 
 ROUND_SOURCE_VERIFICATION_MISSING="false"
@@ -308,9 +261,6 @@ if [ "$IN_REMEDIATION" = "true" ] && [ "$SUMMARY_SCOPE_DIR" != "$PHASE_DIR" ]; t
   fi
 fi
 
-# Metadata-only round detection — if remediation round modified only
-# .vbw-planning/ files (no production code), phase-level deviations
-# are still unresolved and the override must fire.
 METADATA_ONLY_ROUND="false"
 ROUND_SUMMARY_MISSING="false"
 ROUND_PLAN_MISSING="false"
@@ -319,11 +269,6 @@ ROUND_CHANGE_EVIDENCE_EMPTY="false"
 ROUND_IGNORED_EVIDENCE_USED="false"
 ROUND_SUMMARY_NONTERMINAL="false"
 if [ "$IN_REMEDIATION" = "true" ] && [ "$SUMMARY_SCOPE_DIR" != "$PHASE_DIR" ]; then
-  # Scan round SUMMARY.md files_modified for non-metadata paths. When
-  # files_modified is absent (older summaries / partial installs), fall back to
-  # commit_hashes only when they can be proven to belong to this round's history
-  # after the round-start anchor and, when available, the source verification's
-  # verified_at_commit.
   _mo_has_code_changes="false"
   _mo_found_summary="false"
   _mo_all_recorded_paths=""
@@ -365,7 +310,6 @@ if [ "$IN_REMEDIATION" = "true" ] && [ "$SUMMARY_SCOPE_DIR" != "$PHASE_DIR" ]; t
           ROUND_CHANGE_EVIDENCE_UNAVAILABLE="true"
           break
         fi
-        # Detect whether gitignored-metadata evidence was needed for corroboration
         if [ "$ROUND_IGNORED_EVIDENCE_USED" != "true" ] && [ -n "$ROUND_IGNORED_WORKTREE_PATHS_CANONICAL" ]; then
           _mo_without_ignored=$(resolve_corroborated_recorded_paths "$PHASE_DIR" "$_mo_recorded_files" "$ROUND_ACTUAL_DIFF_PATHS_CANONICAL" "$ROUND_WORKTREE_PATHS_CANONICAL" "")
           if ! recorded_paths_are_fully_corroborated "$_mo_recorded_files" "$_mo_without_ignored"; then
@@ -399,9 +343,6 @@ if [ "$IN_REMEDIATION" = "true" ] && [ "$SUMMARY_SCOPE_DIR" != "$PHASE_DIR" ]; t
     fi
     [ "$_mo_has_code_changes" = "true" ] && break
   done < <(find "$SUMMARY_SCOPE_DIR" -maxdepth 1 ! -name '.*' \( -name '*-SUMMARY.md' -o -name 'SUMMARY.md' \) 2>/dev/null | (sort -V 2>/dev/null || sort))
-  # Only flag metadata-only when a round SUMMARY.md exists — if no summary was
-  # found, the remediation round is structurally incomplete and PASS must not
-  # proceed without the artifact that carries change evidence.
   if [ "$_mo_found_summary" = "false" ]; then
     ROUND_SUMMARY_MISSING="true"
   elif [ "$_mo_has_code_changes" = "false" ]; then
@@ -409,14 +350,12 @@ if [ "$IN_REMEDIATION" = "true" ] && [ "$SUMMARY_SCOPE_DIR" != "$PHASE_DIR" ]; t
   fi
 fi
 
-# Plan coverage — count PLAN.md files and plans_verified entries
 PLAN_COUNT=0
 while IFS= read -r plan_file; do
   [ -f "$plan_file" ] || continue
   PLAN_COUNT=$((PLAN_COUNT + 1))
 done < <(find "$PLAN_SCOPE_DIR" -maxdepth 1 ! -name '.*' \( -name '*-PLAN.md' -o -name 'PLAN.md' \) 2>/dev/null | (sort -V 2>/dev/null || sort))
 
-# Parse plans_verified from VERIFICATION.md frontmatter (YAML array)
 PLANS_VERIFIED_COUNT=$(extract_frontmatter_array_items "$VERIF_PATH" plans_verified | awk '
   {
     if (!seen[$0]++) count++
@@ -524,7 +463,6 @@ if [ "$IN_REMEDIATION" = "true" ] && [ "$SUMMARY_SCOPE_DIR" != "$PHASE_DIR" ]; t
   fi
 fi
 
-# Output diagnostic fields
 echo "qa_gate_writer=${WRITER:-missing}"
 echo "qa_gate_result=${RESULT:-missing}"
 echo "qa_gate_fail_count=$FAIL_COUNT"
@@ -536,23 +474,19 @@ if [ "$ROUND_IGNORED_EVIDENCE_USED" = "true" ]; then
   echo "qa_gate_planning_ignored_evidence=true"
 fi
 
-# 3. Writer provenance check
 if [ -z "$WRITER" ] || [ "$WRITER" != "write-verification.sh" ]; then
   echo "qa_gate_routing=QA_RERUN_REQUIRED"
   exit 0
 fi
 
-# 4. Result field empty
 if [ -z "$RESULT" ]; then
   echo "qa_gate_routing=QA_RERUN_REQUIRED"
   exit 0
 fi
 
-# 5-7. Route based on result + fail count + deviation cross-check + plan coverage + metadata-only
 case "$RESULT" in
   PASS)
     if [ "$FAIL_COUNT" -gt 0 ] 2>/dev/null; then
-      # 6. PASS with FAIL rows → defense-in-depth override
       echo "qa_gate_routing=REMEDIATION_REQUIRED"
     elif [ "$ROUND_SUMMARY_NONTERMINAL" = "true" ]; then
       echo "qa_gate_round_summary_nonterminal=true"
@@ -591,27 +525,12 @@ case "$RESULT" in
     }; then
       echo "qa_gate_routing=REMEDIATION_REQUIRED"
     elif [ "$DEVIATION_COUNT" -gt 0 ] && { [ "$IN_REMEDIATION" = "false" ] || [ "$SUMMARY_SCOPE_DIR" != "$PHASE_DIR" ]; }; then
-      # 5a. PASS but deviations exist without FAIL checks → QA rationalized deviations.
-      # During remediation, phase-root SUMMARY.md deviations are historical and must
-      # not override a fresh PASS. Current-round SUMMARY.md deviations are still real
-      # and must be reflected as FAIL checks, so scoped round summaries keep the override.
       echo "qa_gate_deviation_override=true"
-      # Also check plan coverage so both diagnostics surface simultaneously
       if [ "$PLAN_COUNT" -gt 0 ] && [ "$PLANS_VERIFIED_COUNT" -lt "$PLAN_COUNT" ]; then
         echo "qa_gate_plan_coverage=${PLANS_VERIFIED_COUNT}/${PLAN_COUNT}"
       fi
       echo "qa_gate_routing=QA_RERUN_REQUIRED"
     elif [ "$METADATA_ONLY_ROUND" = "true" ]; then
-      # 5c. Remediation round made no implementation/config changes — only
-      # metadata/planning/documentation updates. Re-check phase-level deviations.
-      # Metadata-only rounds are invalid when they still claim a code-fix path.
-      # Pure plan-amendment rounds can resolve cleanly when the original plan was
-      # actually updated. Pure process-exception rounds can resolve cleanly only
-      # when the recorded evidence includes planning/remediation artifacts rather
-      # than delivered docs/README changes alone. Semantic correctness of a
-      # process-exception (i.e. whether it is truly non-fixable) is still enforced
-      # by remediation QA re-verifying the original FAILs; this deterministic gate
-      # only validates structural evidence.
       PHASE_DEVIATION_COUNT=$(count_deviations_in_dir "$PHASE_DIR" "$PHASE_DIR")
       if [ "$ROUND_CODE_FIX_COUNT" -gt 0 ] 2>/dev/null; then
         echo "qa_gate_metadata_only_override=true"
@@ -629,9 +548,6 @@ case "$RESULT" in
         echo "qa_gate_known_issues_override=true"
         echo "qa_gate_routing=REMEDIATION_REQUIRED"
       elif [ "$KNOWN_ISSUES_STATUS" = "present" ] && [ "$KNOWN_ISSUES_COUNT" -gt 0 ] 2>/dev/null; then
-        # Metadata-only round claims clean, but known issues exist in registry.
-        # Apply the same coverage guard as the non-metadata-only known-issues path:
-        # outcomes must cover every live registry entry, not just the carried snapshot.
         _live_registry_json=$(load_known_issue_registry_json "$PHASE_DIR/known-issues.json")
         if [ "$ROUND_KNOWN_ISSUE_CONTRACT_REQUIRED" = "true" ] \
            && [ "$ROUND_KNOWN_ISSUES_VALID" = "true" ] \
@@ -648,17 +564,12 @@ case "$RESULT" in
         echo "qa_gate_routing=PROCEED_TO_UAT"
       fi
     elif [ "$PLAN_COUNT" -gt 0 ] && [ "$PLANS_VERIFIED_COUNT" -lt "$PLAN_COUNT" ]; then
-      # 5b. PASS but incomplete plan coverage → QA skipped some plans
       echo "qa_gate_plan_coverage=${PLANS_VERIFIED_COUNT}/${PLAN_COUNT}"
       echo "qa_gate_routing=QA_RERUN_REQUIRED"
     elif [ "$KNOWN_ISSUES_STATUS" = "malformed" ] || [ "$KNOWN_ISSUES_STATUS" = "probe_error" ]; then
       echo "qa_gate_known_issues_override=true"
       echo "qa_gate_routing=REMEDIATION_REQUIRED"
     elif [ "$KNOWN_ISSUES_STATUS" = "present" ] && [ "$KNOWN_ISSUES_COUNT" -gt 0 ] 2>/dev/null; then
-      # Known issues exist in the registry. If this remediation round properly
-      # addressed all of them (contract valid, outcomes recorded, none unresolved,
-      # AND outcomes cover every live registry entry — not just carried snapshot),
-      # allow proceeding rather than blocking on stale registry entries.
       _live_registry_json=$(load_known_issue_registry_json "$PHASE_DIR/known-issues.json")
       if [ "$ROUND_KNOWN_ISSUE_CONTRACT_REQUIRED" = "true" ] \
          && [ "$ROUND_KNOWN_ISSUES_VALID" = "true" ] \
@@ -672,16 +583,13 @@ case "$RESULT" in
         echo "qa_gate_routing=REMEDIATION_REQUIRED"
       fi
     else
-      # 5. Clean PASS
       echo "qa_gate_routing=PROCEED_TO_UAT"
     fi
     ;;
   FAIL|PARTIAL)
-    # 7. Explicit failure
     echo "qa_gate_routing=REMEDIATION_REQUIRED"
     ;;
   *)
-    # Unknown result value — treat as untrustworthy
     echo "qa_gate_routing=QA_RERUN_REQUIRED"
     ;;
 esac

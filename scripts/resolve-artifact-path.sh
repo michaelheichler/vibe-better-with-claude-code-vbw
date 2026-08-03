@@ -1,31 +1,10 @@
 #!/bin/bash
 set -euo pipefail
-# resolve-artifact-path.sh — Single source of truth for phase-directory artifact filenames.
-#
-# Usage: bash resolve-artifact-path.sh <type> <phase-dir> [--plan-number MM]
-#
-# Types:
-#   plan          Next available PLAN path: {NN}-{MM}-PLAN.md
-#   summary       SUMMARY for given plan:   {NN}-{MM}-SUMMARY.md  (requires --plan-number)
-#   research        Per-plan RESEARCH:        {NN}-{MM}-RESEARCH.md (requires --plan-number)
-#   phase-research  Phase-wide RESEARCH:      {NN}-RESEARCH.md
-#   context         Per-phase CONTEXT:        {NN}-CONTEXT.md
-#   uat             Per-phase UAT:            {NN}-UAT.md
-#   verification    Per-phase VERIFICATION:   {NN}-VERIFICATION.md
-#
-# For "plan" without --plan-number: computes next available plan number by scanning
-# existing *-PLAN.md files in the phase directory.
-#
-# For "plan" with --plan-number: returns path for that specific plan number.
-#
-# Outputs the filename (not the full path) to stdout. Caller joins with phase-dir.
-# Exit codes: 0=success, 1=usage error, 2=missing phase dir
 
 TYPE="${1:-}"
 PHASE_DIR="${2:-}"
 PLAN_NUMBER=""
 
-# Parse remaining args — guard shift count against actual arg count
 if [ $# -ge 2 ]; then
   shift 2
 else
@@ -48,7 +27,6 @@ while [ $# -gt 0 ]; do
   esac
 done
 
-# Validate type
 case "$TYPE" in
   plan|summary|research|phase-research|context|uat|verification) ;;
   "")
@@ -61,7 +39,6 @@ case "$TYPE" in
     ;;
 esac
 
-# Validate phase dir
 if [ -z "$PHASE_DIR" ]; then
   echo "error: phase-dir is required" >&2
   exit 1
@@ -71,7 +48,6 @@ if [ ! -d "$PHASE_DIR" ]; then
   exit 2
 fi
 
-# Extract phase number from directory basename (e.g., "03" from "03-slug-name")
 PHASE_DIR="${PHASE_DIR%/}"
 _base=$(basename "$PHASE_DIR")
 PHASE_NUM=$(echo "$_base" | sed 's/^\([0-9]*\).*/\1/')
@@ -79,10 +55,8 @@ if [ -z "$PHASE_NUM" ]; then
   echo "error: cannot extract phase number from directory: $_base" >&2
   exit 1
 fi
-# Zero-pad to 2 digits
 PHASE_NUM=$(printf "%02d" "$((10#$PHASE_NUM))")
 
-# --- Per-phase types (no plan number needed) ---
 case "$TYPE" in
   phase-research)
     echo "${PHASE_NUM}-RESEARCH.md"
@@ -102,7 +76,6 @@ case "$TYPE" in
     ;;
 esac
 
-# Validate --plan-number is numeric and >= 1 if provided
 if [ -n "${PLAN_NUMBER:-}" ]; then
   case "$PLAN_NUMBER" in
     *[!0-9]*)
@@ -116,9 +89,7 @@ if [ -n "${PLAN_NUMBER:-}" ]; then
   fi
 fi
 
-# --- Per-plan types: need plan number ---
 
-# next_plan_number: scan existing *-PLAN.md files and return the next available number
 next_plan_number() {
   local dir="$1"
   local max_num=0
@@ -128,16 +99,13 @@ next_plan_number() {
     [ -f "$f" ] || continue
     fname=$(basename "$f")
 
-    # Match {NN}-{MM}-PLAN.md (new format: phase-plan-PLAN.md)
     num=$(echo "$fname" | sed -n 's/^[0-9][0-9]*-\([0-9][0-9]*\)-PLAN\.md$/\1/p')
 
-    # Match {MM}-PLAN.md (legacy format: plan-PLAN.md)
     if [ -z "$num" ]; then
       num=$(echo "$fname" | sed -n 's/^\([0-9][0-9]*\)-PLAN\.md$/\1/p')
     fi
 
     [ -z "$num" ] && continue
-    # Strip leading zeros for arithmetic
     num=$((10#$num))
     if [ "$num" -gt "$max_num" ]; then
       max_num=$num

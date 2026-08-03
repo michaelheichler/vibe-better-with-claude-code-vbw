@@ -1,11 +1,4 @@
 #!/usr/bin/env bash
-# track-uat-deviations.sh — deterministic accepted summary-deviation registry.
-#
-# Usage:
-#   track-uat-deviations.sh signature <source-plan> <source-path> <text>
-#   track-uat-deviations.sh accepted-signatures <phase-dir>
-#   track-uat-deviations.sh record-from-uat <phase-dir> <uat-file>
-#   track-uat-deviations.sh todo-from-uat <phase-dir> <uat-file> <checkpoint-id>
 
 set -euo pipefail
 

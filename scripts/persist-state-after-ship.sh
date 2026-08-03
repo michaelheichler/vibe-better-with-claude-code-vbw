@@ -1,30 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# persist-state-after-ship.sh — Extract project-level sections from archived
-# STATE.md and write a fresh root STATE.md so todos, decisions, blockers,
-# and codebase profile survive across milestone boundaries.
-#
-# Usage: persist-state-after-ship.sh ARCHIVED_STATE_PATH OUTPUT_PATH PROJECT_NAME
-#
-# Called by Ship mode (vibe.md Step 5) AFTER moving STATE.md to the archive.
-# Reads the archived copy and writes a minimal root STATE.md with only
-# project-level sections. Milestone-specific sections (Current Phase, Activity
-# Log) are excluded — they belong in the archive.
-#
-# Project-level sections (preserved):
-#   ## Decisions / ## Key Decisions
-#   ## Todos / ### Pending Todos
-#   ## Blockers
-#   ## Codebase Profile
-#
-# Milestone-level sections (excluded):
-#   ## Current Phase / ## Phase Status
-#   ## Activity Log / ## Recent Activity
-#
-# Exit codes:
-#   0 = success
-#   1 = archived STATE.md not found or args missing
 
 if [[ $# -lt 3 ]]; then
   echo "Usage: persist-state-after-ship.sh ARCHIVED_STATE_PATH OUTPUT_PATH PROJECT_NAME" >&2
@@ -299,7 +275,6 @@ generate_root_state() {
 
 generate_root_state > "$OUTPUT_PATH"
 
-# Garbage-collect orphaned todo-details entries after STATE.md rebuild
 DETAIL_SCRIPT=""
 SESSION_KEY="${CLAUDE_SESSION_ID:-default}"
 LINK="/tmp/.vbw-plugin-root-link-${SESSION_KEY}"

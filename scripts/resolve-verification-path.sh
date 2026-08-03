@@ -1,26 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# resolve-verification-path.sh — Canonical resolver for QA VERIFICATION.md inputs.
-#
-# Usage:
-#   bash resolve-verification-path.sh <phase|current|authoritative|plan-input> <phase-dir>
-#
-# Modes:
-#   phase      → phase-level VERIFICATION path (prefers {NN}-VERIFICATION.md,
-#                falls back to brownfield plain VERIFICATION.md, else returns the
-#                canonical numbered path)
-#   current    → verification artifact for the current QA verification pass
-#                (current round R{RR}-VERIFICATION.md only while stage=verify
-#                or after stage=done, else phase-level fallback)
-#   authoritative → QA result downstream UAT consumers should trust
-#                (round VERIFICATION only after remediation reaches stage=done,
-#                else phase-level fallback)
-#   plan-input → verification artifact to plan remediation from (the nearest
-#                earlier remediation verification that still contains unresolved
-#                FAIL rows; if no earlier round still has FAIL rows, fall back
-#                to the phase-level verification. Missing prior-round artifacts
-#                still fail closed.)
 
 MODE="${1:-}"
 PHASE_DIR="${2:-}"

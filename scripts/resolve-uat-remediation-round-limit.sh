@@ -1,34 +1,6 @@
 #!/usr/bin/env bash
 set -u
 
-# resolve-uat-remediation-round-limit.sh — normalize the UAT remediation round cap.
-#
-# Usage:
-#   bash scripts/resolve-uat-remediation-round-limit.sh [path/to/config.json]
-#     -> emits a positive integer when the cap is finite, or an empty string
-#        when the effective behavior is unlimited.
-#
-#   bash scripts/resolve-uat-remediation-round-limit.sh --normalize-json <json-literal>
-#     -> emits canonical JSON literal: false or positive integer.
-#
-#   bash scripts/resolve-uat-remediation-round-limit.sh --validate-input <value>
-#     -> validates explicit /vbw:config input. Emits canonical JSON literal
-#        false or positive integer. Exit 1 on invalid interactive input.
-#
-#   bash scripts/resolve-uat-remediation-round-limit.sh --read-top-level-literal <config-path> <key>
-#     -> emits the exact top-level JSON literal for <key>, preserving oversized
-#        integers exactly as written. Emits nothing when the top-level key is absent.
-#
-#   bash scripts/resolve-uat-remediation-round-limit.sh --next-round-decision <config-path> <current-round>
-#     -> emits key=value lines describing whether round N+1 is allowed:
-#        current_round, next_round, max_rounds, cap_reached, unlimited
-#
-# Semantics:
-#   - new key max_uat_remediation_rounds wins over legacy max_remediation_rounds
-#   - absent key => unlimited
-#   - false / 0 => unlimited
-#   - positive integer => exact finite cap
-#   - malformed persisted values => unlimited
 
 usage() {
   echo "Usage: resolve-uat-remediation-round-limit.sh [config-path] | --normalize-json <json-literal> | --validate-input <value> | --read-top-level-literal <config-path> <key> | --next-round-decision <config-path> <current-round>" >&2

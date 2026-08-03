@@ -1,9 +1,4 @@
 #!/usr/bin/env bash
-# reconcile-state-md.sh — Deterministically reconcile STATE.md current phase
-# projection from phase PLAN/SUMMARY/UAT artifacts.
-#
-# Default mode is intentionally quiet and fail-open so hooks and SessionStart
-# can call it without injecting context or breaking Claude Code sessions.
 
 set -u
 
@@ -37,17 +32,13 @@ quiet_json() {
   fi
 }
 
-# Source shared helpers. Missing dependencies are a quiet no-op by default.
 if [ -f "$SCRIPT_DIR/summary-utils.sh" ]; then
-  # shellcheck source=summary-utils.sh
   . "$SCRIPT_DIR/summary-utils.sh" || { quiet_json "skipped" "summary-utils unavailable"; exit 0; }
 fi
 if [ -f "$SCRIPT_DIR/phase-state-utils.sh" ]; then
-  # shellcheck source=phase-state-utils.sh
   . "$SCRIPT_DIR/phase-state-utils.sh" || { quiet_json "skipped" "phase-state-utils unavailable"; exit 0; }
 fi
 if [ -f "$SCRIPT_DIR/uat-utils.sh" ]; then
-  # shellcheck source=uat-utils.sh
   . "$SCRIPT_DIR/uat-utils.sh" || { quiet_json "skipped" "uat-utils unavailable"; exit 0; }
 fi
 

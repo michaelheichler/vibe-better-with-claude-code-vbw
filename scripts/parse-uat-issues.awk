@@ -1,10 +1,3 @@
-# parse-uat-issues.awk — Extract compact issue lines from a UAT markdown file.
-#
-# Output format:
-#   ID|SEVERITY|DESCRIPTION
-#
-# The caller is responsible for header generation, round counting, recurrence
-# tracking, and any consistency guards.
 
 function tolower_str(s,    i, c, out, upper, lower, pos) {
   upper = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"

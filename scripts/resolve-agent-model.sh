@@ -1,29 +1,4 @@
 #!/usr/bin/env bash
-# resolve-agent-model.sh - Model resolution for VBW agents
-#
-# Resolution precedence:
-#   1. model_overrides.<agent> in config.json (string or preference array)
-#   2. model_matrix.<agent>.<effort> in config.json (string or preference array)
-#   3. model_profile preset from model-profiles.json (legacy tier table)
-#
-# Preference arrays resolve to the first entry present in the detected model
-# catalog (scripts/detect-models.sh, 1h cache); when no catalog is available
-# the first entry is trusted as-is. Single strings are emitted without an
-# availability check: the matrix is written from a detected catalog at init
-# time, so configured models are available by construction.
-#
-# Usage: resolve-agent-model.sh <agent-name> <config-path> <profiles-path>
-#   agent-name: lead|dev|qa|scout|debugger|architect|docs
-#   config-path: path to .vbw-planning/config.json
-#   profiles-path: path to config/model-profiles.json
-#
-# Returns: stdout = model string (tier alias or full model id), exit 0
-# Errors: stderr = error message, exit 1
-#
-# Integration pattern (from command files):
-#   MODEL=$(bash ${CLAUDE_PLUGIN_ROOT}/scripts/resolve-agent-model.sh lead .vbw-planning/config.json ${CLAUDE_PLUGIN_ROOT}/config/model-profiles.json)
-#   if [ $? -ne 0 ]; then echo "Model resolution failed"; exit 1; fi
-#   # Pass to Task tool: model: "${MODEL}"
 
 set -euo pipefail
 
@@ -45,10 +20,8 @@ file_content_fingerprint() {
   fi
 }
 
-# Task model parameters accept one token, including gateway id punctuation.
 MODEL_SHAPE='^[][A-Za-z0-9._:/-]+$'
 
-# Argument parsing
 if [ $# -ne 3 ]; then
   echo "Usage: resolve-agent-model.sh <agent-name> <config-path> <profiles-path>" >&2
   exit 1
@@ -58,10 +31,8 @@ AGENT="$1"
 CONFIG_PATH="$2"
 PROFILES_PATH="$3"
 
-# Validate agent name
 case "$AGENT" in
   lead|dev|qa|scout|debugger|architect|docs)
-    # Valid agent
     ;;
   *)
     echo "Invalid agent name '$AGENT'. Valid: lead, dev, qa, scout, debugger, architect, docs" >&2
@@ -69,19 +40,16 @@ case "$AGENT" in
     ;;
 esac
 
-# Validate config file exists
 if [ ! -f "$CONFIG_PATH" ]; then
   echo "Config not found at $CONFIG_PATH. Run /vbw:init first." >&2
   exit 1
 fi
 
-# Validate profiles file exists
 if [ ! -f "$PROFILES_PATH" ]; then
   echo "Model profiles not found at $PROFILES_PATH. Plugin installation issue." >&2
   exit 1
 fi
 
-# Catalog fingerprints prevent stale model resolutions after refresh.
 _MODELS_BASE="${ANTHROPIC_BASE_URL:-https://api.anthropic.com}"
 _MODELS_BASE="${_MODELS_BASE%/}"
 _MODELS_AUTH=""
@@ -96,7 +64,6 @@ if [ -n "$_MODELS_BIN" ]; then
 fi
 _MODELS_CACHE="/tmp/vbw-models-$(hash_path "bin:${_MODELS_BIN:-none}:${_MODELS_STAMP}|${_MODELS_AUTH:+$_MODELS_BASE}")"
 if [ -n "${VBW_MODEL_CATALOG_FILE:-}" ]; then
-  # Test catalogs override live detection, so their content must scope the cache.
   if [ -f "$VBW_MODEL_CATALOG_FILE" ]; then
     MODELS_HASH=$(file_content_fingerprint "$VBW_MODEL_CATALOG_FILE")
   else
@@ -108,9 +75,6 @@ else
   MODELS_HASH="none"
 fi
 
-# Session-level cache: avoid repeated jq calls for the same agent + config pair.
-# Scope by content fingerprints and path hash so parallel BATS workers
-# using different temp repos cannot collide.
 CONFIG_HASH=$(file_content_fingerprint "$CONFIG_PATH")
 PROFILES_HASH=$(file_content_fingerprint "$PROFILES_PATH")
 PATH_HASH=$(hash_path "${CONFIG_PATH}|${PROFILES_PATH}")
@@ -121,7 +85,6 @@ if [ -f "$CACHE_FILE" ]; then
     echo "$_cached"
     exit 0
   fi
-  # Cache is corrupt or empty — fall through to recompute
 fi
 
 CATALOG=""
@@ -130,19 +93,16 @@ CATALOG_LOADED=false
 load_catalog() {
   if [ "$CATALOG_LOADED" = false ]; then
     CATALOG=$(bash "$SCRIPT_DIR/detect-models.sh" 2>/dev/null) || CATALOG=""
-    # model_catalog_extra: trusted ids treated as available even if undetected.
     CATALOG_EXTRA=$(jq -r '(.model_catalog_extra // [])[]' "$CONFIG_PATH" 2>/dev/null || true)
     CATALOG_LOADED=true
   fi
 }
 
 candidates_from() {
-  # The jq filter emits one candidate per line.
   jq -r "($1) // empty | if type == \"array\" then .[] else . end" "$CONFIG_PATH" 2>/dev/null || true
 }
 
 pick_model() {
-  # Preference arrays require catalog matching, while single candidates are trusted.
   local first="" count=0 c chosen=""
   local all=""
   while IFS= read -r c; do
@@ -189,7 +149,6 @@ fi
 
 if [[ "$MODEL" =~ $MODEL_SHAPE ]]; then
   echo "$MODEL"
-  # Cache result for session reuse
   echo "$MODEL" > "$CACHE_FILE" 2>/dev/null || true
 else
   echo "Invalid model '$MODEL' for $AGENT. Must be a single model id token." >&2

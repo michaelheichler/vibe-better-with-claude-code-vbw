@@ -1,29 +1,4 @@
 #!/usr/bin/env bash
-# resolve-debug-target.sh — Resolve the contributor-local VBW debug target repo.
-#
-# Resolution order:
-#   1. VBW_DEBUG_TARGET_REPO env var (one-off override)
-#   2. <git-common-dir>/info/vbw-debug-target.txt (preferred local config shared
-#      across worktrees created from the same clone)
-#   3. <plugin-root>/.claude/vbw-debug-target.txt (legacy per-checkout fallback)
-#   4. ${CLAUDE_DIR}/vbw/debug-target.txt (user-global fallback; CLAUDE_DIR is
-#      resolved by resolve-claude-dir.sh using CLAUDE_CONFIG_DIR when set and
-#      the canonical Claude config-directory defaults otherwise)
-#
-# File format: first non-empty, non-comment line is the absolute path to the
-# contributor's primary VBW consumer/test repo.
-#
-# Usage:
-#   resolve-debug-target.sh [repo|planning-dir|encoded-path|claude-project-dir|source|all] [--plugin-root PATH]
-#
-# Notes:
-# - --plugin-root exists so tests and diagnostics can point at an explicit repo
-#   root without relying on the script's installed location.
-# - If --plugin-root is not inside a git checkout (for example some installed
-#   cache layouts), the shared git-common-dir lookup is skipped and the legacy
-#   per-checkout/global fallbacks still apply.
-# - The resolved target must exist as a directory. The script does not require
-#   .vbw-planning/ to exist because some debug flows may need to inspect pre-init repos.
 
 set -euo pipefail
 
@@ -55,8 +30,11 @@ resolve_git_common_dir() {
   [ -n "$raw_dir" ] || return 1
 
   case "$raw_dir" in
-    /*) ;;
-    *) raw_dir="$PLUGIN_ROOT/$raw_dir" ;;
+    /*)
+      ;;
+    *)
+      raw_dir="$PLUGIN_ROOT/$raw_dir"
+      ;;
   esac
 
   [ -d "$raw_dir" ] || return 1
@@ -77,7 +55,8 @@ validate_target_repo() {
   fi
 
   case "$target_repo" in
-    /*) ;;
+    /*)
+      ;;
     *)
       echo "Configured VBW debug target repo from $target_source must be an absolute path: $target_repo" >&2
       exit 1
@@ -116,7 +95,6 @@ fi
 
 PLUGIN_ROOT="$(cd "$PLUGIN_ROOT" && pwd -P)"
 
-# shellcheck source=resolve-claude-dir.sh
 . "$SCRIPT_DIR/resolve-claude-dir.sh"
 
 read_target_file() {

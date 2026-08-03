@@ -1,10 +1,6 @@
 #!/usr/bin/env bash
 set -u
 
-# token-baseline.sh [measure|compare|report] [--phase=N] [--save]
-# Computes per-phase token usage from event log data and produces comparison reports.
-# Reads from event-log.jsonl and run-metrics.jsonl, stores baselines in .baselines/.
-# Exit 0 always — baseline measurement must never block execution.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PLANNING_DIR="${VBW_PLANNING_DIR:-.vbw-planning}"
@@ -14,7 +10,6 @@ BASELINES_DIR="${PLANNING_DIR}/.baselines"
 BASELINE_FILE="${BASELINES_DIR}/token-baseline.json"
 BUDGETS_PATH="${SCRIPT_DIR}/../config/token-budgets.json"
 
-# Parse arguments
 ACTION="measure"
 PHASE_FILTER=""
 SAVE_BASELINE=false
@@ -33,7 +28,6 @@ for arg in "$@"; do
   esac
 done
 
-# --- Data reading functions ---
 
 count_overages() {
   local phase_filter="${1:-}"
@@ -54,7 +48,6 @@ sum_truncated_chars() {
     echo "0"
     return
   fi
-  # Support both old (lines_truncated) and new (chars_truncated) field names
   if [ -n "$phase_filter" ]; then
     jq -s "[.[] | select(.event == \"token_overage\") | select(.phase == ${phase_filter}) | (.data.chars_truncated // .data.lines_truncated // \"0\") | tonumber] | add // 0" "$METRICS_FILE" 2>/dev/null || echo "0"
   else
@@ -107,7 +100,6 @@ get_phases() {
   echo "$phases"
 }
 
-# --- Helper: delta direction ---
 get_delta_direction() {
   local d="$1"
   if [ "$d" -gt 0 ] 2>/dev/null; then echo "worse"
@@ -116,13 +108,11 @@ get_delta_direction() {
   fi
 }
 
-# --- Prerequisites check ---
 if [ ! -f "$EVENTS_FILE" ] && [ ! -f "$METRICS_FILE" ]; then
   echo "No event data found yet."
   exit 0
 fi
 
-# --- Measure function (reusable) ---
 build_measurement() {
   local phase_filter="${1:-}"
   local ts
@@ -173,7 +163,6 @@ build_measurement() {
     total_opt=$(awk "BEGIN {printf \"%.3f\", ${total_overages} / ${total_tasks}}")
   fi
 
-  # Budget utilization
   local budget_json="{}"
   if [ -f "$BUDGETS_PATH" ] && [ -f "$METRICS_FILE" ]; then
     local roles
@@ -210,7 +199,6 @@ build_measurement() {
     }' 2>/dev/null || echo "{}"
 }
 
-# --- Compare function ---
 build_comparison() {
   if [ ! -f "$BASELINE_FILE" ]; then
     echo "No baseline found. Run with --save first."
@@ -245,12 +233,10 @@ build_comparison() {
   dir_ov=$(get_delta_direction "$d_ov")
   dir_tr=$(get_delta_direction "$d_tr")
   dir_es=$(get_delta_direction "$d_es")
-  # For float delta direction
   local d_opt_int
   d_opt_int=$(awk "BEGIN {d = ${c_opt} - ${b_opt}; if (d > 0.0005) print 1; else if (d < -0.0005) print -1; else print 0}")
   dir_opt=$(get_delta_direction "$d_opt_int")
 
-  # Detect phase changes (new/removed phases)
   local phase_changes="{}"
   local baseline_phases current_phases
   baseline_phases=$(echo "$baseline" | jq -r '.phases | keys[] | select(test("^[0-9]+$"))' 2>/dev/null || echo "")
@@ -288,7 +274,6 @@ build_comparison() {
     }' 2>/dev/null || echo "{}"
 }
 
-# --- Report function ---
 build_report() {
   local measurement
   measurement=$(build_measurement "$PHASE_FILTER")
@@ -304,7 +289,6 @@ build_report() {
   fi
   echo ""
 
-  # Per-Phase Summary
   echo "## Per-Phase Summary"
   echo "| Phase | Overages | Chars Truncated | Tasks | Overages/Task |"
   echo "|-------|----------|-----------------|-------|---------------|"
@@ -329,7 +313,6 @@ build_report() {
   printf "| **Total** | **%s** | **%s** | **%s** | **%.2f** |\n" "$t_ov" "$t_tr" "$t_ta" "$t_opt"
   echo ""
 
-  # Budget Utilization
   echo "## Budget Utilization"
   echo "| Role | Total Chars | Budget Max | Utilization |"
   echo "|------|-------------|-----------|-------------|"
@@ -341,7 +324,6 @@ build_report() {
     r_t=$(echo "$measurement" | jq -r --arg r "$role" '.budget_utilization[$r].total_chars // .budget_utilization[$r].total_lines // 0' 2>/dev/null)
     r_m=$(echo "$measurement" | jq -r --arg r "$role" '.budget_utilization[$r].max_chars // .budget_utilization[$r].max_lines // 0' 2>/dev/null)
     r_p=$(echo "$measurement" | jq -r --arg r "$role" '.budget_utilization[$r].utilization_pct // 0' 2>/dev/null)
-    # Only show roles with actual usage data
     if [ "$r_t" -gt 0 ] 2>/dev/null || [ "$r_m" -gt 0 ] 2>/dev/null; then
       echo "| ${role} | ${r_t} | ${r_m} | ${r_p}% |"
       has_budget_data=true
@@ -352,7 +334,6 @@ build_report() {
   fi
   echo ""
 
-  # Comparison section
   if [ -f "$BASELINE_FILE" ]; then
     echo "## Comparison with Baseline"
 
@@ -391,7 +372,6 @@ build_report() {
   echo ""
 }
 
-# --- Action dispatch ---
 case "$ACTION" in
   measure)
     RESULT=$(build_measurement "$PHASE_FILTER")
