@@ -1,0 +1,24 @@
+scripts/bootstrap/lib/bootstrap-claude-migration.sh
+  s_6ef0e951f7d046::t_f52e4dc22350bb 95
+  s_6ef0e951f7d046::t_009bd44877e271 8
+  s_6ef0e951f7d046::t_3e0975d1044f55 28
+  s_6ef0e951f7d046::t_af89a58addf41b 144
+scripts/bootstrap/bootstrap-claude.sh
+  s_6ef0e951f7d046::t_18cc5f4e4a35a8 20-21
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "8573a8329257ecb69a65bfe29297319014d81985",
+  "prompts": {},
+  "sessions": {
+    "s_6ef0e951f7d046": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "32b96d9e-2f7c-4f57-88c2-54535491e857",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": null
+    }
+  }
+}
