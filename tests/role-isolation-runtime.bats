@@ -3,6 +3,7 @@
 load test_helper
 
 setup() {
+  LIVE_PIDS=()
   setup_temp_dir
   create_test_config
   mkdir -p "$TEST_TEMP_DIR/.vbw-planning/phases/01-test"
@@ -10,6 +11,10 @@ setup() {
 }
 
 teardown() {
+  local pid
+  for pid in "${LIVE_PIDS[@]}"; do
+    kill "$pid" 2>/dev/null || true
+  done
   teardown_temp_dir
 }
 
@@ -36,8 +41,6 @@ create_contract() {
 {"phase_id":"phase-1","plan_id":"01-01","phase":1,"plan":1,"objective":"Test","task_ids":["1-1-T1"],"task_count":1,"allowed_paths":["src/allowed.js"],"forbidden_paths":[],"depends_on":[],"must_haves":["Works"],"verification_checks":[],"max_token_budget":50000,"timeout_seconds":300,"contract_hash":"abc123"}
 CONTRACT
 }
-
-# Role markers are unsafe caller evidence because concurrent callers share session state.
 
 @test "file-guard: blocks lead from writing outside .vbw-planning/ when role isolation enabled" {
   cd "$TEST_TEMP_DIR"
@@ -238,18 +241,25 @@ JSON
 @test "file-guard: degraded mixed-role markers do not leave stale Scout write block" {
   cd "$TEST_TEMP_DIR"
   create_plan_with_files
-  echo "2" > "$TEST_TEMP_DIR/.vbw-planning/.active-agent-count"
-  echo "dev" > "$TEST_TEMP_DIR/.vbw-planning/.active-agent"
-  cat > "$TEST_TEMP_DIR/.vbw-planning/.active-agent-roles" <<'EOF'
-scout 1
-dev 1
-EOF
+  local scout_pid dev_pid
+  sleep 30 >/dev/null 2>&1 & scout_pid=$!
+  LIVE_PIDS+=("$scout_pid")
+  sleep 30 >/dev/null 2>&1 & dev_pid=$!
+  LIVE_PIDS+=("$dev_pid")
+  printf '%s\n' "{\"agent_type\":\"vbw-scout\",\"pid\":\"$scout_pid\"}" | \
+    VBW_PLANNING_DIR="$TEST_TEMP_DIR/.vbw-planning" bash "$SCRIPTS_DIR/agent-start.sh"
+  printf '%s\n' "{\"agent_type\":\"vbw-dev\",\"pid\":\"$dev_pid\"}" | \
+    VBW_PLANNING_DIR="$TEST_TEMP_DIR/.vbw-planning" bash "$SCRIPTS_DIR/agent-start.sh"
 
-  run bash -c "cd '$TEST_TEMP_DIR' && unset CLAUDE_CODE_CHILD_SESSION CLAUDE_SESSION_ID && echo '{}' | bash '$SCRIPTS_DIR/agent-stop.sh'"
+  run bash -c "cd '$TEST_TEMP_DIR' && unset CLAUDE_CODE_CHILD_SESSION CLAUDE_SESSION_ID && printf '%s\\n' '{\"pid\":\"$scout_pid\"}' | bash '$SCRIPTS_DIR/agent-stop.sh'"
   [ "$status" -eq 0 ]
   [ "$(cat "$TEST_TEMP_DIR/.vbw-planning/.active-agent-count")" = "1" ]
-  [ ! -f "$TEST_TEMP_DIR/.vbw-planning/.active-agent-roles" ]
-  [ ! -f "$TEST_TEMP_DIR/.vbw-planning/.active-agent" ]
+  [ -f "$TEST_TEMP_DIR/.vbw-planning/.active-agent-roles" ]
+  run grep -Fqx 'dev 1' "$TEST_TEMP_DIR/.vbw-planning/.active-agent-roles"
+  [ "$status" -eq 0 ]
+  run grep -Fqx 'scout 1' "$TEST_TEMP_DIR/.vbw-planning/.active-agent-roles"
+  [ "$status" -ne 0 ]
+  [ "$(cat "$TEST_TEMP_DIR/.vbw-planning/.active-agent")" = "dev" ]
 
   INPUT='{"tool_name":"Write","tool_input":{"file_path":"src/allowed.js","content":"allowed-after-degrade"}}'
   run bash -c "unset CLAUDE_CODE_CHILD_SESSION VBW_AGENT_ROLE; echo '$INPUT' | bash '$SCRIPTS_DIR/file-guard.sh'"
