@@ -1,0 +1,21 @@
+tests/active-agent-lifecycle.bats
+  s_396441278312df::t_b07376c2baf78c 5-13
+scripts/lib/active-agent-state.sh
+  s_396441278312df::t_f9b958eab3940c 36-40
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "aaf5985a96c9ec3d3b3f022a8fb27c497221de3e",
+  "prompts": {},
+  "sessions": {
+    "s_396441278312df": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8b693812-fc94-4ea6-be47-0ddb22b766f3",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
