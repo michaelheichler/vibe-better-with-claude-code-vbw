@@ -1,0 +1,32 @@
+tests/agent-shutdown-integration.bats
+  s_148ae53cf16113::t_e0e62c0a83ee3b 110-111
+  s_148ae53cf16113::t_f0be13be5dd303 137
+  s_148ae53cf16113::t_b6441d2ecafb5b 321
+  s_148ae53cf16113::t_4ef8a3d7b2c0cc 88,107
+  s_148ae53cf16113::t_d04f43d65d71a5 35-37
+  s_148ae53cf16113::t_de9487a449a970 7
+  s_148ae53cf16113::t_cb343e8b9e1413 120
+  s_148ae53cf16113::t_8e2778bbd5af15 303-306
+  s_148ae53cf16113::t_35bed77636bf52 153
+  s_148ae53cf16113::t_52442963252491 302,308,310
+  s_148ae53cf16113::t_ba8e9b6e2c6520 26-29
+  s_148ae53cf16113::t_7f10857f7c20ce 76-79,91-94,123-126,509-512
+  s_148ae53cf16113::t_53571ad06b117d 505
+  s_148ae53cf16113::t_3ed2f7d78c02bf 62-63,156-157,493-494
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "f812f5ade373325128424f85b18fe4d2e77811e8",
+  "prompts": {},
+  "sessions": {
+    "s_148ae53cf16113": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "82bc467d-d72d-428e-97b7-1f3f33916f5e",
+        "model": "terra"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
