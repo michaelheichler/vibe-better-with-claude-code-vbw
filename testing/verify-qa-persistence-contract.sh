@@ -154,7 +154,7 @@ else
 fi
 
 # 15. Execute post-build QA QA task descriptions use VBW_PLUGIN_ROOT (not CLAUDE_PLUGIN_ROOT)
-#     CLAUDE_PLUGIN_ROOT is only set for --plugin-dir installs; VBW_PLUGIN_ROOT is the
+#     CLAUDE_PLUGIN_ROOT is only set for --plugin-dir installs. VBW_PLUGIN_ROOT is the
 #     resolved variable from the 6-step cascade at the top of execute-post-build-qa.md.
 if grep -q 'Plugin root: \${CLAUDE_PLUGIN_ROOT}' "$EXEC_PROTO"; then
   fail "15: execute-post-build-qa.md QA task descriptions use CLAUDE_PLUGIN_ROOT instead of VBW_PLUGIN_ROOT"

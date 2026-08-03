@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# verify-config-defaults-sync.sh — Contract test for issue #373
+# Keep config/defaults.json and commands/config.md aligned for issue #373.
 #
 # Validates that the settings reference table in commands/config.md stays
 # in sync with config/defaults.json (the source of truth for all settings).
@@ -9,7 +9,7 @@ set -euo pipefail
 # Checks:
 # 1. Every key in defaults.json has a row in the config.md table
 # 2. Every setting name in the config.md table exists in defaults.json
-# 3. Default values match (scalars compared directly, arrays/objects via compact JSON; shorthand-only keys skipped)
+# 3. Default values match. Compare scalars directly, and compare arrays and objects via compact JSON. Skip shorthand-only keys.
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 CONFIG_MD="$ROOT/commands/config.md"
@@ -71,7 +71,7 @@ done
 
 # --- Check 3: Default values match across supported table representations ---
 # Compare scalar defaults directly and array/object defaults via compact JSON
-# when the table uses JSON-like notation; skip only keys whose table values
+# when the table uses JSON-like notation. Skip only keys whose table values
 # use non-JSON shorthand representations.
 echo ""
 echo "--- Check: default values match ---"

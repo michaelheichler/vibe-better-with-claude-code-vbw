@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# verify-uat-autocontinue.sh — Contract tests for UAT remediation auto-continuation
+# Keep UAT remediation auto-continuation contract tests aligned with the workflow.
 #
 # Validates that the verify.md ↔ vibe.md signal flow for auto-continuing
 # remediation rounds has the required structural elements.
@@ -101,7 +101,7 @@ else
   pass "verify.md orchestrated mode correctly defers needs-round to caller"
 fi
 
-# 11. vibe.md Step 4 does not directly call needs-round; prepare-reverification owns mutation
+# 11. prepare-reverification owns Step 4 needs-round mutation in vibe.md.
 if grep -q 'uat-remediation-state.sh needs-round' <<<"$VIBE_VERIFY_STEP4_BLOCK"; then
   fail "vibe.md Step 4 must not directly call uat-remediation-state.sh needs-round"
 else
@@ -125,7 +125,7 @@ else
 fi
 
 # 14. vibe.md and verify.md fail-close on malformed transition helper output
-# vibe.md Step 4 must stop when prepare-reverification fails or emits malformed output;
+# vibe.md Step 4 must stop when prepare-reverification fails or emits malformed output.
 # verify.md standalone mode still stops on malformed cap-helper output.
 if grep -q 'prepare-reverification.*exits nonzero' <<<"$VIBE_VERIFY_STEP4_BLOCK" \
   && grep -q 'malformed' <<<"$VIBE_VERIFY_STEP4_BLOCK" \
