@@ -1,0 +1,31 @@
+.vbw-planning/STATE.md
+  s_148ae53cf16113::t_c28c016e5390b5 40
+  s_148ae53cf16113::t_c67179f59160ce 42
+  s_148ae53cf16113::t_73b5d4529ffbe8 44
+  s_148ae53cf16113::t_c599ba04062b77 73
+  s_003abf6c36868f::t_401e4ca6befcc0 7-8,13,103-107
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "2e2a6f60a8f0cb9a61ef4aaeff225e70f36c455f",
+  "prompts": {},
+  "sessions": {
+    "s_003abf6c36868f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-adev-r01-c7a739dc053e7758",
+        "model": "unknown"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    },
+    "s_148ae53cf16113": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "82bc467d-d72d-428e-97b7-1f3f33916f5e",
+        "model": "terra"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
