@@ -1,0 +1,22 @@
+tests/role-isolation-runtime.bats
+  s_148ae53cf16113::t_6964db2f9da75a 6,14-17
+  s_148ae53cf16113::t_8e70cae6364c5d 246,248
+  s_148ae53cf16113::t_e25cee46919a98 244-245,247,249-252,254
+  s_148ae53cf16113::t_9bee87ddd9c489 257-262
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "31b2dbcfbc1efeb1faf1b8bdad7dc1b2132466cf",
+  "prompts": {},
+  "sessions": {
+    "s_148ae53cf16113": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "82bc467d-d72d-428e-97b7-1f3f33916f5e",
+        "model": "terra"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
