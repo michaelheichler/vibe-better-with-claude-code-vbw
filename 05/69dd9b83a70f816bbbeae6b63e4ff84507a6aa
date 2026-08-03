@@ -1,0 +1,29 @@
+scripts/bash-guard.sh
+  s_396441278312df::t_dbbd46604b54a4 501-504
+  s_396441278312df::t_061c75f6f35fbc 490-493
+  s_396441278312df::t_6b88c8624066f2 547
+  s_396441278312df::t_ead6d0e783fdc8 585
+  s_396441278312df::t_8d58314ea0b4a9 542-546,548-556,559-560,562-564
+  s_396441278312df::t_0f710a110c51d3 557-558
+  s_396441278312df::t_58403b6e793e32 561
+  s_396441278312df::t_ccf23ac7892ada 600
+tests/qa-bash-guard.bats
+  s_396441278312df::t_a3c83b9467caeb 102-117,119-122
+  s_396441278312df::t_cca5642707c694 118
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "0569dd9b83a70f816bbbeae6b63e4ff84507a6aa",
+  "prompts": {},
+  "sessions": {
+    "s_396441278312df": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8b693812-fc94-4ea6-be47-0ddb22b766f3",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
