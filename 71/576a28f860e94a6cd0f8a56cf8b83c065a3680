@@ -1,0 +1,22 @@
+tests/active-agent-state.bats
+  s_148ae53cf16113::t_cee8ed591e3efa 29-40
+scripts/lib/active-agent-state.sh
+  s_148ae53cf16113::t_5aab1bfe5da381 310
+  s_148ae53cf16113::t_5fc1e435971c57 318,322
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "71576a28f860e94a6cd0f8a56cf8b83c065a3680",
+  "prompts": {},
+  "sessions": {
+    "s_148ae53cf16113": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "82bc467d-d72d-428e-97b7-1f3f33916f5e",
+        "model": "kimi3"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
