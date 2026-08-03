@@ -1,0 +1,20 @@
+.vbw-planning/phases/07-terminology-and-punctuation/07-04-SUMMARY.md
+  s_6ef0e951f7d046::t_b203f8decc9838 42-43,45-52,54-65
+  s_6ef0e951f7d046::t_8b4eddae19d51f 1-41,44,53
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "0acb7c776001b30cffa0c9f2c6271cb82b20bf06",
+  "prompts": {},
+  "sessions": {
+    "s_6ef0e951f7d046": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "32b96d9e-2f7c-4f57-88c2-54535491e857",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
