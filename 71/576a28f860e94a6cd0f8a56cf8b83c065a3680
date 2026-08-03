@@ -3,6 +3,9 @@ tests/active-agent-state.bats
 scripts/lib/active-agent-state.sh
   s_148ae53cf16113::t_5aab1bfe5da381 310
   s_148ae53cf16113::t_5fc1e435971c57 318,322
+  s_148ae53cf16113::t_3e180ad0b73389 310
+  s_6574fb526b4528::t_c1242471c1b4de 322
+  s_8b686e67864e62::t_acffdb1074dd92 318
 ---
 {
   "schema_version": "authorship/3.0.0",
@@ -15,6 +18,22 @@ scripts/lib/active-agent-state.sh
         "tool": "claude",
         "id": "82bc467d-d72d-428e-97b7-1f3f33916f5e",
         "model": "kimi3"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    },
+    "s_6574fb526b4528": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "28b0741e-0896-4ad8-8b83-3ec312b243f7",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    },
+    "s_8b686e67864e62": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-adev-01-86c6bc09974fd120",
+        "model": "unknown"
       },
       "human_author": "Michael Heichler <iam@michaelheichler.eu>"
     }
