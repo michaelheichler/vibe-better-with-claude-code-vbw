@@ -1,0 +1,22 @@
+scripts/agent-spawn-guard.sh
+  s_396441278312df::t_c0c103eee12d06 166-198
+tests/agent-spawn-guard.bats
+  s_396441278312df::t_678fe0e0267586 146
+  s_396441278312df::t_48c1add032cb94 138-145,147-175
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "1c3884144905a13aac66d3be02e03ed2c3ea3a4c",
+  "prompts": {},
+  "sessions": {
+    "s_396441278312df": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8b693812-fc94-4ea6-be47-0ddb22b766f3",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
