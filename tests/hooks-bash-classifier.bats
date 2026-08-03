@@ -1221,7 +1221,8 @@ EOF
 
   mkdir -p "$TEST_PROJECT/.vbw-planning"
   echo '{"bash_guard":true}' > "$TEST_PROJECT/.vbw-planning/config.json"
-  printf '%s\n' '{"session_id":"session-A","agent_type":"vbw:vbw-scout","pid":"10101"}' | \
+  sleep 30 & scout_pid=$!
+  printf '%s\n' "{\"session_id\":\"session-A\",\"agent_type\":\"vbw:vbw-scout\",\"pid\":\"$scout_pid\"}" | \
     VBW_PLANNING_DIR="$TEST_PROJECT/.vbw-planning" bash "$PROJECT_ROOT/scripts/agent-start.sh"
 
   run bash -c 'cd "$1" && printf "%s\n" "{\"session_id\":\"session-B\"}" | bash "$2"' _ \
@@ -1236,15 +1237,16 @@ EOF
     "$TEST_PROJECT" "$input_a" "$PROJECT_ROOT/scripts/bash-guard.sh"
   [ "$status" -eq 0 ]
 
-  run bash -c 'cd "$1" && printf "%s\n" "{\"session_id\":\"session-A\",\"agent_type\":\"vbw:vbw-scout\",\"pid\":\"10101\"}" | bash "$2"' _ \
-    "$TEST_PROJECT" "$PROJECT_ROOT/scripts/agent-stop.sh"
+  run bash -c 'cd "$1" && printf "%s\n" "$2" | bash "$3"' _ \
+    "$TEST_PROJECT" "{\"session_id\":\"session-A\",\"agent_type\":\"vbw:vbw-scout\",\"pid\":\"$scout_pid\"}" "$PROJECT_ROOT/scripts/agent-stop.sh"
   [ "$status" -eq 0 ]
-  [ ! -d "$TEST_PROJECT/.vbw-planning/.active-agents/session-A" ]
+  [ ! -f "$TEST_PROJECT/.vbw-planning/.active-agents/session-A/agents/$scout_pid.json" ]
   [ ! -f "$TEST_PROJECT/.vbw-planning/.active-agent" ]
 
   run bash -c 'cd "$1" && printf "%s\n" "$2" | bash "$3"' _ \
     "$TEST_PROJECT" "$input_a" "$PROJECT_ROOT/scripts/bash-guard.sh"
   [ "$status" -eq 0 ]
+  kill "$scout_pid" 2>/dev/null || true
 }
 
 @test "bash-guard: no-session session-stop rebuilds Scout state without classifying orchestrator" {
@@ -1253,7 +1255,8 @@ EOF
 
   mkdir -p "$TEST_PROJECT/.vbw-planning"
   echo '{"bash_guard":true}' > "$TEST_PROJECT/.vbw-planning/config.json"
-  printf '%s\n' '{"session_id":"session-A","agent_type":"vbw:vbw-scout","pid":"10101"}' | \
+  sleep 30 & scout_pid=$!
+  printf '%s\n' "{\"session_id\":\"session-A\",\"agent_type\":\"vbw:vbw-scout\",\"pid\":\"$scout_pid\"}" | \
     VBW_PLANNING_DIR="$TEST_PROJECT/.vbw-planning" bash "$PROJECT_ROOT/scripts/agent-start.sh"
 
   run bash -c 'cd "$1" && unset CLAUDE_SESSION_ID && printf "%s\n" "{}" | bash "$2"' _ \
@@ -1263,7 +1266,7 @@ EOF
   [ "$(cat "$TEST_PROJECT/.vbw-planning/.active-agent-count")" = "1" ]
   [ "$(cat "$TEST_PROJECT/.vbw-planning/.active-agent")" = "scout" ]
   grep -Fqx 'scout 1' "$TEST_PROJECT/.vbw-planning/.active-agent-roles"
-  grep -Fqx '10101 scout' "$TEST_PROJECT/.vbw-planning/.active-agent-role-pids"
+  grep -Fqx "$scout_pid scout" "$TEST_PROJECT/.vbw-planning/.active-agent-role-pids"
 
   cmd='gh issue comment 1403 --repo abhigyanpatwari/GitNexus --body-file /tmp/vbw-body.md'
   input_no_session=$(jq -n --arg cmd "$cmd" '{tool_input:{command:$cmd}}')
@@ -1283,9 +1286,11 @@ EOF
 
   mkdir -p "$TEST_PROJECT/.vbw-planning"
   echo '{"bash_guard":true}' > "$TEST_PROJECT/.vbw-planning/config.json"
-  printf '%s\n' '{"agent_type":"vbw:vbw-scout","pid":"10101"}' | \
+  sleep 30 & scout_pid=$!
+  sleep 30 & dev_pid=$!
+  printf '%s\n' "{\"agent_type\":\"vbw:vbw-scout\",\"pid\":\"$scout_pid\"}" | \
     env -u CLAUDE_SESSION_ID VBW_PLANNING_DIR="$TEST_PROJECT/.vbw-planning" bash "$PROJECT_ROOT/scripts/agent-start.sh"
-  printf '%s\n' '{"session_id":"session-B","agent_type":"vbw:vbw-dev","pid":"20202"}' | \
+  printf '%s\n' "{\"session_id\":\"session-B\",\"agent_type\":\"vbw:vbw-dev\",\"pid\":\"$dev_pid\"}" | \
     VBW_PLANNING_DIR="$TEST_PROJECT/.vbw-planning" bash "$PROJECT_ROOT/scripts/agent-start.sh"
 
   [ "$(cat "$TEST_PROJECT/.vbw-planning/.active-agent-count")" = "2" ]
@@ -1303,6 +1308,7 @@ EOF
   run bash -c 'cd "$1" && printf "%s\n" "$2" | bash "$3"' _ \
     "$TEST_PROJECT" "$input_b" "$PROJECT_ROOT/scripts/bash-guard.sh"
   [ "$status" -eq 0 ]
+  kill "$scout_pid" "$dev_pid" 2>/dev/null || true
 }
 
 @test "bash-guard: legacy root Scout marker does not classify payload-less orchestrator" {
@@ -1338,7 +1344,7 @@ EOF
 
   run bash -c "cd '$TEST_PROJECT' && echo '{}' | bash '$PROJECT_ROOT/scripts/agent-stop.sh'"
   [ "$status" -eq 0 ]
-  [ "$(cat "$TEST_PROJECT/.vbw-planning/.active-agent-count")" = "1" ]
+  [ ! -f "$TEST_PROJECT/.vbw-planning/.active-agent-count" ]
   [ ! -f "$TEST_PROJECT/.vbw-planning/.active-agent-roles" ]
   [ ! -f "$TEST_PROJECT/.vbw-planning/.active-agent" ]
 
