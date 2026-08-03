@@ -126,7 +126,8 @@ block_readonly_agent_command() {
 
 has_shell_file_write_redirection() {
   local command="$1"
-  local index=0 length character next_character in_single=0 in_double=0 escaped=0
+  local index=0 length character next_character target_start target_end redirect_target target_quote
+  local in_single=0 in_double=0 escaped=0
 
   length=${#command}
   while [ "$index" -lt "$length" ]; do
@@ -165,7 +166,59 @@ has_shell_file_write_redirection() {
         escaped=1
         ;;
       ">")
-        return 0
+        target_start=$((index + 1))
+        [ "${command:$target_start:1}" = ">" ] && target_start=$((target_start + 1))
+        while [ "$target_start" -lt "$length" ] && [[ "${command:$target_start:1}" = [[:space:]] ]]; do
+          target_start=$((target_start + 1))
+        done
+
+        target_quote="${command:$target_start:1}"
+        case "$target_quote" in
+          "'"|'"')
+            target_end=$((target_start + 1))
+            while [ "$target_end" -lt "$length" ] && [ "${command:$target_end:1}" != "$target_quote" ]; do
+              target_end=$((target_end + 1))
+            done
+            redirect_target="${command:$((target_start + 1)):$((target_end - target_start - 1))}"
+            [ "$redirect_target" = "/dev/null" ] || return 0
+            index=$((target_end + 1))
+            continue
+            ;;
+        esac
+
+        if [ "$target_quote" = "&" ]; then
+          target_end=$((target_start + 1))
+          if [ "${command:$target_end:1}" = "-" ]; then
+            target_end=$((target_end + 1))
+          else
+            while [ "$target_end" -lt "$length" ] && [[ "${command:$target_end:1}" = [0-9] ]]; do
+              target_end=$((target_end + 1))
+            done
+          fi
+          redirect_target="${command:$target_start:$((target_end - target_start))}"
+          case "$redirect_target" in
+            '&'-|'&'[0-9]*)
+              ;;
+            *)
+              return 0
+              ;;
+          esac
+        else
+          target_end=$target_start
+          while [ "$target_end" -lt "$length" ]; do
+            next_character="${command:$target_end:1}"
+            case "$next_character" in
+              [[:space:]]|";"|"|"|"&"|"<"|">")
+                break
+                ;;
+            esac
+            target_end=$((target_end + 1))
+          done
+          redirect_target="${command:$target_start:$((target_end - target_start))}"
+          [ "$redirect_target" = "/dev/null" ] || return 0
+        fi
+        index=$target_end
+        continue
         ;;
       "<")
         next_character="${command:$((index + 1)):1}"
