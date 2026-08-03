@@ -21,26 +21,19 @@ echo "=== Bash Script Contract Verification ==="
 while IFS= read -r file; do
   rel="${file#$ROOT/}"
 
-  case "$rel" in
-    */lib/*.sh)
-      pass "$rel: sourced library"
+  if [ -x "$file" ]; then
+    pass "$rel: executable"
+  else
+    fail "$rel: not executable"
+  fi
+
+  SHEBANG="$(head -1 "$file" 2>/dev/null || true)"
+  case "$SHEBANG" in
+    '#!/usr/bin/env bash'|'#!/bin/bash')
+      pass "$rel: bash shebang"
       ;;
     *)
-      if [ -x "$file" ]; then
-        pass "$rel: executable"
-      else
-        fail "$rel: not executable"
-      fi
-
-      SHEBANG="$(head -1 "$file" 2>/dev/null || true)"
-      case "$SHEBANG" in
-        '#!/usr/bin/env bash'|'#!/bin/bash')
-          pass "$rel: bash shebang"
-          ;;
-        *)
-          fail "$rel: invalid shebang ($SHEBANG)"
-          ;;
-      esac
+      fail "$rel: invalid shebang ($SHEBANG)"
       ;;
   esac
 
