@@ -1,0 +1,29 @@
+testing/verify-github-fix-workflow-contract.sh
+  s_6ef0e951f7d046::t_7a04619cfe9470 334-336
+  s_6ef0e951f7d046::t_9ef2ab72b9acfe 182-183,185-186
+  s_24c37196ba17a8::t_9ab23d1df35408 4
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "c901c90cac007847f969eb7649e0e61e3b12b7b2",
+  "prompts": {},
+  "sessions": {
+    "s_24c37196ba17a8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-adev-02-07f0675e1338dd4e",
+        "model": "unknown"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    },
+    "s_6ef0e951f7d046": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "32b96d9e-2f7c-4f57-88c2-54535491e857",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
