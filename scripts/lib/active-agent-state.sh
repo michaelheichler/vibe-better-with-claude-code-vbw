@@ -848,16 +848,19 @@ vbw_active_agent_current_role_is() {
 
   [ -n "$target_role" ] || return 1
 
-  if session_id=$(vbw_active_agent_session_id "$input"); then
-    roles_file=$(_vbw_active_agent_roles_file "$planning_dir" "$session_id")
-    marker_file=$(_vbw_active_agent_marker_file "$planning_dir" "$session_id")
-  else
-    roles_file=$(_vbw_active_agent_roles_file "$planning_dir" "")
-    marker_file=$(_vbw_active_agent_marker_file "$planning_dir" "")
+  if ! session_id=$(vbw_active_agent_session_id "$input"); then
+    printf '%s\n' 'session_id unresolvable, role detection skipped (fail-closed)' >&2
+    return 1
   fi
 
-  if [ -f "$roles_file" ] && awk -v r="$target_role" '$1 == r && ($2 ~ /^[0-9]+$/) && $2 > 0 { found=1 } END { exit found ? 0 : 1 }' "$roles_file" 2>/dev/null; then
-    return 0
+  roles_file=$(_vbw_active_agent_roles_file "$planning_dir" "$session_id")
+  marker_file=$(_vbw_active_agent_marker_file "$planning_dir" "$session_id")
+
+  if [ -f "$roles_file" ]; then
+    if awk -v r="$target_role" '$1 == r && ($2 ~ /^[0-9]+$/) && $2 > 0 { found=1 } END { exit found ? 0 : 1 }' "$roles_file" 2>/dev/null; then
+      return 0
+    fi
+    return 1
   fi
 
   if [ -f "$marker_file" ]; then
