@@ -1,0 +1,46 @@
+scripts/check-claude-md-staleness.sh
+  s_6ef0e951f7d046::t_b18b85392a7925 15
+scripts/debug-session-state.sh
+  s_6ef0e951f7d046::t_21df71a805a5aa 511,513,517,519,526,530,534,536,538,540,542,544,546,548,550,552
+  s_6ef0e951f7d046::t_10d1d9bfd168df 4
+  s_6ef0e951f7d046::t_5dee454df97613 176
+  s_6ef0e951f7d046::t_6ba23e1bd0e626 20-22
+scripts/lib/qa-result-gate-path-evidence.sh
+  s_6ef0e951f7d046::t_48fe83c7875c34 246-251
+scripts/lib/resolve-caveman-level.sh
+  s_6ef0e951f7d046::t_40bc16abca7db5 48-49
+scripts/compile-debug-session-context.sh
+  s_6ef0e951f7d046::t_21df71a805a5aa 78,85,89,93,97,101,116,123,127,131,135
+  s_6ef0e951f7d046::t_10d1d9bfd168df 4
+  s_6ef0e951f7d046::t_62a8aaf1cfc064 36
+scripts/debug-start-selected-todo.sh
+  s_6ef0e951f7d046::t_8007824bf2b8b1 72-76
+  s_6ef0e951f7d046::t_5dee454df97613 330
+scripts/adopt-contributor-pr.sh
+  s_6ef0e951f7d046::t_5dee454df97613 20
+scripts/lib/claude-md-vbw-sections.sh
+  s_6ef0e951f7d046::t_5dee454df97613 25,37,61
+  s_6ef0e951f7d046::t_cc15374ca34fd9 10
+testing/verify-debug-session-contract.sh
+  s_6ef0e951f7d046::t_6d927267ff0972 193
+scripts/log-event.sh
+  s_6ef0e951f7d046::t_40bc16abca7db5 116-117
+scripts/list-todos.sh
+  s_6ef0e951f7d046::t_40bc16abca7db5 211-212
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "d1c450ae8857d3878bef37c302e7916eeeae8c8a",
+  "prompts": {},
+  "sessions": {
+    "s_6ef0e951f7d046": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "32b96d9e-2f7c-4f57-88c2-54535491e857",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
