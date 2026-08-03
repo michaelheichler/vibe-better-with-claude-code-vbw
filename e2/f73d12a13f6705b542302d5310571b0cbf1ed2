@@ -1,0 +1,22 @@
+testing/verify-delegation-guard.sh
+  s_396441278312df::t_c1696a870ff278 41-46
+  s_396441278312df::t_6d6ac8e02674f1 126,134,137
+  s_396441278312df::t_f8c05bb7ad7c8d 13
+  s_396441278312df::t_8d85b616b8d75d 127-133
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "e2f73d12a13f6705b542302d5310571b0cbf1ed2",
+  "prompts": {},
+  "sessions": {
+    "s_396441278312df": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8b693812-fc94-4ea6-be47-0ddb22b766f3",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
