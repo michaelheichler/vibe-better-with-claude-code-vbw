@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# verify-github-fix-workflow-contract.sh — Contract checks for local GH fix workflow helpers
+
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 TOOL_GUARD="$ROOT/.github/hooks/copilot-tool-guard.sh"
@@ -179,11 +179,11 @@ test_contributor_pr_review_documents_codex_comment_trigger() {
 test_contributor_pr_review_documents_codex_comment_trigger
 
 test_stop_guard_block_reasons_include_worktree() {
-  # All block() calls that reference a PR number should include the worktree path
-  # in the human-readable reason text (issue #478).
+
+
   local pr_blocks_without_worktree
-  # Verify the first quoted argument (reason string) mentions the worktree.
-  # Some blocks say "(worktree: ...)" after PR#, others say "worktree '...'" before PR#.
+
+
   pr_blocks_without_worktree=$(grep -n 'block ".*PR #' "$STOP_GUARD" \
     | grep -vE 'block "[^"]*worktree[^"]*PR #|block "[^"]*PR #[^"]*worktree' || true)
   if [ -z "$pr_blocks_without_worktree" ]; then
@@ -331,7 +331,9 @@ test_pr_template_documents_qa_evidence_commit_gate
 
 test_public_docs_reject_lower_minimum_qa_guidance() {
   local stale_guidance
-  stale_guidance=$(grep -nEi '2[–-]4|2 to 4|two to four|at least 2[[:space:]]+QA|minimum 2[[:space:]]+QA|2[[:space:]]+QA[[:space:]]+(review|round|evidence)' \
+  local en_dash
+  printf -v en_dash '\\u2013'
+  stale_guidance=$(grep -nEi "2[${en_dash}-]4|2 to 4|two to four|at least 2[[:space:]]+QA|minimum 2[[:space:]]+QA|2[[:space:]]+QA[[:space:]]+(review|round|evidence)" \
     "$CONTRIBUTING_DOC" "$PR_TEMPLATE" || true)
   if [ -z "$stale_guidance" ]; then
     pass "public docs do not contain stale lower-minimum QA guidance"
