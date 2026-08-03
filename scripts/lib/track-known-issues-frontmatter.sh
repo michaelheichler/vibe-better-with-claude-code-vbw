@@ -9,8 +9,11 @@ function trim(v) {
 function strip_quotes(v, first, last) {
   first = substr(v, 1, 1)
   last = substr(v, length(v), 1)
-  if ((first == "\"" && last == "\"") || (first == squote && last == squote)) {
-    return substr(v, 2, length(v) - 2)
+  if (first == "\"" && last == "\"") return substr(v, 2, length(v) - 2)
+  if (first == squote && last == squote) {
+    v = substr(v, 2, length(v) - 2)
+    gsub(squote squote, squote, v)
+    return v
   }
   return v
 }
@@ -20,9 +23,26 @@ function emit_value(v) {
   v = strip_quotes(v)
   if (v != "") print v
 }
+function strip_inline_comment(rest, i, ch, quote) {
+  quote = ""
+  for (i = 1; i <= length(rest); i++) {
+    ch = substr(rest, i, 1)
+    if (quote == "") {
+      if (ch == "\"" || ch == squote) {
+        quote = ch
+      } else if (ch == "#" && (i == 1 || substr(rest, i - 1, 1) ~ /[[:space:]]/)) {
+        return substr(rest, 1, i - 1)
+      }
+    } else if (ch == quote) {
+      quote = ""
+    }
+  }
+  return rest
+}
 function parse_flow_array(rest, i, ch, current, quote) {
-  rest = trim(rest)
+  rest = trim(strip_inline_comment(rest))
   if (rest !~ /^\[/) return 0
+  if (rest ~ /^\[[[:space:]]*\][[:space:]]*$/) return 1
   sub(/^\[/, "", rest)
   sub(/\][[:space:]]*$/, "", rest)
   current = ""
