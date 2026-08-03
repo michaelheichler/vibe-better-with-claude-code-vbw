@@ -5,7 +5,7 @@ migration_collect_rows() {
   local buffer="$1"
   local row
 
-  # Invariant: emitted rows are exactly the eligible table rows seen so far. Variant: unread buffer lines.
+  # Invariant: emitted rows are exactly the eligible table rows seen so far (variant: unread buffer lines).
   while IFS= read -r row; do
     [[ "$row" =~ ^\|\ *Decision ]] && continue
     [[ "$row" =~ ^\|[-[:space:]|]+\|$ ]] && continue
@@ -25,7 +25,7 @@ migration_collect_unique_rows() {
   local data_rows="$2"
   local drow
 
-  # Invariant: emitted rows are eligible rows absent from STATE.md among rows seen so far. Variant: unread data rows.
+  # Invariant: emitted rows are eligible rows absent from STATE.md among rows seen so far (variant: unread data rows).
   while IFS= read -r drow; do
     [[ -z "$drow" ]] && continue
     if ! tr -s ' ' < "$state_path" | grep -qF "$(printf '%s' "$drow" | tr -s ' ')"; then
@@ -92,7 +92,7 @@ migration_rewrite_state() {
   MIGRATION_PAST_SEPARATOR=false
   MIGRATION_ROWS_INSERTED=false
 
-  # Invariant: the temporary file mirrors processed STATE.md lines and contains new rows only after its separator. Variant: unread state lines.
+  # Invariant: the temporary file mirrors processed STATE.md lines and contains new rows only after its separator (variant: unread state lines).
   while IFS= read -r sline || [[ -n "$sline" ]]; do
     migration_process_state_line "$sline"
   done < "$state_path"
@@ -141,7 +141,7 @@ migration_preserved_deprecated_notes() {
   local buffer="$1"
   local bline first_line=true preserved=""
 
-  # Invariant: preserved contains non-table lines after the section header. Variant: unread deprecated-section lines.
+  # Invariant: preserved contains non-table lines after the section header (variant: unread deprecated-section lines).
   while IFS= read -r bline; do
     if [[ "$first_line" == true ]]; then
       first_line=false

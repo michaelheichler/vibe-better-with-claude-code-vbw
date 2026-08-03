@@ -17,8 +17,8 @@ source "$SCRIPT_DIR/lib/bootstrap-claude-migration.sh"
 VBW_SECTIONS=("${VBW_CANONICAL_HEADERS[@]}")
 
 VBW_DEPRECATED_SECTIONS=(
-  "## Key Decisions"  # Removed: tracked in .vbw-planning/PROJECT.md and STATE.md
-  "## Installed Skills"  # Removed: skills surfaced through runtime activation pipeline
+  "## Key Decisions"  # Removed, tracked in .vbw-planning/PROJECT.md and STATE.md
+  "## Installed Skills"  # Removed, skills surfaced through runtime activation pipeline
 )
 
 GSD_STRONG_SECTIONS=(
