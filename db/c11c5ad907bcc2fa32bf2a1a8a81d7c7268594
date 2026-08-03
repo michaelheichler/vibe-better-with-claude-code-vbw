@@ -1,0 +1,30 @@
+scripts/lib/active-agent-state.sh
+  s_148ae53cf16113::t_87e5063871af40 147,214,216-217
+  s_148ae53cf16113::t_b9f5ff688fa0c7 230
+  s_148ae53cf16113::t_8e1a70f5f24e7f 146
+  s_8b686e67864e62::t_18f5c8162ef45f 156-157,160,162-163
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "dbc11c5ad907bcc2fa32bf2a1a8a81d7c7268594",
+  "prompts": {},
+  "sessions": {
+    "s_148ae53cf16113": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "82bc467d-d72d-428e-97b7-1f3f33916f5e",
+        "model": "terra"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    },
+    "s_8b686e67864e62": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-adev-01-86c6bc09974fd120",
+        "model": "unknown"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
