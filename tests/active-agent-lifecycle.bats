@@ -2,6 +2,15 @@
 
 bats_require_minimum_version 1.5.0
 load test_helper
+@test "agent-start rejects malformed explicit role suffixes" {
+  setup_temp_dir
+  mkdir -p "$TEST_TEMP_DIR/.vbw-planning"
+  echo '{"agent_type":"vbw-dev-foo","pid":"$$"}' | bash -c "cd '$TEST_TEMP_DIR' && bash '$SCRIPTS_DIR/agent-start.sh'"
+  [ ! -f "$TEST_TEMP_DIR/.vbw-planning/.active-agent" ]
+  [ ! -f "$TEST_TEMP_DIR/.vbw-planning/.active-agent-count" ]
+  teardown_temp_dir
+}
+
 @test "agent-start handles vbw: prefixed agent_type" {
   setup_temp_dir
   mkdir -p "$TEST_TEMP_DIR/.vbw-planning"

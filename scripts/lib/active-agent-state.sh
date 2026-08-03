@@ -33,6 +33,11 @@ vbw_active_agent_normalize_role() {
   lower=$(printf '%s' "${1:-}" | tr '[:upper:]' '[:lower:]')
   lower="${lower#@}"
   lower="${lower#vbw:}"
+  if [[ "$lower" == vbw-* ]]; then
+    [[ "$lower" =~ ^vbw-(lead|dev|qa|scout|debugger|architect|docs)(-[0-9]+)?$ ]] || return 1
+    printf '%s' "${BASH_REMATCH[1]}"
+    return 0
+  fi
   case "$lower" in
     vbw-lead|vbw-lead-*|lead|lead-*|team-lead|team-lead-*) printf 'lead'; return 0 ;;
     vbw-dev|vbw-dev-*|dev|dev-*|team-dev|team-dev-*) printf 'dev'; return 0 ;;
