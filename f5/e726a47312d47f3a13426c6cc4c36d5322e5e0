@@ -1,0 +1,23 @@
+references/vibe-mode-add-phase.md
+  s_6ef0e951f7d046::t_e7f64529bb3a22 17
+commands/research.md
+  s_6ef0e951f7d046::t_10aa35cfe96c8b 97
+references/vibe-mode-bootstrap.md
+  s_6ef0e951f7d046::t_2e80b366efd769 39
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "f5e726a47312d47f3a13426c6cc4c36d5322e5e0",
+  "prompts": {},
+  "sessions": {
+    "s_6ef0e951f7d046": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "32b96d9e-2f7c-4f57-88c2-54535491e857",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": null
+    }
+  }
+}
