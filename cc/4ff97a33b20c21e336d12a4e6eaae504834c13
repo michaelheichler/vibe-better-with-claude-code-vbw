@@ -1,0 +1,50 @@
+scripts/collect-diagnostics.sh
+  s_6ef0e951f7d046::t_fe52380e3a4e39 125,145,273,323
+scripts/dev-setup.sh
+  s_6ef0e951f7d046::t_fe52380e3a4e39 53,88,126,135,160,163,167,196
+  s_6ef0e951f7d046::t_de881d7a1c5dc0 4
+scripts/prepare-reverification.sh
+  s_6ef0e951f7d046::t_fe52380e3a4e39 80,89,94,125,175,243
+scripts/compaction-instructions.sh
+  s_6ef0e951f7d046::t_fe52380e3a4e39 258,260
+scripts/suggest-next.sh
+  s_6ef0e951f7d046::t_fe52380e3a4e39 151,976
+scripts/bump-version.sh
+  s_6ef0e951f7d046::t_fe52380e3a4e39 110
+scripts/compile-research-context.sh
+  s_6ef0e951f7d046::t_fe52380e3a4e39 58,106
+scripts/post-compact.sh
+  s_6ef0e951f7d046::t_fe52380e3a4e39 372
+scripts/agent-health.sh
+  s_6ef0e951f7d046::t_fe52380e3a4e39 212,231,236,260,266,390
+scripts/agent-spawn-guard.sh
+  s_6ef0e951f7d046::t_fe52380e3a4e39 131,135
+scripts/help-output.sh
+  s_6ef0e951f7d046::t_fe52380e3a4e39 84,100
+scripts/session-start.sh
+  s_6ef0e951f7d046::t_fe52380e3a4e39 488,504,513,976
+scripts/bootstrap/bootstrap-claude.sh
+  s_6ef0e951f7d046::t_fe52380e3a4e39 162,167,182,236
+scripts/resolve-todo-item.sh
+  s_6ef0e951f7d046::t_fe52380e3a4e39 56
+scripts/compile-fix-commit-context.sh
+  s_6ef0e951f7d046::t_fe52380e3a4e39 82
+scripts/vbw-statusline.sh
+  s_6ef0e951f7d046::t_fe52380e3a4e39 2,828
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "cc4ff97a33b20c21e336d12a4e6eaae504834c13",
+  "prompts": {},
+  "sessions": {
+    "s_6ef0e951f7d046": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "32b96d9e-2f7c-4f57-88c2-54535491e857",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
