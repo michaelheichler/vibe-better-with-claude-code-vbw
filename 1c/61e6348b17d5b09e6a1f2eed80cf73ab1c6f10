@@ -1,0 +1,25 @@
+tests/agent-health.bats
+  s_396441278312df::t_33659bde4c84f7 361,365,367,369
+  s_396441278312df::t_789032c3d6e8c9 472
+  s_396441278312df::t_fd65a0a2decd77 487
+  s_396441278312df::t_d33d8b2cdfa082 449-450,455,457-458,460
+  s_396441278312df::t_2d97e550ee4e4c 500-535
+  s_396441278312df::t_dea00b484805b6 482
+  s_396441278312df::t_1687c39a8ba823 536
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "1c61e6348b17d5b09e6a1f2eed80cf73ab1c6f10",
+  "prompts": {},
+  "sessions": {
+    "s_396441278312df": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8b693812-fc94-4ea6-be47-0ddb22b766f3",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
