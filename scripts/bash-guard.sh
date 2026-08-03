@@ -469,20 +469,55 @@ command_segments_without_quoted_text() {
 
 segment_command_token() {
   local segment="$1"
-  local token
+  local token wrapper="" skip_next=0
 
   while IFS= read -r token; do
     [ -n "$token" ] || continue
+    if [ "$skip_next" -eq 1 ]; then
+      skip_next=0
+      continue
+    fi
     case "$token" in
-      [0-9]*'>'*|[0-9]*'<'*|'>'*|'<'*|[[:alnum:]_]*=*)
-        continue
-        ;;
-      sudo|env|command|exec|nice)
+      [0-9]*'>'*|[0-9]*'<'*|[[:alnum:]_]*=*)
         continue
         ;;
     esac
-    printf '%s' "${token##*/}"
-    return 0
+    case "$wrapper" in
+      sudo)
+        case "$token" in
+          -u|-g|-h|-p|-C) skip_next=1; continue ;;
+          -*) continue ;;
+          *) wrapper="" ;;
+        esac
+        ;;
+      env)
+        case "$token" in
+          -*) continue ;;
+          *=*) continue ;;
+          *) wrapper="" ;;
+        esac
+        ;;
+      command|exec)
+        case "$token" in
+          -*) continue ;;
+          *) wrapper="" ;;
+        esac
+        ;;
+      nice)
+        case "$token" in
+          -n) skip_next=1; continue ;;
+          -*) continue ;;
+          *) wrapper="" ;;
+        esac
+        ;;
+    esac
+    if [ -z "$wrapper" ]; then
+      case "$token" in
+        sudo|env|command|exec|nice) wrapper="$token"; continue ;;
+      esac
+      printf '%s' "${token##*/}"
+      return 0
+    fi
   done <<< "$(shell_visible_tokens "$segment")"
 
   return 1
