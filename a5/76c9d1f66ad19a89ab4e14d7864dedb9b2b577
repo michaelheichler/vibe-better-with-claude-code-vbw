@@ -1,0 +1,34 @@
+commands/list-todos.md
+  s_6ef0e951f7d046::t_6b92b1788b83e1 15-16
+  s_6ef0e951f7d046::t_51a57099d61a3f 27-28,47,52-56,61-63,89
+commands/fix.md
+  s_6ef0e951f7d046::t_6b92b1788b83e1 62,132
+  s_6ef0e951f7d046::t_51a57099d61a3f 49,58,76,84,96,98,126,149-150
+commands/resume.md
+  s_6ef0e951f7d046::t_51a57099d61a3f 82-89,91,97,103
+  s_6ef0e951f7d046::t_6b92b1788b83e1 98
+commands/report.md
+  s_6ef0e951f7d046::t_51a57099d61a3f 36,51,53,71,73,79,86,89,92,101,106,110,113,116,119,130,157,168,181,198
+commands/qa.md
+  s_6ef0e951f7d046::t_51a57099d61a3f 87,105,107,124,161,172,185,290,327
+  s_6ef0e951f7d046::t_6b92b1788b83e1 85,120,365,372,390
+commands/todo.md
+  s_6ef0e951f7d046::t_51a57099d61a3f 25,30-31,34-35,38,41,51-52,60,68
+  s_6ef0e951f7d046::t_6b92b1788b83e1 15
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "a576c9d1f66ad19a89ab4e14d7864dedb9b2b577",
+  "prompts": {},
+  "sessions": {
+    "s_6ef0e951f7d046": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "32b96d9e-2f7c-4f57-88c2-54535491e857",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
