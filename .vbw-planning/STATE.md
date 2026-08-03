@@ -4,13 +4,13 @@
 **Milestone:** Guard, QA-Gate, and Execute-Safety Remediation
 
 ## Current Phase
-Phase: 1 of 5 (Guard State Correctness)
-Plans: 0/4
+Phase: 2 of 5 (Qa And Verification Gate Correctness)
+Plans: 0/0
 Progress: 0%
 Status: ready
 
 ## Phase Status
-- **Phase 1 (Guard State Correctness):** Planned
+- **Phase 1 (Guard State Correctness):** Complete
 - **Phase 2 (Qa And Verification Gate Correctness):** Pending
 - **Phase 3 (Execute Mode Team And Parallelization Safety):** Pending
 - **Phase 4 (Test Infra Reliability And Lint Cleanup):** Pending
@@ -37,11 +37,11 @@ Status: ready
 - FIXED 2026-07-31 (commit 510b4245): active-agent marker was being wiped by session-stop.sh on every Stop event, even while a background subagent was still running. file-guard.sh now also recognizes the runtime-owned agent_id/agent_type fields on the PreToolUse payload. Verified by kimi3 QA (PASS, 3 advisories, none blocking). (ref:223228c3)
 - Bug (control-plane): control-plane.sh's full action does not resolve the plan path for the contract step (reports no plan file even with a valid absolute path), so contract generation silently skips. Fail-open falls through to generate-contract.sh directly, so execution is not blocked, but the intended fast path is broken. (added 2026-07-31) (ref:ed825592)
 - FIXED 2026-08-03 (commits 455bd16b, dde46550): the active-agent count-based bypass in file-guard.sh was removed. (ref:679bc053)
-- Bug (active-agent lock contention): concurrent registrations in active-agent-state.sh can lose updates after the ~1s lock-wait timeout expires and mutators proceed unlocked. Found during the 510b4245 investigation, confirmed distinct and pre-existing. (added 2026-07-31) (ref:d5538eb5)
+- FIXED 2026-08-03 (commits ac5feb08, dbc11c5a): active-agent registrations now use per-PID files and aggregate publication uses writer-scoped atomic temp files. Lifecycle mutators no longer call the timed lock helpers, so timed-out lock paths cannot lose updates. Verified by tests/active-agent-state.bats and phase 01 C11. (ref:d5538eb5)
 - FIXED 2026-07-31 (commit 6ae202bf): bash-guard.sh's detect_agent_role lacked the payload-based agent_id/agent_type check that file-guard.sh already has (510b4245). It fell back to session-scoped active-agent markers shared across every subagent in one Claude Code session. A concurrently-running QA subagent's registered "qa" role leaked into an unrelated Docs subagent sharing the same session_id, misclassifying it read-only and blocking its own git/filesystem commands. Ported file-guard.sh's detect_payload_agent_role() into bash-guard.sh. Verified by an independent QA pass (fidelity to file-guard.sh confirmed, correct precedence, negative-control repro, no new spoofing bypass). (ref:9f14a2b7)
-- Bug (bash-guard orchestrator role leakage, advisory): after the 6ae202bf fix, subagents identify themselves correctly via payload, but the orchestrator's own direct Bash calls have no agent_id/agent_type payload at all, so they still fall through to the shared session-scoped marker fallback. A just-finished QA subagent's leftover "qa" marker briefly misclassified the orchestrator's own commands as read-only mid-Phase-2. Distinct from 9f14a2b7 (that was subagent-vs-subagent, this is orchestrator-vs-subagent). Not yet fixed. Workaround used was rewording commands to avoid the naive-regex trigger tokens from ref:c8e0a911. (added 2026-07-31) (ref:5d92e6a4)
+- FIXED 2026-08-03 (commit c251d4b2): payload-less guard calls now require the session-scoped orchestrator identity marker and no longer fall through to shared active-agent role markers. Unrecognized payload evidence fails closed. Verified by tests/qa-file-guard.bats and tests/role-isolation-runtime.bats. (ref:5d92e6a4)
 - Bug (qa-result-gate metadata-only gap): qa-result-gate.sh's METADATA_ONLY_ROUND detection (path_is_metadata_artifact) treats every docs/* and *.md path as metadata, so a remediation round whose FAIL is itself a documentation-content defect, fixed by directly editing that same documentation file, gets blocked by the code-fix evidence override even though the fix is genuinely complete and correct. Worked around during Phase 2 round 3 by reclassifying that FAIL as process-exception (semantically imprecise but the gate's own documented valid path) rather than editing this load-bearing script under time pressure. The gate has no distinct "doc-fix" category and does not special-case a FAIL whose own subject file matches the changed doc path. Not yet fixed. (added 2026-07-31) (ref:2a7c918e)
-- Bug (bash-guard naive mutation regex, advisory): bash-guard.sh's destructive-pattern matching scans the full command string including piped JSON/text payloads. Read-only agents (QA) get blocked writing evidence strings that merely contain substrings like "mv", "mkdir", "touch", or "install", and any `2>/dev/null` redirection is flagged as a shell file write even for genuinely read-only commands. Found by kimi3 QA during Phase 2 wave-2 verification while persisting VERIFICATION.md. Workaround used was rewording evidence text to avoid the tokens. Not yet fixed. (added 2026-07-31) (ref:c8e0a911)
+- FIXED 2026-08-03 (commits c227be7a, 90b3e322, 0cccec32): bash-guard now masks quoted and piped data before mutation matching and classifies `/dev/null` and descriptor duplication as non-writes while retaining real redirect blocks. Verified by tests/qa-bash-guard.bats and tests/hooks-bash-classifier.bats, 143/143 guard assertions plus 104/104 classifier assertions. (ref:c8e0a911)
 **Milestone mapping**
 - Mapped 2026-07-30: C10 (bootstrap-requirements answered[]) added to Phase 3, C4 (oversized files) added as dedicated Phase 6. Terminology moved to Phase 7.
 **Phase 1 known issues, group 1**
@@ -70,7 +70,7 @@ Status: ready
 - [UAT-DEVIATION] R01: The SUMMARY validator rejected in-progress, so the incremental artifact used partial until finalization. (phase 02, see remediation/uat/round-01/R01-SUMMARY.md) (added 2026-08-01) (ref:51dca537)
 - [UAT-DEVIATION] R01: The agent discipline hook required five pre-existing punctuation fixes in commands/rtk.md while the file wa... (phase 02, see remediation/uat/round-01/R01-SUMMARY.md) (added 2026-08-01) (ref:f34804bb)
 - [FOLLOW-UP] Sweep all commands/*.md and reference docs for the same pre-existing punctuation violations found in commands/rtk.md and fix them repo-wide (user request during round-01 re-verification, phase 02) (added 2026-08-01)
-- [BUG] Stale Scout guard state after subagent runs: bash-guard/file-guard treat the orchestrator session as Scout read-only, blocking command substitution, redirections, and writes outside .vbw-planning/. Extends ref:c8e0a911 with new stale active-agent marker evidence (added 2026-08-01) (ref:ece780a9)
+- [FIXED] 2026-08-03 (commit c251d4b2): bash-guard and file-guard now distinguish payload-less orchestrator calls through a session-scoped identity marker instead of stale active-agent role markers. Unrecognized payload evidence fails closed. Verified by tests/qa-file-guard.bats and tests/role-isolation-runtime.bats. (ref:ece780a9)
 - [UAT-DEVIATION] R01: Full-suite verification remained blocked by the pre-existing `tests/rtk-manager.bats:2058-2069` failure alr... (phase 02, see remediation/uat/round-01/R01-SUMMARY.md) (added 2026-08-01) (ref:e3341f2e)
 - [UAT-DEVIATION] R02: The full suite completed with 3700 passing BATS tests and one known pre-existing rtk-manager failure. (phase 02, see remediation/uat/round-02/R02-SUMMARY.md) (added 2026-08-01) (ref:44cde73d)
 **Phase 3 and Phase 5 known issues**
@@ -100,6 +100,11 @@ Status: ready
 - [KNOWN-ISSUE] bash testing/verify-bash-scripts-contract.sh (scripts/lib/rtk-manager-runtime.sh, scripts/lib/track-known-issues-parsers.sh, scripts/track-known-issues.sh): Unmodified files retain the documented executable or shebang contract failures. (phase 07, seen 1x) (see 07-05-SUMMARY.md) (added 2026-08-03) (ref:697c93b9)
 - [KNOWN-ISSUE] bash scripts/verify-claude-bootstrap.sh (scripts/bootstrap/bootstrap-claude.sh): Three greenfield checks fail (Active Context, Code Intelligence, Plugin Isola..., accepted as process-exception for this phase (phase 07, seen 1x) (see remediation/qa/round-02/R02-SUMMARY.md) (added 2026-08-03) (ref:177ac08d)
 - [KNOWN-ISSUE] bash testing/run-lint.sh (scripts/lib/rtk-manager-runtime.sh): SC2148: sourced helper has no shebang or shell directive. Untracked external ..., accepted as process-exception for this phase (phase 07, seen 1x) (see remediation/qa/round-02/R02-SUMMARY.md) (added 2026-08-03) (ref:6ed5f5f6)
+- [KNOWN-ISSUE] ShellCheck SC1083 and SC2034 (scripts/vbw-statusline.sh): Literal braces at line 417 and unused AGENT_N at line 561 (phase 01, seen 1x) (see 01-VERIFICATION.md) (added 2026-08-03) (ref:9ddf4be7)
+- [KNOWN-ISSUE] ShellCheck SC1090 and SC2034 (scripts/bootstrap/bootstrap-claude.sh): Non-constant source and unused DEPRECATED_HAS_USER_CONTENT (phase 01, seen 1x) (see 01-VERIFICATION.md) (added 2026-08-03) (ref:9f8899ce)
+- [KNOWN-ISSUE] ShellCheck SC2034 (scripts/todo-lifecycle.sh): DETAILS_PATH and DETAILS_CACHE_JSON appear unused (phase 01, seen 1x) (see 01-VERIFICATION.md) (added 2026-08-03) (ref:f187f462)
+- [KNOWN-ISSUE] ShellCheck SC2148 (scripts/lib/track-known-issues-parsers.sh): No shebang and not executable. Present at baseline a14a1adc, blob unchanged. ... (phase 01, seen 1x) (see 01-VERIFICATION.md) (added 2026-08-03) (ref:4e4f140d)
+- [KNOWN-ISSUE] Working tree contamination (scripts/agent-spawn-guard.sh, scripts/detect-models.sh, AGENTS.md, references/execute-protocol.md, .vbw-planning/STATE.md): Uncommitted parallel edits present during verification. Commit a5993731 also ... (phase 01, seen 1x) (see 01-VERIFICATION.md) (added 2026-08-03) (ref:9d133f90)
 ### Phase 6 Inventory
 - Phase-6 inventory: There are 20 skill-activation payload-prefix pairs (40 emitted blocks). `commands/vibe.md` contains 10 pairs. The rest span `research.md`, `fix.md`, `map.md`, `qa.md`, `debug.md`, and `references/execute-protocol.md`. See `.vbw-planning/phases/04-shared-contract-dedup/04-RESEARCH.md` for the exact line table. (Phase-6 inventory, added 2026-08-02)
 - Phase-6 inventory bug: `commands/map.md` lines 195 and 230 use a period in `Skills: none preselected.` instead of the common comma wording. (Phase-6 inventory, added 2026-08-02)
