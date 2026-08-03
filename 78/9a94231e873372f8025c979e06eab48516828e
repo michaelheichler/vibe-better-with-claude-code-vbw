@@ -1,0 +1,35 @@
+scripts/lib/todo-lifecycle-snapshot.sh
+  s_6ef0e951f7d046::t_a1ac248a7edf18 133,135-136,141,143,145-148,162-186
+  s_6ef0e951f7d046::t_b49acf1e782efd 246,248,252-282,284-292,302,306-307,309-313
+  s_6ef0e951f7d046::t_75285826c85ee7 2
+  s_6ef0e951f7d046::t_c0def7a44ce3f7 1,3-132,134,137-140,142,144,149-161,187-245,247,249-251,283,293-301,303-305,308,314
+scripts/todo-lifecycle.sh
+  s_6ef0e951f7d046::t_127f27452a9364 17-18
+scripts/bootstrap/lib/bootstrap-claude-migration.sh
+  s_6ef0e951f7d046::t_caf3f5367c721f 102
+  s_6ef0e951f7d046::t_2a54afb0b0043c 1-40,42,49,56,67,69,80-101,103-184
+  s_6ef0e951f7d046::t_4b6a732d37cf4c 41,43-48,50-55,57-66,68,70-79
+scripts/lib/todo-lifecycle-known-issues.sh
+  s_6ef0e951f7d046::t_9368fbb8723826 1-3,5,7-19,29,32-37,43-60,62-153,167-180,185-186,205-230,232
+  s_6ef0e951f7d046::t_fe61b02ec2c7a9 61
+  s_6ef0e951f7d046::t_0e603840669d11 154-166,181-184,187-204,231
+  s_6ef0e951f7d046::t_dd79f20354ab2b 4,6,20-28,30-31,38-42
+scripts/bootstrap/bootstrap-claude.sh
+  s_6ef0e951f7d046::t_07fbe5ca8bfde5 14
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "789a94231e873372f8025c979e06eab48516828e",
+  "prompts": {},
+  "sessions": {
+    "s_6ef0e951f7d046": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "32b96d9e-2f7c-4f57-88c2-54535491e857",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
