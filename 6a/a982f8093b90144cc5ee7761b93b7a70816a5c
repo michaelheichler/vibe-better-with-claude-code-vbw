@@ -1,0 +1,42 @@
+.vbw-planning/phases/01-guard-state-correctness/01-02-SUMMARY.md
+  s_148ae53cf16113::t_306fb62f77944f 55-57
+  s_148ae53cf16113::t_5bf4c24fdbd157 5
+  s_148ae53cf16113::t_1653ce9200643a 13
+  s_148ae53cf16113::t_234156b3b39c07 14-15
+  s_148ae53cf16113::t_f4f07bcde27306 19,22,25-26,28,31,34
+  s_148ae53cf16113::t_6b4039627f7c87 32
+  s_148ae53cf16113::t_bcfe8965e5e0b6 2-4
+  s_148ae53cf16113::t_50e2d55df509e6 6-8,10-12
+  s_148ae53cf16113::t_eef5b6c6847fd9 16-18
+  s_148ae53cf16113::t_a4605dc90ca64a 20-21
+  s_148ae53cf16113::t_69024b238addec 23-24
+  s_148ae53cf16113::t_69ce0da363f70d 27
+  s_148ae53cf16113::t_6d07acfae436d2 29-30
+  s_148ae53cf16113::t_6cd1b5cba58761 33
+  s_148ae53cf16113::t_70e265b7ec3adc 35-37,52-54
+  s_003abf6c36868f::t_c6761c86e60ab0 1,9,38-51
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "6aa982f8093b90144cc5ee7761b93b7a70816a5c",
+  "prompts": {},
+  "sessions": {
+    "s_003abf6c36868f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-adev-r01-c7a739dc053e7758",
+        "model": "unknown"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    },
+    "s_148ae53cf16113": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "82bc467d-d72d-428e-97b7-1f3f33916f5e",
+        "model": "terra"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
