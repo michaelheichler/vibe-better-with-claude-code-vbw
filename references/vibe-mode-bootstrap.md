@@ -36,7 +36,7 @@
        SCOUT_MODEL=""
        SCOUT_MAX_TURNS=""
        if ! SCOUT_SETTINGS=$(bash /tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}/scripts/resolve-agent-settings.sh scout .vbw-planning/config.json /tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}/config/model-profiles.json); then
-         echo "Warning: failed to resolve Scout agent settings; continuing without explicit Scout model/maxTurns." >&2
+         echo "Warning: failed to resolve Scout agent settings. Continuing without explicit Scout model/maxTurns." >&2
        else
          eval "$SCOUT_SETTINGS"
          SCOUT_MODEL="$RESOLVED_MODEL"

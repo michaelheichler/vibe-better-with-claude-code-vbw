@@ -94,7 +94,7 @@ The common Scout prompt body follows the rendered prefix:
 Research: {topic or sub-topic}.
 Project context: {tech stack, constraints from PROJECT.md if relevant}.
 Extended context from todo detail (include only if detail was loaded in Step 1): {detail.context}. Related files: {detail.files, comma-separated}.
-Todo selection note (include only if TODO_SELECTED=true): Numbered /vbw:list-todos research selections are context-only; leave the todo visible because research may not complete the underlying work item.
+Todo selection note (include only if TODO_SELECTED=true): Numbered /vbw:list-todos research selections are context-only. Leave the todo visible because research may not complete the underlying work item.
 </task_context>
 
 <output_path>{resolved save path}</output_path>
