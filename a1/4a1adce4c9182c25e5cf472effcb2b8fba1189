@@ -1,0 +1,44 @@
+.vbw-planning/STATE.md
+  s_6ef0e951f7d046::t_e90bd4933602da 27
+  s_e9215f0fe80144::t_10d49437fd2f53 34
+  s_6ef0e951f7d046::t_d7ecf384b6bdfb 81-86
+  s_6ef0e951f7d046::t_44e1c3d9d71ee1 31
+  s_e9215f0fe80144::t_373e95e722b319 32-33
+  s_6ef0e951f7d046::t_0dd38ca13083a8 91-96
+  s_e9215f0fe80144::t_c73cf8beae7691 35
+  s_6ef0e951f7d046::t_9d1c4e9924d53a 87-90
+  s_6ef0e951f7d046::t_14cdfb8c2fc9c9 97-99
+  s_148ae53cf16113::t_7461bb4c26e935 4,7-10,13-17,100-102,109,114
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "a14a1adce4c9182c25e5cf472effcb2b8fba1189",
+  "prompts": {},
+  "sessions": {
+    "s_148ae53cf16113": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "82bc467d-d72d-428e-97b7-1f3f33916f5e",
+        "model": "unknown"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    },
+    "s_6ef0e951f7d046": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "32b96d9e-2f7c-4f57-88c2-54535491e857",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    },
+    "s_e9215f0fe80144": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "82c663dd-e713-408a-979a-d97249fd5666",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
