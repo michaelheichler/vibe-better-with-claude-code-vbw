@@ -1,0 +1,21 @@
+scripts/agent-stop.sh
+  s_148ae53cf16113::t_72ecf085d4856d 81
+scripts/agent-start.sh
+  s_148ae53cf16113::t_beb61b6bf07459 63
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "b80d48913ec81fc88aed3c963132e1062a3f050c",
+  "prompts": {},
+  "sessions": {
+    "s_148ae53cf16113": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "82bc467d-d72d-428e-97b7-1f3f33916f5e",
+        "model": "kimi3"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
