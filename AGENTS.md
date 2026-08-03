@@ -189,7 +189,7 @@ Runtime state lives in `.vbw-planning/` (created per-project by `/vbw:init`): `S
 ### Model routing
 `scripts/resolve-agent-model.sh` resolves each agent's model with precedence: `model_overrides.<agent>` > `model_matrix.<agent>.<effort>` > `model_profile` preset from `config/model-profiles.json`.
 - Override and matrix values may be a single model id or a preference array (first entry present in the detected catalog wins, or the first entry is trusted when no catalog exists).
-- `scripts/detect-models.sh` treats the Claude Code binary's embedded model table as the sole primary source (credential-free, works offline), falling back to `${ANTHROPIC_BASE_URL}/v1/models` only as a last resort when the binary yields nothing and `ANTHROPIC_API_KEY`/`ANTHROPIC_AUTH_TOKEN` exists. Cache is 1h, keyed on binary path/mtime/size, so a re-patched binary is picked up immediately.
+- `scripts/detect-models.sh` treats the Claude Code binary's embedded model table as the sole source (credential-free, works offline). An empty catalog is valid, and callers fall back to their configured model preference. Cache is 1h, keyed on binary path/mtime/size, so a re-patched binary is picked up immediately.
 - A `--labeled` mode emits `id` TAB `description` for proposal flows.
 - `/vbw:init` Step 1.8 writes the user-confirmed `model_matrix` + `model_catalog` into `.vbw-planning/config.json`, applying the role guidance in `references/model-profiles.md` (see "Choosing models per role").
 - The resolved model string is passed as an explicit `model:` parameter to Task tool invocations (session `/model` does not propagate to subagents).

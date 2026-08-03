@@ -5,7 +5,7 @@ load test_helper
 setup() {
   setup_temp_dir
   export CLAUDE_CODE_EXECPATH="$TEST_TEMP_DIR/no-such-binary"
-  unset ANTHROPIC_API_KEY ANTHROPIC_AUTH_TOKEN VBW_MODEL_CATALOG_FILE 2>/dev/null || true
+  unset VBW_MODEL_CATALOG_FILE 2>/dev/null || true
   dm_cache_path
 }
 
@@ -36,7 +36,7 @@ make_fake_binary() {
   dm_cache_path
 }
 
-@test "no auth and no binary: empty output, exit 0, no cache write" {
+@test "no binary: empty output, exit 0, no cache write" {
   run bash "$SCRIPTS_DIR/detect-models.sh"
   [ "$status" -eq 0 ]
   [ -z "$output" ]
