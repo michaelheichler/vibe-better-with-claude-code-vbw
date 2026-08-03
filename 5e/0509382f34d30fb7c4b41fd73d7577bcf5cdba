@@ -1,0 +1,21 @@
+docs/vbw-vs-paul-analysis.md
+  s_6ef0e951f7d046::t_888f184bb199a2 30,48,94,150,241,292
+  s_6ef0e951f7d046::t_e278a9d23c827f 1,23,31,36,38,45,52,63,67-72,78-79,82,90,93,111-113,127-128,132,142,146,154,176,193,196,202,217,219-220,222,239-240,245,247,249,269,283,285-286,288,302-303,305,309,312-313,327,344,365,370,375,387-388,402,406
+  s_6ef0e951f7d046::t_453d87ad686967 13
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "5e0509382f34d30fb7c4b41fd73d7577bcf5cdba",
+  "prompts": {},
+  "sessions": {
+    "s_6ef0e951f7d046": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "32b96d9e-2f7c-4f57-88c2-54535491e857",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
