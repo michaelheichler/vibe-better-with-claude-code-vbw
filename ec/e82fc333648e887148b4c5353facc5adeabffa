@@ -1,0 +1,48 @@
+tests/hooks-session-state.bats
+  s_148ae53cf16113::t_8e66ad9bc7fa8d 1-90,93-97,99-317
+  s_148ae53cf16113::t_9a77cd78ff9120 91-92,98
+tests/active-agent-lifecycle.bats
+  s_148ae53cf16113::t_8e66ad9bc7fa8d 1-136,138-139,146,148-150,152-154,156
+  s_148ae53cf16113::t_4a455e43ae6ad1 137,140-145,147,151,155,157-248,251-285,288-294
+  s_148ae53cf16113::t_938008ba660c2e 249-250,286-287
+tests/active-agent-lifecycle-legacy.bats
+  s_148ae53cf16113::t_26d9ac2a8d0347 156-157,161,163,172,175-260
+  s_148ae53cf16113::t_c290fbe2564ebb 87-88,90,92,100-101,103,106-151
+  s_148ae53cf16113::t_b25a6cd2574f8c 330,333-424
+  s_148ae53cf16113::t_8e66ad9bc7fa8d 1-3,5-6,22,81-83
+  s_148ae53cf16113::t_c19e48ef9c9d88 4,15,17-18
+  s_148ae53cf16113::t_274faa321caf75 9,11,13-14,16,19-20
+  s_148ae53cf16113::t_aabe2ce1ced77b 84-86,89,91,93-99,102,104-105,152-155,158-160,162,164-171,173-174,261-329,331-332,425-426
+  s_148ae53cf16113::t_f7b3e0471a233d 7-8,10,12,21,23-80
+tests/hooks-bash-classifier.bats
+  s_148ae53cf16113::t_4748a2c7acff4b 1243
+  s_148ae53cf16113::t_41bfc8a1bd6e93 1240-1241
+  s_148ae53cf16113::t_2aab7a3caed6bd 1347
+  s_148ae53cf16113::t_a55b29ec43a05a 1289-1291,1293
+  s_148ae53cf16113::t_91e96f8896c303 1249
+  s_148ae53cf16113::t_9dbdfa8d6fa538 1269
+  s_148ae53cf16113::t_e46b67831ba5d7 1224-1225
+  s_148ae53cf16113::t_250ac2c22a0f8f 1258-1259
+  s_148ae53cf16113::t_96350372eefc43 1311
+tests/active-agent-lifecycle-edge.bats
+  s_148ae53cf16113::t_61b77a7722a404 15,19-20,25-52
+  s_148ae53cf16113::t_41dd5bfc4dede2 118,126
+  s_148ae53cf16113::t_8e66ad9bc7fa8d 1-14,16-18,21-24,53-117,119-125,127-130
+  s_148ae53cf16113::t_02f2f5ee874195 131
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "ece82fc333648e887148b4c5353facc5adeabffa",
+  "prompts": {},
+  "sessions": {
+    "s_148ae53cf16113": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "82bc467d-d72d-428e-97b7-1f3f33916f5e",
+        "model": "terra"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
