@@ -99,6 +99,27 @@ new_test_project() {
   [[ "$output" == *"filesystem mutation command"* ]]
 }
 
+@test "bash-guard: quoted CLI arguments remain executable evidence" {
+  TEST_PROJECT=$(new_test_project qa-quoted-cli)
+  run_role_bash_guard dev "$TEST_PROJECT" "php artisan 'migrate:fresh'"
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"destructive command detected"* ]]
+}
+
+@test "bash-guard: long sudo options do not hide filesystem mutations" {
+  TEST_PROJECT=$(new_test_project qa-sudo-long)
+  run_qa_bash_guard "$TEST_PROJECT" "sudo --user bob rm file"
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"filesystem mutation command"* ]]
+}
+
+@test "bash-guard: leading redirection does not hide filesystem mutations" {
+  TEST_PROJECT=$(new_test_project qa-leading-redirect)
+  run_qa_bash_guard "$TEST_PROJECT" "< /dev/null rm file"
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"filesystem mutation command"* ]]
+}
+
 @test "bash-guard: quoted destructive evidence does not trigger the pattern blocklist" {
   TEST_PROJECT=$(new_test_project destructive-evidence)
   run_role_bash_guard dev "$TEST_PROJECT" 'echo "artisan migrate:fresh output"'

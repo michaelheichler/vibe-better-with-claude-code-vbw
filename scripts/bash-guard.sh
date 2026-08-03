@@ -487,6 +487,10 @@ segment_command_token() {
       continue
     fi
     case "$token" in
+      '>'|'>>'|'<'|'<<'|'<<<'|'>|')
+        skip_next=1
+        continue
+        ;;
       [0-9]*'>'*|[0-9]*'<'*|[[:alnum:]_]*=*)
         continue
         ;;
@@ -494,7 +498,10 @@ segment_command_token() {
     case "$wrapper" in
       sudo)
         case "$token" in
-          -u|-g|-h|-p|-C) skip_next=1; continue ;;
+          -u|-g|-h|-p|-r|-t|-C|-D|-R|-T|--user|--group|--host|--prompt|--role|--type|--close-from|--chdir|--chroot|--command-timeout)
+            skip_next=1
+            continue
+            ;;
           -*) continue ;;
           *) wrapper="" ;;
         esac
@@ -532,6 +539,29 @@ segment_command_token() {
   return 1
 }
 
+command_has_quoted_executable_payload() {
+  local command="$1"
+  local segment command_token visible match
+
+  [ -n "$PATTERNS" ] || return 1
+  printf '%s' "$command" | grep -qE "['\"]" || return 1
+  while IFS= read -r segment; do
+    command_token=$(segment_command_token "$segment") || continue
+    is_shell_interpreter_token "$command_token" && continue
+    case "$command_token" in
+      echo|printf|print|cat|grep|egrep|fgrep|awk|sed|jq)
+        continue
+        ;;
+    esac
+    visible=$(shell_visible_tokens "$segment" | tr '\n' ' ')
+    match=$(printf '%s\n' "$visible" | grep -ioE "$PATTERNS" | head -1) || true
+    [ -n "$match" ] || continue
+    printf '%s\n' "$match"
+    return 0
+  done < <(printf '%s\n' "$command" | tr ';|&' '\n')
+  return 1
+}
+
 command_has_filesystem_mutation() {
   local command="$1"
   local segment command_token
@@ -552,6 +582,7 @@ command_matches_patterns() {
   local command="$1"
   local segment COMMAND
 
+  command_has_quoted_executable_payload "$command" >/dev/null && return 0
   while IFS= read -r segment; do
     COMMAND="$segment"
     if echo "$COMMAND" | grep -iqE "$PATTERNS"; then
@@ -566,6 +597,7 @@ command_pattern_match() {
   local command="$1"
   local segment
 
+  command_has_quoted_executable_payload "$command" && return 0
   while IFS= read -r segment; do
     if printf '%s\n' "$segment" | grep -iqE "$PATTERNS"; then
       printf '%s\n' "$segment" | grep -ioE "$PATTERNS" | head -1
