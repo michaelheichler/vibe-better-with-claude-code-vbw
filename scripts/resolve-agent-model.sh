@@ -50,19 +50,13 @@ if [ ! -f "$PROFILES_PATH" ]; then
   exit 1
 fi
 
-_MODELS_BASE="${ANTHROPIC_BASE_URL:-https://api.anthropic.com}"
-_MODELS_BASE="${_MODELS_BASE%/}"
-_MODELS_AUTH=""
-if [ -n "${ANTHROPIC_API_KEY:-}" ] || [ -n "${ANTHROPIC_AUTH_TOKEN:-}" ]; then
-  _MODELS_AUTH="1"
-fi
 _MODELS_BIN="${CLAUDE_CODE_EXECPATH:-$(command -v claude || true)}"
 [ -f "$_MODELS_BIN" ] || _MODELS_BIN=""
 _MODELS_STAMP="0:0"
 if [ -n "$_MODELS_BIN" ]; then
   _MODELS_STAMP="$(stat -f '%m:%z' "$_MODELS_BIN" 2>/dev/null || stat -c '%Y:%s' "$_MODELS_BIN" 2>/dev/null || echo 0:0)"
 fi
-_MODELS_CACHE="/tmp/vbw-models-$(hash_path "bin:${_MODELS_BIN:-none}:${_MODELS_STAMP}|${_MODELS_AUTH:+$_MODELS_BASE}")"
+_MODELS_CACHE="/tmp/vbw-models-$(hash_path "bin:${_MODELS_BIN:-none}:${_MODELS_STAMP}")"
 if [ -n "${VBW_MODEL_CATALOG_FILE:-}" ]; then
   if [ -f "$VBW_MODEL_CATALOG_FILE" ]; then
     MODELS_HASH=$(file_content_fingerprint "$VBW_MODEL_CATALOG_FILE")
