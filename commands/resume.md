@@ -44,7 +44,8 @@ _refresh_phase_detect() {
   printf '%s' "$PD" > "$P"
   return 0
 }
-if ! _refresh_phase_detect; then
+if ! _refresh_phase_detect
+then
   PD="phase_detect_error=true"
   printf '%s\n' "$PD" > "$P"
 fi
