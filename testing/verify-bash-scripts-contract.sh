@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# verify-bash-scripts-contract.sh — Repo-wide checks for shell scripts
+# verify-bash-scripts-contract.sh, Repo-wide checks for shell scripts
 #
 # Checks all .sh files under scripts/ and testing/ for:
 # - executable bit

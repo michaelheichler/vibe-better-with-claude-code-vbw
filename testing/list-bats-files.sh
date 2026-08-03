@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# list-bats-files.sh — Shared bats file discovery for CI/local parity.
+# list-bats-files.sh, Shared bats file discovery for CI/local parity.
 #
 # Usage:
 #   bash testing/list-bats-files.sh --shardable

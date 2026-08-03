@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# verify-codex-agent-assets-contract.sh — Contract checks for Codex repo skills and custom agents
+# verify-codex-agent-assets-contract.sh, Contract checks for Codex repo skills and custom agents
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 

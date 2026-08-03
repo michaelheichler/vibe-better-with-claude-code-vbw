@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# run-all-state-utils.sh — shared run-all suite coordination helpers.
+# run-all-state-utils.sh, shared run-all suite coordination helpers.
 # Source from testing/run-all.sh or test harnesses that need to query the same
 # active-peer invariant used by the local auto-throttle path.
 

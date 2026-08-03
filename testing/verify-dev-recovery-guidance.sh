@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# verify-dev-recovery-guidance.sh — Verify vbw-dev.md has deterministic recovery rules
+# verify-dev-recovery-guidance.sh, Verify vbw-dev.md has deterministic recovery rules
 #
 # Checks that the Dev agent prompt includes explicit recovery guidance for:
 # - Read-before-edit tool precondition errors

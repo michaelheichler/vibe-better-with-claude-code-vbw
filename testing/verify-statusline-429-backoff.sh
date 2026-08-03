@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# verify-statusline-429-backoff.sh — Contract tests for #249
+# verify-statusline-429-backoff.sh, Contract tests for #249
 # Verifies: 429 → ratelimited status, failure backoff (300s), DISABLE_NONESSENTIAL_TRAFFIC
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -34,7 +34,7 @@ else
   fail "backoff reads previous status from slow cache"
 fi
 
-# --- Test 4: backoff escalates TTL on fail or ratelimited (not notraffic — user-intentional) ---
+# --- Test 4: backoff escalates TTL on fail or ratelimited (not notraffic, user-intentional) ---
 if grep -q '_PREV_STATUS.*=.*"fail"\|_PREV_STATUS.*=.*"ratelimited"' "$SL" \
    && ! grep -q '_PREV_STATUS.*=.*"notraffic".*_SLOW_TTL' "$SL" \
    && grep -q '_SLOW_TTL=300' "$SL"; then

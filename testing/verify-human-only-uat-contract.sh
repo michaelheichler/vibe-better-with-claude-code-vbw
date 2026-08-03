@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# verify-human-only-uat-contract.sh — Prevent drift between execute-time UAT
+# verify-human-only-uat-contract.sh, Prevent drift between execute-time UAT
 # generation and verify.md UAT generation rules.
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -87,7 +87,7 @@ require_all "$VERIFY_FILE" \
   "Run a CLI command and check its exit code or output" \
   "Execute a script and verify it passes" \
   "Run a linter, type-checker, or build command" \
-  "Running test suites — QA runs these during execution. Do NOT ask the user to run tests." \
+  "Running test suites, QA runs these during execution. Do NOT ask the user to run tests." \
   "Checking command output, exit codes, or build success" \
   "Grepping files for expected content" \
   "Verifying file existence or structure"

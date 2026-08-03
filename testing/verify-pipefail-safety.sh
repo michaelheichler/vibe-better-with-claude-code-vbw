@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# verify-pipefail-safety.sh — Focused guard against early-closing verifier pipelines
+# verify-pipefail-safety.sh, Focused guard against early-closing verifier pipelines
 #
 # Related: #535
 

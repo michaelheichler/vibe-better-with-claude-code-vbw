@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# verify-agent-spawn-guard.sh — Behavior checks for execute-time spawn semantics
+# verify-agent-spawn-guard.sh, Behavior checks for execute-time spawn semantics
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 GUARD="$ROOT/scripts/agent-spawn-guard.sh"

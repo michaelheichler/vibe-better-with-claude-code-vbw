@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# run-bats-shard.sh — Shared BATS shard selector/runner for CI and local parity.
+# run-bats-shard.sh, Shared BATS shard selector/runner for CI and local parity.
 #
 # Usage:
 #   bash testing/run-bats-shard.sh <shard> <total-shards> [--print-files] <files...>

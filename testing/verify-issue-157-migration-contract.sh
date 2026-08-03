@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# verify-issue-157-migration-contract.sh — targeted contract coverage for
+# verify-issue-157-migration-contract.sh, targeted contract coverage for
 # command markdown migrated off embedded inline/path `!` spans.
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"

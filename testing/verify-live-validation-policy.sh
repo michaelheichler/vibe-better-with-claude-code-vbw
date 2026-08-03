@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# verify-live-validation-policy.sh — Verify live-validation and API tool-choice policy
+# verify-live-validation-policy.sh, Verify live-validation and API tool-choice policy
 #
 # Checks:
 # - execute-protocol.md has validation-before-code hard gate

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# verify-lsp-setup.sh — Verify LSP setup pipeline artifacts and integration
+# verify-lsp-setup.sh, Verify LSP setup pipeline artifacts and integration
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 

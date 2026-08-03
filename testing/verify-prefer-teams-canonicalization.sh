@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# verify-prefer-teams-canonicalization.sh — Contract test for issue #127
+# verify-prefer-teams-canonicalization.sh, Contract test for issue #127
 #
 # The canonical user-facing prefer_teams values are always|auto|never.
 # Legacy when_parallel remains a silent compatibility alias in runtime code,
