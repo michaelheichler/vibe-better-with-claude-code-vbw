@@ -1,0 +1,26 @@
+scripts/bash-guard.sh
+  s_148ae53cf16113::t_bfd5bc04f15694 474,477-478
+  s_148ae53cf16113::t_47ddae9ad384a7 707-708
+  s_148ae53cf16113::t_45f61771817c64 437,442,445-446,449-450
+  s_148ae53cf16113::t_9e6ec626ad2aa4 441,443
+  s_148ae53cf16113::t_034fcb3135c5f4 816-817
+  s_148ae53cf16113::t_6f6a4f260fd6b3 500
+  s_148ae53cf16113::t_132d3c3dcd7cbd 740
+  s_148ae53cf16113::t_4b60e5634afa95 427-436,438-440,444,447-448,451-473,475-476,479-499
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "c227be7a4d1c4bbbc96f15ffb10de6ff40767129",
+  "prompts": {},
+  "sessions": {
+    "s_148ae53cf16113": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "82bc467d-d72d-428e-97b7-1f3f33916f5e",
+        "model": "kimi3"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
