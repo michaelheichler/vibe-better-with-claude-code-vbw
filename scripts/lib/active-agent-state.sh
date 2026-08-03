@@ -34,13 +34,22 @@ vbw_active_agent_normalize_role() {
   lower="${lower#@}"
   lower="${lower#vbw:}"
   if [[ "$lower" == vbw-* ]]; then
-    [[ "$lower" =~ ^vbw-(lead|dev|qa|scout|debugger|architect|docs)(-[0-9]+)?$ ]] || return 1
-    printf '%s' "${BASH_REMATCH[1]}"
-    return 0
+    case "$lower" in
+      vbw-lead|vbw-lead-[0-9]*) printf 'lead'; return 0 ;;
+      vbw-dev|vbw-dev-[0-9]*) printf 'dev'; return 0 ;;
+      vbw-qa|vbw-qa-[0-9]*) printf 'qa'; return 0 ;;
+      vbw-qa-author|vbw-qa-author-[0-9]*) printf 'qa-author'; return 0 ;;
+      vbw-scout|vbw-scout-[0-9]*) printf 'scout'; return 0 ;;
+      vbw-debugger|vbw-debugger-[0-9]*) printf 'debugger'; return 0 ;;
+      vbw-architect|vbw-architect-[0-9]*) printf 'architect'; return 0 ;;
+      vbw-docs|vbw-docs-[0-9]*) printf 'docs'; return 0 ;;
+      *) return 1 ;;
+    esac
   fi
   case "$lower" in
     vbw-lead|vbw-lead-*|lead|lead-*|team-lead|team-lead-*) printf 'lead'; return 0 ;;
     vbw-dev|vbw-dev-*|dev|dev-*|team-dev|team-dev-*) printf 'dev'; return 0 ;;
+    vbw-qa-author|vbw-qa-author-*|qa-author|qa-author-*|team-qa-author|team-qa-author-*) printf 'qa-author'; return 0 ;;
     vbw-qa|vbw-qa-*|qa|qa-*|team-qa|team-qa-*) printf 'qa'; return 0 ;;
     vbw-scout|vbw-scout-*|scout|scout-*|team-scout|team-scout-*) printf 'scout'; return 0 ;;
     vbw-debugger|vbw-debugger-*|debugger|debugger-*|team-debugger|team-debugger-*) printf 'debugger'; return 0 ;;
@@ -318,11 +327,9 @@ vbw_active_agent_remove_current_session() {
 }
 
 vbw_active_agent_clear_all() {
-  local planning_dir="$1" lock_dir
-  lock_dir=$(_vbw_active_agent_lock_dir "$planning_dir")
+  local planning_dir="$1"
   if ! vbw_active_agent_acquire_lock "$planning_dir"; then
-    rm -rf "$lock_dir"
-    vbw_active_agent_acquire_lock "$planning_dir" || return 0
+    return 0
   fi
   rm -rf "$planning_dir/.active-agents"
   _vbw_active_agent_root_files_remove "$planning_dir"
