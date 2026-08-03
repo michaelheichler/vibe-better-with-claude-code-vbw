@@ -1,0 +1,46 @@
+references/vbw-brand-essentials.md
+  s_6ef0e951f7d046::t_dce9744ccd7ab6 57-58
+  s_24c37196ba17a8::t_1e1564bf4b0a5f 19,24,62
+references/phase-detection.md
+  s_6ef0e951f7d046::t_0b0869f0e19cb9 90
+  s_24c37196ba17a8::t_18e610d1bc5da9 60,63,69,112-117,121-132
+references/caveman-language.md
+  s_6ef0e951f7d046::t_d308e99f46b05a 59
+  s_24c37196ba17a8::t_3b5774f7632243 20,23,30,33,40,43,56
+references/ask-user-question.md
+  s_6ef0e951f7d046::t_79df2e681e419f 14-15,46-50,59
+references/caveman-commit.md
+  s_6ef0e951f7d046::t_7e0f9640929599 10,12,25-26,53
+references/caveman-review.md
+  s_6ef0e951f7d046::t_48ab7adc73b843 9,12-15,21-24
+references/effort-profile-turbo.md
+  s_6ef0e951f7d046::t_537afaad2411f5 35
+references/lsp-first-policy.md
+  s_6ef0e951f7d046::t_22011543c844e2 8-14,30
+references/verification-protocol.md
+  s_6ef0e951f7d046::t_59e312b7e0c3ed 17,98,105,127
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "e7f7efc415296b052995e0bd4d0bbff9dc594302",
+  "prompts": {},
+  "sessions": {
+    "s_24c37196ba17a8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-adev-02-07f0675e1338dd4e",
+        "model": "unknown"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    },
+    "s_6ef0e951f7d046": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "32b96d9e-2f7c-4f57-88c2-54535491e857",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
