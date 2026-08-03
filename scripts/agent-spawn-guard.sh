@@ -1,12 +1,5 @@
 #!/bin/bash
 set -u
-# agent-spawn-guard.sh — PreToolUse guard for execute-mode agent spawn shapes
-#
-# Protects the execute workflow from faux-team launches where plain background
-# Agent spawns are used without real team semantics.
-#
-# Exit 2 = definitive invalid spawn shape
-# Exit 0 = allow / fail-open
 
 if ! command -v jq >/dev/null 2>&1; then
   exit 0
@@ -17,7 +10,6 @@ INPUT=$(cat 2>/dev/null) || exit 0
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 if [ -f "$SCRIPT_DIR/lib/active-agent-state.sh" ]; then
-  # shellcheck source=lib/active-agent-state.sh
   . "$SCRIPT_DIR/lib/active-agent-state.sh"
 fi
 
@@ -40,7 +32,6 @@ resolve_project_root() {
   fi
 
   if [ -f "$SCRIPT_DIR/lib/vbw-config-root.sh" ]; then
-    # shellcheck source=lib/vbw-config-root.sh
     if source "$SCRIPT_DIR/lib/vbw-config-root.sh" 2>/dev/null; then
       if find_vbw_root >/dev/null 2>&1 && [ -n "${VBW_CONFIG_ROOT:-}" ] && [ -n "${VBW_PLANNING_DIR:-}" ] && [ -d "$VBW_PLANNING_DIR" ]; then
         printf '%s\n' "$VBW_CONFIG_ROOT"
@@ -114,7 +105,6 @@ fi
 
 emit_strip_json() {
   local stripped_input="$1" reason="$2"
-  # Build entire hook JSON via jq to guarantee valid output (reason is JSON-escaped)
   local compact_input
   compact_input=$(echo "$stripped_input" | jq -c '.' 2>/dev/null) || compact_input="$stripped_input"
   jq -n -c --arg reason "$reason" --argjson input "$compact_input" \
@@ -130,30 +120,24 @@ allow_with_strip() {
 }
 
 if is_teammate_spawn_tool; then
-  # Non-team .tool_input.name is platform label metadata; VBW routing and
-  # lifecycle state must come from delegation markers and team_name only.
-  # Hard blocks first — VBW-internal invariants must reject before strip paths
   if requested_vbw_worktree_cwd; then
     echo "Blocked: teammate spawn requested a VBW worktree path as a spawn working directory. Omit cwd/working_dir/workingDirectory/workdir fields; VBW worktree targeting is task prompt/state metadata, not a spawn cwd." >&2
     exit 2
   fi
-  # Strip paths — record fields to strip but do NOT exit yet.
-  # Execute-mode checks below may still block this spawn.
   STRIP_REASON=""
   STRIP_WARN=""
   if requested_sidechain_cwd; then
     STRIPPED_INPUT=$(echo "$INPUT" | jq '.tool_input | del(.cwd, .working_dir, .workingDirectory, .workdir, .isolation)' 2>/dev/null)
-    STRIP_REASON="VBW stripped sidechain cwd fields — worktree targeting is task metadata, not spawn cwd"
+    STRIP_REASON="VBW stripped sidechain cwd fields, worktree targeting is task metadata, not spawn cwd"
     STRIP_WARN="VBW guard: stripped sidechain cwd fields (and isolation if present) from $TOOL_NAME spawn (models add these spontaneously; blocking causes infinite retry loops)"
   elif requested_worktree_isolation; then
     STRIPPED_INPUT=$(echo "$INPUT" | jq '.tool_input | del(.isolation)' 2>/dev/null)
-    STRIP_REASON="VBW stripped isolation:worktree — worktree isolation is not managed via spawn params"
+    STRIP_REASON="VBW stripped isolation:worktree, worktree isolation is not managed via spawn params"
     STRIP_WARN="VBW guard: stripped isolation:worktree from $TOOL_NAME spawn (models add this spontaneously; blocking causes infinite retry loops)"
   fi
 fi
 
 [ "$MARKER_LIVE" = "true" ] || {
-  # No marker — if stripping was needed, emit now and exit
   allow_with_strip
 }
 [ "$MODE" = "execute" ] || {

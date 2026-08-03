@@ -1,12 +1,4 @@
 #!/usr/bin/env bash
-# resolve-todo-item.sh — resolve a numbered todo selection to stable metadata.
-#
-# Usage:
-#   bash resolve-todo-item.sh <N>
-#   bash resolve-todo-item.sh <N> --session-snapshot [--require-unfiltered] [--validate-live]
-#
-# Output: JSON object with status, message/code on error, or the selected item metadata on success.
-# Requires: jq, list-todos.sh, todo-lifecycle.sh in the same scripts/ directory
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -61,7 +53,7 @@ select_from_live_list() {
 
   count=$(printf '%s' "$output_json" | jq '.items | length')
   if [ "$N" -lt 1 ] || [ "$N" -gt "$count" ]; then
-    jq -n --arg message "Invalid selection — only items 1-${count} exist." '{status:"error", code:"invalid_selection", message:$message}'
+    jq -n --arg message "Invalid selection, only items 1-${count} exist." '{status:"error", code:"invalid_selection", message:$message}'
     return 0
   fi
 

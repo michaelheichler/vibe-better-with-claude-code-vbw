@@ -1,22 +1,4 @@
 #!/usr/bin/env bash
-# suggest-next.sh — Context-aware Next Up suggestions (ADP-03)
-#
-# Usage: suggest-next.sh <command> [result] [phase-number]
-#   command: the VBW command that just ran (implement, qa, plan, execute, fix, etc.)
-#   result:  optional outcome (pass, fail, partial, complete, skipped)
-#   phase-number: optional phase hint for phase-scoped suggestions (used by verify)
-#
-# Output: Formatted ➜ Next Up block with 2-3 contextual suggestions.
-# Called by commands during their output step.
-#
-# Context detection (all from disk, no extra args needed):
-#   - Phase state: next unplanned/unbuilt phase, all-done
-#   - Plan count: number of PLAN.md files in active phase
-#   - Effort level: from config.json
-#   - Deviations: summed from SUMMARY.md frontmatter in active phase
-#   - Failing plans: SUMMARY.md files with status != complete
-#   - Map staleness: percentage from META.md git hash comparison
-#   - Phase name: human-readable slug from directory name
 
 set -eo pipefail
 
@@ -27,22 +9,15 @@ PLANNING_DIR="${VBW_PLANNING_DIR:-.vbw-planning}"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 RESOLVE_VERIF_SCRIPT="$SCRIPT_DIR/resolve-verification-path.sh"
 
-# Source shared UAT helpers (extract_status_value → aliased as read_status_field, current_uat, latest_non_source_uat)
-# shellcheck source=uat-utils.sh
 . "$SCRIPT_DIR/uat-utils.sh"
-# Alias for backward compat within this script
 read_status_field() { extract_status_value "$@"; }
 
-# Source shared summary-status helpers for status-aware SUMMARY detection
 if [ -f "$SCRIPT_DIR/summary-utils.sh" ]; then
-  # shellcheck source=summary-utils.sh
   . "$SCRIPT_DIR/summary-utils.sh"
 else
-  # Safe default: report zero completions when helpers unavailable
   count_complete_summaries() { echo "0"; }
 fi
 if [ -f "$SCRIPT_DIR/phase-state-utils.sh" ]; then
-  # shellcheck source=phase-state-utils.sh
   . "$SCRIPT_DIR/phase-state-utils.sh"
 else
   count_phase_plans() {
@@ -59,7 +34,6 @@ list_child_dirs_sorted() {
     (sort -V 2>/dev/null || awk -F/ '{n=$NF; gsub(/[^0-9].*/,"",n); if (n == "") n=0; print (n+0)"\t"$0}' | sort -n -k1,1 -k2,2 | cut -f2-)
 }
 
-# --- State detection ---
 has_project=false
 phase_count=0
 next_unplanned=""
@@ -68,7 +42,6 @@ all_done=false
 last_qa_result=""
 map_exists=false
 
-# Contextual state (ADP-03)
 effort="balanced"
 active_phase_dir=""
 active_phase_num=""
@@ -121,7 +94,6 @@ read_deviations_field() {
 
 if [ -d "$PLANNING_DIR" ]; then
 
-  # Canonical post-archive UAT recovery state from phase-detect.sh
   _pd_out=$(bash "$SCRIPT_DIR/phase-detect.sh" 2>/dev/null || true)
   _pd_complete=$(printf '%s\n' "$_pd_out" | awk -F= '/^phase_detect_complete=/{print $2; exit}')
   if [ -n "$_pd_out" ] && [ "$_pd_out" != "phase_detect_error=true" ] && [ "${_pd_complete:-}" = "true" ]; then
@@ -138,25 +110,20 @@ if [ -d "$PLANNING_DIR" ]; then
     _pd_require_discuss=$(echo "$_pd_out" | grep -m1 '^config_require_phase_discussion=' | sed 's/^[^=]*=//' || true)
     [ -n "${_pd_require_discuss:-}" ] && cfg_require_phase_discussion="$_pd_require_discuss"
 
-    # Unverified phases (for mid-milestone auto_uat suppression)
     _pd_has_unverified=$(echo "$_pd_out" | grep -m1 '^has_unverified_phases=' | sed 's/^[^=]*=//' || true)
     [ "${_pd_has_unverified:-}" = "true" ] && has_unverified_phases=true
 
-    # First unverified phase details
     _pd_first_unverified_phase=$(echo "$_pd_out" | grep -m1 '^first_unverified_phase=' | sed 's/^[^=]*=//' || true)
     _pd_first_unverified_slug=$(echo "$_pd_out" | grep -m1 '^first_unverified_slug=' | sed 's/^[^=]*=//' || true)
     [ -n "${_pd_first_unverified_phase:-}" ] && first_unverified_phase="$_pd_first_unverified_phase"
     [ -n "${_pd_first_unverified_slug:-}" ] && first_unverified_slug="$_pd_first_unverified_slug"
 
-    # Next phase state (for reverification routing)
     _pd_next_phase_state=$(echo "$_pd_out" | grep -m1 '^next_phase_state=' | sed 's/^[^=]*=//' || true)
     [ -n "${_pd_next_phase_state:-}" ] && next_phase_state="$_pd_next_phase_state"
 
-    # Next phase number (for reverification suggestions)
     _pd_next_phase=$(echo "$_pd_out" | grep -m1 '^next_phase=' | sed 's/^[^=]*=//' || true)
     [ -n "${_pd_next_phase:-}" ] && pd_next_phase="$_pd_next_phase"
 
-    # Current-phase UAT issues (distinct from archived milestone UAT)
     _pd_uat_phase=$(echo "$_pd_out" | grep -m1 '^uat_issues_phase=' | sed 's/^[^=]*=//' || true)
     _pd_uat_slug=$(echo "$_pd_out" | grep -m1 '^uat_issues_slug=' | sed 's/^[^=]*=//' || true)
     _pd_uat_major=$(echo "$_pd_out" | grep -m1 '^uat_issues_major_or_higher=' | sed 's/^[^=]*=//' || true)
@@ -172,8 +139,6 @@ if [ -d "$PLANNING_DIR" ]; then
       current_uat_blocking_phase="$_pd_uat_blocking_phase"
     fi
 
-    # Build human-readable phase label: "Phase N (slug-name)" or just "Phase N"
-    # Append "— Round Y" when archived round files exist (Y = count + 1)
     if [ -n "$current_uat_issues_phase" ] && [ -n "$current_uat_issues_slug" ]; then
       current_uat_issues_label="Phase $current_uat_issues_phase ($current_uat_issues_slug)"
     elif [ -n "$current_uat_issues_phase" ]; then
@@ -183,21 +148,17 @@ if [ -d "$PLANNING_DIR" ]; then
     fi
     if [ -n "$current_uat_issues_label" ] && [ "$current_uat_round_count" -gt 0 ] 2>/dev/null; then
       _display_round=$((current_uat_round_count + 1))
-      current_uat_issues_label="$current_uat_issues_label — Round $_display_round"
+      current_uat_issues_label="$current_uat_issues_label, Round $_display_round"
     fi
   fi
 
-  # Root-canonical phases directory (no ACTIVE indirection)
   PHASES_DIR="$PLANNING_DIR/phases"
 
-  # Check PROJECT.md exists and isn't template
   if [ -f "$PLANNING_DIR/PROJECT.md" ] && ! grep -q '{project-name}' "$PLANNING_DIR/PROJECT.md" 2>/dev/null; then
     has_project=true
   fi
 
-  # Read effort from config
   if [ -f "$PLANNING_DIR/config.json" ] && command -v jq >/dev/null 2>&1; then
-    # Auto-migrate: add model_profile if missing
     if ! jq -e '.model_profile' "$PLANNING_DIR/config.json" >/dev/null 2>&1; then
       TMP=$(mktemp)
       jq '. + {model_profile: "quality", model_overrides: {}}' "$PLANNING_DIR/config.json" > "$TMP" && mv "$TMP" "$PLANNING_DIR/config.json"
@@ -210,9 +171,7 @@ if [ -d "$PLANNING_DIR" ]; then
     [ "$au" = "true" ] && cfg_auto_uat=true
   fi
 
-  # Scan phases
   if [ -d "$PHASES_DIR" ]; then
-    # Sort phase dirs numerically (prevents 100 sorting before 11)
     SN_PHASE_DIRS=()
     while IFS= read -r _sn_dir; do
       [ -n "$_sn_dir" ] || continue
@@ -228,7 +187,6 @@ if [ -d "$PLANNING_DIR" ]; then
     for dir in "${SN_PHASE_DIRS[@]}"; do
       [ -d "$dir" ] || continue
       phase_num=$(basename "$dir" | sed 's/[^0-9].*//')
-      # Skip non-canonical dirs without numeric prefix
       if [ -z "$phase_num" ] || ! echo "$phase_num" | grep -qE '^[0-9]+$'; then
         continue
       fi
@@ -239,14 +197,11 @@ if [ -d "$PLANNING_DIR" ]; then
       summaries=$(count_complete_summaries "$dir")
 
       if [ "$plans" -eq 0 ] && [ -z "$next_unplanned" ]; then
-        # Track first undiscussed phase (for require_phase_discussion suggestions)
         if [ "$cfg_require_phase_discussion" = "true" ] && [ -z "$next_undiscussed" ]; then
           context_files=$(find "$dir" -maxdepth 1 ! -name '.*' -name '[0-9]*-CONTEXT.md' 2>/dev/null | wc -l | tr -d ' ')
           if [ "$context_files" -eq 0 ]; then
             next_undiscussed="$phase_num"
           elif [ -z "$next_preseeded" ]; then
-            # Check ALL context files (sorted) for pre_seeded: true to avoid
-            # order-dependent detection when multiple CONTEXT.md files exist.
             while IFS= read -r ctx_file; do
               [ -n "$ctx_file" ] || continue
               if awk '
@@ -275,7 +230,6 @@ if [ -d "$PLANNING_DIR" ]; then
         active_phase_plans="$plans"
       fi
 
-      # Track the last phase as fallback active phase
       last_phase_dir="$dir"
       last_phase_num="$phase_num"
       last_phase_name="$phase_slug"
@@ -283,7 +237,6 @@ if [ -d "$PLANNING_DIR" ]; then
     done
     fi  # end SN_PHASE_DIRS length check
 
-    # If no unplanned/unbuilt, use the last phase (most recently completed)
     if [ -z "$active_phase_dir" ] && [ -n "$last_phase_dir" ]; then
       active_phase_dir="$last_phase_dir"
       active_phase_num="$last_phase_num"
@@ -291,12 +244,10 @@ if [ -d "$PLANNING_DIR" ]; then
       active_phase_plans="$last_phase_plans"
     fi
 
-    # All done if phases exist, nothing is unplanned/unbuilt, and no current-phase UAT blocker exists
     if [ "$phase_count" -gt 0 ] && [ -z "$next_unplanned" ] && [ -z "$next_unbuilt" ] && [ -z "$current_uat_issues_phase" ] && [ -z "$current_uat_blocking_phase" ]; then
       all_done=true
     fi
 
-    # Find most recent authoritative QA result for downstream/UAT suggestions.
     for dir in "$PHASES_DIR"/*/; do
       [ -d "$dir" ] || continue
       _sn_verif=$(bash "$RESOLVE_VERIF_SCRIPT" authoritative "${dir%/}" 2>/dev/null || true)
@@ -306,18 +257,15 @@ if [ -d "$PLANNING_DIR" ]; then
       [ -n "$r" ] && last_qa_result="$r"
     done
 
-    # Count deviations and find failing plans in active phase
     if [ -n "$active_phase_dir" ] && [ -d "$active_phase_dir" ]; then
       for sf in "$active_phase_dir"/*-SUMMARY.md "$active_phase_dir"/SUMMARY.md; do
         [ -f "$sf" ] || continue
-        # Extract deviations count from frontmatter
         d=$(read_deviations_field "$sf")
         case "$d" in
           0|"[]"|"") ;;  # zero deviations
           [0-9]*) deviation_count=$((deviation_count + d)) ;;
           *) deviation_count=$((deviation_count + 1)) ;;  # non-empty, non-numeric = at least 1
         esac
-        # Check for failed/partial status
         s=$(read_status_field "$sf")
         if [ "$s" = "failed" ] || [ "$s" = "partial" ]; then
           plan_id=$(basename "$sf" | sed 's/-SUMMARY.md//')
@@ -325,7 +273,6 @@ if [ -d "$PLANNING_DIR" ]; then
         fi
       done
 
-      # Check for completed UAT in active phase (exclude SOURCE-UAT copies)
       for uf in "$active_phase_dir"/*-UAT.md; do
         [ -f "$uf" ] || continue
         case "$uf" in
@@ -336,7 +283,6 @@ if [ -d "$PLANNING_DIR" ]; then
           has_uat=true
         fi
       done
-      # Round-dir fallback: check remediation round UATs
       if [ "$has_uat" != true ]; then
         for uf in "$active_phase_dir"/remediation/uat/round-*/R*-UAT.md; do
           [ -f "$uf" ] || continue
@@ -349,7 +295,6 @@ if [ -d "$PLANNING_DIR" ]; then
     fi
   fi
 
-  # Check map staleness (not just existence)
   if [ -d "$PLANNING_DIR/codebase" ]; then
     map_exists=true
     META="$PLANNING_DIR/codebase/META.md"
@@ -368,23 +313,17 @@ if [ -d "$PLANNING_DIR" ]; then
   fi
 fi
 
-# Use explicit result if provided, fall back to detected QA result
 effective_result="${RESULT:-$last_qa_result}"
 
-# Verify issues_found routing: inspect target UAT severities to choose fix vs re-plan guidance.
-# - major/critical (or unknown severity shape): route to discuss+plan
-# - minor-only: route to quick fix
 if [ "$CMD" = "verify" ] && [ "$effective_result" = "issues_found" ] && [ -d "${PHASES_DIR:-}" ]; then
   verify_target_phase="$TARGET_PHASE_ARG"
 
-  # Normalize explicit arg: strip leading zeros for comparison (user may pass "3" for phase "03")
   if [ -n "$verify_target_phase" ]; then
     verify_target_phase=$(echo "$verify_target_phase" | sed 's/^0*//')
     [ -z "$verify_target_phase" ] && verify_target_phase="0"
   fi
 
   if [ -n "$verify_target_phase" ]; then
-    # Explicit phase arg — find the matching directory
     for dir in "$PHASES_DIR"/*/; do
       [ -d "$dir" ] || continue
       pn=$(basename "$dir" | sed 's/[^0-9].*//' | sed 's/^0*//')
@@ -395,7 +334,6 @@ if [ "$CMD" = "verify" ] && [ "$effective_result" = "issues_found" ] && [ -d "${
       fi
     done
   else
-    # No phase arg — find the first phase with UAT issues (numeric order, matching phase-detect.sh)
     SN_VERIFY_DIRS=()
     while IFS= read -r _sv_dir; do
       [ -n "$_sv_dir" ] || continue
@@ -404,7 +342,6 @@ if [ "$CMD" = "verify" ] && [ "$effective_result" = "issues_found" ] && [ -d "${
 
     for dir in ${SN_VERIFY_DIRS[@]+"${SN_VERIFY_DIRS[@]}"}; do
       [ -d "$dir" ] || continue
-      # Guard: skip phases without execution artifacts (matching phase-detect.sh)
       _plans=$(count_phase_plans "$dir")
       _summaries=$(count_complete_summaries "$dir")
       if [ "$_plans" -eq 0 ] || [ "$_summaries" -lt "$_plans" ]; then
@@ -421,8 +358,6 @@ if [ "$CMD" = "verify" ] && [ "$effective_result" = "issues_found" ] && [ -d "${
         fi
       fi
     done
-    # No fallback — if no phase has issues_found, leave verify_target_phase empty
-    # so the output section can show generic guidance instead of false remediation.
   fi
 
   if [ -n "$verify_target_phase_dir" ]; then
@@ -435,26 +370,20 @@ if [ "$CMD" = "verify" ] && [ "$effective_result" = "issues_found" ] && [ -d "${
     uat_minor=$(grep -Eci 'severity:\**[[:space:]]*\**[[:space:]]*minor' "$verify_target_uat" || true)
     tagged_severities=$((uat_critical + uat_major + uat_minor))
 
-    # Brownfield-safe default: older UAT formats may omit severity lines.
     if [ "$uat_critical" -gt 0 ] || [ "$uat_major" -gt 0 ] || [ "$tagged_severities" -eq 0 ]; then
       uat_major_or_higher=true
     fi
   else
-    # If UAT file isn't locatable but a target was identified, choose safer escalation.
-    # If no target was identified at all (no-arg scan found nothing), leave uat_major_or_higher=false
-    # so the output shows generic fix guidance rather than false remediation.
     if [ -n "$verify_target_phase_dir" ]; then
       uat_major_or_higher=true
     fi
   fi
 fi
 
-# Format phase name for display (replace hyphens with spaces)
 fmt_phase_name() {
   echo "$1" | tr '-' ' '
 }
 
-# --- Output ---
 echo "➜ Next Up"
 
 suggest() {
@@ -503,10 +432,6 @@ case "$CMD" in
         fi
         ;;
       *)
-        # Suggest UAT verification when:
-        # 1. Active phase is fully built (plans>0), has no UAT, no known issues, AND (auto_uat or cautious/standard)
-        # 2. auto_uat=true AND some completed phase is unverified (cross-phase)
-        # Skip when current phase already has UAT issues (remediation takes priority)
         if [ -z "$current_uat_issues_phase" ] && \
            { { [ "$has_uat" = false ] && [ "$active_phase_plans" -gt 0 ] && { [ "$cfg_auto_uat" = true ] || [ "$cfg_autonomy" = "cautious" ] || [ "$cfg_autonomy" = "standard" ]; }; } \
              || { [ "$cfg_auto_uat" = true ] && [ "$has_unverified_phases" = true ]; }; }; then
@@ -543,7 +468,6 @@ case "$CMD" in
           fi
         elif { [ -n "$next_unbuilt" ] || [ -n "$next_unplanned" ]; } && ! { [ "$cfg_auto_uat" = true ] && [ "$has_unverified_phases" = true ]; }; then
           target="${next_unbuilt:-$next_unplanned}"
-          # If next phase needs discussion, suggest discuss (suppress continue)
           if [ -n "$next_undiscussed" ] && [ "$next_undiscussed" = "$target" ]; then
             suggest "/vbw:discuss $target -- Discuss phase before planning"
           elif [ -n "$next_preseeded" ] && [ "$next_preseeded" = "$target" ]; then
@@ -586,15 +510,11 @@ case "$CMD" in
     ;;
 
   qa)
-    # Check for active standalone debug session (phase_count=0 only —
-    # when phases exist, qa.md itself handles debug-session next-step text
-    # inline, so we must not hijack phase QA suggestions here)
     _qa_debug_handled=false
     if [ "${phase_count:-0}" -eq 0 ] && [ -d "$PLANNING_DIR/debugging" ]; then
       _qa_ds_output=$("$SCRIPT_DIR/debug-session-state.sh" get-or-latest "$PLANNING_DIR" 2>/dev/null) || true
       if [ -n "$_qa_ds_output" ]; then
         eval "$_qa_ds_output" 2>/dev/null || true
-        # shellcheck disable=SC2154
         if [ "${active_session:-none}" != "none" ] && [ -n "${session_file:-}" ] && [ -f "$session_file" ]; then
           _qa_ds_status="${session_status:-}"
           case "$_qa_ds_status" in
@@ -617,7 +537,6 @@ case "$CMD" in
                   _qa_debug_handled=true
                   ;;
                 *)
-                  # No result passed — suggest based on session status
                   case "$_qa_ds_status" in
                     qa_pending|fix_applied)
                       suggest "/vbw:debug --resume -- Continue to QA verification"
@@ -644,10 +563,6 @@ case "$CMD" in
     else
     case "$effective_result" in
       pass)
-        # Suggest UAT verification when:
-        # 1. Active phase is fully built (plans>0), has no UAT, no known issues, AND (auto_uat or cautious/standard)
-        # 2. auto_uat=true AND some completed phase is unverified (cross-phase)
-        # Skip when current phase already has UAT issues (remediation takes priority)
         if [ -z "$current_uat_issues_phase" ] && \
            { { [ "$has_uat" = false ] && [ "$active_phase_plans" -gt 0 ] && { [ "$cfg_auto_uat" = true ] || [ "$cfg_autonomy" = "cautious" ] || [ "$cfg_autonomy" = "standard" ]; }; } \
              || { [ "$cfg_auto_uat" = true ] && [ "$has_unverified_phases" = true ]; }; }; then
@@ -733,14 +648,11 @@ case "$CMD" in
     ;;
 
   fix)
-    # Check for an active debug session only for non-phase work
-    # (phase_count=0), so phase-scoped fix suggestions remain unchanged.
     _fix_debug_handled=false
     if [ "${phase_count:-0}" -eq 0 ] && [ -d "$PLANNING_DIR/debugging" ]; then
       _fix_ds_output=$("$SCRIPT_DIR/debug-session-state.sh" get-or-latest "$PLANNING_DIR" 2>/dev/null) || true
       if [ -n "$_fix_ds_output" ]; then
         eval "$_fix_ds_output" 2>/dev/null || true
-        # shellcheck disable=SC2154
         if [ "${active_session:-none}" != "none" ] && [ -n "${session_file:-}" ] && [ -f "$session_file" ]; then
           _fix_ds_status="${session_status:-}"
           case "$_fix_ds_status" in
@@ -771,7 +683,6 @@ case "$CMD" in
     if [ "$_fix_debug_handled" = false ]; then
       suggest "/vbw:vibe -- Verify the fix"
       if [ "$cfg_auto_uat" = true ] && [ -f "$PLANNING_DIR/.last-fix-commit" ]; then
-        # Only suggest UAT if marker is fresh (<24h); fail-closed on stat/date errors
         _marker_stale=true
         _marker_mtime=$(stat -c '%Y' "$PLANNING_DIR/.last-fix-commit" 2>/dev/null || stat -f '%m' "$PLANNING_DIR/.last-fix-commit" 2>/dev/null || echo 0)
         _now=$(date +%s 2>/dev/null || echo 0)
@@ -788,15 +699,11 @@ case "$CMD" in
     ;;
 
   verify)
-    # Check for active debug session with uat_failed status (phase_count=0 only —
-    # when phases exist, verify.md itself handles debug-session next-step text
-    # inline, so we must not hijack phase verify suggestions here)
     _verify_debug_handled=false
     if [ "${phase_count:-0}" -eq 0 ] && [ -d "$PLANNING_DIR/debugging" ]; then
       _verify_ds_output=$("$SCRIPT_DIR/debug-session-state.sh" get-or-latest "$PLANNING_DIR" 2>/dev/null) || true
       if [ -n "$_verify_ds_output" ]; then
         eval "$_verify_ds_output" 2>/dev/null || true
-        # shellcheck disable=SC2154
         if [ "${active_session:-none}" != "none" ] && [ -n "${session_file:-}" ] && [ -f "$session_file" ]; then
           _verify_ds_status="${session_status:-}"
           if [ "$_verify_ds_status" = "uat_failed" ]; then
@@ -840,13 +747,11 @@ case "$CMD" in
     ;;
 
   debug)
-    # Check for active debug session to give session-aware suggestions
     _ds_status=""
     if [ -d "$PLANNING_DIR/debugging" ]; then
       _ds_output=$("$SCRIPT_DIR/debug-session-state.sh" get-or-latest "$PLANNING_DIR" 2>/dev/null) || true
       if [ -n "$_ds_output" ]; then
         eval "$_ds_output" 2>/dev/null || true
-        # shellcheck disable=SC2154
         if [ "${active_session:-none}" != "none" ] && [ -n "${session_file:-}" ] && [ -f "$session_file" ]; then
           _ds_status="${session_status:-}"
         fi
@@ -928,7 +833,6 @@ case "$CMD" in
       fi
     elif [ -n "$next_unbuilt" ] || [ -n "$next_unplanned" ]; then
       target="${next_unbuilt:-$next_unplanned}"
-      # If next phase needs discussion, suggest discuss (suppress continue)
       if [ -n "$next_undiscussed" ] && [ "$next_undiscussed" = "$target" ]; then
         suggest "/vbw:discuss $target -- Discuss phase before planning"
       elif [ -n "$next_preseeded" ] && [ "$next_preseeded" = "$target" ]; then
@@ -1032,7 +936,6 @@ case "$CMD" in
     ;;
 
   *)
-    # Fallback for help, whats-new, update, etc.
     if [ "$has_project" = true ]; then
       suggest "/vbw:vibe -- Continue building"
       suggest "/vbw:status -- View project progress"
@@ -1042,7 +945,6 @@ case "$CMD" in
     ;;
 esac
 
-# Map staleness hint (skip for map/init/help commands)
 case "$CMD" in
   map|init|help|update|whats-new|uninstall) ;;
   *)
@@ -1056,7 +958,6 @@ case "$CMD" in
     ;;
 esac
 
-# Known issues hint (skip for init/help/uninstall)
 case "$CMD" in
   init|help|update|whats-new|uninstall) ;;
   *)
@@ -1072,7 +973,7 @@ case "$CMD" in
       done < <(find "$PHASES_DIR" -mindepth 1 -maxdepth 1 -type d 2>/dev/null)
       if [ "$_ki_total" -gt 0 ]; then
         echo ""
-        echo "Note: $_ki_total known issue(s) deferred across phases — visible in /vbw:list-todos"
+        echo "Note: $_ki_total known issue(s) deferred across phases, visible in /vbw:list-todos"
       fi
     fi
     ;;

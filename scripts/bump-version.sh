@@ -35,7 +35,6 @@ Examples:
 EOF
 }
 
-# write_version NEW: write the given version string to all 4 version files
 write_version() {
   local new="$1"
 
@@ -94,7 +93,6 @@ case "$MODE" in
     ;;
 esac
 
-# --verify: check all 4 version files are in sync without bumping
 if [[ "$MODE" == "--verify" ]]; then
   V_FILE=$(tr -d '[:space:]' < "$ROOT/VERSION")
   V_PLUGIN=$(jq -r '.version' "$ROOT/.claude-plugin/plugin.json")
@@ -107,11 +105,9 @@ if [[ "$MODE" == "--verify" ]]; then
   echo "  .claude-plugin/marketplace.json $V_MKT_PLUGIN"
   echo "  marketplace.json                $V_MKT_ROOT"
 
-  # intentional: detect if ANY file differs from VERSION
-  # shellcheck disable=SC2055
   if [[ "$V_FILE" != "$V_PLUGIN" || "$V_FILE" != "$V_MKT_PLUGIN" || "$V_FILE" != "$V_MKT_ROOT" ]]; then
     echo ""
-    echo "MISMATCH DETECTED — the following files differ:" >&2
+    echo "MISMATCH DETECTED, the following files differ:" >&2
     [[ "$V_FILE" != "$V_PLUGIN" ]]     && echo "  .claude-plugin/plugin.json ($V_PLUGIN != $V_FILE)" >&2
     [[ "$V_FILE" != "$V_MKT_PLUGIN" ]] && echo "  .claude-plugin/marketplace.json ($V_MKT_PLUGIN != $V_FILE)" >&2
     [[ "$V_FILE" != "$V_MKT_ROOT" ]]   && echo "  marketplace.json ($V_MKT_ROOT != $V_FILE)" >&2
@@ -125,12 +121,10 @@ fi
 
 LOCAL=$(tr -d '[:space:]' < "$ROOT/VERSION")
 
-# --offline: skip remote fetch entirely (useful in CI or air-gapped environments)
 if [[ "$MODE" == "--offline" ]]; then
   REMOTE="$LOCAL"
   echo "Offline mode: skipping GitHub fetch."
 else
-  # Fetch the authoritative version from GitHub (graceful fallback on failure)
   REMOTE=$(curl -sf --max-time 5 "$REPO_URL" 2>/dev/null | tr -d '[:space:]' || true)
   if [[ -z "$REMOTE" ]]; then
     echo "Warning: Could not fetch version from GitHub. Using local VERSION as baseline." >&2
@@ -138,13 +132,11 @@ else
   fi
 fi
 
-# Use whichever is higher as the base (protects against local being behind)
 BASE="$REMOTE"
 if [[ "$(printf '%s\n%s' "$LOCAL" "$REMOTE" | sort -V | tail -1)" == "$LOCAL" ]]; then
   BASE="$LOCAL"
 fi
 
-# Auto-increment patch version
 MAJOR="${BASE%%.*}"
 REST="${BASE#*.}"
 MINOR="${REST%%.*}"

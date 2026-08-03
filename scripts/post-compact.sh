@@ -1,7 +1,5 @@
 #!/bin/bash
 set -u
-# SessionStart(compact) hook: Remind agent to re-read key files after compaction
-# Reads compaction context from stdin, detects agent role, suggests re-reads
 
 INPUT=$(cat)
 
@@ -149,19 +147,12 @@ fallback_worktree_path() {
   fi
 }
 
-# Resolve VBW workspace root (issue #258: bare .vbw-planning/ fails in monorepo submodules)
-# shellcheck source=lib/vbw-config-root.sh
 . "$(dirname "$0")/lib/vbw-config-root.sh"
 find_vbw_root
 
-# Clean up cost tracking files and compaction marker (stale after compaction)
-# Preserve .active-agent and .active-agent-count — agents may still be running
-# after compaction. These are cleaned up by agent-stop.sh and session-stop.sh.
 rm -f "$VBW_PLANNING_DIR/.cost-ledger.json" "$VBW_PLANNING_DIR/.compaction-marker" "$VBW_PLANNING_DIR/.vbw-context" "$VBW_PLANNING_DIR/.context-usage" 2>/dev/null
 
-# Clean up per-agent compaction marker (this agent completed compaction successfully)
 if [ -d "$VBW_PLANNING_DIR/.compacting" ]; then
-  # Find our PID by walking parent chain (same as compaction-instructions.sh)
   _cleanup_pid="$PPID"
   PANE_MAP="$VBW_PLANNING_DIR/.agent-panes"
   if [ -f "$PANE_MAP" ]; then
@@ -176,12 +167,10 @@ if [ -d "$VBW_PLANNING_DIR/.compacting" ]; then
   fi
   rm -f "$VBW_PLANNING_DIR/.compacting/${_cleanup_pid}.json" 2>/dev/null || true
 
-  # Also clean stale markers for dead PIDs or invalid schema
   for _marker in "$VBW_PLANNING_DIR"/.compacting/*.json; do
     [ ! -f "$_marker" ] && continue
     _mpid=$(jq -r '.pid // ""' "$_marker" 2>/dev/null)
     _mts=$(jq -r '.started_at // ""' "$_marker" 2>/dev/null)
-    # Full schema validation: PID and started_at must be sane positive integers (max 10 digits)
     if ! echo "$_mpid" | grep -Eq '^[1-9][0-9]{0,9}$' \
        || ! echo "$_mts" | grep -Eq '^[1-9][0-9]{0,9}$' \
        || ! kill -0 "$_mpid" 2>/dev/null; then
@@ -190,7 +179,6 @@ if [ -d "$VBW_PLANNING_DIR/.compacting" ]; then
   done
 fi
 
-# Try to identify agent role from explicit hook fields.
 ROLE=""
 if ROLE=$(extract_agent_role); then
   :
@@ -198,13 +186,11 @@ else
   ROLE=""
 fi
 
-# Convert plan id (e.g. "05-01") to numeric plan number (e.g. "1")
 plan_id_to_num() {
   local plan_id="$1"
   echo "$plan_id" | sed 's/^[0-9]*-//' | sed 's/^0*//' | sed 's/^$/0/'
 }
 
-# Build next task id from last completed task id (e.g. 1-1-T3 -> 1-1-T4)
 next_task_from_completed() {
   local task_id="$1"
   if [[ "$task_id" =~ ^([0-9]+-[0-9]+-T)([0-9]+)$ ]]; then
@@ -236,7 +222,6 @@ case "$ROLE" in
     ;;
 esac
 
-# --- Restore agent state snapshot ---
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 SNAPSHOT_CONTEXT=""
 if [ -f "$VBW_PLANNING_DIR/.execution-state.json" ] && [ -f "$SCRIPT_DIR/snapshot-resume.sh" ]; then
@@ -262,7 +247,6 @@ if [ -f "$VBW_PLANNING_DIR/.execution-state.json" ] && [ -f "$SCRIPT_DIR/snapsho
       SNAP_STATUS=$(jq -r '.execution_state.status // "unknown"' "$SNAP_PATH" 2>/dev/null)
       SNAP_COMMITS=$(jq -r '.recent_commits | join(", ")' "$SNAP_PATH" 2>/dev/null) || SNAP_COMMITS=""
 
-      # Task-level resume hint: prefer explicit cursor; fallback to event log.
       SNAP_IN_PROGRESS_TASK=$(jq -r '.execution_state.current_task_id // ""' "$SNAP_PATH" 2>/dev/null)
       SNAP_LAST_COMPLETED_TASK=""
       SNAP_NEXT_TASK=""
@@ -308,7 +292,6 @@ if [ -f "$VBW_PLANNING_DIR/.execution-state.json" ] && [ -f "$SCRIPT_DIR/snapsho
   fi
 fi
 
-# --- Worktree context injection ---
 WORKTREE_CONTEXT=""
 if echo "$ROLE" | grep -q "vbw-dev\|vbw-debugger"; then
   WORKTREE_MAP_FILE=$(resolve_worktree_map_file) || WORKTREE_MAP_FILE=""
@@ -322,17 +305,11 @@ if echo "$ROLE" | grep -q "vbw-dev\|vbw-debugger"; then
   fi
 fi
 
-# Teammate task recovery hint
 TASK_HINT=""
 if [ -n "$ROLE" ] && [ "$ROLE" != "unknown" ]; then
   TASK_HINT=" If you are a teammate, call TaskGet for your assigned task ID to restore your current objective."
 fi
 
-# --- Orchestrator resume hint (non-agent sessions only) ---
-# When the orchestrator (ROLE="" or "unknown") compacts mid-command, it loses
-# the vibe.md instructions and may try Skill('vbw:vibe') which is blocked by
-# disable-model-invocation. Detect active mode from disk state and emit a
-# targeted resume instruction with the exact file path and mode section.
 ORCH_RESUME=""
 if [ -z "$ROLE" ] || [ "$ROLE" = "unknown" ]; then
   VIBE_CMD_PATH="$SCRIPT_DIR/../commands/vibe.md"
@@ -343,7 +320,6 @@ if [ -z "$ROLE" ] || [ "$ROLE" = "unknown" ]; then
 
   ACTIVE_MODE=""
   PD_AUTONOMY=""
-  # Detect from execution state first (most specific)
   if [ -f "$VBW_PLANNING_DIR/.execution-state.json" ] && command -v jq &>/dev/null; then
     EXEC_STATUS=$(jq -r '.status // ""' "$VBW_PLANNING_DIR/.execution-state.json" 2>/dev/null)
     EXEC_PHASE=$(jq -r '.phase // ""' "$VBW_PLANNING_DIR/.execution-state.json" 2>/dev/null)
@@ -353,7 +329,6 @@ if [ -z "$ROLE" ] || [ "$ROLE" = "unknown" ]; then
     esac
   fi
 
-  # Fall back to phase-detect for non-execution modes
   if [ -z "$ACTIVE_MODE" ] && [ -f "$SCRIPT_DIR/phase-detect.sh" ]; then
     PD_OUT=$(bash "$SCRIPT_DIR/phase-detect.sh" 2>/dev/null) || PD_OUT=""
     _PD_COMPLETE=$(printf '%s\n' "$PD_OUT" | awk -F= '/^phase_detect_complete=/{print $2; exit}')
@@ -391,11 +366,10 @@ if [ -z "$ROLE" ] || [ "$ROLE" = "unknown" ]; then
     fi
   fi
 
-  # Filter sentinel values from phase display
   case "${EXEC_PHASE:-}" in none|"") EXEC_PHASE="" ;; esac
 
   if [ -n "$ACTIVE_MODE" ] && [ -f "$VIBE_CMD_PATH" ]; then
-    ORCH_RESUME=" ORCHESTRATOR RESUME: You were executing /vbw:vibe ${ACTIVE_MODE} mode${EXEC_PHASE:+ for Phase ${EXEC_PHASE}}. Do NOT call Skill('vbw:vibe') or any Skill('vbw:*') — it will fail (disable-model-invocation). Instead, use the Read tool to re-read ${VIBE_CMD_PATH} and jump directly to the '### Mode: ${ACTIVE_MODE}' section. Resume from where you left off using your compacted summary context.${PD_AUTONOMY:+ Autonomy: ${PD_AUTONOMY}.}"
+    ORCH_RESUME=" ORCHESTRATOR RESUME: You were executing /vbw:vibe ${ACTIVE_MODE} mode${EXEC_PHASE:+ for Phase ${EXEC_PHASE}}. Do NOT call Skill('vbw:vibe') or any Skill('vbw:*'), it will fail (disable-model-invocation). Instead, use the Read tool to re-read ${VIBE_CMD_PATH} and jump directly to the '### Mode: ${ACTIVE_MODE}' section. Resume from where you left off using your compacted summary context.${PD_AUTONOMY:+ Autonomy: ${PD_AUTONOMY}.}"
   fi
 fi
 

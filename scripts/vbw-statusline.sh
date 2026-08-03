@@ -1,58 +1,30 @@
 #!/bin/bash
-# VBW Status Line — 4-line dashboard (L1: project, L2: context, L3: usage+cache, L4: model/cost)
-# Cache: {prefix}-fast (5s), {prefix}-slow (60s), {prefix}-cost (per-render), {prefix}-ok (permanent)
 
-# Read stdin with timeout — CC may not pipe data on the first dsR() invocation
-# (no cost/model info yet), and bare `cat` would block until the 5s dsR timeout
-# kills us. Use a read loop: 1s timeout per line handles multi-line JSON while
-# bailing fast when CC sends nothing. Total budget: ~2s for read + ~1s for render
-# = 3s well within dsR's 5s timeout.
 input=""
 while IFS= read -t 1 -r _line; do
   input="${input}${_line}"
 done 2>/dev/null
-# Capture trailing data after last newline (if no final \n)
 [ -n "${_line:-}" ] && input="${input}${_line}"
-# Replace stdin with /dev/null — prevents downstream commands (jq, curl, etc.)
-# from inheriting a hung pipe and blocking indefinitely.
 exec 0</dev/null
 
-# Colors
 C='\033[36m' G='\033[32m' Y='\033[33m' R='\033[31m'
 D='\033[2m' B='\033[1m' X='\033[0m'
 
-# --- Cached platform info ---
 _UID=$(id -u)
 _OS=$(uname)
-# Derive script dir early — used as a preferred anchor for find_vbw_root (#266).
-# In dev (--plugin-dir), the script lives inside the project repo; anchoring here
-# makes .vbw-planning/ resolution immune to agents cd-ing around the monorepo.
-# In production (plugin cache), the script lives outside any project repo so
-# script-relative resolution fails gracefully and find_vbw_root falls back to CWD.
 _SL_SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 _VER=$(cat "$_SL_SCRIPT_DIR/../VERSION" 2>/dev/null | tr -d '[:space:]')
-# Resolve the VBW workspace root before deriving the temp cache key.
-# Cache isolation must follow the resolved .vbw-planning boundary, not just the git
-# top-level root, so nested VBW workspaces inside one monorepo do not share caches.
-# shellcheck source=lib/vbw-config-root.sh
 . "$_SL_SCRIPT_DIR/lib/vbw-config-root.sh"
-# shellcheck source=lib/vbw-cache-key.sh
 . "$_SL_SCRIPT_DIR/lib/vbw-cache-key.sh"
 find_vbw_root "$_SL_SCRIPT_DIR"
 
-# _REPO_ROOT is still used for GitHub link rendering and bare-directory labels.
 _REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || echo "$PWD")
 _CACHE_ROOT="${VBW_CONFIG_ROOT:-$_REPO_ROOT}"
 _CACHE=$(vbw_cache_prefix "${_VER:-0}" "$_UID" "$_CACHE_ROOT")
 
-# Clean stale caches from previous versions on first run
 if ! [ -f "${_CACHE}-ok" ] || ! [ -O "${_CACHE}-ok" ]; then
-  # Only remove old-format caches (no repo hash) — do NOT glob all UID caches,
-  # as that would nuke concurrent repos' caches under parallel test execution.
   rm -f /tmp/vbw-sl-cache-"${_UID}" /tmp/vbw-usage-cache-"${_UID}" /tmp/vbw-gh-cache-"${_UID}" /tmp/vbw-team-cache-"${_UID}" /tmp/vbw-*-"${_UID}" 2>/dev/null
-  # Clean old-format caches that lack the repo hash (e.g. vbw-1.0.0-501-fast)
   for f in /tmp/vbw-*-"${_UID}"-fast /tmp/vbw-*-"${_UID}"-slow /tmp/vbw-*-"${_UID}"-cost /tmp/vbw-*-"${_UID}"-ok; do
-    # Old format: vbw-{ver}-{uid}-{suffix} (3 dashes). New format: vbw-{ver}-{uid}-{hash}-{suffix} (4 dashes).
     _stale_bn="${f##*/}"
     _stale_dc=$(echo "$_stale_bn" | tr -cd '-' | wc -c | tr -d ' ')
     [ "$_stale_dc" -le 3 ] && rm -f "$f" 2>/dev/null
@@ -61,28 +33,19 @@ if ! [ -f "${_CACHE}-ok" ] || ! [ -O "${_CACHE}-ok" ]; then
   touch "${_CACHE}-ok"
 fi
 
-# --- Helpers ---
 
-# Source shared summary-status helpers for status-aware SUMMARY detection
-# (_SL_SCRIPT_DIR already set above in platform info section)
 if [ -f "$_SL_SCRIPT_DIR/summary-utils.sh" ]; then
-  # shellcheck source=summary-utils.sh
   . "$_SL_SCRIPT_DIR/summary-utils.sh"
 else
-  # Safe default: report zero completions when helpers unavailable
   count_complete_summaries() { echo "0"; }
   count_done_summaries() { echo "0"; }
 fi
-# Source shared UAT helpers for status normalization
 if [ -f "$_SL_SCRIPT_DIR/uat-utils.sh" ]; then
-  # shellcheck source=uat-utils.sh
   . "$_SL_SCRIPT_DIR/uat-utils.sh"
 else
-  # Safe default: passthrough when helpers unavailable
   normalize_uat_status() { echo "$1"; }
 fi
 if [ -f "$_SL_SCRIPT_DIR/phase-state-utils.sh" ]; then
-  # shellcheck source=phase-state-utils.sh
   . "$_SL_SCRIPT_DIR/phase-state-utils.sh"
 else
   count_phase_plans() {
@@ -120,7 +83,6 @@ else
 fi
 
 if [ -f "$_SL_SCRIPT_DIR/verification-freshness.sh" ]; then
-  # shellcheck source=verification-freshness.sh
   . "$_SL_SCRIPT_DIR/verification-freshness.sh"
 else
   verification_is_stale() { return 0; }
@@ -162,9 +124,6 @@ lifecycle_artifacts_newer_than_cache() {
   while IFS= read -r artifact; do
     [ -f "$artifact" ] || continue
     artifact_mt=$(file_mtime_epoch "$artifact")
-    # Use -ge (not -gt) to handle same-second writes: macOS stat has 1s
-    # granularity, so a cache written at T and an artifact also modified at T
-    # would miss invalidation with strict -gt, causing stale QA status display.
     if [ "$artifact_mt" -ge "$cache_mt" ] 2>/dev/null; then
       return 0
     fi
@@ -188,7 +147,6 @@ acquire_lock_dir() {
   while ! mkdir "$lock_dir" 2>/dev/null; do
     attempts=$((attempts + 1))
     [ "$attempts" -ge 100 ] && return 1
-    # Check for stale lock (holder process died)
     if [ -f "$lock_dir/pid" ]; then
       local lock_pid
       lock_pid=$(cat "$lock_dir/pid" 2>/dev/null || echo "")
@@ -198,7 +156,6 @@ acquire_lock_dir() {
         continue
       fi
     else
-      # Lock dir exists but no pid file — wait briefly for holder to write it
       local pw=0
       while [ "$pw" -lt 5 ] && [ ! -f "$lock_dir/pid" ]; do
         sleep 0.02
@@ -207,7 +164,6 @@ acquire_lock_dir() {
       if [ -f "$lock_dir/pid" ]; then
         continue
       fi
-      # No pid file after 0.1s — lock is orphaned
       rmdir "$lock_dir" 2>/dev/null || true
       continue
     fi
@@ -223,8 +179,6 @@ release_lock_dir() {
   rmdir "$lock_dir" 2>/dev/null || rm -rf "$lock_dir" 2>/dev/null || true
 }
 
-# Resolve CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC from env var or settings.json.
-# Sets _NOTRAFFIC_ACTIVE=1 if the flag is truthy, empty otherwise.
 _resolve_notraffic() {
   _NOTRAFFIC_ACTIVE=""
   local _val="${CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC:-}"
@@ -321,39 +275,12 @@ CACHE_W=${CACHE_W:-0}; CACHE_R=${CACHE_R:-0}; COST=${COST:-0}
 DUR_MS=${DUR_MS:-0}; API_MS=${API_MS:-0}; ADDED=${ADDED:-0}; REMOVED=${REMOVED:-0}
 MODEL=${MODEL:-Claude}; VER=${VER:-?}
 
-# --- Autocompact buffer normalization (#237) ---
-# Claude Code reserves context for autocompact that's never usable. Raw percentages
-# make users think they have more headroom than they do. Normalize so 100% = trigger.
-#
-# Algorithm (reverse-engineered from cli.js v2.1.76):
-#   effective_window = context_window - min(max_output_tokens, 20000)
-#   default_trigger  = effective_window - 13000
-#   override_trigger = floor(effective_window * pct / 100)   [if override set]
-#   trigger          = min(override_trigger, default_trigger)
-#   buffer           = context_window - trigger
-#
-# Constants: OUTPUT_TOKEN_CAP=20000, HEADROOM=13000
-# Results:   200K → buffer=33K (16.5%), 1M → buffer=33K (3.3%)
-#            1M + override=95 → buffer=69K (6.9%)
-#
-# Also respects:
-#   CLAUDE_CODE_AUTO_COMPACT_WINDOW — caps context window for compact math
-#   CLAUDE_CODE_MAX_OUTPUT_TOKENS   — min(value, 20000) for output deduction
-# Notes:
-#   - Override decimals (e.g., 95.5) handled via fixed-point x10 math.
-#   - Output token deduction defaults to 20K (correct for Claude 4 family).
-#     Older models (3.5 Sonnet=8K, Claude 3=4K) use smaller deductions internally,
-#     making our buffer estimate ~12K too large (pessimistic/safe direction).
-#     Users on older models can set CLAUDE_CODE_MAX_OUTPUT_TOKENS for accuracy.
 
 _AC_DISABLED=""
 _AC_OVERRIDE=""
 _AC_WINDOW_CAP=""
 _AC_MAX_OUTPUT=""
 
-# Resolve env vars: real env > settings.json env block (single jq call for all 4)
-# Note: first settings.json with any env value wins — values are NOT merged across files.
-# This matches the credential lookup pattern elsewhere in this script.
 _AC_SETTINGS_ENV=""
 for _sdir in "${CLAUDE_CONFIG_DIR:-}" "$HOME/.config/claude-code" "$HOME/.claude"; do
   [ -z "$_sdir" ] && continue
@@ -364,29 +291,23 @@ for _sdir in "${CLAUDE_CONFIG_DIR:-}" "$HOME/.config/claude-code" "$HOME/.claude
     .env.CLAUDE_CODE_AUTO_COMPACT_WINDOW // "",
     .env.CLAUDE_CODE_MAX_OUTPUT_TOKENS // ""
   ] | join("|")' "$_sdir/settings.json" 2>/dev/null)
-  # Only break if at least one value was found (jq returns "|||" for empty .env)
   [ -n "$_AC_SETTINGS_ENV" ] && [ "$_AC_SETTINGS_ENV" != "|||" ] && break
 done
 IFS='|' read -r _S_DISABLED _S_OVERRIDE _S_WINDOW _S_OUTPUT <<< "$_AC_SETTINGS_ENV"
 
-# Real env vars take priority over settings.json
 _AC_DISABLED="${DISABLE_AUTO_COMPACT:-$_S_DISABLED}"
 _AC_OVERRIDE="${CLAUDE_AUTOCOMPACT_PCT_OVERRIDE:-$_S_OVERRIDE}"
 _AC_WINDOW_CAP="${CLAUDE_CODE_AUTO_COMPACT_WINDOW:-$_S_WINDOW}"
 _AC_MAX_OUTPUT="${CLAUDE_CODE_MAX_OUTPUT_TOKENS:-$_S_OUTPUT}"
 
-# Match Claude Code's truthiness check: "1", "true", "yes", "on" all disable
-# Uses case-insensitive patterns for bash 3.2 compatibility (macOS default)
 _AC_SKIP=false
 case "$_AC_DISABLED" in
   1|[Tt][Rr][Uu][Ee]|[Yy][Ee][Ss]|[Oo][Nn]) _AC_SKIP=true ;;
 esac
 
-# Strip leading zeros to prevent bash octal interpretation (e.g., "08000" → "8000")
 _ac_dec() { local v="${1#"${1%%[!0]*}"}"; echo "${v:-0}"; }
 
 if [ "$_AC_SKIP" = "false" ] && [ "${CTX_SIZE:-0}" -gt 0 ] 2>/dev/null; then
-  # Apply AUTO_COMPACT_WINDOW cap (if set, use the smaller of window and cap)
   _AC_CTX="$CTX_SIZE"
   if [ -n "$_AC_WINDOW_CAP" ]; then
     _WC="$(_ac_dec "${_AC_WINDOW_CAP%%.*}")"
@@ -395,7 +316,6 @@ if [ "$_AC_SKIP" = "false" ] && [ "${CTX_SIZE:-0}" -gt 0 ] 2>/dev/null; then
     fi
   fi
 
-  # Output token deduction: min(max_output_tokens, 20000), default 20000
   _OUT_CAP=20000
   if [ -n "$_AC_MAX_OUTPUT" ]; then
     _MO="$(_ac_dec "${_AC_MAX_OUTPUT%%.*}")"
@@ -404,26 +324,20 @@ if [ "$_AC_SKIP" = "false" ] && [ "${CTX_SIZE:-0}" -gt 0 ] 2>/dev/null; then
     fi
   fi
 
-  # Effective window after output token reservation
   _EFF=$((_AC_CTX - _OUT_CAP))
   [ "$_EFF" -lt 0 ] && _EFF=0
 
-  # Default trigger: effective - 13K headroom
   _DEF_TRIGGER=$((_EFF - 13000))
   [ "$_DEF_TRIGGER" -lt 0 ] && _DEF_TRIGGER=0
 
   _TRIGGER="$_DEF_TRIGGER"
 
-  # Override: floor(effective * pct / 100), then min with default
-  # Fixed-point x10 to handle decimals like "95.5" without floating point.
-  # "95.5" → whole=95 frac=5 → pct_x10=955 → effective * 955 / 1000
   if [ -n "$_AC_OVERRIDE" ]; then
     _OV_WHOLE="$(_ac_dec "${_AC_OVERRIDE%%.*}")"
     _OV_FRAC="0"
     case "$_AC_OVERRIDE" in
       *.*) _OV_FRAC="${_AC_OVERRIDE#*.}"; _OV_FRAC="$(_ac_dec "${_OV_FRAC:0:1}")"; _OV_FRAC="${_OV_FRAC:-0}" ;;
     esac
-    # Guard: ensure both parts are numeric
     if [ "$_OV_WHOLE" -ge 0 ] 2>/dev/null && [ "$_OV_FRAC" -ge 0 ] 2>/dev/null; then
       _OV_PCT_X10=$((_OV_WHOLE * 10 + _OV_FRAC))
       if [ "$_OV_PCT_X10" -gt 0 ] && [ "$_OV_PCT_X10" -le 1000 ]; then
@@ -434,15 +348,9 @@ if [ "$_AC_SKIP" = "false" ] && [ "${CTX_SIZE:-0}" -gt 0 ] 2>/dev/null; then
   fi
 
   if [ "$_TRIGGER" -gt 0 ]; then
-    # Buffer as percentage of RAW window (CTX_SIZE) because REM from Claude Code
-    # is also a percentage of the raw window. Both must use the same reference frame.
-    # Use CTX_SIZE - _TRIGGER (not _AC_CTX - _TRIGGER) so the buffer spans from
-    # the raw window down to the trigger point, regardless of any window cap.
     _BUFFER=$((CTX_SIZE - _TRIGGER))
     _BUF_PCT_X10=$((_BUFFER * 1000 / CTX_SIZE))
 
-    # Normalize remaining: strip buffer zone, rescale to usable range
-    # REM is 0-100 integer from Claude Code. Convert to x10 for precision.
     _REM_X10=$((REM * 10))
     [ "$_BUF_PCT_X10" -ge 1000 ] && _BUF_PCT_X10=999  # defensive: prevent division by zero
     _USABLE_REM=$(( (_REM_X10 - _BUF_PCT_X10) * 1000 / (1000 - _BUF_PCT_X10) ))
@@ -463,8 +371,6 @@ CTX_USED=$((IN_TOK + CACHE_W + CACHE_R))
 CTX_USED_FMT=$(fmt_tok "$CTX_USED")
 CTX_SIZE_FMT=$(fmt_tok "$CTX_SIZE")
 
-# Cache context usage for pre-flight guard (suggest-compact.sh).
-# Include session ID so suggest-compact.sh can detect stale cross-session data (#238).
 if [ -d "$VBW_PLANNING_DIR" ]; then
   printf '%s\n' "${CLAUDE_SESSION_ID:-unknown}|${PCT}|${CTX_SIZE}" > "$VBW_PLANNING_DIR/.context-usage" 2>/dev/null || true
 fi
@@ -482,7 +388,6 @@ elif [ "$CACHE_HIT_PCT" -ge 40 ]; then CACHE_COLOR="$Y"
 else CACHE_COLOR="$R"
 fi
 
-# --- Fast cache (5s TTL): VBW state + execution + agents ---
 FAST_CF="${_CACHE}-fast"
 
 if ! cache_fresh "$FAST_CF" 5 || lifecycle_artifacts_newer_than_cache "$FAST_CF" "$VBW_PLANNING_DIR"; then
@@ -490,14 +395,11 @@ if ! cache_fresh "$FAST_CF" 5 || lifecycle_artifacts_newer_than_cache "$FAST_CF"
   PD=0; PT=0; PPD=0; PPT=0; QA="--"; QA_COLOR="D"; GH_URL=""
   PP_LABEL="this phase"; REM_ACTIVE="false"
   if [ -f "$VBW_PLANNING_DIR/STATE.md" ]; then
-    # Parse "Phase: N of M (slug)" — extract N and M before parenthetical
-    # to avoid picking up numbers from phase name slugs like "01-context-diet"
     _phase_line=$(grep -m1 "^Phase:" "$VBW_PLANNING_DIR/STATE.md" 2>/dev/null)
     PH=$(echo "$_phase_line" | sed -n 's/^Phase:[[:space:]]*\([0-9][0-9]*\).*/\1/p')
     TT=$(echo "$_phase_line" | sed -n 's/.*[[:space:]]of[[:space:]]*\([0-9][0-9]*\).*/\1/p')
   fi
   if [ -f "$VBW_PLANNING_DIR/config.json" ]; then
-    # Auto-migrate: add model_profile if missing
     if ! jq -e '.model_profile' "$VBW_PLANNING_DIR/config.json" >/dev/null 2>&1; then
       TMP=$(mktemp)
       jq '. + {model_profile: "quality", model_overrides: {}}' "$VBW_PLANNING_DIR/config.json" > "$TMP" && mv "$TMP" "$VBW_PLANNING_DIR/config.json"
@@ -512,7 +414,6 @@ if ! cache_fresh "$FAST_CF" 5 || lifecycle_artifacts_newer_than_cache "$FAST_CF"
     GH_URL=$(git remote get-url origin 2>/dev/null | sed 's|git@github.com:|https://github.com/|' | sed 's|\.git$||' | sed 's|https://[^@]*@|https://|')
     GIT_STAGED=$(git diff --cached --numstat 2>/dev/null | wc -l | tr -d ' ')
     GIT_MODIFIED=$(git diff --numstat 2>/dev/null | wc -l | tr -d ' ')
-    # shellcheck disable=SC1083
     GIT_AHEAD=$(git rev-list --count @{u}..HEAD 2>/dev/null || echo 0)
   fi
   if [ -d "$VBW_PLANNING_DIR/phases" ]; then
@@ -522,7 +423,6 @@ if ! cache_fresh "$FAST_CF" 5 || lifecycle_artifacts_newer_than_cache "$FAST_CF"
       [ -d "$_sl_pdir" ] || continue
       PT=$((PT + $(count_phase_plans "$_sl_pdir")))
       PD=$((PD + $(count_complete_summaries "$_sl_pdir")))
-      # Count remediation round summaries (round-dir layout)
       for _sl_rdir in "$_sl_pdir"remediation/uat/round-*/; do
         [ -d "$_sl_rdir" ] || continue
         PD=$((PD + $(count_complete_summaries "$_sl_rdir")))
@@ -532,7 +432,6 @@ if ! cache_fresh "$FAST_CF" 5 || lifecycle_artifacts_newer_than_cache "$FAST_CF"
       PDIR=$(find_phase_dir_by_ref "$VBW_PLANNING_DIR" "$PH")
       [ -n "$PDIR" ] && PPD=$(count_complete_summaries "$PDIR")
       [ -n "$PDIR" ] && PPT=$(count_phase_plans "$PDIR")
-      # Remediation-aware plan counts: override PPT/PPD with remediation round totals
       if [ -n "$PDIR" ] && [ -f "$PDIR/remediation/uat/.uat-remediation-stage" ]; then
         REM_ACTIVE="true"
         PP_LABEL="this remediation"
@@ -548,8 +447,6 @@ if ! cache_fresh "$FAST_CF" 5 || lifecycle_artifacts_newer_than_cache "$FAST_CF"
         REM_ACTIVE="true"
         PP_LABEL="this remediation"
       fi
-      # Lifecycle-aware QA/UAT indicator: the canonical current UAT supersedes
-      # VERIFICATION.md and historical phase-root UAT artifacts.
       if [ -n "$PDIR" ]; then
         _uat_file=$(current_uat "$PDIR" 2>/dev/null || true)
         [ -n "$_uat_file" ] && [ ! -f "$_uat_file" ] && _uat_file=""
@@ -637,9 +534,6 @@ if ! cache_fresh "$FAST_CF" 5 || lifecycle_artifacts_newer_than_cache "$FAST_CF"
         (.plans | length),
         ([.plans[] | select(.status == "running")][0].title // "")
       ] | join("|")' "$VBW_PLANNING_DIR/.execution-state.json" 2>/dev/null)"
-    # Reconcile EXEC_DONE against actual SUMMARY.md files on disk.
-    # After a reset/undo, .execution-state.json retains stale "complete"
-    # statuses but SUMMARY.md files may no longer exist.
     if [ "$EXEC_STATUS" = "running" ] && [ "${EXEC_DONE:-0}" -gt 0 ] 2>/dev/null; then
       _exec_phase=$(jq -r '.phase // ""' "$VBW_PLANNING_DIR/.execution-state.json" 2>/dev/null)
       if [ -n "$_exec_phase" ]; then
@@ -656,26 +550,20 @@ if ! cache_fresh "$FAST_CF" 5 || lifecycle_artifacts_newer_than_cache "$FAST_CF"
 
   AGENT_DATA="0"
 
-  # Sanitize pipe characters in EXEC_CURRENT (user-defined plan title) to
-  # prevent field misalignment in the pipe-delimited fast cache.
   _EXEC_CURRENT_SAFE="${EXEC_CURRENT//|/-}"
 
   atomic_write_string "$FAST_CF" "${PH:-0}|${TT:-0}|${EF}|${MP}|${BR}|${PD}|${PT}|${PPD}|${QA}|${GH_URL}|${GIT_STAGED:-0}|${GIT_MODIFIED:-0}|${GIT_AHEAD:-0}|${EXEC_STATUS:-}|${EXEC_WAVE:-0}|${EXEC_TWAVES:-0}|${EXEC_DONE:-0}|${EXEC_TOTAL:-0}|${_EXEC_CURRENT_SAFE:-}|${AGENT_DATA:-0}|${PPT:-0}|${QA_COLOR:-D}|${HIDE_AGENT_TMUX:-false}|${COLLAPSE_AGENT_TMUX:-false}|${PP_LABEL:-this phase}|${REM_ACTIVE:-false}" 2>/dev/null || true
 fi
 
 if [ -O "$FAST_CF" ]; then
-  # shellcheck disable=SC2034
   IFS='|' read -r PH TT EF MP BR PD PT PPD QA GH_URL GIT_STAGED GIT_MODIFIED GIT_AHEAD \
                   EXEC_STATUS EXEC_WAVE EXEC_TWAVES EXEC_DONE EXEC_TOTAL EXEC_CURRENT \
                   AGENT_N PPT QA_COLOR HIDE_AGENT_TMUX COLLAPSE_AGENT_TMUX \
                   PP_LABEL REM_ACTIVE < "$FAST_CF"
-  # Defaults for caches written by older statusline versions
   PP_LABEL="${PP_LABEL:-this phase}"
   REM_ACTIVE="${REM_ACTIVE:-false}"
 fi
 
-# Badge color: live check (not cached) so transitions are immediate.
-# [ -f ] is a single stat() syscall — negligible cost vs cache TTL staleness.
 VBW_CTX=0; [ -f "$VBW_PLANNING_DIR/.vbw-context" ] && VBW_CTX=1
 if [ "$VBW_CTX" = "1" ]; then
   VC="${C}${B}"
@@ -685,9 +573,6 @@ fi
 
 AGENT_LINE=""
 
-# --- Early collapse exit: skip slow cache for collapsed worktree panes ---
-# In collapsed worktrees, the output only uses input-parsed values (MODEL, PCT,
-# CTX_USED_FMT, etc.), so we can skip OAuth/API/cost/update work entirely.
 if [ -n "${TMUX:-}" ]; then
   _GIT_DIR=$(git rev-parse --git-dir 2>/dev/null)
   _GIT_COMMON=$(git rev-parse --git-common-dir 2>/dev/null)
@@ -703,16 +588,13 @@ if [ -n "${TMUX:-}" ]; then
   fi
 fi
 
-# --- Slow cache (60s TTL, 300s on persistent failure): usage limits + update check ---
 SLOW_CF="${_CACHE}-slow"
 
-# Backoff: use 300s TTL when previous fetch failed or was rate-limited (#249)
 _SLOW_TTL=60
 if [ -O "$SLOW_CF" ]; then
   _PREV_STATUS=$(awk -F'|' '{print $10}' "$SLOW_CF" 2>/dev/null)
   [ "$_PREV_STATUS" = "fail" ] || [ "$_PREV_STATUS" = "ratelimited" ] && _SLOW_TTL=300
 fi
-# If notraffic flag just became active, skip backoff so it takes effect promptly (#249 QA R3/R4)
 if [ "$_SLOW_TTL" -gt 60 ] 2>/dev/null; then
   _resolve_notraffic
   [ -n "$_NOTRAFFIC_ACTIVE" ] && _SLOW_TTL=60
@@ -727,13 +609,11 @@ if ! cache_fresh "$SLOW_CF" "$_SLOW_TTL"; then
   HIDE_LIMITS=$(jq -r '.statusline_hide_limits // false' "$VBW_PLANNING_DIR/config.json" 2>/dev/null)
   HIDE_LIMITS_API=$(jq -r '.statusline_hide_limits_for_api_key // false' "$VBW_PLANNING_DIR/config.json" 2>/dev/null)
 
-  # Priority 1: env var override (escape hatch for keychain issues)
   if [ -n "${VBW_OAUTH_TOKEN:-}" ]; then
     OAUTH_TOKEN="$VBW_OAUTH_TOKEN"
     AUTH_CLASS="oauth"
   fi
 
-  # Priority 2: system credential store (skip if VBW_SKIP_KEYCHAIN=1, e.g. in tests)
   if [ -z "$OAUTH_TOKEN" ] && [ "${VBW_SKIP_KEYCHAIN:-0}" != "1" ]; then
     if [ "$_OS" = "Darwin" ]; then
       CRED_JSON=$(security find-generic-password -s "Claude Code-credentials" -w 2>/dev/null)
@@ -742,7 +622,6 @@ if ! cache_fresh "$SLOW_CF" "$_SLOW_TTL"; then
         [ -n "$OAUTH_TOKEN" ] && AUTH_CLASS="oauth"
       fi
     else
-      # Linux: try secret-tool (GNOME Keyring) then pass (password-store)
       if command -v secret-tool &>/dev/null; then
         CRED_JSON=$(secret-tool lookup service "Claude Code-credentials" 2>/dev/null)
         if [ -n "$CRED_JSON" ]; then
@@ -759,10 +638,6 @@ if ! cache_fresh "$SLOW_CF" "$_SLOW_TTL"; then
     fi
   fi
 
-  # Priority 3: credentials file (check both with and without leading dot,
-  # across all common Claude config locations)
-  # When VBW_SKIP_KEYCHAIN=1 (e.g. in tests), only check the explicitly-set
-  # CLAUDE_CONFIG_DIR — skip hardcoded fallback paths that may hold real credentials.
   if [ -z "$OAUTH_TOKEN" ]; then
     if [ "${VBW_SKIP_KEYCHAIN:-0}" = "1" ]; then
       _p3_dirs=("${CLAUDE_CONFIG_DIR:-}")
@@ -783,8 +658,6 @@ if ! cache_fresh "$SLOW_CF" "$_SLOW_TTL"; then
     done
   fi
 
-  # Priority 4: detect auth method via claude CLI (distinguishes OAuth vs API key)
-  # Skip if VBW_SKIP_AUTH_CLI=1 (e.g. in tests on dev machines with real auth)
   if [ -z "$OAUTH_TOKEN" ] && [ "${VBW_SKIP_AUTH_CLI:-0}" != "1" ]; then
     AUTH_STATUS=$(CLAUDECODE="" claude auth status --json 2>/dev/null) || AUTH_STATUS=""
     if [ -n "$AUTH_STATUS" ]; then
@@ -793,7 +666,6 @@ if ! cache_fresh "$SLOW_CF" "$_SLOW_TTL"; then
     fi
   fi
 
-  # Respect CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC — skip ALL outbound requests (#249)
   _resolve_notraffic
   [ -n "$_NOTRAFFIC_ACTIVE" ] && FETCH_OK="notraffic"
 
@@ -867,7 +739,6 @@ if [ -O "$SLOW_CF" ]; then
   IFS='|' read -r FIVE_PCT FIVE_EPOCH WEEK_PCT WEEK_EPOCH SONNET_PCT \
                   EXTRA_ENABLED EXTRA_PCT EXTRA_USED_C EXTRA_LIMIT_C \
                   FETCH_OK UPDATE_AVAIL AUTH_METHOD AUTH_CLASS HIDE_LIMITS HIDE_LIMITS_API < "$SLOW_CF"
-  # Backward compatibility: older slow-cache entries had no AUTH_CLASS field.
   if [ "$AUTH_CLASS" = "true" ] || [ "$AUTH_CLASS" = "false" ]; then
     HIDE_LIMITS_API="$HIDE_LIMITS"
     HIDE_LIMITS="$AUTH_CLASS"
@@ -877,7 +748,6 @@ if [ -O "$SLOW_CF" ]; then
   AUTH_CLASS="${AUTH_CLASS:-api_key}"
 fi
 
-# --- Cost cache: delta attribution per render ---
 COST_CF="${_CACHE}-cost"
 LEDGER_FILE="$VBW_PLANNING_DIR/.cost-ledger.json"
 PREV_COST=""
@@ -917,7 +787,6 @@ else
 fi
 unset _COST_LOCK_DIR _LEDGER_JSON
 
-# --- Usage rendering ---
 USAGE_LINE=""
 if [ "$FETCH_OK" = "ok" ]; then
   countdown() {
@@ -956,7 +825,7 @@ if [ "$FETCH_OK" = "ok" ]; then
 elif [ "$FETCH_OK" = "auth" ]; then
   USAGE_LINE="${D}Limits: auth expired (run /login)${X}"
 elif [ "$FETCH_OK" = "ratelimited" ]; then
-  USAGE_LINE="${D}Limits: rate limited (retry in 5m — re-login if persistent)${X}"
+  USAGE_LINE="${D}Limits: rate limited (retry in 5m, re-login if persistent)${X}"
 elif [ "$FETCH_OK" = "fail" ]; then
   USAGE_LINE="${D}Limits: fetch failed (retry in 5m)${X}"
 elif [ "$FETCH_OK" = "notraffic" ]; then
@@ -969,14 +838,12 @@ else
   USAGE_LINE="${D}Limits: unavailable${X}"
 fi
 
-# --- Hide-limits suppression ---
 if [ "$HIDE_LIMITS" = "true" ]; then
   USAGE_LINE=""
 elif [ "$HIDE_LIMITS_API" = "true" ] && [ "${AUTH_CLASS:-api_key}" = "api_key" ]; then
   USAGE_LINE=""
 fi
 
-# --- GitHub link (OSC 8 clickable) ---
 GH_LINK=""
 REPO_LABEL=""
 if [ -n "$GH_URL" ]; then
@@ -989,7 +856,6 @@ if [ -n "$GH_URL" ]; then
     GH_LINK="\033]8;;${GH_URL}\a${GH_NAME}\033]8;;\a"
   fi
 else
-  # No remote — use directory name as repo label
   REPO_LABEL=$(basename "$_REPO_ROOT")
 fi
 

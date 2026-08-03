@@ -1,16 +1,8 @@
 #!/bin/bash
 set -u
-# agent-health.sh — Track VBW agent health and recover from failures
-#
-# Usage:
-#   agent-health.sh start     # SubagentStart hook: Create health file
-#   agent-health.sh idle      # TeammateIdle hook: Check liveness, increment idle count
-#   agent-health.sh stop      # SubagentStop hook: Clean up health file
-#   agent-health.sh cleanup   # Stop hook: Remove all health tracking
 
 PLANNING_DIR="${VBW_PLANNING_DIR:-.vbw-planning}"
 HEALTH_DIR="$PLANNING_DIR/.agent-health"
-# shellcheck source=resolve-claude-dir.sh
 . "$(dirname "$0")/resolve-claude-dir.sh" 2>/dev/null || true
 
 normalize_agent_key() {
@@ -132,10 +124,6 @@ refresh_health_pid_from_payload() {
   printf '%s' "$payload_pid"
 }
 
-# Derive a unique agent key from hook JSON.
-# Preference: agent_id > teammate_name > name > task_id > agent_name > agentName > agent_type.
-# Role preference: agent_type > agent_name > agentName > name > teammate_name.
-# Also extracts a normalized role for metadata.
 extract_agent_key_and_role() {
   local input="$1"
   local key="" role="" native_agent_type legacy_role_source role_source="" team_name="" team_scoped_legacy=0
@@ -176,8 +164,6 @@ extract_agent_key_and_role() {
     return 0
   fi
 
-  # Extract unique key: prefer native agent_id (e.g. "dev-01"), then fall
-  # back through legacy fields used by older Claude Code runtimes.
   key=$(echo "$input" | jq -r '.agent_id // ""' 2>/dev/null)
   if [ -z "$key" ]; then
     key=$(echo "$input" | jq -r '.teammate_name // ""' 2>/dev/null)
@@ -198,13 +184,11 @@ extract_agent_key_and_role() {
     key=$(echo "$input" | jq -r '.agent_type // ""' 2>/dev/null)
   fi
 
-  # Normalize key for use as a stable health-file name.
   key=$(normalize_agent_key "$key")
   if [ "$team_scoped_legacy" -eq 1 ] && [ -n "$team_name" ] && [ -n "$key" ]; then
     key="${team_name}__${key}"
   fi
 
-  # Extract role separately (for metadata/reporting and orphan recovery).
   if role=$(normalize_agent_role "$role_source"); then
     :
   else
@@ -224,15 +208,11 @@ orphan_recovery() {
   local advisory=""
   local task_file task_owner task_status task_id health_file live_key live_role live_pid live_team_name team_dir
 
-  # Find team directory (assumes single team for now)
-  # If multiple teams exist, we'll scan all of them
   if [ ! -d "$tasks_dir" ]; then
-    echo "AGENT HEALTH: Orphan recovery — no tasks directory found"
+    echo "AGENT HEALTH: Orphan recovery, no tasks directory found"
     return
   fi
 
-  # Role-owned tasks are shared across same-role teammates. If another live
-  # teammate with the same role still exists, do not clear ownership.
   if [ -d "$HEALTH_DIR" ] && [ -n "$role" ]; then
     for health_file in "$HEALTH_DIR"/*.json; do
       [ ! -f "$health_file" ] && continue
@@ -248,12 +228,12 @@ orphan_recovery() {
       fi
 
       if [ -z "$live_pid" ]; then
-        echo "AGENT HEALTH: Orphan recovery — agent $role PID $pid is dead, but another same-role teammate is still tracked${team_name:+ for team $team_name}; leaving role-owned tasks unchanged"
+        echo "AGENT HEALTH: Orphan recovery, agent $role PID $pid is dead, but another same-role teammate is still tracked${team_name:+ for team $team_name}; leaving role-owned tasks unchanged"
         return
       fi
 
       if [ -n "$live_pid" ] && kill -0 "$live_pid" 2>/dev/null; then
-        echo "AGENT HEALTH: Orphan recovery — agent $role PID $pid is dead, but another live teammate with the same role is still active; leaving role-owned tasks unchanged"
+        echo "AGENT HEALTH: Orphan recovery, agent $role PID $pid is dead, but another live teammate with the same role is still active; leaving role-owned tasks unchanged"
         return
       fi
     done
@@ -265,30 +245,25 @@ orphan_recovery() {
     set -- "$tasks_dir"/*
   fi
 
-  # Scan the matching team directory when known, otherwise all teams.
   for team_dir in "$@"; do
     [ ! -d "$team_dir" ] && continue
 
-    # Scan task JSON files
     for task_file in "$team_dir"/*.json; do
       [ ! -f "$task_file" ] && continue
 
-      # Extract task metadata
       task_owner=$(jq -r '.owner // ""' "$task_file" 2>/dev/null)
       task_status=$(jq -r '.status // ""' "$task_file" 2>/dev/null)
       task_id=$(jq -r '.id // ""' "$task_file" 2>/dev/null)
 
-      # Check if this task is owned by the dead agent and is in_progress
       if [ "$task_owner" = "$role" ] && [ "$task_status" = "in_progress" ]; then
-        # Clear owner field
         jq '.owner = ""' "$task_file" > "${task_file}.tmp" && mv "${task_file}.tmp" "$task_file"
-        advisory="AGENT HEALTH: Orphan recovery — cleared ownership of task $task_id (owner $role PID $pid is dead)"
+        advisory="AGENT HEALTH: Orphan recovery, cleared ownership of task $task_id (owner $role PID $pid is dead)"
       fi
     done
   done
 
   if [ -z "$advisory" ]; then
-    advisory="AGENT HEALTH: Orphan recovery — agent $role PID $pid is dead (no orphaned tasks found)"
+    advisory="AGENT HEALTH: Orphan recovery, agent $role PID $pid is dead (no orphaned tasks found)"
   fi
 
   echo "$advisory"
@@ -308,28 +283,22 @@ cmd_start() {
   local input pid key role team_name key_role now
   input=$(cat)
 
-  # Extract PID
   pid=$(extract_payload_pid "$input")
 
-  # Extract unique key and normalized role
   key_role=$(extract_agent_key_and_role "$input")
   key="${key_role%%|*}"
   role_and_team="${key_role#*|}"
   role="${role_and_team%%|*}"
   team_name="${role_and_team#*|}"
 
-  # Skip if no agent identity extracted.
   if [ -z "$key" ]; then
     exit 0
   fi
 
-  # Create health directory
   mkdir -p "$HEALTH_DIR"
 
-  # Generate ISO8601 timestamp
   now=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
-  # Write health file keyed by unique identity, not role
   jq -n \
     --arg pid "$pid" \
     --arg key "$key" \
@@ -352,7 +321,6 @@ cmd_idle() {
   local input key role team_name key_role health_file pid idle_count now advisory recovery_role role_and_team
   input=$(cat)
 
-  # Extract unique key and normalized role
   key_role=$(extract_agent_key_and_role "$input")
   key="${key_role%%|*}"
   role_and_team="${key_role#*|}"
@@ -365,7 +333,6 @@ cmd_idle() {
 
   health_file="$HEALTH_DIR/${key}.json"
 
-  # Bootstrap on idle if no health file exists (SubagentStart may not have fired)
   if [ ! -f "$health_file" ]; then
     mkdir -p "$HEALTH_DIR"
     pid=$(extract_payload_pid "$input")
@@ -390,15 +357,12 @@ cmd_idle() {
 
   pid=$(refresh_health_pid_from_payload "$health_file" "$input") || pid=""
 
-  # Load health data
   if [ -z "$pid" ]; then
     pid=$(jq -r '.pid // ""' "$health_file" 2>/dev/null)
   fi
   idle_count=$(jq -r '.idle_count // 0' "$health_file" 2>/dev/null)
 
-  # Check PID liveness
   if [ -n "$pid" ] && ! kill -0 "$pid" 2>/dev/null; then
-    # PID is dead — call orphan recovery
     recovery_role="$role"
     [ -z "$recovery_role" ] && recovery_role="$key"
     advisory=$(orphan_recovery "$recovery_role" "$pid" "$key" "$team_name")
@@ -414,22 +378,18 @@ cmd_idle() {
     exit 0
   fi
 
-  # Increment idle count
   idle_count=$((idle_count + 1))
   now=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
-  # Update health file
   jq --arg ts "$now" --argjson count "$idle_count" \
     '.last_event_at = $ts | .last_event = "idle" | .idle_count = $count' \
     "$health_file" > "${health_file}.tmp" && mv "${health_file}.tmp" "$health_file"
 
-  # Check for stuck agent (idle_count >= 3)
   advisory=""
   if [ "$idle_count" -ge 3 ]; then
-    advisory="AGENT HEALTH: Agent $key (role=$role) appears stuck (idle_count=$idle_count). Same teammate has gone idle repeatedly — orchestrator should send one recovery nudge. If next idle repeats, consider terminating and respawning from last safe point, or stop and surface restart guidance to the user."
+    advisory="AGENT HEALTH: Agent $key (role=$role) appears stuck (idle_count=$idle_count). Same teammate has gone idle repeatedly, orchestrator should send one recovery nudge. If next idle repeats, consider terminating and respawning from last safe point, or stop and surface restart guidance to the user."
   fi
 
-  # Output hook response
   jq -n \
     --arg event "TeammateIdle" \
     --arg context "$advisory" \
@@ -445,7 +405,6 @@ cmd_stop() {
   local input key role team_name key_role health_file pid advisory recovery_role role_and_team
   input=$(cat)
 
-  # Extract unique key and normalized role
   key_role=$(extract_agent_key_and_role "$input")
   key="${key_role%%|*}"
   role_and_team="${key_role#*|}"
@@ -460,20 +419,17 @@ cmd_stop() {
   advisory=""
 
   if [ -f "$health_file" ]; then
-    # Load PID and check liveness
     pid=$(refresh_health_pid_from_payload "$health_file" "$input") || pid=""
     if [ -z "$pid" ]; then
       pid=$(jq -r '.pid // ""' "$health_file" 2>/dev/null)
     fi
 
     if [ -n "$pid" ] && ! kill -0 "$pid" 2>/dev/null; then
-      # PID is dead — call orphan recovery
       recovery_role="$role"
       [ -z "$recovery_role" ] && recovery_role="$key"
       advisory=$(orphan_recovery "$recovery_role" "$pid" "$key" "$team_name")
     fi
 
-    # Remove health file
     rm -f "$health_file"
   fi
 
@@ -481,7 +437,6 @@ cmd_stop() {
 }
 
 cmd_cleanup() {
-  # Remove entire health tracking directory
   if [ -d "$HEALTH_DIR" ]; then
     rm -rf "$HEALTH_DIR"
   fi
