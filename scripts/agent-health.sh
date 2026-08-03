@@ -53,39 +53,47 @@ extract_payload_pid() {
   local pid=""
 
   pid=$(echo "$input" | jq -r '.pid // ""' 2>/dev/null)
-  if echo "$pid" | grep -Eq '^[0-9]+$'; then
+  if echo "$pid" | grep -Eq '^[1-9][0-9]*$'; then
     printf '%s' "$pid"
   fi
 }
 
+process_start_identity() {
+  local pid="$1"
+  ps -o lstart= -p "$pid" 2>/dev/null | awk '{$1=$1; print}'
+}
+
+extract_payload_artifact_path() {
+  local input="$1"
+  echo "$input" | jq -r '(.artifact_path // .output_path // .artifact // "")' 2>/dev/null
+}
+
+update_health_pid_record() {
+  local health_file="$1" pid="$2" team_name="$3" identity="$4"
+  jq \
+    --arg pid "$pid" \
+    --arg team_name "$team_name" \
+    --arg identity "$identity" \
+    'if $pid != "" then .pid = $pid else . end
+     | if $identity != "" then .pid_identity = $identity else . end
+     | if $team_name != "" then .team_name = $team_name else . end' \
+    "$health_file" > "${health_file}.tmp" && mv "${health_file}.tmp" "$health_file"
+}
+
 refresh_health_pid_from_payload() {
-  local health_file="$1"
-  local input="$2"
-  local payload_pid=""
-  local current_pid=""
-  local payload_team_name=""
-
-  [ ! -f "$health_file" ] && return 1
-
+  local health_file="$1" input="$2" payload_pid payload_team_name payload_identity
+  [ -f "$health_file" ] || return 1
   payload_pid=$(extract_payload_pid "$input")
-  payload_team_name=$(echo "$input" | jq -r '.team_name // ""' 2>/dev/null)
-  payload_team_name=$(normalize_team_name "$payload_team_name")
-
+  payload_team_name=$(normalize_team_name "$(echo "$input" | jq -r '.team_name // ""' 2>/dev/null)")
+  payload_identity=""
+  [ -n "$payload_pid" ] && payload_identity=$(process_start_identity "$payload_pid")
   if [ -n "$payload_pid" ] || [ -n "$payload_team_name" ]; then
-    jq \
-      --arg pid "$payload_pid" \
-      --arg team_name "$payload_team_name" \
-      'if $pid != "" then .pid = $pid else . end
-       | if $team_name != "" then .team_name = $team_name else . end' \
-      "$health_file" > "${health_file}.tmp" && mv "${health_file}.tmp" "$health_file"
+    update_health_pid_record "$health_file" "$payload_pid" "$payload_team_name" "$payload_identity"
   fi
-
-  [ -z "$payload_pid" ] && return 1
-
-  current_pid=$(jq -r '.pid // ""' "$health_file" 2>/dev/null)
-  [ "$current_pid" = "$payload_pid" ] || true
+  [ -n "$payload_pid" ] || return 1
   printf '%s' "$payload_pid"
 }
+
 
 resolve_health_role_context() {
   local input="$1" native legacy team role_source="" scoped=0
@@ -224,44 +232,71 @@ prepare_health_file() {
 }
 
 write_health_record() {
-  local file="$1" pid="$2" key="$3" role="$4" team_name="$5" event="$6" now epoch
+  local file="$1" pid="$2" key="$3" role="$4" team_name="$5" event="$6" artifact_path="${7:-}" now epoch pid_identity
   now=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
   epoch=$(date +%s)
+  pid_identity=""
+  [ -n "$pid" ] && pid_identity=$(process_start_identity "$pid")
   if [ -f "$file" ]; then
-    jq --arg pid "$pid" --arg key "$key" --arg role "$role" --arg team "$team_name" --arg ts "$now" --arg event "$event" --argjson epoch "$epoch" \
-      '.pid=$pid | .key=$key | .role=$role | .team_name=$team | .started_at=$ts | .started_epoch=$epoch | .last_event_at=$ts | .last_event=$event | .idle_count=0 | .nudge_sent=false | .respawn_cycle_done=false' \
+    jq --arg pid "$pid" --arg key "$key" --arg role "$role" --arg team "$team_name" --arg ts "$now" --arg event "$event" --arg artifact "$artifact_path" --arg identity "$pid_identity" --argjson epoch "$epoch" \
+      '.pid=$pid | .key=$key | .role=$role | .team_name=$team | .started_at=$ts | .started_epoch=$epoch | .last_event_at=$ts | .last_event=$event | .idle_count=0 | .nudge_sent=false | .respawn_cycle_done=false
+       | if $artifact != "" then .artifact_path=$artifact else . end
+       | if $identity != "" then .pid_identity=$identity else . end' \
       "$file" > "${file}.tmp" && mv "${file}.tmp" "$file"
   else
-    jq -n --arg pid "$pid" --arg key "$key" --arg role "$role" --arg team "$team_name" --arg ts "$now" --arg event "$event" --argjson epoch "$epoch" \
-      '{pid:$pid,key:$key,role:$role,team_name:$team,started_at:$ts,started_epoch:$epoch,last_event_at:$ts,last_event:$event,idle_count:0,nudge_sent:false,respawn_cycle_done:false}' > "$file"
+    jq -n --arg pid "$pid" --arg key "$key" --arg role "$role" --arg team "$team_name" --arg ts "$now" --arg event "$event" --arg artifact "$artifact_path" --arg identity "$pid_identity" --argjson epoch "$epoch" \
+      '{pid:$pid,key:$key,role:$role,team_name:$team,started_at:$ts,started_epoch:$epoch,last_event_at:$ts,last_event:$event,idle_count:0,nudge_sent:false,respawn_cycle_done:false,artifact_path:$artifact,pid_identity:$identity}' > "$file"
   fi
 }
 
-artifact_suffix_for_role() {
-  case "$1" in
-    lead) printf 'PLAN.md' ;;
-    dev) printf 'SUMMARY.md' ;;
-    scout) printf 'RESEARCH.md' ;;
-    qa) printf 'VERIFICATION.md' ;;
-    *) return 1 ;;
-  esac
+pid_identity_matches() {
+  local file="$1" pid="$2" recorded current
+  case "$pid" in ''|0|*[!0-9]*) return 1 ;; esac
+  recorded=$(jq -r '.pid_identity // ""' "$file" 2>/dev/null)
+  [ -n "$recorded" ] || return 1
+  current=$(process_start_identity "$pid")
+  [ -n "$current" ] && [ "$current" = "$recorded" ]
+}
+
+normalize_artifact_path() {
+  local path="$1" planning_abs relative artifact_dir artifact_base
+  planning_abs=$(cd "$PLANNING_DIR" 2>/dev/null && pwd -P) || return 1
+  if [[ "$path" = /* ]]; then
+    artifact_dir=$(cd "$(dirname "$path")" 2>/dev/null && pwd -P) || return 1
+    artifact_base=$(basename "$path")
+    path="$artifact_dir/$artifact_base"
+  fi
+  relative="${path#"$planning_abs"/}"
+  if [ "$relative" != "$path" ]; then
+    printf '%s' "$path"
+  elif [[ "$path" = /* ]]; then
+    return 1
+  else
+    printf '%s/%s' "$planning_abs" "${path#./}"
+  fi
 }
 
 artifact_delivered() {
-  local file="$1" role="$2" suffix epoch artifact mtime
+  local file="$1" role="$2" suffix epoch artifact mtime artifact_path
   suffix=$(artifact_suffix_for_role "$role") || return 1
   epoch=$(jq -r '.started_epoch // 0' "$file" 2>/dev/null)
   [ "$epoch" -gt 0 ] || return 1
-  [ -d "$PLANNING_DIR/phases" ] || return 1
-  while IFS= read -r artifact; do
-    mtime=$(stat -f %m "$artifact" 2>/dev/null || stat -c %Y "$artifact" 2>/dev/null || echo 0)
-    [ "$mtime" -ge "$epoch" ] && return 0
-  done < <(find "$PLANNING_DIR/phases" -type f -name "*-$suffix" -print 2>/dev/null)
-  return 1
+  artifact_path=$(jq -r '.artifact_path // ""' "$file" 2>/dev/null)
+  [ -n "$artifact_path" ] || return 1
+  artifact=$(normalize_artifact_path "$artifact_path") || return 1
+  case "$artifact" in *-"$suffix") ;; *) return 1 ;; esac
+  [ -f "$artifact" ] || return 1
+  if [ "$(uname -s)" = "Darwin" ]; then
+    mtime=$(stat -f %m "$artifact" 2>/dev/null || echo 0)
+  else
+    mtime=$(stat -c %Y "$artifact" 2>/dev/null || echo 0)
+  fi
+  [ "$mtime" -ge "$epoch" ]
 }
 
 can_terminate_pid() {
   local target="$1" current="$$" parent
+  case "$target" in ''|0|*[!0-9]*) return 1 ;; esac
   while _vbw_active_agent_valid_pid "$current" && [ "$current" -gt 1 ]; do
     [ "$current" = "$target" ] && return 1
     parent=$(ps -o ppid= -p "$current" 2>/dev/null | tr -d ' ')
@@ -274,6 +309,7 @@ can_terminate_pid() {
 terminate_health_agent() {
   local file="$1" pid="$2" key="$3" reason="$4" grace
   can_terminate_pid "$pid" || return 1
+  pid_identity_matches "$file" "$pid" || return 1
   kill -TERM "$pid" 2>/dev/null || true
   grace="${VBW_AGENT_STOP_GRACE_SECONDS:-2}"
   case "$grace" in ''|*[!0-9]*) grace=2 ;; esac
@@ -303,15 +339,27 @@ reset_idle_streak_if_active() {
 }
 
 cmd_start() {
-  local input pid key role team_name key_role role_and_team health_file
+  local input pid key role team_name key_role role_and_team health_file artifact_path
   input=$(cat)
   pid=$(extract_payload_pid "$input")
+  artifact_path=$(extract_payload_artifact_path "$input")
   key_role=$(extract_agent_key_and_role "$input")
   key="${key_role%%|*}"; role_and_team="${key_role#*|}"
   role="${role_and_team%%|*}"; team_name="${role_and_team#*|}"
   [ -n "$key" ] || return 0
   health_file=$(prepare_health_file "$input" "$key" "$role" "$pid")
-  write_health_record "$health_file" "$pid" "$key" "$role" "$team_name" start
+  write_health_record "$health_file" "$pid" "$key" "$role" "$team_name" start "$artifact_path"
+}
+
+
+artifact_suffix_for_role() {
+  case "$1" in
+    lead) printf 'PLAN.md' ;;
+    dev) printf 'SUMMARY.md' ;;
+    scout) printf 'RESEARCH.md' ;;
+    qa) printf 'VERIFICATION.md' ;;
+    *) return 1 ;;
+  esac
 }
 
 idle_context_for() {
@@ -336,15 +384,16 @@ idle_context_for() {
 }
 
 cmd_idle() {
-  local input key role team_name key_role role_and_team health_file pid advisory recovery_role
+  local input key role team_name key_role role_and_team health_file pid advisory recovery_role artifact_path
   input=$(cat)
+  artifact_path=$(extract_payload_artifact_path "$input")
   key_role=$(extract_agent_key_and_role "$input")
   key="${key_role%%|*}"; role_and_team="${key_role#*|}"
   role="${role_and_team%%|*}"; team_name="${role_and_team#*|}"
   [ -n "$key" ] || return 0
   pid=$(extract_payload_pid "$input")
   health_file=$(prepare_health_file "$input" "$key" "$role" "$pid")
-  [ -f "$health_file" ] || write_health_record "$health_file" "$pid" "$key" "$role" "$team_name" idle_bootstrap
+  [ -f "$health_file" ] || write_health_record "$health_file" "$pid" "$key" "$role" "$team_name" idle_bootstrap "$artifact_path"
   [ -n "$HEALTH_DIR" ] || HEALTH_DIR=$(dirname "$health_file")
   pid=$(refresh_health_pid_from_payload "$health_file" "$input") || pid=""
   [ -n "$pid" ] || pid=$(jq -r '.pid // ""' "$health_file" 2>/dev/null)
@@ -392,7 +441,9 @@ cmd_stop() {
 }
 
 cmd_cleanup() {
-  if [ -n "$HEALTH_DIR" ]; then rm -rf "$HEALTH_DIR"; else vbw_active_agent_remove_current_session "$PLANNING_DIR" ""; fi
+  local input
+  input=$(cat)
+  if [ -n "$HEALTH_DIR" ]; then rm -rf "$HEALTH_DIR"; else vbw_active_agent_remove_current_session "$PLANNING_DIR" "$input"; fi
   exit 0
 }
 
