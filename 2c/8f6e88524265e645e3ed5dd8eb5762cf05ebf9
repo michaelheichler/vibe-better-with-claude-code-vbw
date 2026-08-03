@@ -1,0 +1,35 @@
+templates/REQUIREMENTS.md
+  s_6ef0e951f7d046::t_353d7a2a54da69 37-38
+templates/MILESTONE-CONTEXT.md
+  s_6ef0e951f7d046::t_353d7a2a54da69 1,8,27
+templates/RESEARCH.md
+  s_6ef0e951f7d046::t_353d7a2a54da69 9
+templates/DEBUG-SESSION.md
+  s_6ef0e951f7d046::t_353d7a2a54da69 34
+templates/CONTEXT.md
+  s_6ef0e951f7d046::t_353d7a2a54da69 1,32
+templates/REMEDIATION-PLAN.md
+  s_6ef0e951f7d046::t_353d7a2a54da69 31
+templates/REMEDIATION-RESEARCH.md
+  s_6ef0e951f7d046::t_353d7a2a54da69 10,14,18,22,26
+templates/UAT.md
+  s_6ef0e951f7d046::t_353d7a2a54da69 18-20,23-24,61
+templates/REMEDIATION-SUMMARY.md
+  s_6ef0e951f7d046::t_353d7a2a54da69 32
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "2c8f6e88524265e645e3ed5dd8eb5762cf05ebf9",
+  "prompts": {},
+  "sessions": {
+    "s_6ef0e951f7d046": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "32b96d9e-2f7c-4f57-88c2-54535491e857",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
