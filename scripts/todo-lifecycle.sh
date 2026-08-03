@@ -1,24 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# todo-lifecycle.sh — shared deterministic todo snapshot, validation, and mutation helper.
-#
-# Commands:
-#   list-with-snapshot [filter]   Run list-todos.sh, persist last-view snapshot, return original JSON
-#   snapshot-save                 Read list-todos JSON from stdin and persist last-view snapshot
-#   snapshot-show                 Print persisted snapshot JSON
-#   snapshot-select <N> [--require-unfiltered]
-#                                 Resolve N against persisted snapshot
-#   validate-item                 Validate selected item JSON from stdin against live STATE.md
-#   detail-warning <hash> [state-path]
-#                                 Append detail-load warning using activity-heading preservation rules
-#   pickup <command-label> <detail-status> <detail-cleanup-policy>
-#                                 Mutate STATE.md for a claimed todo (reads selected item JSON from stdin)
-#   remove <detail-status> <detail-cleanup-policy>
-#                                 Mutate STATE.md for a removed todo (reads selected item JSON from stdin)
-#
-# detail-status: ok | not_found | error | none
-# detail-cleanup-policy: safe | keep
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PLANNING_DIR="${VBW_PLANNING_DIR:-.vbw-planning}"
@@ -29,10 +11,8 @@ SNAPSHOT_PATH="/tmp/.vbw-last-list-view-${SESSION_KEY}.json"
 DETAILS_PATH="${PLANNING_DIR}/todo-details.json"
 CMD="${1:-}"
 shift || true
-# shellcheck disable=SC2034  # consumed by sourced todo-item-metadata helpers
 DETAILS_CACHE_JSON=""
 
-# shellcheck source=scripts/lib/todo-item-metadata.sh
 . "$SCRIPT_DIR/lib/todo-item-metadata.sh"
 
 json_out() {
@@ -201,19 +181,19 @@ list_with_snapshot() {
 
 snapshot_show() {
   if [ ! -f "$SNAPSHOT_PATH" ]; then
-    error_json "snapshot_missing" "Todo snapshot missing — rerun /vbw:list-todos first."
+    error_json "snapshot_missing" "Todo snapshot missing. Rerun /vbw:list-todos first."
     return 0
   fi
 
   local json_input
   json_input=$(cat "$SNAPSHOT_PATH" 2>/dev/null || true)
   if ! printf '%s' "$json_input" | jq empty >/dev/null 2>&1; then
-    error_json "snapshot_invalid" "Todo snapshot is malformed — rerun /vbw:list-todos first."
+    error_json "snapshot_invalid" "Todo snapshot is malformed. Rerun /vbw:list-todos first."
     return 0
   fi
 
   if ! snapshot_validate_schema "$json_input"; then
-    error_json "snapshot_invalid" "Todo snapshot is malformed — rerun /vbw:list-todos first."
+    error_json "snapshot_invalid" "Todo snapshot is malformed. Rerun /vbw:list-todos first."
     return 0
   fi
 
@@ -295,7 +275,7 @@ snapshot_select() {
   done
 
   if [ -z "$selection" ] || ! [[ "$selection" =~ ^[0-9]+$ ]]; then
-    error_json "invalid_selection" "Invalid selection — choose a numbered todo from /vbw:list-todos."
+    error_json "invalid_selection" "Invalid selection. Choose a numbered todo from /vbw:list-todos."
     return 0
   fi
 
@@ -311,7 +291,7 @@ snapshot_select() {
   local filter
   filter=$(printf '%s' "$snapshot" | jq -r '.filter // empty')
   if [ "$require_unfiltered" = "true" ] && [ -n "$filter" ]; then
-    error_json "snapshot_filtered" "Current list view is filtered — rerun unfiltered /vbw:list-todos before using this numbered todo command."
+    error_json "snapshot_filtered" "Current list view is filtered. Rerun unfiltered /vbw:list-todos before using this numbered todo command."
     return 0
   fi
 
@@ -319,7 +299,7 @@ snapshot_select() {
   count=$(printf '%s' "$snapshot" | jq '.items | length')
   selection=$((10#$selection))
   if [ "$selection" -lt 1 ] || [ "$selection" -gt "$count" ]; then
-    error_json "invalid_selection" "Invalid selection — only items 1-${count} exist."
+    error_json "invalid_selection" "Invalid selection. Only items 1-${count} exist."
     return 0
   fi
 
@@ -513,7 +493,9 @@ normalize_phase_dir() {
     return
   fi
   case "$phase_dir" in
-    /*) printf '%s\n' "$phase_dir" ;;
+    /*)
+      printf '%s\n' "$phase_dir"
+      ;;
     *)
       if [ -d "$phase_dir" ]; then
         printf '%s\n' "$phase_dir"
@@ -541,7 +523,7 @@ lookup_legacy_known_issue_signature() {
   disposition="unresolved"
   if printf '%s' "$issue_text" | grep -q 'accepted as process-exception for this phase'; then
     disposition="accepted-process-exception"
-    issue_text=$(printf '%s' "$issue_text" | sed 's/ — accepted as process-exception for this phase//')
+    issue_text="${issue_text// $'\xE2\x80\x94' accepted as process-exception for this phase/}"
   fi
 
   source_path=$(printf '%s' "$issue_text" | sed -n 's/.*(see \([^)]*\)).*/\1/p')
