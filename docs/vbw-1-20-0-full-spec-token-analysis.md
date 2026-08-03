@@ -1,17 +1,26 @@
 # Full Spec Compliance: Token & Infrastructure Analysis
 
+
 **Date:** 2026-02-13
+
+
 **Version:** v1.20.0
+
 **Baseline:** v1.10.7 (post-context-compiler)
-**Scope:** 258 commits across 6 milestones — from context compiler to full V2/V3 spec, test infrastructure, vibe consolidation, and comprehensive code review sweep
+
+
+**Scope:** 258 commits across 6 milestones, from context compiler to full V2/V3 spec, test infrastructure, vibe consolidation, and comprehensive code review sweep
+
 **Method:** 258 commits, 63 scripts, 36 test files (4,767 lines), 324 bats tests, 188/188 QA checks
+
+
 **Verdict:** Per-request overhead **reduced 7%** despite massive infrastructure growth. Shell-only architecture ensures 40 new scripts add **zero model tokens**. Coordination overhead vs stock teams: **~85% reduction** (maintained from v1.10.7 despite 3.3x codebase growth).
 
 ---
 
 ## Executive Summary
 
-v1.10.7 optimized *what gets loaded* — routing context to the right agent. v1.20.0 builds *the entire execution infrastructure* — V2 protocol enforcement, V3 feature flags, test harness, vibe consolidation, and a comprehensive hardening sweep — while maintaining the token efficiency gains from prior milestones.
+v1.10.7 optimized *what gets loaded*, routing context to the right agent. v1.20.0 builds *the entire execution infrastructure*. It adds V2 protocol enforcement, V3 feature flags, a test harness, vibe consolidation, and a comprehensive hardening sweep. The release maintains the token efficiency gains from prior milestones.
 
 The key design decision: **every new capability is shell-only**. The 40 new scripts (5,337 lines) execute as bash subprocesses, consuming zero model tokens. The V2/V3 infrastructure (contracts, gates, locks, events, metrics, budgets) runs entirely in hook-triggered shell scripts. The model only sees the results when they're injected into compiled context.
 
@@ -99,7 +108,7 @@ fix.md               51 lines    (+4)
 qa.md                77 lines    (+7)
 research.md          51 lines    (+7)
 status.md            97 lines    (unchanged)
-vibe.md             343 lines    (NEW — replaces implement+plan+discuss+assumptions)
+vibe.md             343 lines    (NEW, replaces implement+plan+discuss+assumptions)
 CLAUDE.md            77 lines    (+10)
                     ─────────
 Total:              773 lines  (~11,595 tokens)
@@ -134,7 +143,7 @@ vs v1.10.7:         -61 lines  (~-915 tokens, -7.3%)
 | progress.md | 18 | vibe.md progress mode |
 | velocity.md | 15 | vibe.md velocity mode |
 
-The routing logic (modes, flags, NL parsing) lives in vibe.md's first ~100 lines. Each mode section is 15-40 lines of scoped instructions. The key architectural decision: **one file = one truth** — the model sees all modes at once but only executes one per invocation.
+The routing logic (modes, flags, NL parsing) lives in vibe.md's first ~100 lines. Each mode section is 15-40 lines of scoped instructions. The key architectural decision: **one file = one truth**, the model sees all modes at once but only executes one per invocation.
 
 ### Token Trade-off
 
@@ -170,9 +179,9 @@ once per /vbw:vibe execute invocation, not per-request.
 
 ### execute-protocol.md: The Extracted Execution Engine
 
-The biggest new file is `references/execute-protocol.md` (385 lines). This is the execution orchestration protocol — team setup, Dev/QA spawning, wave management, blocker handling, completion protocol.
+The biggest new file is `references/execute-protocol.md` (385 lines). This is the execution orchestration protocol, team setup, Dev/QA spawning, wave management, blocker handling, completion protocol.
 
-**Token impact:** This file is loaded once per `/vbw:vibe execute` invocation via a `Read` instruction in vibe.md:235. It replaces the inline execution logic that was previously embedded in implement.md (~193 lines) and plan.md (~146 lines). The extraction adds ~46 lines net but moves them from per-request loading to per-invocation loading — a significant win because most requests aren't execution requests.
+**Token impact:** This file is loaded once per `/vbw:vibe execute` invocation via a `Read` instruction in vibe.md:235. It replaces the inline execution logic that was previously embedded in implement.md (~193 lines) and plan.md (~146 lines). The extraction adds ~46 lines net but moves them from per-request loading to per-invocation loading, a significant win because most requests aren't execution requests.
 
 ---
 
@@ -184,7 +193,7 @@ The biggest new file is `references/execute-protocol.md` (385 lines). This is th
 
 ### What Happened
 
-`init.md` grew from 207 to 467 lines (+260). But init.md has `disable-model-invocation: true` — it's only loaded when the user explicitly runs `/vbw:init`. It's never in the per-request budget.
+`init.md` grew from 207 to 467 lines (+260). But init.md has `disable-model-invocation: true`, it's only loaded when the user explicitly runs `/vbw:init`. It's never in the per-request budget.
 
 10 new shell scripts were created:
 
@@ -201,7 +210,7 @@ The biggest new file is `references/execute-protocol.md` (385 lines). This is th
 | verify-vibe.sh | 242 | Verification script for vibe consolidation |
 | install-hooks.sh | 56 | Install git hooks |
 
-All are shell scripts — zero model tokens at runtime.
+All are shell scripts, zero model tokens at runtime.
 
 ---
 
@@ -253,7 +262,7 @@ All features are **opt-in** (default false) and **additive** (they add to compil
 
 ## Milestone 5: V2 Protocol Enforcement
 
-**Goal:** Formal protocol enforcement — typed messages, hard contracts, gates, two-phase completion, token budgets, role isolation.
+**Goal:** Formal protocol enforcement, typed messages, hard contracts, gates, two-phase completion, token budgets, role isolation.
 **Commits:** ~47 (6d329d9 through bbb545c)
 **Token impact:** +1,950 tokens per agent spawn (handoff schema growth). Shell enforcement: zero.
 
@@ -310,11 +319,11 @@ Each agent gained ~4 lines of role isolation rules (what paths they can write, w
 
 **Goal:** Address all 53 items from GitHub issue #4. Harden scripts, fix edge cases, add tests.
 **Commits:** ~114 (test infrastructure + bug fixes + hardening)
-**Token impact:** Mixed — mostly zero (shell fixes), some reference growth.
+**Token impact:** Mixed, mostly zero (shell fixes), some reference growth.
 
 ### Test Infrastructure (Zero Model Tokens)
 
-36 test files with 4,767 lines (324 bats tests) were added. Tests are never loaded by the model — they exist purely for CI/shellcheck validation. The `.github/workflows/ci.yml` pipeline runs shellcheck + bats on every commit.
+36 test files with 4,767 lines (324 bats tests) were added. Tests are never loaded by the model, they exist purely for CI/shellcheck validation. The `.github/workflows/ci.yml` pipeline runs shellcheck + bats on every commit.
 
 ### Code Review Fixes
 
@@ -341,7 +350,9 @@ Each agent gained ~4 lines of role isolation rules (what paths they can write, w
 | model-profiles.md | 0 | 110 | +110 | New (documentation) |
 | **Total** | **656** | **1,333** | **+677** | |
 
-Of the +677 lines: execute-protocol.md (+385) is loaded once per execution invocation (not per-request). handoff-schemas.md (+130) is loaded per agent spawn in team mode. model-profiles.md (+110) is never auto-loaded (disabled reference). effort-profiles (+52) are loaded only when effort tier is resolved.
+Of the +677 lines, execute-protocol.md (+385) is loaded once per execution invocation, not per request. handoff-schemas.md (+130) is loaded per agent spawn in team mode.
+
+model-profiles.md (+110) is never auto-loaded because it is a disabled reference. effort-profiles (+52) are loaded only when the effort tier is resolved.
 
 ---
 
@@ -409,7 +420,7 @@ Per-phase non-request        16,710       28,530      +11,820
 
 Per-phase overhead **increased** because V2/V3 adds real capabilities that require context:
 
-1. **execute-protocol.md (+5,775):** The execution engine protocol. In v1.10.7 this was split across implement.md and plan.md and loaded per-request. Now it's loaded once per execution invocation — worse per-phase, better per-session.
+1. **execute-protocol.md (+5,775):** The execution engine protocol. In v1.10.7 this was split across implement.md and plan.md and loaded per-request. Now it's loaded once per execution invocation, worse per-phase, better per-session.
 2. **handoff-schemas.md (+1,950):** Typed message contracts. The model needs to know the schemas to communicate correctly with teammates.
 3. **V3 compiled context (+555-2,595):** Research findings and delta files. More context = better decisions.
 
@@ -449,10 +460,10 @@ Total coordination/phase  97,900      38,170     24,975     14,155     22,188
 Per-request × 80 msgs   864,000     397,600    258,400    259,600    255,840
 
 Total session (1 phase)  961,900     435,770    283,375    273,755    277,828
-Reduction vs stock             —        55%        71%        72%        71%
+Reduction vs stock,        55%        71%        72%        71%
 
 Total session (5 phases) 4,809,500  2,178,850  1,416,875  1,368,775  1,289,140
-Reduction vs stock             —        55%        71%        72%        73%
+Reduction vs stock,        55%        71%        72%        73%
 ```
 
 **Note:** Per-phase spawn+context grew from v1.10.7 (10,910) to v1.20.0 (18,990) because V2/V3 adds real capabilities. But per-request overhead dropped (3,245 → 3,198), and at scale (5+ phases, 80+ messages), the per-request saving dominates.
@@ -590,9 +601,9 @@ Same methodology as v1.10.2 and v1.10.7: ~15 tokens/line for markdown. Shell scr
 
 5. **Tests don't cost tokens.** 4,767 lines of bats tests add quality assurance without touching the model's context window. CI catches regressions before they reach the model.
 
-6. **Protocol growth is a one-time cost with compounding benefits.** handoff-schemas.md grew +1,950 tokens — loaded once per agent spawn. But typed messages reduce miscommunication retries, which each cost 3,000-5,000 tokens. One prevented retry pays for ~2.5 phases of schema loading.
+6. **Protocol growth is a one-time cost with compounding benefits.** handoff-schemas.md grew +1,950 tokens, loaded once per agent spawn. But typed messages reduce miscommunication retries, which each cost 3,000-5,000 tokens. One prevented retry pays for ~2.5 phases of schema loading.
 
-7. **The codebase tripled; the model barely noticed.** 12,181 → 16,154 lines (+33%). Per-request tokens: 12,510 → 11,595 (-7.3%). The shell-only architecture ensures that infrastructure growth and model token consumption are decoupled.
+7. **The codebase tripled, the model barely noticed.** 12,181 → 16,154 lines (+33%). Per-request tokens: 12,510 → 11,595 (-7.3%). The shell-only architecture ensures that infrastructure growth and model token consumption are decoupled.
 
 ---
 
@@ -614,19 +625,19 @@ Same methodology as v1.10.2 and v1.10.7: ~15 tokens/line for markdown. Shell scr
 
 | File | v1.10.7 | v1.20.0 | Status | Change |
 |---|---|---|---|---|
-| assumptions.md | 44 (active) | — | Deleted | Absorbed into vibe.md |
+| assumptions.md | 44 (active) |, | Deleted | Absorbed into vibe.md |
 | config.md | 79 (disabled) | 345 (disabled) | Modified | +266 (model profile UI) |
 | debug.md | 65 (active) | 77 (active) | Modified | +12 |
-| discuss.md | 61 (active) | — | Deleted | Absorbed into vibe.md |
-| doctor.md | — | 72 (disabled) | New | Health check command |
+| discuss.md | 61 (active) |, | Deleted | Absorbed into vibe.md |
+| doctor.md |, | 72 (disabled) | New | Health check command |
 | fix.md | 47 (active) | 51 (active) | Modified | +4 |
 | help.md | 39 (disabled) | 73 (disabled) | Modified | +34 |
-| implement.md | 193 (active) | — | Deleted | Absorbed into vibe.md |
+| implement.md | 193 (active) |, | Deleted | Absorbed into vibe.md |
 | init.md | 207 (disabled) | 467 (disabled) | Modified | +260 (bootstrap) |
 | map.md | 116 (disabled) | 120 (disabled) | Modified | +4 |
 | pause.md | 28 (disabled) | 28 (disabled) | Unchanged | |
-| plan.md | 146 (active) | — | Deleted | Absorbed into vibe.md |
-| profile.md | — | 60 (disabled) | New | Profile switching |
+| plan.md | 146 (active) |, | Deleted | Absorbed into vibe.md |
+| profile.md |, | 60 (disabled) | New | Profile switching |
 | qa.md | 70 (active) | 77 (active) | Modified | +7 |
 | release.md | 96 (disabled) | 96 (disabled) | Modified | Auth resolution updated |
 | research.md | 44 (active) | 51 (active) | Modified | +7 |
@@ -637,7 +648,7 @@ Same methodology as v1.10.2 and v1.10.7: ~15 tokens/line for markdown. Shell scr
 | todo.md | 29 (disabled) | 29 (disabled) | Unchanged | |
 | uninstall.md | 58 (disabled) | 58 (disabled) | Unchanged | |
 | update.md | 87 (disabled) | 87 (disabled) | Unchanged | |
-| vibe.md | — | 343 (active) | New | Unified entry point |
+| vibe.md |, | 343 (active) | New | Unified entry point |
 | whats-new.md | 25 (disabled) | 25 (disabled) | Unchanged | |
 
 ### Agents

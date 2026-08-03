@@ -1,21 +1,30 @@
 # VBW v1.30.0 Token & Infrastructure Analysis
 
+
 **Date:** 2026-02-19
+
+
 **Version:** v1.30.0
+
 **Baseline:** v1.21.30
-**Scope:** Two milestones — CC Alignment v1 (44 commits, 4 phases) + Worktree Isolation (41 commits, 6 phases) = 85 total commits
+
+
+**Scope:** Two milestones, CC Alignment v1 (44 commits, 4 phases) + Worktree Isolation (41 commits, 6 phases) = 85 total commits
+
 **Method:** 85 commits, 85 scripts, 57 test files (11,298 lines), 825 bats tests
-**Verdict:** Per-request overhead **grew 12%** from v1.21.30 (CC Alignment enforcement content). Worktree Isolation added 6 scripts and 32 tests at **zero per-request cost** — all shell. Dead code removal in Phase 1 actually **reduced** total codebase by 1,665 lines vs the CC Alignment snapshot. Overall coordination overhead vs stock teams: **~73%** reduction.
+
+
+**Verdict:** Per-request overhead **grew 12%** from v1.21.30 (CC Alignment enforcement content). Worktree Isolation added 6 scripts and 32 tests at **zero per-request cost**, all shell. Dead code removal in Phase 1 actually **reduced** total codebase by 1,665 lines vs the CC Alignment snapshot. Overall coordination overhead vs stock teams: **~73%** reduction.
 
 ---
 
 ## Executive Summary
 
-v1.21.30 optimized loading patterns — moving vibe.md from active to on-demand, cutting per-request 17%. v1.30.0 ships two milestones: CC Alignment v1 (hardening agents, hooks, and commands for CC 2.1.47) and Worktree Isolation (git worktree-based per-plan Dev agent isolation).
+v1.21.30 optimized loading patterns by moving vibe.md from active to on-demand. This cut per-request overhead by 17%. v1.30.0 ships two milestones: CC Alignment v1 (hardening agents, hooks, and commands for CC 2.1.47) and Worktree Isolation (git worktree-based per-plan Dev agent isolation).
 
 The CC Alignment trade-off is deliberate: active commands grew +81 lines to encode better agent behavior, crash recovery protocols, and verification procedures. These lines improve agent output quality and reduce costly retries. Meanwhile, 20 always-true feature flags were graduated (removing dead code branches), agents gained native Task spawn restrictions and memory scoping, and 55 new BATS tests validate hook bash commands against CC's stricter classifier.
 
-Worktree Isolation added 6 worktree lifecycle scripts and integrated them into the execute protocol at zero per-request cost — all shell infrastructure. Phase 1's dead code removal (lock-lite, graduated flags) actually removed more lines than Phases 2-6 added, resulting in a net codebase reduction.
+Worktree Isolation added 6 worktree lifecycle scripts and integrated them into the execute protocol at zero per-request cost, all shell infrastructure. Phase 1's dead code removal (lock-lite, graduated flags) actually removed more lines than Phases 2-6 added, resulting in a net codebase reduction.
 
 Two milestones shipped since v1.21.30:
 
@@ -24,7 +33,7 @@ Two milestones shipped since v1.21.30:
 | CC Alignment v1 | 44 | 4 (Dead Code, Agent Hardening, Hook Enhancement, Docs) | +78 lines per-request, +29 agents (lazy) |
 | Worktree Isolation | 41 | 6 (Dead Code, Lifecycle Scripts, Agent Targeting, Integration, Protocol, Tests+Docs) | +16 reference lines (lazy), -505 script lines, -49 test lines |
 
-**The pattern evolves:** The codebase grew from 26,533 to 37,627 lines (+42%), per-request tokens grew from 9,630 to 10,800 (+12%), but this remains 7% below v1.20.0's 11,595. The CC Alignment growth buys CC 2.1.47 compatibility; the Worktree Isolation work is entirely shell-only. Dead code removal in Worktree Phase 1 actually *reduced* the codebase by 1,665 lines vs the CC Alignment snapshot. Shell infrastructure change: scripts -505 lines (net), tests -49 lines (net) — invisible to the model.
+**The pattern evolves:** The codebase grew from 26,533 to 37,627 lines (+42%), per-request tokens grew from 9,630 to 10,800 (+12%), but this remains 7% below v1.20.0's 11,595. The CC Alignment growth buys CC 2.1.47 compatibility, the Worktree Isolation work is entirely shell-only. Dead code removal in Worktree Phase 1 actually *reduced* the codebase by 1,665 lines vs the CC Alignment snapshot. Shell infrastructure change: scripts -505 lines (net), tests -49 lines (net), invisible to the model.
 
 ---
 
@@ -100,7 +109,11 @@ vs v1.20.0:         -53 lines  (~-795 tokens, -7%)
 vs v1.10.7:        -114 lines  (~-1,710 tokens, -14%)
 ```
 
-**Why it increased from v1.21.30:** CC Alignment added enforcement content to active commands. debug.md gained agent spawn restriction documentation (+14). fix.md grew from expanded commit discipline and CC 2.1.47 compatibility (+31). qa.md expanded with agent frontmatter verification procedures (+27). verify.md gained CC version requirements checks (+9). CLAUDE.md shrank slightly (-3). These additions improve agent behavior quality and reduce costly retries — the per-request growth buys better first-pass accuracy.
+**Why it increased from v1.21.30:** CC Alignment added enforcement content to active commands. debug.md gained agent spawn restriction documentation (+14). fix.md grew from expanded commit discipline and CC 2.1.47 compatibility (+31).
+
+qa.md expanded with agent frontmatter verification procedures (+27). verify.md gained CC version requirements checks (+9). CLAUDE.md shrank slightly (-3).
+
+These additions improve agent behavior quality and reduce costly retries. The per-request growth buys better first-pass accuracy.
 
 **Why it's still below v1.20.0:** The vibe.md skill extraction from v1.21.x removed 343 lines from per-request. Even with +78 lines of CC Alignment content, v1.30.0 remains 53 lines below v1.20.0's per-request overhead.
 
@@ -116,13 +129,13 @@ vs v1.10.7:        -114 lines  (~-1,710 tokens, -14%)
 
 **Token impact:** Zero per-request. Shell-only changes.
 
-Graduated 20 always-true feature flags (v2_* and v3_*), removing dead code branches from scripts. Defaulted v2_token_budgets to false. Removed plan mode compaction workaround. All changes in shell scripts and config files — zero model tokens.
+Graduated 20 always-true feature flags (v2_* and v3_*), removing dead code branches from scripts. Defaulted v2_token_budgets to false. Removed plan mode compaction workaround. All changes in shell scripts and config files, zero model tokens.
 
 ### Phase 2: Agent Frontmatter Hardening (14 commits)
 
 **Token impact:** +29 lines in agent definitions (+435 tokens per full team spawn). Zero per-request.
 
-Added Task spawn restrictions (`allowedTools` / `disallowedTools`) and native memory scoping (`memory: project` / `memory: local`) to all 7 agents. Removed restart messaging from /vbw:update. Agent definitions grew from 462 to 491 lines. This is spawn-time overhead only — loaded when a specific agent is spawned, not per-request.
+Added Task spawn restrictions (`allowedTools` / `disallowedTools`) and native memory scoping (`memory: project` / `memory: local`) to all 7 agents. Removed restart messaging from /vbw:update. Agent definitions grew from 462 to 491 lines. This is spawn-time overhead only, loaded when a specific agent is spawned, not per-request.
 
 | Agent | v1.21.30 | v1.30.0 | Change |
 |---|---|---|---|
@@ -138,7 +151,7 @@ Added Task spawn restrictions (`allowedTools` / `disallowedTools`) and native me
 
 **Token impact:** Zero per-request. Shell + test infrastructure only.
 
-Captured last_assistant_message in agent-stop hook for crash recovery. Audited all 26 hook bash commands against CC 2.1.47 stricter classifier. Added 55 new BATS tests. All shell scripts and test files — zero model tokens.
+Captured last_assistant_message in agent-stop hook for crash recovery. Audited all 26 hook bash commands against CC 2.1.47 stricter classifier. Added 55 new BATS tests. All shell scripts and test files, zero model tokens.
 
 ### Phase 4: Documentation and Cleanup (4 commits)
 
@@ -164,7 +177,7 @@ Graduated 20 feature flags (same flags from CC Alignment, now cleaned in test fi
 
 **Token impact:** Zero per-request. Shell-only.
 
-Created worktree-create.sh, worktree-merge.sh, worktree-cleanup.sh, worktree-status.sh. All fail-open (exit 0 on error). These are shell scripts — zero model tokens.
+Created worktree-create.sh, worktree-merge.sh, worktree-cleanup.sh, worktree-status.sh. All fail-open (exit 0 on error). These are shell scripts, zero model tokens.
 
 ### Phase 3: Agent Targeting Scripts (2 scripts)
 
@@ -180,7 +193,7 @@ Wired worktree isolation into config defaults, compaction hooks, file-guard, ses
 
 ### Phase 5: Execute Protocol Integration (3 commits)
 
-**Token impact:** +16 reference lines (+240 tokens per reference load). Lazy — only loaded during execution.
+**Token impact:** +16 reference lines (+240 tokens per reference load). Lazy, only loaded during execution.
 
 Modified execute-protocol.md at three insertion points: Step 2 (worktree creation after plan loading), Step 3 (worktree path in Dev task description), Step 5 (worktree merge and cleanup after completion). The reference file grew from 507 to 523 lines. This is the only model-visible change in the entire Worktree Isolation milestone.
 
@@ -273,13 +286,13 @@ Total coordination/phase  97,900      38,170     14,155     22,188     27,715   
 Per-request × 80 msgs   864,000     397,600    259,600    255,840    212,400     268,000
 
 Total session (1 phase)  961,900     435,770    273,755    277,828    240,115     297,885
-Reduction vs stock             —        55%        72%        71%        75%         69%
+Reduction vs stock,        55%        72%        71%        75%         69%
 
 Total session (5 phases) 4,809,500  2,178,850  1,368,775  1,289,140  1,101,575  1,289,425
-Reduction vs stock             —        55%        72%        73%        77%         73%
+Reduction vs stock,        55%        72%        73%        77%         73%
 ```
 
-**v1.30.0 achieves 69-73% overhead reduction vs stock teams.** Down from v1.21.30's 75-77% — the CC Alignment enforcement content adds per-request tokens. However, this is the same tier as v1.20.0 (71-73%) while providing significantly better agent behavior: crash recovery, spawn restrictions, memory scoping, and CC 2.1.47 classifier compliance.
+**v1.30.0 achieves 69-73% overhead reduction vs stock teams.** Down from v1.21.30's 75-77%, the CC Alignment enforcement content adds per-request tokens. However, this is the same tier as v1.20.0 (71-73%) while providing significantly better agent behavior: crash recovery, spawn restrictions, memory scoping, and CC 2.1.47 classifier compliance.
 
 ---
 
@@ -313,7 +326,7 @@ Templates (10)              290        301        +11    Template refinements
 Shell-only total         21,643     24,935     +3,292    ALL zero model tokens
 ```
 
-**The key insight:** This is the first release where per-request tokens *increased*. The increase is deliberate — encoding CC 2.1.47 enforcement rules into active commands means agents behave correctly under the stricter classifier without needing retries. The 12% per-request growth buys compatibility with 6 months of Claude Code evolution (2.1.32 through 2.1.47). The Worktree Isolation milestone then added 41 commits of shell infrastructure at zero per-request cost, while dead code removal actually *shrank* the overall codebase by 1,665 lines vs the CC Alignment snapshot.
+**The key insight:** This is the first release where per-request tokens *increased*. The increase is deliberate, encoding CC 2.1.47 enforcement rules into active commands means agents behave correctly under the stricter classifier without needing retries. The 12% per-request growth buys compatibility with 6 months of Claude Code evolution (2.1.32 through 2.1.47). The Worktree Isolation milestone then added 41 commits of shell infrastructure at zero per-request cost, while dead code removal actually *shrank* the overall codebase by 1,665 lines vs the CC Alignment snapshot.
 
 ---
 
@@ -358,7 +371,7 @@ Shell-only total         21,643     24,935     +3,292    ALL zero model tokens
 
 7. **Dead code removal offset new feature growth.** The codebase grew 42% overall (26,533 → 37,627), but the Worktree Isolation milestone actually *shrank* it by 1,665 lines vs the CC Alignment snapshot (39,292 → 37,627). Phase 1's lock-lite deletion and flag graduation removed more than Phases 2-6 added. Per-request: 9,630 → 10,800 (+12%). The decoupling between codebase size and model cost remains strong.
 
-8. **Worktree Isolation: 41 commits at near-zero model cost.** The entire 6-phase worktree milestone produced only +16 model-visible lines (execute-protocol reference, loaded lazily during execution). Everything else — 6 scripts, 16 bats tests, protocol integration — is shell infrastructure. This demonstrates the architecture's strength: major features can ship without inflating per-request overhead.
+8. **Worktree Isolation: 41 commits at near-zero model cost.** The entire 6-phase worktree milestone produced only +16 model-visible lines (execute-protocol reference, loaded lazily during execution). Everything else, 6 scripts, 16 bats tests, protocol integration, is shell infrastructure. This demonstrates the architecture's strength: major features can ship without inflating per-request overhead.
 
 ---
 

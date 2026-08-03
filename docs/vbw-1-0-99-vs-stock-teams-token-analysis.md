@@ -1,8 +1,14 @@
 # VBW vs Stock Agent Teams: Token Efficiency Analysis
 
+
 **Date:** 2026-02-10
+
+
 **Scope:** Deep comparison of VBW plugin token optimization vs Claude Code's native Agent Teams
-**Method:** Parallel research agents analyzed both sides; team lead synthesized
+
+**Method:** Parallel research agents analyzed both sides, team lead synthesized
+
+
 **Verdict:** VBW saves **40-65% of tokens** and **46% of dollar cost** per session through 15 distinct optimization mechanisms across 7 architectural layers
 
 ---
@@ -13,7 +19,7 @@ Stock Claude Code Agent Teams are a general-purpose coordination primitive. They
 
 VBW wraps Agent Teams with a purpose-built optimization stack: shell-based pre-computation, model routing, `disable-model-invocation`, compaction-aware hooks, context budgeting, and disk-based coordination. The result is the same coordination capability at significantly lower token cost.
 
-**The key insight:** Stock teams pay the "coordination tax" -- 57,000-133,000 tokens of pure overhead per phase execution before any productive work begins. VBW cuts that overhead by 60-80%.
+**The key insight:** Stock teams pay the "coordination tax", 57,000-133,000 tokens of pure overhead per phase execution before any productive work begins. VBW cuts that overhead by 60-80%.
 
 ---
 
@@ -42,7 +48,7 @@ Before showing VBW's optimizations, here's what stock teams cost in token overhe
 
 #### Mechanism 1: `disable-model-invocation` on 19/27 Commands
 
-**Impact: ~7,500+ tokens/session (HIGH CONFIDENCE -- measured)**
+**Impact: ~7,500+ tokens/session (HIGH CONFIDENCE, measured)**
 
 Commands with this frontmatter flag are excluded from the always-on context. The model never sees their description until explicitly invoked.
 
@@ -64,10 +70,10 @@ A single 50-line `vbw-brand-essentials.md` replaced a 329-line `vbw-brand.md` th
 
 **Impact: ~200-400 tokens/invocation**
 
-Commands inject STATE.md and ROADMAP.md via `head -40` or `head -50`, not full file reads. These files grow to 100+ lines in mature projects; capping prevents context bloat.
+Commands inject STATE.md and ROADMAP.md via `head -40` or `head -50`, not full file reads. These files grow to 100+ lines in mature projects, capping prevents context bloat.
 
 ```bash
-# execute.md:17 -- reads only first 40 lines
+# execute.md:17, reads only first 40 lines
 !`head -40 .vbw-planning/STATE.md`
 ```
 
@@ -85,7 +91,7 @@ The monolithic `effort-profiles.md` (all 4 profiles, ~1,000 tokens) was split in
 
 ```markdown
 # execute.md:61-62
-Read the corresponding profile... Do NOT read all four profile files -- only the active one.
+Read the corresponding profile... Do NOT read all four profile files, only the active one.
 ```
 
 #### Mechanism 6: Reference Deduplication in Agent Files
@@ -102,7 +108,7 @@ Removed 3 redundant `@` file references from agent definition files. Agent defin
 
 #### Mechanism 7: `phase-detect.sh` State Pre-Computation
 
-**Impact: ~800 tokens/invocation (HIGH CONFIDENCE -- measured)**
+**Impact: ~800 tokens/invocation (HIGH CONFIDENCE, measured)**
 
 This 202-line bash script pre-computes 22 key=value pairs entirely in shell before the model runs:
 
@@ -121,12 +127,12 @@ brownfield, execution_state
 
 #### Mechanism 8: SessionStart Rich Context Injection
 
-**Impact: ~600 tokens/session (HIGH CONFIDENCE -- measured)**
+**Impact: ~600 tokens/session (HIGH CONFIDENCE, measured)**
 
 The 314-line `session-start.sh` hook injects a one-line project summary via `additionalContext`:
 
 ```
-VBW project detected. Milestone: v1-release. Phase: 2/3 (Script Offloading) -- Planned.
+VBW project detected. Milestone: v1-release. Phase: 2/3 (Script Offloading), Planned.
 Progress: 45%. Config: effort=balanced, autonomy=standard, auto_commit=true,
 verification=standard, agent_teams=true, max_tasks=5. Next: /vbw:implement.
 ```
@@ -170,7 +176,7 @@ The 215-line `suggest-next.sh` computes context-aware next-action suggestions in
 
 #### Mechanism 10: Agent-Specific Model Assignment
 
-**Impact: 40-60% dollar cost reduction (HIGH CONFIDENCE -- pricing-based)**
+**Impact: 40-60% dollar cost reduction (HIGH CONFIDENCE, pricing-based)**
 
 | Agent | Model | Why | Stock equivalent |
 |---|---|---|---|
@@ -210,16 +216,16 @@ Saving:                                                                 43%
 
 **Impact: ~500-2,000 tokens/compaction event**
 
-Two hooks prevent the "amnesia tax" -- the cost of re-establishing context after compaction:
+Two hooks prevent the "amnesia tax", the cost of re-establishing context after compaction:
 
-**PreCompact (`compaction-instructions.sh`)** -- Injects tailored preservation priorities:
+**PreCompact (`compaction-instructions.sh`)** injects tailored preservation priorities:
 ```
 vbw-dev:  "Preserve commit hashes, file paths modified, deviation decisions, current task number"
 vbw-scout: "Preserve research findings, URLs, confidence assessments"
 vbw-qa:   "Preserve pass/fail status, gap descriptions, verification results"
 ```
 
-**Post-compact (`post-compact.sh`)** -- Tells each agent exactly what to re-read:
+**Post-compact (`post-compact.sh`)** tells each agent exactly what to re-read:
 ```
 vbw-lead: "Re-read STATE.md, ROADMAP.md, config.json, and current phase plans"
 vbw-dev:  "Re-read your assigned plan file, SUMMARY.md template, and relevant source files"
@@ -491,7 +497,7 @@ Saving: 42% tokens, 46% cost
 
 3. **Model routing is the biggest dollar-cost win.** Scout on Haiku (60x cheaper than Opus) and QA on Sonnet (5x cheaper) cut 40-60% off agent costs while maintaining quality where it matters.
 
-4. **Coordination-by-disk beats coordination-by-message.** VBW agents write PLANs and SUMMARYs to disk; the next agent reads them. Stock teams pass context through messages (each a full API round-trip with growing context windows). Disk coordination is nearly free.
+4. **Coordination-by-disk beats coordination-by-message.** VBW agents write PLANs and SUMMARYs to disk, the next agent reads them. Stock teams pass context through messages (each a full API round-trip with growing context windows). Disk coordination is nearly free.
 
 5. **Compaction resilience is an underappreciated optimization.** Without hooks, post-compaction recovery wastes 5,000-8,000 tokens re-establishing context. VBW's two hooks cut that to ~2,000 tokens with surgical instructions.
 
@@ -506,7 +512,7 @@ Saving: 42% tokens, 46% cost
 | Limitation | Impact | Why |
 |---|---|---|
 | CLAUDE.md loaded in every agent | ~6,000 tokens duplication | Claude Code platform behavior, no API to control |
-| Task CRUD tool calls | ~8,000-10,000 tokens | Required for team coordination; VBW reduces but can't eliminate |
+| Task CRUD tool calls | ~8,000-10,000 tokens | Required for team coordination, VBW reduces but can't eliminate |
 | System prompt / tool schemas | ~3,000-4,000 per agent | Platform-injected, not controllable |
 | Idle notification tokens | ~500-2,000/phase | System-generated, can't suppress |
 
@@ -539,4 +545,4 @@ VBW uses 18+ hooks across 7 hook types to move work from model to shell:
 
 ## Appendix B: Irony of This Analysis
 
-This very analysis was produced using a stock Agent Team (not VBW's optimized agents). The team lead spawned two Explore agents on the default model to research in parallel, coordinated via messages, and waited through idle notifications. If this analysis had been run through VBW's `/vbw:research` command instead, the two Scout agents would have run on Haiku, pre-computed state would have been injected, and the total cost would have been approximately 40-60% lower. The analysis itself demonstrates the problem it describes.
+This analysis was produced using a stock Agent Team (not VBW's optimized agents). The team lead spawned two Explore agents on the default model to research in parallel, coordinated via messages, and waited through idle notifications. If this analysis had been run through VBW's `/vbw:research` command instead, the two Scout agents would have run on Haiku, pre-computed state would have been injected, and the total cost would have been approximately 40-60% lower. The analysis itself demonstrates the problem it describes.

@@ -1,16 +1,24 @@
 # Token Compression Milestone: Before vs After Analysis
 
+
 **Date:** 2026-02-10
+
+
 **Version:** v1.10.1
+
 **Scope:** Measured impact of 3-phase token compression across all VBW instruction layers
+
+
 **Method:** 9 plans, 25 tasks, 23 commits, 80/80 QA checks across 3 sequential phases
-**Verdict:** VBW's per-session token footprint reduced by **~45-55%** through aggressive instruction compression, artifact compaction, and reference consolidation -- saving an estimated **8,000-14,000 tokens per session**
+
+**Verdict:** VBW's per-session token footprint reduced by **~45-55%** through aggressive instruction compression, artifact compaction, and reference consolidation, saving an estimated **8,000-14,000 tokens per session**
+
 
 ---
 
 ## Executive Summary
 
-VBW v1.0.99 introduced 15 optimization mechanisms across 7 architectural layers (see `vbw-1-0-99-vs-stock-teams-token-analysis.md`). Those mechanisms optimized *when* and *how* content is loaded. This milestone optimized *the content itself* -- making every loaded byte carry more signal per token.
+VBW v1.0.99 introduced 15 optimization mechanisms across 7 architectural layers (see `vbw-1-0-99-vs-stock-teams-token-analysis.md`). Those mechanisms optimized *when* and *how* content is loaded. This milestone optimized *the content itself*, making every loaded byte carry more signal per token.
 
 Three phases attacked three distinct token surfaces:
 
@@ -20,9 +28,9 @@ Three phases attacked three distinct token surfaces:
 | 2: Artifact Compaction | 7 templates + 5 hooks + live artifacts | 1,918 lines | 1,378 lines | **28%** |
 | 3: Reference Diet | 17 reference files + CLAUDE.md | 1,913 lines | 591 lines | **69%** |
 
-**The key insight:** VBW v1.0.99 already controlled *which* files get loaded and *when*. But the files themselves were written in explanatory prose -- readable for humans, wasteful for models. Claude doesn't need "Please follow this protocol carefully:" before a bullet list. Cutting the prose cut the tokens.
+**The key insight:** VBW v1.0.99 already controlled *which* files get loaded and *when*. But the files themselves were written in explanatory prose, readable for humans, wasteful for models. Claude doesn't need "Please follow this protocol carefully:" before a bullet list. Cutting the prose cut the tokens.
 
-**Compounding effect:** These savings multiply with VBW's existing optimization stack. Compressed commands loaded via `disable-model-invocation` were already cheap -- now the 8 always-on commands are cheaper too. Compressed agents loaded via model routing were already dollar-efficient -- now each spawn is also token-efficient. Every layer that was optimized for *when* to load now also benefits from *less to load*.
+**Compounding effect:** These savings multiply with VBW's existing optimization stack. Compressed commands loaded via `disable-model-invocation` were already cheap, now the 8 always-on commands are cheaper too. Compressed agents loaded via model routing were already dollar-efficient, now each spawn is also token-efficient. Every layer that was optimized for *when* to load now also benefits from *less to load*.
 
 ---
 
@@ -44,7 +52,7 @@ Before this milestone, VBW's instruction files were written in a readable, expla
 | Hook scripts (26) | 26 .sh | 1,105 | N/A (shell) | Zero model cost |
 | **TOTAL** | **92** | **9,061** | **~63,670** | |
 
-Not all of this loads at once -- VBW's lazy-loading and `disable-model-invocation` already ensure only relevant content is read. But *when* content is loaded, it was fatter than necessary.
+Not all of this loads at once, VBW's lazy-loading and `disable-model-invocation` already ensure only relevant content is read. But *when* content is loaded, it was fatter than necessary.
 
 ---
 
@@ -56,7 +64,7 @@ Not all of this loads at once -- VBW's lazy-loading and `disable-model-invocatio
 
 ### Strategy
 
-Replace prose with bullets. Remove rationale paragraphs. Compress conditionals into single-line guards. Convert verbose step descriptions to terse action items. Keep all functional behavior; strip all explanation.
+Replace prose with bullets. Remove rationale paragraphs. Compress conditionals into single-line guards. Convert verbose step descriptions to terse action items. Keep all functional behavior, strip all explanation.
 
 ### Before/After Examples
 
@@ -211,7 +219,7 @@ Live artifacts (loaded via head -40/50):
   After:   179 lines ≈ 2,685 tokens
   Saving:  ~3,780 tokens (most artifacts now fit in head -40 entirely)
 
-Hook scripts (shell -- zero model cost):
+Hook scripts (shell, zero model cost):
   Before:  1,105 lines
   After:   1,003 lines (9% slimmer, but still zero model tokens)
   Saving:  0 model tokens (maintenance benefit only)
@@ -238,14 +246,14 @@ Three-wave approach:
 
 | File | Lines | Disposition | Reason |
 |---|---|---|---|
-| vbw-brand.md | 334 | **Deleted** | Header says "NOT loaded into agent context" -- human-only doc |
+| vbw-brand.md | 334 | **Deleted** | Header says "NOT loaded into agent context", human-only doc |
 | model-cost-evaluation.md | 121 | **Deleted** | Analysis artifact, zero references from commands/agents |
 | deviation-handling.md | 108 | **Deleted** | Already fully inlined into vbw-dev.md during Phase 1 |
 | checkpoints.md | 37 | **Deleted** | Only referenced by deviation-handling.md (orphan chain) |
 | continuation-format.md | 42 | **Deleted** | Only referenced by checkpoints.md (orphan chain) |
 | shared-patterns.md | 37 | **Inlined** | 4 patterns distributed into 20 consuming commands |
-| memory-protocol.md | 163 | **Inlined** | Single consumer (implement.md) -- compressed to ~20 lines inline |
-| skill-discovery.md | 182 | **Inlined** | Single consumer (init.md) -- compressed to ~25 lines inline |
+| memory-protocol.md | 163 | **Inlined** | Single consumer (implement.md), compressed to ~20 lines inline |
+| skill-discovery.md | 182 | **Inlined** | Single consumer (init.md), compressed to ~25 lines inline |
 | **Total eliminated** | **1,024** | | **8 files removed** |
 
 **Deviation noted (DEVN-01):** Plan specified 12 commands needed shared-patterns inlining. Actual count was 20. All 20 received the same mechanical inline replacement.
@@ -263,7 +271,7 @@ Three-wave approach:
 | handoff-schemas.md | 172 | 94 | 45% | Removed field tables (JSON examples ARE the schema) |
 | **Net change** | **640** | **364** | **43%** | |
 
-The effort profile sub-files grew individually but the hub file was eliminated -- a net reduction of 40 lines and the elimination of one level of indirection (commands no longer load a hub that points to a sub-profile; they load the sub-profile directly).
+The effort profile sub-files grew individually, but the hub file was eliminated. This reduced the file count by 40 lines and removed one level of indirection. Commands now load the sub-profile directly.
 
 ### Wave 3: CLAUDE.md Trim and Final Audit
 
@@ -271,7 +279,7 @@ The effort profile sub-files grew individually but the hub file was eliminated -
 |---|---|---|---|
 | Installed Skills | 13 lines (full list) | 1 line (count + `/vbw:skills`) | -12 lines |
 | Learned Patterns | 9 lines | 3 lines (most universal patterns only) | -6 lines |
-| Key Decisions | 12 rows | 12 rows (unchanged -- all still relevant) | 0 |
+| Key Decisions | 12 rows | 12 rows (unchanged, all still relevant) | 0 |
 | Compact Instructions | 18 lines | 14 lines (trimmed "safe to discard") | -4 lines |
 | State section | 3 lines | 2 lines (removed document count qualifier) | -1 line |
 | Other sections | Unchanged | Unchanged | 0 |
@@ -473,7 +481,7 @@ TOTAL                    92→77    8,635     4,235      51%
 
 ### Line-to-Token Estimation
 
-This analysis uses ~15 tokens/line for markdown command/reference files. This is conservative; actual token density varies:
+This analysis uses ~15 tokens/line for markdown command/reference files. This is conservative, actual token density varies:
 - Dense YAML frontmatter: ~8-10 tokens/line
 - Prose paragraphs: ~18-25 tokens/line
 - Terse bullet lists (post-compression): ~10-12 tokens/line
@@ -485,7 +493,7 @@ The compression disproportionately removed prose paragraphs (~20 tokens/line) an
 
 | Component | Lines | Why Left Alone |
 |---|---|---|
-| Hook scripts (26 .sh files) | 2,858 | Already zero model cost -- shell executes for free |
+| Hook scripts (26 .sh files) | 2,858 | Already zero model cost, shell executes for free |
 | phase-detect.sh | 202 | Shell pre-computation, not loaded as text |
 | vbw-statusline.sh | 559 | Status dashboard, not instruction content |
 | session-start.sh | 314 | Infrastructure bootstrapping, zero model tokens |
@@ -497,9 +505,9 @@ Each phase was verified by the vbw-qa agent using the verification protocol:
 
 | Phase | Checks | Result | Key Validations |
 |---|---|---|---|
-| Phase 1 | 46/46 | PASS | All 35 files parse valid frontmatter; all commands functional |
-| Phase 2 | 24/24 | PASS | All templates parse; hooks validate new format; artifacts migrated |
-| Phase 3 | 10/10 | PASS | 8 reference files remain; zero orphans; zero stale paths |
+| Phase 1 | 46/46 | PASS | All 35 files parse valid frontmatter, all commands functional |
+| Phase 2 | 24/24 | PASS | All templates parse, hooks validate new format, artifacts migrated |
+| Phase 3 | 10/10 | PASS | 8 reference files remain, zero orphans, zero stale paths |
 | **Total** | **80/80** | **PASS** | |
 
 ---
@@ -510,15 +518,15 @@ Each phase was verified by the vbw-qa agent using the verification protocol:
 
 2. **Compression compounds with existing optimizations.** VBW's `disable-model-invocation`, lazy-loading, and model routing already controlled *when* content loads. Making that content 50% smaller means every existing optimization now saves more absolute tokens.
 
-3. **Template compression has outsized impact.** Templates are loaded during every plan/execute flow -- the most token-intensive operations. A 49% reduction in template size saves ~2,790 tokens per build cycle.
+3. **Template compression has outsized impact.** Templates are loaded during every plan/execute flow, the most token-intensive operations. A 49% reduction in template size saves ~2,790 tokens per build cycle.
 
 4. **Reference elimination beats reference compression.** Deleting 9 files (orphans + inlined singles) saved more than compressing the 8 survivors. The cheapest reference file is the one that doesn't exist.
 
 5. **Live artifact migration is a one-time unlock.** Converting STATE.md from 89 to 24 lines means every future state read (happening 5-10 times per session via `head -40`) now fits entirely in the cap. No truncation, no re-reads needed.
 
-6. **CLAUDE.md per-request savings are the gift that keeps giving.** 360 tokens saved per request seems modest, but in a 100-request session across 5 agents, that's 180,000 fewer tokens -- equivalent to the entire cost of a small build.
+6. **CLAUDE.md per-request savings are the gift that keeps giving.** 360 tokens saved per request seems modest, but in a 100-request session across 5 agents, that's 180,000 fewer tokens, equivalent to the entire cost of a small build.
 
-7. **Terse instructions don't hurt model performance.** 80/80 QA checks passed. Zero functional regressions. Models parse `If no .vbw-planning/: STOP` exactly as well as the 3-line prose equivalent. Possibly better -- less ambiguity.
+7. **Terse instructions don't hurt model performance.** 80/80 QA checks passed. Zero functional regressions. Models parse `If no .vbw-planning/: STOP` exactly as well as the 3-line prose equivalent. Possibly better, less ambiguity.
 
 ---
 
@@ -558,15 +566,15 @@ Each phase was verified by the vbw-qa agent using the verification protocol:
 
 | File | Lines | Reason |
 |---|---|---|
-| references/vbw-brand.md | 334 | Orphan -- human-only doc, never loaded by agents |
-| references/skill-discovery.md | 182 | Single consumer -- inlined into init.md |
-| references/memory-protocol.md | 163 | Single consumer -- inlined into implement.md |
-| references/model-cost-evaluation.md | 121 | Orphan -- analysis artifact |
-| references/deviation-handling.md | 108 | Orphan -- already inlined into vbw-dev.md (Phase 1) |
-| references/effort-profiles.md | 100 | Hub eliminated -- content distributed to 4 sub-profiles |
-| references/continuation-format.md | 42 | Orphan chain -- only ref'd by checkpoints.md |
-| references/shared-patterns.md | 37 | Multi-consumer single-pattern -- inlined into 20 commands |
-| references/checkpoints.md | 37 | Orphan chain -- only ref'd by deviation-handling.md |
+| references/vbw-brand.md | 334 | Orphan, human-only doc, never loaded by agents |
+| references/skill-discovery.md | 182 | Single consumer, inlined into init.md |
+| references/memory-protocol.md | 163 | Single consumer, inlined into implement.md |
+| references/model-cost-evaluation.md | 121 | Orphan, analysis artifact |
+| references/deviation-handling.md | 108 | Orphan, already inlined into vbw-dev.md (Phase 1) |
+| references/effort-profiles.md | 100 | Hub eliminated, content distributed to 4 sub-profiles |
+| references/continuation-format.md | 42 | Orphan chain, only ref'd by checkpoints.md |
+| references/shared-patterns.md | 37 | Multi-consumer single-pattern, inlined into 20 commands |
+| references/checkpoints.md | 37 | Orphan chain, only ref'd by deviation-handling.md |
 
 ## Appendix C: Version Progression
 
