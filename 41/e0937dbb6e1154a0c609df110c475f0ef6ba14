@@ -1,0 +1,19 @@
+.vbw-planning/STATE.md
+  s_34a1328aca5c55::t_000684b304e76d 103-105,107-118
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "41e0937dbb6e1154a0c609df110c475f0ef6ba14",
+  "prompts": {},
+  "sessions": {
+    "s_34a1328aca5c55": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ad0e21736b6ea4bec",
+        "model": "unknown"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
