@@ -1,0 +1,55 @@
+scripts/verify-claude-bootstrap.sh
+  s_6ef0e951f7d046::t_7b82b0291d411e 3,53-54,56,62,65-66,70,73,76,82,85,88,91,94,97,100,103,106,153-154,158,161,175-176,178,184,187-188,192,198,237-238,240,247-248,252,257,271-272,274,276,303-304,306,312,315-316,320,327,350-351,353,360-361,365,374,387-388,390,396,399-400,404,410,424-425,427,433
+scripts/qa-remediation-state.sh
+  s_6ef0e951f7d046::t_80cca75295608c 112-117
+scripts/validate-uat-remediation-artifact.sh
+  s_6ef0e951f7d046::t_80cca75295608c 54-58,74-79,287-291
+scripts/planning-git.sh
+  s_6ef0e951f7d046::t_7b82b0291d411e 3,32-33,42,54,58,61,66,69,83,86
+scripts/verify-init-todo.sh
+  s_6ef0e951f7d046::t_7b82b0291d411e 3,114-116
+scripts/bump-version.sh
+  s_6ef0e951f7d046::t_c39af022a7aefd 108
+scripts/refresh-claude-md-vbw-sections.sh
+  s_6ef0e951f7d046::t_bc3811ade2bab7 13
+scripts/token-budget.sh
+  s_6ef0e951f7d046::t_229d35a0446526 4
+scripts/uat-utils.sh
+  s_6ef0e951f7d046::t_229d35a0446526 2
+scripts/resolve-debug-target.sh
+  s_6ef0e951f7d046::t_80cca75295608c 33-37,58-59
+scripts/validate-summary.sh
+  s_6ef0e951f7d046::t_0ae66cfc83b30e 8
+scripts/snapshot-resume.sh
+  s_6ef0e951f7d046::t_be9e92c34beea9 56
+  s_6ef0e951f7d046::t_e7983cb78a53cb 71
+  s_6ef0e951f7d046::t_432468076380a0 53
+scripts/verify-state-consistency.sh
+  s_6ef0e951f7d046::t_80cca75295608c 84-89
+scripts/normalize-plan-filenames.sh
+  s_6ef0e951f7d046::t_aebaeb5f3353a8 7
+scripts/pre-push-hook.sh
+  s_6ef0e951f7d046::t_d5022ba3aaec35 6
+scripts/qa-gate.sh
+  s_6ef0e951f7d046::t_b09165f755b644 70
+scripts/two-phase-complete.sh
+  s_6ef0e951f7d046::t_cf85f59b4de071 4
+scripts/unarchive-milestone.sh
+  s_6ef0e951f7d046::t_3ba23e998677e6 520,526
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "e45c4a97e2cd1ae5e45295cbbe5253f0586b8c07",
+  "prompts": {},
+  "sessions": {
+    "s_6ef0e951f7d046": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "32b96d9e-2f7c-4f57-88c2-54535491e857",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
