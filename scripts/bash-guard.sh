@@ -29,24 +29,6 @@ if [ -f "$SCRIPT_DIR/lib/active-agent-state.sh" ]; then
   . "$SCRIPT_DIR/lib/active-agent-state.sh"
 fi
 
-normalize_agent_role() {
-  local lower
-  lower=$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')
-  lower="${lower#@}"
-  lower="${lower#vbw:}"
-
-  case "$lower" in
-    vbw-scout|vbw-scout-[0-9]*|scout|scout-[0-9]*|team-scout|team-scout-[0-9]*) printf 'scout' ;;
-    vbw-lead|vbw-lead-[0-9]*|lead|lead-[0-9]*|team-lead|team-lead-[0-9]*) printf 'lead' ;;
-    vbw-dev|vbw-dev-[0-9]*|dev|dev-[0-9]*|team-dev|team-dev-[0-9]*) printf 'dev' ;;
-    vbw-qa|vbw-qa-[0-9]*|qa|qa-[0-9]*|team-qa|team-qa-[0-9]*) printf 'qa' ;;
-    vbw-debugger|vbw-debugger-[0-9]*|debugger|debugger-[0-9]*|team-debugger|team-debugger-[0-9]*) printf 'debugger' ;;
-    vbw-architect|vbw-architect-[0-9]*|architect|architect-[0-9]*|team-architect|team-architect-[0-9]*) printf 'architect' ;;
-    vbw-docs|vbw-docs-[0-9]*|docs|docs-[0-9]*|team-docs|team-docs-[0-9]*) printf 'docs' ;;
-    *) return 1 ;;
-  esac
-}
-
 _BG_PAYLOAD_AGENT_TYPE=$(printf '%s' "$INPUT" | jq -r '.agent_type // ""' 2>/dev/null) || _BG_PAYLOAD_AGENT_TYPE=""
 _BG_PAYLOAD_AGENT_ID=$(printf '%s' "$INPUT" | jq -r '.agent_id // ""' 2>/dev/null) || _BG_PAYLOAD_AGENT_ID=""
 _BG_PAYLOAD_HAS_AGENT=false
@@ -58,13 +40,13 @@ detect_agent_role() {
   local candidate role
   for candidate in "${VBW_AGENT_ROLE:-}" "${VBW_ACTIVE_AGENT:-}"; do
     [ -z "$candidate" ] && continue
-    role=$(normalize_agent_role "$candidate") || continue
+    role=$(vbw_active_agent_normalize_role "$candidate") || continue
     printf '%s' "$role"
     return 0
   done
   for candidate in "$_BG_PAYLOAD_AGENT_TYPE" "$_BG_PAYLOAD_AGENT_ID"; do
     [ -z "$candidate" ] && continue
-    role=$(normalize_agent_role "$candidate") || continue
+    role=$(vbw_active_agent_normalize_role "$candidate") || continue
     printf '%s' "$role"
     return 0
   done
