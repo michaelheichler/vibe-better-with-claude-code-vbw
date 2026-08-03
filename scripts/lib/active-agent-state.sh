@@ -143,7 +143,8 @@ _vbw_active_agent_role_stats() {
 }
 
 _vbw_active_agent_sync_session_aggregate() {
-  local planning_dir="$1" session_id="$2" state_dir agents count sum roles marker file role tmp
+  local planning_dir="$1" session_id="$2" state_dir agents count sum roles marker file role tmp writer_id
+  writer_id="${BASHPID:-$$}"
   state_dir=$(_vbw_active_agent_state_dir "$planning_dir" "$session_id")
   agents=$(_vbw_active_agent_agents_dir "$planning_dir" "$session_id")
   count=$(_vbw_active_agent_count_from_files "$agents")
@@ -152,14 +153,14 @@ _vbw_active_agent_sync_session_aggregate() {
     return 0
   fi
   mkdir -p "$state_dir" || return 0
-  printf '%s\n' "$count" > "$state_dir/active-agent-count.tmp.$$" && mv "$state_dir/active-agent-count.tmp.$$" "$state_dir/active-agent-count"
-  : > "$state_dir/active-agent-roles.tmp.$$"; : > "$state_dir/active-agent-role-pids.tmp.$$"
+  printf '%s\n' "$count" > "$state_dir/active-agent-count.tmp.$writer_id" && mv "$state_dir/active-agent-count.tmp.$writer_id" "$state_dir/active-agent-count"
+  : > "$state_dir/active-agent-roles.tmp.$writer_id"; : > "$state_dir/active-agent-role-pids.tmp.$writer_id"
   while IFS= read -r file; do
     role=$(_vbw_active_agent_file_role "$file" 2>/dev/null) || continue
-    printf '%s %s\n' "$(basename "$file" .json)" "$role" >> "$state_dir/active-agent-role-pids.tmp.$$"
+    printf '%s %s\n' "$(basename "$file" .json)" "$role" >> "$state_dir/active-agent-role-pids.tmp.$writer_id"
   done < <(_vbw_active_agent_live_files "$agents")
-  awk '{ counts[$2] += 1 } END { for (role in counts) print role, counts[role] }' "$state_dir/active-agent-role-pids.tmp.$$" | sort > "$state_dir/active-agent-roles.tmp2.$$"
-  mv "$state_dir/active-agent-roles.tmp2.$$" "$state_dir/active-agent-roles"; mv "$state_dir/active-agent-role-pids.tmp.$$" "$state_dir/active-agent-role-pids"
+  awk '{ counts[$2] += 1 } END { for (role in counts) print role, counts[role] }' "$state_dir/active-agent-role-pids.tmp.$writer_id" | sort > "$state_dir/active-agent-roles.tmp2.$writer_id"
+  mv "$state_dir/active-agent-roles.tmp2.$writer_id" "$state_dir/active-agent-roles"; mv "$state_dir/active-agent-role-pids.tmp.$writer_id" "$state_dir/active-agent-role-pids"
   IFS=' ' read -r sum _count role <<< "$(_vbw_active_agent_role_stats "$planning_dir" "$session_id")"
   marker="$state_dir/active-agent"
   if [ "${sum:-0}" -eq "$count" ] && [ "${_count:-0}" -eq 1 ] && [ -n "${role:-}" ]; then printf '%s\n' "$role" > "$marker"; else rm -f "$marker"; fi
@@ -210,9 +211,10 @@ _vbw_active_agent_migrate_legacy_root_to_source_unlocked() {
 }
 
 _vbw_active_agent_rebuild_aggregate_unlocked() {
-  local planning_dir="$1" total=0 dir source file role tmp_roles tmp_pids
+  local planning_dir="$1" total=0 dir source file role tmp_roles tmp_pids writer_id
   local -A sums=()
-  tmp_roles="$planning_dir/.active-agent-roles.tmp.$$"; tmp_pids="$planning_dir/.active-agent-role-pids.tmp.$$"
+  writer_id="${BASHPID:-$$}"
+  tmp_roles="$planning_dir/.active-agent-roles.tmp.$writer_id"; tmp_pids="$planning_dir/.active-agent-role-pids.tmp.$writer_id"
   : > "$tmp_roles"; : > "$tmp_pids"
   for dir in "$planning_dir/.active-agents"/*; do
     [ -d "$dir" ] || continue
@@ -225,7 +227,7 @@ _vbw_active_agent_rebuild_aggregate_unlocked() {
     done < <(_vbw_active_agent_live_files "$(_vbw_active_agent_agents_dir "$planning_dir" "$source")")
   done
   if [ "$total" -le 0 ]; then _vbw_active_agent_root_files_remove "$planning_dir"; rm -f "$tmp_roles" "$tmp_pids"; return 0; fi
-  printf '%s\n' "$total" > "$planning_dir/.active-agent-count.tmp.$$"; mv "$planning_dir/.active-agent-count.tmp.$$" "$planning_dir/.active-agent-count"
+  printf '%s\n' "$total" > "$planning_dir/.active-agent-count.tmp.$writer_id"; mv "$planning_dir/.active-agent-count.tmp.$writer_id" "$planning_dir/.active-agent-count"
   for role in "${!sums[@]}"; do printf '%s %s\n' "$role" "${sums[$role]}"; done | sort > "$tmp_roles"
   mv "$tmp_roles" "$planning_dir/.active-agent-roles"; mv "$tmp_pids" "$planning_dir/.active-agent-role-pids"
   if [ "${#sums[@]}" -eq 1 ]; then printf '%s\n' "${!sums[@]}" > "$planning_dir/.active-agent"; else rm -f "$planning_dir/.active-agent"; fi
