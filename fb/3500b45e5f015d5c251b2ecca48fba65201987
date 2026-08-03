@@ -1,0 +1,27 @@
+scripts/rename-default-milestone.sh
+  s_6ef0e951f7d046::t_51a0a70bb777f0 27-28
+scripts/extract-verified-items.sh
+  s_6ef0e951f7d046::t_8ef4459b2bb913 131,134
+scripts/derive-milestone-slug.sh
+  s_6ef0e951f7d046::t_3051d4c4cbd7d7 27-28
+scripts/todo-lifecycle.sh
+  s_6ef0e951f7d046::t_b3f41ab2fa19c8 526
+  s_6ef0e951f7d046::t_a89b31b4290a5a 184,191,196,278,294,302
+  s_6ef0e951f7d046::t_54ddb87d89d62c 496-498
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "fb3500b45e5f015d5c251b2ecca48fba65201987",
+  "prompts": {},
+  "sessions": {
+    "s_6ef0e951f7d046": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "32b96d9e-2f7c-4f57-88c2-54535491e857",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": null
+    }
+  }
+}
