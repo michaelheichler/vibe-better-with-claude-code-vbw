@@ -1,0 +1,21 @@
+scripts/bash-guard.sh
+  s_148ae53cf16113::t_11e82dfa9f63ff 175-189
+  s_148ae53cf16113::t_489f66aabf7a66 129
+  s_148ae53cf16113::t_d2e0edc53e4d20 130,169-174,190-221
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "90b3e322e1ff2b6927f4852b2fe92825448c64ce",
+  "prompts": {},
+  "sessions": {
+    "s_148ae53cf16113": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "82bc467d-d72d-428e-97b7-1f3f33916f5e",
+        "model": "kimi3"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
