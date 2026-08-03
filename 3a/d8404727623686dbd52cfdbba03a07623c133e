@@ -1,0 +1,33 @@
+testing/verify-qa-persistence-contract.sh
+  s_6ef0e951f7d046::t_7e0bb5c42bed92 4,181,235
+testing/verify-report-diag-handoff.sh
+  s_6ef0e951f7d046::t_7e0bb5c42bed92 4,49,123,135
+testing/verify-summary-status-contract.sh
+  s_6ef0e951f7d046::t_7e0bb5c42bed92 4,442
+testing/verify-lead-research-conditional.sh
+  s_6ef0e951f7d046::t_7e0bb5c42bed92 4,146,162
+testing/verify-exec-state-reconciliation.sh
+  s_6ef0e951f7d046::t_7e0bb5c42bed92 4,257,316,515
+testing/verify-summary-utils-contract.sh
+  s_6ef0e951f7d046::t_7e0bb5c42bed92 4,522
+testing/run-all.sh
+  s_6ef0e951f7d046::t_7e0bb5c42bed92 4,101,105
+testing/verify-report-template-contract.sh
+  s_6ef0e951f7d046::t_7e0bb5c42bed92 4,73,79,100,121,134
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "3ad8404727623686dbd52cfdbba03a07623c133e",
+  "prompts": {},
+  "sessions": {
+    "s_6ef0e951f7d046": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "32b96d9e-2f7c-4f57-88c2-54535491e857",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
