@@ -1,0 +1,35 @@
+testing/verify-debug-session-contract.sh
+  s_6ef0e951f7d046::t_45d33118eac94f 273-274
+  s_6ef0e951f7d046::t_317f6224e22a48 6
+  s_6ef0e951f7d046::t_f265d53c6dcaea 468
+  s_6ef0e951f7d046::t_72d97250d8e26e 419
+  s_6ef0e951f7d046::t_c4334343768bfc 467,474-475
+  s_6ef0e951f7d046::t_c1e22a4e029c3f 194
+scripts/uat-remediation-state.sh
+  s_6ef0e951f7d046::t_13ea4bce72b69e 6,485,585
+  s_6ef0e951f7d046::t_b1fc4cdeb8ce25 114-119
+scripts/track-known-issues.sh
+  s_6ef0e951f7d046::t_7b98bbf4290657 3,32
+  s_6ef0e951f7d046::t_741404989fe8ba 962
+  s_6ef0e951f7d046::t_13ea4bce72b69e 29,840,854
+scripts/write-debug-session.sh
+  s_6ef0e951f7d046::t_13ea4bce72b69e 35,197,335,356-357,378-379,423
+scripts/lib/track-known-issues-parsers.sh
+  s_6ef0e951f7d046::t_9c473d54102977 1-172
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "b90e8a3a8b37afdc93ecca282d9da66bb9f923a0",
+  "prompts": {},
+  "sessions": {
+    "s_6ef0e951f7d046": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "32b96d9e-2f7c-4f57-88c2-54535491e857",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
