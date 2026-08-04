@@ -1,0 +1,19 @@
+scripts/lib/qa-result-gate-fail-classifications.sh
+  s_55c34ee548bef4::t_beb47528736d93 6-7,9-22,25-26,29-32,36-37,40-51,183-187,191-198,202-210
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "7d437d367cfb3978c28ab7d7e7e36735132189d1",
+  "prompts": {},
+  "sessions": {
+    "s_55c34ee548bef4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e2c40e1d-1763-4ad0-a1b3-bd1755008e2b",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
