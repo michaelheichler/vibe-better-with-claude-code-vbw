@@ -150,8 +150,8 @@ round_classification_pair_matches_deviation() {
       process-exception|plan-amendment)
         bare_id="${classification_id#FAIL-}"
         [[ "$bare_id" =~ ^[[:alnum:]_.-]+$ ]] || return 1
-        if printf '%s\n' "$deviation_text" | grep -Ew -- "$bare_id" >/dev/null 2>&1 \
-          || printf '%s\n' "$deviation_text" | grep -Ew -- "FAIL-$bare_id" >/dev/null 2>&1; then
+        if printf '%s\n' "$deviation_text" | grep -Fw -- "$bare_id" >/dev/null 2>&1 \
+          || printf '%s\n' "$deviation_text" | grep -Fw -- "FAIL-$bare_id" >/dev/null 2>&1; then
           return 0
         fi
         ;;

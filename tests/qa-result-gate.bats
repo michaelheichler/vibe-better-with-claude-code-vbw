@@ -2196,6 +2196,38 @@ VERIF
   [[ "$output" == *"qa_gate_routing=REMEDIATION_REQUIRED"* ]]
 }
 
+@test "malformed fail classification entries do not misalign id and type pairs" {
+  local plan_dir="$TEST_DIR/round-plans"
+  mkdir -p "$plan_dir"
+  cat > "$plan_dir/R01-PLAN.md" <<'PLAN'
+---
+fail_classifications:
+  - {id: "FAIL-01", type: "code-fix"}
+  - {id: "FAIL-02"}
+  - {type: "process-exception"}
+  - {id: "FAIL-03", type: "code-fix"}
+---
+PLAN
+
+  run bash -c 'source "$1"; collect_fail_classification_id_type_pairs_in_dir "$2"' _ \
+    "$REPO_ROOT/scripts/lib/qa-result-gate-fail-classifications.sh" "$plan_dir"
+
+  [ "$status" -eq 0 ]
+  expected=$'FAIL-01\tcode-fix\nFAIL-03\tcode-fix'
+  [ "$output" = "$expected" ]
+}
+
+@test "classification ids with dots match exact deviation text only" {
+  local classified_pairs=$'DEV.04\tprocess-exception'
+
+  run bash -c 'source "$1"; round_classification_pair_matches_deviation "$2" "$3"' _ \
+    "$REPO_ROOT/scripts/lib/qa-result-gate-summary-deviations.sh" "DEVX04" "$classified_pairs"
+  [ "$status" -eq 1 ]
+
+  run bash -c 'source "$1"; round_classification_pair_matches_deviation "$2" "$3"' _ \
+    "$REPO_ROOT/scripts/lib/qa-result-gate-summary-deviations.sh" "DEV.04" "$classified_pairs"
+  [ "$status" -eq 0 ]
+}
 
 @test "metadata-only round with phase-level deviations → REMEDIATION_REQUIRED" {
   create_source_fail_verif "FAIL-01" "Deviation still needs a real fix"

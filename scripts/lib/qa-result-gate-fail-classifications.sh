@@ -60,6 +60,29 @@ extract_fail_classification_ids() { extract_fail_classification_field "${1:-}" i
 extract_fail_classification_paths() { extract_fail_classification_field "${1:-}" path; }
 extract_fail_classification_source_plans() { extract_fail_classification_field "${1:-}" source_plan; }
 
+extract_fail_classification_id_type_pairs() {
+  local file_path="${1:-}"
+  [ -f "$file_path" ] || return 0
+  awk '
+    function value(text, field, result) { if (match(text, field ":[[:space:]]*[^,}]+")) { result=substr(text,RSTART,RLENGTH); sub("^" field ":[[:space:]]*","",result); gsub(/[",}\]]/,"",result); gsub(/^[[:space:]]+|[[:space:]]+$/,"",result); return result } return "" }
+    function emit(text, id, type) { id=value(text,"id"); type=value(text,"type"); if (id!="" && type!="") printf "%s\t%s\n",id,type }
+    function flush() { if (entry!="") emit(entry); entry="" }
+    BEGIN { in_fm=0; in_fc=0; entry="" }
+    NR==1 && /^---[[:space:]]*$/ { in_fm=1; next }
+    in_fm && /^---[[:space:]]*$/ { exit }
+    in_fm && /^fail_classifications:/ {
+      rest=$0; sub(/^fail_classifications:[[:space:]]*/,"",rest)
+      if (rest ~ /^\[/) { while (match(rest,/\{[^}]*\}/)) { emit(substr(rest,RSTART,RLENGTH)); rest=substr(rest,RSTART+RLENGTH) }; exit }
+      in_fc=1; next
+    }
+    in_fm && in_fc && /^[[:space:]]+-[[:space:]]/ { flush(); entry=$0; sub(/^[[:space:]]+-[[:space:]]*/,"",entry); next }
+    in_fm && in_fc && /^[[:space:]]+/ { if (entry!="") entry=entry " " $0; next }
+    in_fm && in_fc && /^[^[:space:]]/ { flush(); exit }
+    END { flush() }
+  ' "$file_path" 2>/dev/null
+}
+
+
 collect_fail_classification_types_in_dir() {
   local scan_dir="${1:-}"
   [ -d "$scan_dir" ] || return 0
@@ -100,23 +123,10 @@ collect_fail_classification_source_plans_in_dir() {
 collect_fail_classification_id_type_pairs_in_dir() {
   local scan_dir="${1:-}"
   local _cfc_plan=""
-  local _cfc_ids=""
-  local _cfc_types=""
-  local _cfc_id_count=0
-  local _cfc_type_count=0
   [ -d "$scan_dir" ] || return 0
   while IFS= read -r _cfc_plan; do
     [ -f "$_cfc_plan" ] || continue
-    _cfc_ids=$(extract_fail_classification_ids "$_cfc_plan" | awk 'NF')
-    _cfc_types=$(extract_fail_classification_types "$_cfc_plan" | awk 'NF')
-    _cfc_id_count=$(printf '%s\n' "$_cfc_ids" | awk 'NF { count++ } END { print count + 0 }')
-    _cfc_type_count=$(printf '%s\n' "$_cfc_types" | awk 'NF { count++ } END { print count + 0 }')
-    if [ "$_cfc_id_count" -ne "$_cfc_type_count" ] 2>/dev/null; then
-      return 1
-    fi
-    if [ "$_cfc_id_count" -gt 0 ] 2>/dev/null; then
-      paste <(printf '%s\n' "$_cfc_ids") <(printf '%s\n' "$_cfc_types")
-    fi
+    extract_fail_classification_id_type_pairs "$_cfc_plan"
   done < <(find "$scan_dir" -maxdepth 1 ! -name '.*' \( -name '*-PLAN.md' -o -name 'PLAN.md' \) 2>/dev/null | (sort -V 2>/dev/null || sort))
 }
 
