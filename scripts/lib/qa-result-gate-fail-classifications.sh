@@ -64,7 +64,18 @@ extract_fail_classification_id_type_pairs() {
   local file_path="${1:-}"
   [ -f "$file_path" ] || return 0
   awk '
-    function value(text, field, result) { if (match(text, field ":[[:space:]]*[^,}]+")) { result=substr(text,RSTART,RLENGTH); sub("^" field ":[[:space:]]*","",result); gsub(/[",}\]]/,"",result); gsub(/^[[:space:]]+|[[:space:]]+$/,"",result); return result } return "" }
+    function value(text, field, value_start, remainder, boundary, result) {
+      if (!match(text, field ":[[:space:]]*")) return ""
+      value_start=RSTART+RLENGTH
+      remainder=substr(text,value_start)
+      boundary=length(remainder)+1
+      if (match(remainder,/[,}]/) && RSTART < boundary) boundary=RSTART
+      if (match(remainder,/[[:space:]](id|type|rationale|path|source_plan):/) && RSTART < boundary) boundary=RSTART
+      result=substr(remainder,1,boundary-1)
+      gsub(/[",}\]]/,"",result)
+      gsub(/^[[:space:]]+|[[:space:]]+$/,"",result)
+      return result
+    }
     function emit(text, id, type) { id=value(text,"id"); type=value(text,"type"); if (id!="" && type!="") printf "%s\t%s\n",id,type }
     function flush() { if (entry!="") emit(entry); entry="" }
     BEGIN { in_fm=0; in_fc=0; entry="" }

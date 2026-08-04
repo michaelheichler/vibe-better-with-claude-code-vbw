@@ -2217,6 +2217,45 @@ PLAN
   [ "$output" = "$expected" ]
 }
 
+@test "multiline fail classification entries route matching deviations" {
+  local plan_dir="$TEST_DIR/round-plans"
+  mkdir -p "$plan_dir"
+  cat > "$plan_dir/R01-PLAN.md" <<'PLAN'
+---
+fail_classifications:
+  - id: "FAIL-01"
+    type: "process-exception"
+    rationale: "Block style continuation fields"
+  - {id: "FAIL-02",
+     type: "plan-amendment",
+     rationale: "Wrapped flow style continuation"}
+---
+PLAN
+
+  run bash -c 'source "$1"; collect_fail_classification_id_type_pairs_in_dir "$2"' _ \
+    "$REPO_ROOT/scripts/lib/qa-result-gate-fail-classifications.sh" "$plan_dir"
+
+  [ "$status" -eq 0 ]
+  expected=$'FAIL-01\tprocess-exception\nFAIL-02\tplan-amendment'
+  [ "$output" = "$expected" ]
+  local classified_pairs="$output"
+
+  run bash -c 'source "$1"; round_classification_pair_matches_deviation "$2" "$3"' _ \
+    "$REPO_ROOT/scripts/lib/qa-result-gate-summary-deviations.sh" \
+    "FAIL-01 accepted process exception" "$classified_pairs"
+  [ "$status" -eq 0 ]
+
+  run bash -c 'source "$1"; round_classification_pair_matches_deviation "$2" "$3"' _ \
+    "$REPO_ROOT/scripts/lib/qa-result-gate-summary-deviations.sh" \
+    "FAIL-02 accepted plan amendment" "$classified_pairs"
+  [ "$status" -eq 0 ]
+
+  run bash -c 'source "$1"; round_classification_pair_matches_deviation "$2" "$3"' _ \
+    "$REPO_ROOT/scripts/lib/qa-result-gate-summary-deviations.sh" \
+    "FAIL-03 unclassified deviation" "$classified_pairs"
+  [ "$status" -eq 1 ]
+}
+
 @test "classification ids with dots match exact deviation text only" {
   local classified_pairs=$'DEV.04\tprocess-exception'
 
