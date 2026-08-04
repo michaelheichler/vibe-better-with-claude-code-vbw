@@ -10,6 +10,7 @@ HOOK_WRAPPER="$ROOT/scripts/hook-wrapper.sh"
 PASS=0
 FAIL=0
 TMPDIR_BASE=""
+SIDECHAIN_TEST_PIDS=()
 
 pass() {
   echo "PASS  $1"
@@ -37,6 +38,12 @@ EOF
 }
 
 cleanup() {
+  local pid
+  for pid in "${SIDECHAIN_TEST_PIDS[@]}"; do
+    kill "$pid" 2>/dev/null || true
+    wait "$pid" 2>/dev/null || true
+  done
+  SIDECHAIN_TEST_PIDS=()
   [ -n "$TMPDIR_BASE" ] && rm -rf "$TMPDIR_BASE" 2>/dev/null || true
 }
 trap cleanup EXIT
@@ -116,10 +123,18 @@ write_live_execute_state() {
 
 run_sidechain_agent_hook() {
   local hook_script="$1"
-  local input
-  input=$(jq -n '{agent_type:"vbw:vbw-dev", pid:"12345"}')
+  local input agent_pid
+  if [ "${#SIDECHAIN_TEST_PIDS[@]}" -eq 0 ]; then
+    sleep 300 &
+    agent_pid=$!
+    SIDECHAIN_TEST_PIDS+=("$agent_pid")
+  else
+    agent_pid="${SIDECHAIN_TEST_PIDS[0]}"
+  fi
+  input=$(jq -n --arg pid "$agent_pid" '{agent_type:"vbw:vbw-dev", pid:$pid}')
 
   (
+
     cd "$SIDECHAIN"
     unset VBW_CONFIG_ROOT VBW_PLANNING_DIR
     CLAUDE_CONFIG_DIR="$TMPDIR_BASE/claude" \

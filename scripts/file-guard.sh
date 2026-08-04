@@ -5,10 +5,14 @@ INPUT=$(cat 2>/dev/null) || exit 0
 
 FILE_PATH=$(echo "$INPUT" | jq -r '.tool_input.file_path // ""' 2>/dev/null) || exit 0
 [ -z "$FILE_PATH" ] && exit 0
+case "$FILE_PATH" in *$'\n'*) exit 2 ;; esac
 
 _FG_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 if [ -f "$_FG_SCRIPT_DIR/lib/active-agent-state.sh" ]; then
   . "$_FG_SCRIPT_DIR/lib/active-agent-state.sh"
+fi
+if [ -f "$_FG_SCRIPT_DIR/lib/orchestrator-identity.sh" ]; then
+  . "$_FG_SCRIPT_DIR/lib/orchestrator-identity.sh"
 fi
 _FG_SHARED_ROOT_RESOLVED=false
 if [ -f "$_FG_SCRIPT_DIR/lib/vbw-config-root.sh" ]; then
@@ -81,7 +85,7 @@ normalize_agent_role() {
 }
 
 _FG_PAYLOAD_AGENT_TYPE=$(printf '%s' "$INPUT" | jq -r '.agent_type // ""' 2>/dev/null) || _FG_PAYLOAD_AGENT_TYPE=""
-_FG_PAYLOAD_AGENT_ID=$(printf '%s' "$INPUT" | jq -r '.agent_id // ""' 2>/dev/null) || _FG_PAYLOAD_AGENT_ID=""
+_FG_PAYLOAD_AGENT_ID=$(printf '%s' "$INPUT" | jq -r '.agent_id // .agent_name // .agentName // ""' 2>/dev/null) || _FG_PAYLOAD_AGENT_ID=""
 _FG_PAYLOAD_HAS_AGENT=false
 if [ -n "$_FG_PAYLOAD_AGENT_TYPE" ] || [ -n "$_FG_PAYLOAD_AGENT_ID" ]; then
   _FG_PAYLOAD_HAS_AGENT=true
@@ -95,7 +99,7 @@ fi
 
 # Environment roles take precedence because VBW exports them for spawned agents.
 detect_agent_role() {
-  local candidate role planning_dir
+  local candidate role
   for candidate in "${VBW_AGENT_ROLE:-}" "${VBW_ACTIVE_AGENT:-}"; do
     [ -z "$candidate" ] && continue
     role=$(normalize_agent_role "$candidate") || continue
@@ -108,23 +112,27 @@ detect_agent_role() {
     printf '%s' "$role"
     return 0
   done
-  [ "$_FG_PAYLOAD_HAS_AGENT" = true ] || return 1
-  [ -n "$PROJECT_ROOT" ] || return 1
-  planning_dir="$PROJECT_ROOT/.vbw-planning"
-  command -v vbw_active_agent_current_scout >/dev/null 2>&1 \
-    && vbw_active_agent_current_scout "$planning_dir" "$INPUT" \
-    && { printf 'scout'; return 0; }
-  command -v vbw_active_agent_current_qa >/dev/null 2>&1 \
-    && vbw_active_agent_current_qa "$planning_dir" "$INPUT" \
-    && { printf 'qa'; return 0; }
-  return 1
+  if [ "$_FG_PAYLOAD_HAS_AGENT" != true ]; then
+    _FG_SESSION_ID=$(vbw_active_agent_session_id "$INPUT" 2>/dev/null) || _FG_SESSION_ID="${CLAUDE_SESSION_ID:-}"
+    if vbw_orchestrator_instance_id "$_FG_SESSION_ID" >/dev/null 2>&1; then
+      printf 'orchestrator'
+      return 0
+    fi
+    return 1
+  fi
+  printf 'Blocked: unrecognized agent evidence (agent_type=%s, agent_id=%s); role cannot be confirmed.\n' "$_FG_PAYLOAD_AGENT_TYPE" "$_FG_PAYLOAD_AGENT_ID" >&2
+  return 2
 }
 
 ACTIVE_AGENT_ROLE=""
 if ACTIVE_AGENT_ROLE=$(detect_agent_role); then
   :
 else
+  _FG_ROLE_STATUS=$?
   ACTIVE_AGENT_ROLE=""
+  if [ "$_FG_ROLE_STATUS" -eq 2 ]; then
+    exit 2
+  fi
 fi
 
 _FG_NORMALIZED=$(echo "$FILE_PATH" | sed 's#/[^/]*/\.\./#/#g')
@@ -264,6 +272,88 @@ normalize_path() {
   echo "$input_path"
 }
 
+declare -A _FG_PATTERN_MATCH_CACHE=()
+
+path_pattern_components_match_at() {
+  local target_index="$1" pattern_index="$2" cache_key result
+  local target_segment pattern_segment
+  local target_count="${#_FG_TARGET_COMPONENTS[@]}" pattern_count="${#_FG_PATTERN_COMPONENTS[@]}"
+  cache_key="$target_index:$pattern_index"
+  if [ -n "${_FG_PATTERN_MATCH_CACHE["$cache_key"]+set}" ]; then
+    return "${_FG_PATTERN_MATCH_CACHE["$cache_key"]}"
+  fi
+  if [ "$pattern_index" -eq "$pattern_count" ]; then
+    result=1
+    [ "$target_index" -eq "$target_count" ] && result=0
+  else
+    pattern_segment="${_FG_PATTERN_COMPONENTS[$pattern_index]}"
+    if [ "$target_index" -ge "$target_count" ] && [ "$pattern_segment" != "**" ]; then
+      result=1
+    elif [ "$pattern_segment" = "**" ]; then
+      result=1
+      path_pattern_components_match_at "$target_index" "$((pattern_index + 1))" && result=0
+      if [ "$result" -ne 0 ] && [ "$target_index" -lt "$target_count" ] && path_pattern_components_match_at "$((target_index + 1))" "$pattern_index"; then
+        result=0
+      fi
+    else
+      result=1
+      target_segment="${_FG_TARGET_COMPONENTS[$target_index]}"
+      # shellcheck disable=SC2254 # Because quoting would disable lexical glob matching.
+      case "$target_segment" in
+        $pattern_segment) path_pattern_components_match_at "$((target_index + 1))" "$((pattern_index + 1))" && result=0 ;;
+      esac
+    fi
+  fi
+  _FG_PATTERN_MATCH_CACHE["$cache_key"]="$result"
+  return "$result"
+}
+
+path_pattern_split_components() {
+  local value="$1" target_array="$2" part
+  if [ "$target_array" = target ]; then _FG_TARGET_COMPONENTS=(); else _FG_PATTERN_COMPONENTS=(); fi
+  while [[ "$value" == */* ]]; do
+    part="${value%%/*}"
+    if [ "$target_array" = target ]; then _FG_TARGET_COMPONENTS+=("$part"); else _FG_PATTERN_COMPONENTS+=("$part"); fi
+    value="${value#*/}"
+  done
+  if [ "$target_array" = target ]; then _FG_TARGET_COMPONENTS+=("$value"); else _FG_PATTERN_COMPONENTS+=("$value"); fi
+}
+
+path_pattern_components_match() {
+  local target="$1" pattern="$2"
+  path_pattern_split_components "$target" target
+  path_pattern_split_components "$pattern" pattern
+  _FG_PATTERN_MATCH_CACHE=()
+  path_pattern_components_match_at 0 0
+}
+
+# shellcheck disable=SC2254 # Because quoting would disable lexical glob matching.
+path_matches_pattern() {
+  local target="$1" pattern="$2"
+  local prefix alternatives suffix alternative expanded_pattern
+  local -a brace_alternatives
+
+  [ "$target" = "$pattern" ] && return 0
+
+  case "$pattern" in
+    *"{"*"}"*)
+      prefix="${pattern%%\{*}"
+      alternatives="${pattern#*\{}"
+      alternatives="${alternatives%%\}*}"
+      suffix="${pattern#*\{*\}}"
+      IFS=',' read -r -a brace_alternatives <<< "$alternatives"
+      for alternative in "${brace_alternatives[@]}"; do
+        expanded_pattern="${prefix}${alternative}${suffix}"
+        path_pattern_components_match "$target" "$expanded_pattern" && return 0
+      done
+      ;;
+    *"*"*|*"?"*|*"["*)
+      path_pattern_components_match "$target" "$pattern" && return 0
+      ;;
+  esac
+  return 1
+}
+
 NORM_TARGET=$(normalize_path "$FILE_PATH")
 
 CONFIG_PATH="$PROJECT_ROOT/.vbw-planning/config.json"
@@ -271,30 +361,46 @@ WORKTREE_ISOLATION="off"
 if command -v jq >/dev/null 2>&1 && [ -f "$CONFIG_PATH" ]; then
   WORKTREE_ISOLATION=$(jq -r '.worktree_isolation // "off"' "$CONFIG_PATH" 2>/dev/null) || WORKTREE_ISOLATION="off"
 fi
-if [ "$WORKTREE_ISOLATION" != "off" ] && [ -n "${VBW_AGENT_ROLE:-}" ]; then
-  case "${VBW_AGENT_ROLE:-}" in
+if [ "$WORKTREE_ISOLATION" != "off" ] && [ -n "$ACTIVE_AGENT_ROLE" ]; then
+  case "$ACTIVE_AGENT_ROLE" in
     dev|debugger)
-      AGENT_NAME_SHORT=$(echo "${VBW_AGENT_NAME:-}" | sed 's/.*vbw-//')
-      WORKTREE_MAP_FILE="$PROJECT_ROOT/.vbw-planning/.agent-worktrees/${AGENT_NAME_SHORT}.json"
-      if [ -f "$WORKTREE_MAP_FILE" ]; then
-        WORKTREE_PATH=$(jq -r '.worktree_path // ""' "$WORKTREE_MAP_FILE" 2>/dev/null) || WORKTREE_PATH=""
-        if [ -n "$WORKTREE_PATH" ]; then
-          WORKTREE_ABS=$(to_abs_path "$WORKTREE_PATH")
-          TARGET_ABS=$(to_abs_path "$FILE_PATH")
-          case "$TARGET_ABS" in
-            "$WORKTREE_ABS"/*|"$WORKTREE_ABS")
-              :
-              ;;
-            *)
-              echo "Blocked: write outside worktree boundary (expected prefix: $WORKTREE_ABS, got: $TARGET_ABS)" >&2
-              exit 2
-              ;;
-          esac
-        fi
+      AGENT_NAME_SHORT="${VBW_AGENT_NAME:-${_FG_PAYLOAD_AGENT_ID:-}}"
+      case "$AGENT_NAME_SHORT" in
+        @vbw:*) AGENT_NAME_SHORT="${AGENT_NAME_SHORT#@vbw:}" ;;
+        vbw:*) AGENT_NAME_SHORT="${AGENT_NAME_SHORT#vbw:}" ;;
+      esac
+      case "$AGENT_NAME_SHORT" in
+        *vbw-*) AGENT_NAME_SHORT="${AGENT_NAME_SHORT##*vbw-}" ;;
+      esac
+      if [ -z "$AGENT_NAME_SHORT" ]; then
+        echo "Blocked: worktree mapping cannot be resolved for role '$ACTIVE_AGENT_ROLE'" >&2
+        exit 2
       fi
+      WORKTREE_MAP_FILE="$PROJECT_ROOT/.vbw-planning/.agent-worktrees/${AGENT_NAME_SHORT}.json"
+      if [ ! -f "$WORKTREE_MAP_FILE" ]; then
+        echo "Blocked: worktree mapping missing for agent '$AGENT_NAME_SHORT'" >&2
+        exit 2
+      fi
+      WORKTREE_PATH=$(jq -r '.worktree_path // ""' "$WORKTREE_MAP_FILE" 2>/dev/null) || WORKTREE_PATH=""
+      if [ -z "$WORKTREE_PATH" ]; then
+        echo "Blocked: worktree mapping has no path for agent '$AGENT_NAME_SHORT'" >&2
+        exit 2
+      fi
+      WORKTREE_ABS=$(to_abs_path "$WORKTREE_PATH")
+      TARGET_ABS=$(to_abs_path "$FILE_PATH")
+      case "$TARGET_ABS" in
+        "$WORKTREE_ABS"/*|"$WORKTREE_ABS")
+          :
+          ;;
+        *)
+          echo "Blocked: write outside worktree boundary (expected prefix: $WORKTREE_ABS, got: $TARGET_ABS)" >&2
+          exit 2
+          ;;
+      esac
       ;;
   esac
 fi
+
 
 CONTRACT_DIR="$PROJECT_ROOT/.vbw-planning/.contracts"
 if [ -d "$CONTRACT_DIR" ]; then
@@ -325,7 +431,7 @@ if [ -d "$CONTRACT_DIR" ]; then
           while IFS= read -r allowed; do
             [ -z "$allowed" ] && continue
             NORM_ALLOWED="${allowed#./}"
-            if [ "$NORM_TARGET" = "$NORM_ALLOWED" ]; then
+            if path_matches_pattern "$NORM_TARGET" "$NORM_ALLOWED"; then
               IN_SCOPE=true
               break
             fi
@@ -513,7 +619,7 @@ DECLARED_FILES=$(awk '
 while IFS= read -r declared; do
   [ -z "$declared" ] && continue
   NORM_DECLARED=$(normalize_path "$declared")
-  if [ "$NORM_TARGET" = "$NORM_DECLARED" ]; then
+  if path_matches_pattern "$NORM_TARGET" "$NORM_DECLARED"; then
     exit 0
   fi
 done <<< "$DECLARED_FILES"

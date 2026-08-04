@@ -8,6 +8,7 @@ fi
 
 . "$(dirname "$0")/resolve-claude-dir.sh"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+. "$SCRIPT_DIR/lib/orchestrator-identity.sh"
 
 . "$SCRIPT_DIR/lib/vbw-config-root.sh"
 . "$SCRIPT_DIR/lib/vbw-cache-key.sh"
@@ -433,6 +434,16 @@ if [ -n "$_VBW_CANONICAL_ROOT" ] && \
       printf '%s\n' "$_VBW_ROOT_EXPORT" >> "$CLAUDE_ENV_FILE"
     fi
   fi
+  _VBW_MARKER_SESSION_ID="$_VBW_SESSION_ID"
+  if [ -z "$_VBW_MARKER_SESSION_ID" ]; then
+    case "${CLAUDE_SESSION_ID:-}" in
+      ''|*[!a-zA-Z0-9._-]*) _VBW_MARKER_SESSION_ID="" ;;
+      *) _VBW_MARKER_SESSION_ID="$CLAUDE_SESSION_ID" ;;
+    esac
+  fi
+  if [ -n "$_VBW_MARKER_SESSION_ID" ] && ! vbw_orchestrator_write_marker "$_VBW_MARKER_SESSION_ID"; then
+    echo "VBW: SessionStart orchestrator marker bootstrap failed" >&2
+  fi
 fi
 
 CACHE_DIR="$CLAUDE_DIR/plugins/cache/vbw-marketplace/vbw"
@@ -507,8 +518,14 @@ if [ -d "$MKT_DIR/.git" ] && [ -d "$CACHE_DIR" ]; then
   fi
   if [ -d "$MKT_DIR/commands" ] && [ -d "$CACHE_DIR" ]; then
     if [ -n "$_CACHE_LATEST" ] && [ -d "${_CACHE_LATEST}commands" ] && [ ! -L "${_CACHE_LATEST%/}" ]; then
-      MKT_CMD_COUNT=$(ls -1 "$MKT_DIR/commands/" 2>/dev/null | grep '\.md$' | wc -l | tr -d ' ')
-      CACHE_CMD_COUNT=$(ls -1 "${_CACHE_LATEST}commands/" 2>/dev/null | grep '\.md$' | wc -l | tr -d ' ')
+      MKT_CMD_COUNT=0
+      for _cmd_file in "$MKT_DIR/commands"/*.md; do
+        [ -f "$_cmd_file" ] && MKT_CMD_COUNT=$((MKT_CMD_COUNT + 1))
+      done
+      CACHE_CMD_COUNT=0
+      for _cmd_file in "${_CACHE_LATEST}commands"/*.md; do
+        [ -f "$_cmd_file" ] && CACHE_CMD_COUNT=$((CACHE_CMD_COUNT + 1))
+      done
       if [ "${MKT_CMD_COUNT:-0}" -ne "${CACHE_CMD_COUNT:-0}" ]; then
         echo "VBW cache stale, marketplace has ${MKT_CMD_COUNT} commands, cache has ${CACHE_CMD_COUNT}" >&2
         rm -rf "$CACHE_DIR"

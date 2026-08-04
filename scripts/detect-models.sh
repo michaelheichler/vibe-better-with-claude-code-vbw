@@ -5,8 +5,6 @@
 # map, the model picker table, and the custom-model catalog string, so
 # detection works offline with zero credentials and zero third-party calls.
 # Patched binaries advertise injected models in the same structures.
-# ${ANTHROPIC_BASE_URL}/v1/models is a strict last resort, queried only when
-# the binary yields nothing and endpoint auth env exists.
 #
 # Usage: detect-models.sh [--labeled]
 #   default    stdout = model ids, one per line
@@ -18,9 +16,6 @@
 # Env:
 #   VBW_MODEL_CATALOG_FILE  test hook: cat this file and exit (no probing)
 #   CLAUDE_CODE_EXECPATH    Claude Code binary (default: command -v claude)
-#   ANTHROPIC_BASE_URL      endpoint base for the last-resort fetch
-#   ANTHROPIC_API_KEY       last-resort fetch auth (x-api-key)
-#   ANTHROPIC_AUTH_TOKEN    last-resort fetch auth (Bearer, when no api key)
 #
 # Results cached 1h at /tmp/vbw-models-<hash>. Failures are cached too. The
 # cache identity carries the binary mtime and size, so a re-patched binary
@@ -46,26 +41,19 @@ fi
 CLAUDE_BIN="${CLAUDE_CODE_EXECPATH:-$(command -v claude || true)}"
 [ -f "$CLAUDE_BIN" ] || CLAUDE_BIN=""
 
-BASE="${ANTHROPIC_BASE_URL:-https://api.anthropic.com}"
-BASE="${BASE%/}"
-AUTH=""
-if [ -n "${ANTHROPIC_API_KEY:-}" ] || [ -n "${ANTHROPIC_AUTH_TOKEN:-}" ]; then
-  AUTH="1"
-fi
-
 BIN_STAMP="0:0"
 if [ -n "$CLAUDE_BIN" ]; then
   BIN_STAMP="$(stat -f '%m:%z' "$CLAUDE_BIN" 2>/dev/null || stat -c '%Y:%s' "$CLAUDE_BIN" 2>/dev/null || echo 0:0)"
 fi
 
-SRC="bin:${CLAUDE_BIN:-none}:${BIN_STAMP}|${AUTH:+$BASE}"
+SRC="bin:${CLAUDE_BIN:-none}:${BIN_STAMP}"
 CACHE="/tmp/vbw-models-$(hash_path "$SRC")${LABELED:+-labeled}"
 if [ -f "$CACHE" ] && [ -n "$(find "$CACHE" -mmin -60 2>/dev/null)" ]; then
   cat "$CACHE"
   exit 0
 fi
 
-if [ -z "$CLAUDE_BIN" ] && [ -z "$AUTH" ]; then
+if [ -z "$CLAUDE_BIN" ]; then
   exit 0
 fi
 
@@ -82,29 +70,10 @@ extract_binary() {
     | sed 's/^ *//; s/ = /\t/' | grep -E '^[A-Za-z0-9._:/[-]+(\[1m\])?\t' || true
 }
 
-fetch_endpoint() {
-  local auth
-  if [ -n "${ANTHROPIC_API_KEY:-}" ]; then
-    auth="x-api-key: ${ANTHROPIC_API_KEY}"
-  elif [ -n "${ANTHROPIC_AUTH_TOKEN:-}" ]; then
-    auth="Authorization: Bearer ${ANTHROPIC_AUTH_TOKEN}"
-  else
-    return 0
-  fi
-  { curl -fsS --max-time 2 --config - "$BASE/v1/models?limit=1000" 2>/dev/null <<EOF || true
-header = "$auth"
-header = "anthropic-version: 2023-06-01"
-EOF
-  } | jq -r '.data[]? | "\(.id)\t\(.display_name // .id)"' 2>/dev/null || true
-}
-
 TMP="$(mktemp "${CACHE}.XXXXXX")"
 trap 'rm -f "$TMP"' EXIT
 if [ -n "$CLAUDE_BIN" ]; then
   extract_binary >> "$TMP"
-fi
-if [ ! -s "$TMP" ] && [ -n "$AUTH" ]; then
-  fetch_endpoint >> "$TMP"
 fi
 if [ -z "$LABELED" ]; then
   cut -f1 "$TMP" | sort -u > "${TMP}.ids" && mv "${TMP}.ids" "$TMP"

@@ -1,13 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# verify-bash-scripts-contract.sh, Repo-wide checks for shell scripts
-#
-# Checks all .sh files under scripts/ and testing/ for:
-# - executable bit
-# - bash shebang
-# - valid Bash syntax (bash -n)
-
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 
 PASS=0
@@ -15,12 +8,12 @@ FAIL=0
 
 pass() {
   echo "PASS  $1"
-  PASS=$((PASS + 1))
+  declare -g PASS=$((PASS + 1))
 }
 
 fail() {
   echo "FAIL  $1"
-  FAIL=$((FAIL + 1))
+  declare -g FAIL=$((FAIL + 1))
 }
 
 echo "=== Bash Script Contract Verification ==="

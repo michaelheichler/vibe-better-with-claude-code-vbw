@@ -16,48 +16,6 @@ LEGACY_AGENT_ROLE_SOURCE=$(echo "$INPUT" | jq -r '.agent_name // .agentName // .
 
 COUNT_FILE="$PLANNING_DIR/.active-agent-count"
 
-normalize_agent_role() {
-  local value="$1"
-  local lower
-
-  lower=$(printf '%s' "$value" | tr '[:upper:]' '[:lower:]')
-  lower="${lower#@}"
-  lower="${lower#vbw:}"
-
-  case "$lower" in
-    vbw-lead|vbw-lead-[0-9]*|lead|lead-[0-9]*|team-lead|team-lead-[0-9]*)
-      printf 'lead'
-      return 0
-      ;;
-    vbw-dev|vbw-dev-[0-9]*|dev|dev-[0-9]*|team-dev|team-dev-[0-9]*)
-      printf 'dev'
-      return 0
-      ;;
-    vbw-qa|vbw-qa-[0-9]*|qa|qa-[0-9]*|team-qa|team-qa-[0-9]*)
-      printf 'qa'
-      return 0
-      ;;
-    vbw-scout|vbw-scout-[0-9]*|scout|scout-[0-9]*|team-scout|team-scout-[0-9]*)
-      printf 'scout'
-      return 0
-      ;;
-    vbw-debugger|vbw-debugger-[0-9]*|debugger|debugger-[0-9]*|team-debugger|team-debugger-[0-9]*)
-      printf 'debugger'
-      return 0
-      ;;
-    vbw-architect|vbw-architect-[0-9]*|architect|architect-[0-9]*|team-architect|team-architect-[0-9]*)
-      printf 'architect'
-      return 0
-      ;;
-    vbw-docs|vbw-docs-[0-9]*|docs|docs-[0-9]*|team-docs|team-docs-[0-9]*)
-      printf 'docs'
-      return 0
-      ;;
-  esac
-
-  return 1
-}
-
 is_explicit_vbw_agent() {
   local value="$1"
   local lower
@@ -102,7 +60,7 @@ else
 fi
 
 ROLE=""
-if ROLE=$(normalize_agent_role "$AGENT_ROLE_SOURCE"); then
+if ROLE=$(vbw_active_agent_normalize_role "$AGENT_ROLE_SOURCE"); then
   :
 else
   ROLE=""

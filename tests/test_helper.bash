@@ -179,7 +179,7 @@ create_test_vbw_workspace() {
 
 create_test_config() {
   local dir="${1:-.vbw-planning}"
-  jq '.worktree_isolation = "on" | .lease_locks = false | .event_recovery = false' "$CONFIG_DIR/defaults.json" > "$TEST_TEMP_DIR/$dir/config.json"
+  jq '.worktree_isolation = "off" | .lease_locks = false | .event_recovery = false' "$CONFIG_DIR/defaults.json" > "$TEST_TEMP_DIR/$dir/config.json"
 }
 
 setup_unrelated_git_repo() {

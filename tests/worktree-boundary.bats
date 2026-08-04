@@ -1,18 +1,16 @@
 #!/usr/bin/env bats
 
-# Tests for worktree boundary enforcement in file-guard.sh,
-# worktree context injection in compaction-instructions.sh and post-compact.sh,
-# stale worktree cleanup in session-stop.sh, and worktree scan in doctor-cleanup.sh.
 
 load test_helper
 
 setup() {
   setup_temp_dir
   create_test_config
+  jq '.worktree_isolation = "on"' "$TEST_TEMP_DIR/.vbw-planning/config.json" > "$TEST_TEMP_DIR/.vbw-planning/config.json.tmp"
+  mv "$TEST_TEMP_DIR/.vbw-planning/config.json.tmp" "$TEST_TEMP_DIR/.vbw-planning/config.json"
 
   cd "$TEST_TEMP_DIR"
 
-  # Git repo needed for file-guard.sh
   git init -q
   git config user.email "test@test.com"
   git config user.name "Test"
@@ -20,7 +18,6 @@ setup() {
   git add init.txt
   git commit -q -m "chore: init"
 
-  # Create an active plan so file-guard doesn't fail-open for plan checks
   mkdir -p .vbw-planning/phases/01-test
   cat > .vbw-planning/phases/01-test/01-01-PLAN.md <<'PLAN'
 ---
@@ -40,7 +37,6 @@ teardown() {
   teardown_temp_dir
 }
 
-# Helper: run file-guard.sh with env vars and JSON input
 run_file_guard() {
   local role="$1" agent_name="$2" file_path="$3"
   jq -n --arg fp "$file_path" '{"tool_input":{"file_path":$fp}}' > "$TEST_TEMP_DIR/.test-input.json"
@@ -58,15 +54,10 @@ set_stale_mtime_3h() {
   touch -t "$stamp" "$target"
 }
 
-# ===========================================================================
-# file-guard.sh — Worktree Boundary Enforcement
-# ===========================================================================
 
 @test "file-guard worktree: write inside worktree allowed" {
-  # Enable worktree isolation
   jq '.worktree_isolation = "on"' .vbw-planning/config.json > .vbw-planning/config.json.tmp
   mv .vbw-planning/config.json.tmp .vbw-planning/config.json
-  # Create agent-worktrees mapping pointing to project root (simulates worktree = repo)
   mkdir -p .vbw-planning/.agent-worktrees
   echo "{\"worktree_path\":\"$TEST_TEMP_DIR\"}" > .vbw-planning/.agent-worktrees/dev-01.json
 
@@ -116,11 +107,9 @@ set_stale_mtime_3h() {
   mkdir -p "$wt_path"
   echo "{\"worktree_path\":\"$wt_path\"}" > .vbw-planning/.agent-worktrees/qa-01.json
 
-  # QA role gets blocked by role isolation (can't write non-planning files), not by worktree
   local input
   input=$(jq -n '{"tool_input":{"file_path":".vbw-planning/test.md"}}')
   run bash -c "VBW_AGENT_ROLE=qa VBW_AGENT_NAME=vbw-qa-01 echo '$input' | VBW_AGENT_ROLE=qa VBW_AGENT_NAME=vbw-qa-01 bash '$SCRIPTS_DIR/file-guard.sh'"
-  # Planning path is exempted, so exit 0
   [ "$status" -eq 0 ]
 }
 
@@ -132,21 +121,17 @@ set_stale_mtime_3h() {
   mkdir -p "$wt_path"
   echo "{\"worktree_path\":\"$wt_path\"}" > .vbw-planning/.agent-worktrees/dev-01.json
 
-  # Dev role with worktree_isolation=off — boundary check skipped, proceeds to plan check
   run_file_guard dev vbw-dev-01 "$TEST_TEMP_DIR/src/app.ts"
-  # src/app.ts is in the plan's files_modified, so allowed
   [ "$status" -eq 0 ]
 }
 
-@test "file-guard worktree: no agent-worktrees mapping fails open" {
+@test "file-guard worktree: missing agent mapping blocks" {
   jq '.worktree_isolation = "on"' .vbw-planning/config.json > .vbw-planning/config.json.tmp
   mv .vbw-planning/config.json.tmp .vbw-planning/config.json
-  # No .agent-worktrees directory — should fail open
 
   run_file_guard dev vbw-dev-01 "$TEST_TEMP_DIR/src/app.ts"
-  # No mapping file → worktree check skipped → falls through to plan check
-  # src/app.ts is in files_modified → allowed
-  [ "$status" -eq 0 ]
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"worktree mapping missing"* ]]
 }
 
 @test "file-guard worktree: debugger also gets boundary enforced" {
@@ -162,9 +147,6 @@ set_stale_mtime_3h() {
   [[ "$output" == *"outside worktree boundary"* ]]
 }
 
-# ===========================================================================
-# compaction-instructions.sh — Worktree Context Injection
-# ===========================================================================
 
 @test "compaction-instructions: dev with worktree mapping includes CRITICAL path" {
   local wt_path="$TEST_TEMP_DIR/.vbw-worktrees/01-01"
@@ -244,9 +226,6 @@ set_stale_mtime_3h() {
   [[ "$output" != *"CRITICAL: Your working directory"* ]]
 }
 
-# ===========================================================================
-# post-compact.sh — Worktree Context Injection
-# ===========================================================================
 
 @test "post-compact: dev with worktree mapping includes worktree path" {
   local wt_path="$TEST_TEMP_DIR/.vbw-worktrees/01-01"
@@ -327,12 +306,8 @@ set_stale_mtime_3h() {
   [[ "$output" != *"Worktree working directory"* ]]
 }
 
-# ===========================================================================
-# session-stop.sh — Stale Worktree Cleanup
-# ===========================================================================
 
 @test "session-stop: cleans stale worktree directories (>2hrs)" {
-  # Create a real git worktree so cleanup outcome can be asserted.
   git worktree add .vbw-worktrees/01-01 -b vbw/01-01 >/dev/null
   set_stale_mtime_3h .vbw-worktrees/01-01
   [ "$?" -eq 0 ]
@@ -347,10 +322,8 @@ set_stale_mtime_3h() {
 
 @test "session-stop: preserves fresh worktree directories (<2hrs)" {
   mkdir -p .vbw-worktrees/01-01
-  # Just created — should not be cleaned
 
   echo '{"cost_usd":0,"duration_ms":0,"tokens_in":0,"tokens_out":0,"model":"test"}' | bash "$SCRIPTS_DIR/session-stop.sh"
-  # Fresh worktree should still exist
   [ -d ".vbw-worktrees/01-01" ]
 }
 
@@ -360,9 +333,6 @@ set_stale_mtime_3h() {
   [ "$status" -eq 0 ]
 }
 
-# ===========================================================================
-# doctor-cleanup.sh — Stale Worktree Scan
-# ===========================================================================
 
 @test "doctor-cleanup scan: detects stale worktree" {
   mkdir -p .vbw-worktrees/02-01
@@ -376,7 +346,6 @@ set_stale_mtime_3h() {
 
 @test "doctor-cleanup scan: ignores fresh worktree" {
   mkdir -p .vbw-worktrees/01-01
-  # Just created — not stale
 
   run bash "$SCRIPTS_DIR/doctor-cleanup.sh" scan
   [ "$status" -eq 0 ]

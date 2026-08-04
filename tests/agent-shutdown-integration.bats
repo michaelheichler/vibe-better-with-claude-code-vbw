@@ -1,23 +1,15 @@
 #!/usr/bin/env bats
 
-# Integration tests for the agent shutdown lifecycle.
-# Verifies agent-start → agent-stop reference counting, session-stop cleanup,
-# and the full chain including task-verify circuit breaker state lifecycle.
-#
-# Related: PR #95, Issue #94
 
 load test_helper
 
-# Counter for unique fake PIDs across tests
-FAKE_PID_BASE=90000
-
 setup() {
+  LIVE_PIDS=()
   setup_temp_dir
   create_test_config
 
-  cd "$TEST_TEMP_DIR"
+  cd "$TEST_TEMP_DIR" || return 1
 
-  # Git repo needed for task-verify.sh
   git init -q
   git config user.email "test@test.com"
   git config user.name "Test"
@@ -25,26 +17,26 @@ setup() {
   git add init.txt
   git commit -q -m "chore: initial commit"
 
-  # Create a .vbw-session marker (should be preserved by session-stop)
   echo "test-session" > "$TEST_TEMP_DIR/.vbw-planning/.vbw-session"
 
-  # Clean stale PID tracker lock from previous interrupted runs (rm -rf handles
-  # non-empty lock dirs left when a prior run was interrupted after pid write)
   rm -rf "$VBW_AGENT_PID_LOCK_DIR" 2>/dev/null || true
 }
 
 teardown() {
+  local pid
+  for pid in "${LIVE_PIDS[@]}"; do
+    kill "$pid" 2>/dev/null || true
+  done
   rm -rf "$VBW_AGENT_PID_LOCK_DIR" 2>/dev/null || true
   teardown_temp_dir
 }
 
-# Helper: get a unique fake PID (numeric, won't collide with real processes)
-next_fake_pid() {
-  FAKE_PID_BASE=$((FAKE_PID_BASE + 1))
-  echo "$FAKE_PID_BASE"
+next_live_pid() {
+  sleep 999 >/dev/null 2>&1 &
+  NEXT_PID=$!
+  LIVE_PIDS+=("$NEXT_PID")
 }
 
-# Helper: simulate SubagentStart hook for a given agent type with a PID
 simulate_agent_start() {
   local agent_type="$1"
   local pid="$2"
@@ -52,27 +44,23 @@ simulate_agent_start() {
     | bash "$SCRIPTS_DIR/agent-start.sh"
 }
 
-# Helper: simulate SubagentStop hook for a given PID
 simulate_agent_stop() {
   local pid="$1"
   echo "{\"pid\":\"$pid\"}" \
     | bash "$SCRIPTS_DIR/agent-stop.sh"
 }
 
-# Helper: simulate SessionStop hook with minimal metrics
 simulate_session_stop() {
   echo '{"cost_usd":0.01,"duration_ms":5000,"tokens_in":100,"tokens_out":50,"model":"test"}' \
     | bash "$SCRIPTS_DIR/session-stop.sh"
 }
 
-# =============================================================================
-# Agent Start/Stop Reference Counting
-# =============================================================================
 
 @test "agent-start creates .active-agent and sets count to 1" {
   cd "$TEST_TEMP_DIR"
   local pid
-  pid=$(next_fake_pid)
+  next_live_pid
+  pid="$NEXT_PID"
 
   simulate_agent_start "vbw-dev" "$pid"
 
@@ -85,8 +73,10 @@ simulate_session_stop() {
 @test "two agent-starts increment count to 2" {
   cd "$TEST_TEMP_DIR"
   local pid1 pid2
-  pid1=$(next_fake_pid)
-  pid2=$(next_fake_pid)
+  next_live_pid
+  pid1="$NEXT_PID"
+  next_live_pid
+  pid2="$NEXT_PID"
 
   simulate_agent_start "vbw-dev" "$pid1"
   simulate_agent_start "vbw-qa" "$pid2"
@@ -95,16 +85,17 @@ simulate_session_stop() {
   [ "$output" = "2" ]
 }
 
-@test "agent-stop decrements count from 2 to 1 — markers preserved" {
+@test "agent-stop decrements count from 2 to 1 - markers preserved" {
   cd "$TEST_TEMP_DIR"
   local pid1 pid2
-  pid1=$(next_fake_pid)
-  pid2=$(next_fake_pid)
+  next_live_pid
+  pid1="$NEXT_PID"
+  next_live_pid
+  pid2="$NEXT_PID"
 
   simulate_agent_start "vbw-dev" "$pid1"
   simulate_agent_start "vbw-qa" "$pid2"
 
-  # Stop first agent
   simulate_agent_stop "$pid1"
 
   [ -f ".vbw-planning/.active-agent" ]
@@ -113,10 +104,11 @@ simulate_session_stop() {
   [ "$output" = "1" ]
 }
 
-@test "agent-stop decrements count from 1 to 0 — markers removed" {
+@test "agent-stop decrements count from 1 to 0 - markers removed" {
   cd "$TEST_TEMP_DIR"
   local pid1
-  pid1=$(next_fake_pid)
+  next_live_pid
+  pid1="$NEXT_PID"
 
   simulate_agent_start "vbw-dev" "$pid1"
   simulate_agent_stop "$pid1"
@@ -125,11 +117,13 @@ simulate_session_stop() {
   [ ! -f ".vbw-planning/.active-agent-count" ]
 }
 
-@test "two starts then two stops — all markers cleaned" {
+@test "two starts then two stops - all markers cleaned" {
   cd "$TEST_TEMP_DIR"
   local pid1 pid2
-  pid1=$(next_fake_pid)
-  pid2=$(next_fake_pid)
+  next_live_pid
+  pid1="$NEXT_PID"
+  next_live_pid
+  pid2="$NEXT_PID"
 
   simulate_agent_start "vbw-dev" "$pid1"
   simulate_agent_start "vbw-qa" "$pid2"
@@ -140,54 +134,45 @@ simulate_session_stop() {
   [ ! -f ".vbw-planning/.active-agent-count" ]
 }
 
-@test "agent-stop with no count file but active-agent marker — removes marker" {
+@test "agent-stop with no count file but active-agent marker - removes marker" {
   cd "$TEST_TEMP_DIR"
-  # Simulate legacy state: marker but no count file
+  local dead_pid
+  dead_pid=$(get_dead_pid) || fail "get_dead_pid failed"
   echo "dev" > ".vbw-planning/.active-agent"
 
-  echo '{"pid":"99999"}' | bash "$SCRIPTS_DIR/agent-stop.sh"
+  echo "{\"pid\":\"$dead_pid\"}" | bash "$SCRIPTS_DIR/agent-stop.sh"
 
   [ ! -f ".vbw-planning/.active-agent" ]
 }
 
 @test "agent-stop always exits 0" {
   cd "$TEST_TEMP_DIR"
-  # Even with no markers at all
   run bash -c 'echo "{}" | bash "'"$SCRIPTS_DIR"'/agent-stop.sh"'
   [ "$status" -eq 0 ]
 }
 
-# =============================================================================
-# PID Tracker Integration with Agent Start/Stop
-# =============================================================================
 
-@test "agent-start registers PID — agent-stop unregisters it" {
+@test "agent-start registers PID - agent-stop unregisters it" {
   cd "$TEST_TEMP_DIR"
   local pid
-  pid=$(next_fake_pid)
+  next_live_pid
+  pid="$NEXT_PID"
 
   simulate_agent_start "vbw-dev" "$pid"
 
-  # PID should be in the tracker
   [ -f ".vbw-planning/.agent-pids" ]
   run grep "^${pid}$" ".vbw-planning/.agent-pids"
   [ "$status" -eq 0 ]
 
   simulate_agent_stop "$pid"
 
-  # PID should be removed
   run grep "^${pid}$" ".vbw-planning/.agent-pids"
   [ "$status" -ne 0 ]
 }
 
-# =============================================================================
-# PID Tracker Prune — dead PID cleanup
-# =============================================================================
 
 @test "prune removes all dead PIDs and deletes the file" {
   cd "$TEST_TEMP_DIR"
-  # Generate guaranteed-dead PIDs instead of hardcoded values that may
-  # collide with live processes under parallel BATS execution
   local dead1 dead2 dead3
   dead1=$(get_dead_pid) || fail "get_dead_pid failed"
   dead2=$(get_dead_pid) || fail "get_dead_pid failed"
@@ -197,7 +182,6 @@ simulate_session_stop() {
   run bash "$SCRIPTS_DIR/agent-pid-tracker.sh" prune
   [ "$status" -eq 0 ]
 
-  # File should be removed (all PIDs dead)
   [ ! -f ".vbw-planning/.agent-pids" ]
 }
 
@@ -215,12 +199,10 @@ simulate_session_stop() {
   run bash "$SCRIPTS_DIR/agent-pid-tracker.sh" prune
   [ "$status" -eq 0 ]
 
-  # File should exist with only the alive PID
   [ -f ".vbw-planning/.agent-pids" ]
   run grep "^${alive_pid}$" ".vbw-planning/.agent-pids"
   [ "$status" -eq 0 ]
 
-  # Dead PIDs should be gone
   run grep "^${dead1}$" ".vbw-planning/.agent-pids"
   [ "$status" -ne 0 ]
   run grep "^${dead2}$" ".vbw-planning/.agent-pids"
@@ -238,12 +220,10 @@ simulate_session_stop() {
 
 @test "prune ignores leftover .agent-pids.tmp from interrupted prune" {
   cd "$TEST_TEMP_DIR"
-  # Simulate interrupted prune that left a stale temp file with a dead PID
   local stale_pid
   stale_pid=$(get_dead_pid) || fail "get_dead_pid failed"
   echo "$stale_pid" > ".vbw-planning/.agent-pids.tmp"
 
-  # Put a live PID in the real file
   local alive_pid
   assign_live_pid alive_pid || fail "assign_live_pid failed"
   kill -0 "$alive_pid" 2>/dev/null || fail "live pid fixture is not alive"
@@ -255,18 +235,15 @@ simulate_session_stop() {
   run bash "$SCRIPTS_DIR/agent-pid-tracker.sh" prune
   [ "$status" -eq 0 ]
 
-  # File should contain ONLY the live PID (stale temp content must not leak)
   [ -f ".vbw-planning/.agent-pids" ]
   run cat ".vbw-planning/.agent-pids"
   [ "$output" = "$alive_pid" ]
 
-  # Temp file should be cleaned up
   [ ! -f ".vbw-planning/.agent-pids.tmp" ]
 }
 
 @test "prune recovers from stale lock left by crashed process" {
   cd "$TEST_TEMP_DIR"
-  # Simulate stale lock from a crashed process
   local stale_lock_pid dead1 dead2
   stale_lock_pid=$(get_dead_pid) || fail "get_dead_pid failed"
   dead1=$(get_dead_pid) || fail "get_dead_pid failed"
@@ -279,16 +256,13 @@ simulate_session_stop() {
   run bash "$SCRIPTS_DIR/agent-pid-tracker.sh" prune
   [ "$status" -eq 0 ]
 
-  # All dead PIDs should be pruned — file removed
   [ ! -f ".vbw-planning/.agent-pids" ]
 
-  # Lock should be released
   [ ! -d "$VBW_AGENT_PID_LOCK_DIR" ]
 }
 
 @test "prune recovers from stale lock directory with no pid file" {
   cd "$TEST_TEMP_DIR"
-  # Simulate stale lock dir with no pid file (edge case: lock created but pid write failed)
   local dead1 dead2
   dead1=$(get_dead_pid) || fail "get_dead_pid failed"
   dead2=$(get_dead_pid) || fail "get_dead_pid failed"
@@ -299,27 +273,22 @@ simulate_session_stop() {
   run bash "$SCRIPTS_DIR/agent-pid-tracker.sh" prune
   [ "$status" -eq 0 ]
 
-  # All dead PIDs should be pruned
   [ ! -f ".vbw-planning/.agent-pids" ]
 
-  # Lock should be released
   [ ! -d "$VBW_AGENT_PID_LOCK_DIR" ]
 }
 
-# =============================================================================
-# Session Stop Cleanup
-# =============================================================================
 
 @test "session-stop removes transient markers" {
   cd "$TEST_TEMP_DIR"
-
-  # Create all the transient files session-stop should clean
+  local dead_pid
+  dead_pid=$(get_dead_pid) || fail "get_dead_pid failed"
   echo "dev" > ".vbw-planning/.active-agent"
   echo "2" > ".vbw-planning/.active-agent-count"
   echo "scout 1" > ".vbw-planning/.active-agent-roles"
-  echo "12345 scout" > ".vbw-planning/.active-agent-role-pids"
+  echo "$dead_pid scout" > ".vbw-planning/.active-agent-role-pids"
   mkdir -p ".vbw-planning/.active-agent-count.lock"
-  echo "12345 %1" > ".vbw-planning/.agent-panes"
+  echo "$dead_pid %1" > ".vbw-planning/.agent-panes"
 
   simulate_session_stop
 
@@ -333,10 +302,15 @@ simulate_session_stop() {
 
 @test "session-stop with session id removes only that session active-agent state" {
   cd "$TEST_TEMP_DIR"
+  local pid_a pid_b
+  next_live_pid
+  pid_a="$NEXT_PID"
+  next_live_pid
+  pid_b="$NEXT_PID"
 
-  printf '%s\n' '{"session_id":"session-A","agent_type":"vbw-scout","pid":"10101"}' | \
+  printf '%s\n' "{\"session_id\":\"session-A\",\"agent_type\":\"vbw-scout\",\"pid\":\"$pid_a\"}" | \
     VBW_PLANNING_DIR="$TEST_TEMP_DIR/.vbw-planning" bash "$SCRIPTS_DIR/agent-start.sh"
-  printf '%s\n' '{"session_id":"session-B","agent_type":"vbw-dev","pid":"20202"}' | \
+  printf '%s\n' "{\"session_id\":\"session-B\",\"agent_type\":\"vbw-dev\",\"pid\":\"$pid_b\"}" | \
     VBW_PLANNING_DIR="$TEST_TEMP_DIR/.vbw-planning" bash "$SCRIPTS_DIR/agent-start.sh"
 
   run bash -c 'printf "%s\n" "{\"session_id\":\"session-B\",\"cost_usd\":0,\"duration_ms\":0}" | bash "$1"' _ \
@@ -347,7 +321,7 @@ simulate_session_stop() {
   [ ! -d ".vbw-planning/.active-agents/session-B" ]
   [ "$(cat ".vbw-planning/.active-agent-count")" = "1" ]
   [ "$(cat ".vbw-planning/.active-agent")" = "scout" ]
-  grep -Fqx '10101 scout' ".vbw-planning/.active-agent-role-pids"
+  grep -Fqx "$pid_a scout" ".vbw-planning/.active-agent-role-pids"
 }
 
 @test "session-stop preserves current active-agent state while VBW background task runs" {
@@ -418,7 +392,7 @@ EOF
   echo "$dead_pid scout" > ".vbw-planning/.active-agents/session-A/active-agent-role-pids"
   echo "$dead_pid" > ".vbw-planning/.agent-pids"
   echo "$dead_pid %1" > ".vbw-planning/.agent-panes"
-  echo '{"pid":999999,"started_at":1,"agent_name":"stale"}' > ".vbw-planning/.compacting/stale.json"
+  echo "{\"pid\":$dead_pid,\"started_at\":1,\"agent_name\":\"stale\"}" > ".vbw-planning/.compacting/stale.json"
 
   run env PATH="$fakebin:$PATH" VBW_PLANNING_DIR="$TEST_TEMP_DIR/.vbw-planning" bash "$SCRIPTS_DIR/tmux-watchdog.sh" test-session
   [ "$status" -eq 0 ]
@@ -493,10 +467,8 @@ EOF
 
   simulate_session_stop
 
-  # Cost ledger should be gone
   [ ! -f ".vbw-planning/.cost-ledger.json" ]
 
-  # Session log should contain the cost_summary entry (jq slurp handles multi-line JSON)
   run jq -s '[.[] | select(.type == "cost_summary")] | length' ".vbw-planning/.session-log.jsonl"
   [ "$output" = "1" ]
 }
@@ -509,14 +481,10 @@ EOF
   [ "$status" -eq 0 ]
 }
 
-# =============================================================================
-# Full Chain: advisory task-verify → agent-stop → session-stop
-# =============================================================================
 
 @test "full chain: advisory task-verify does not create circuit breaker state" {
   cd "$TEST_TEMP_DIR"
 
-  # A mismatched execute task should emit advisory output, not create state.
   echo "$RANDOM" >> dummy.txt && git add dummy.txt && git commit -q -m "docs: update README"
 
   run bash -c 'echo "{\"task_subject\": \"Execute 07-01: Implement widget renderer\"}" | bash "'"$SCRIPTS_DIR"'/task-verify.sh"'
@@ -524,48 +492,44 @@ EOF
   echo "$output" | jq -e '.hookSpecificOutput.hookEventName == "TaskCompleted"' >/dev/null
   [ ! -f ".vbw-planning/.task-verify-seen" ]
 
-  # Now simulate agent shutdown + session stop
   local pid
-  pid=$(next_fake_pid)
+  next_live_pid
+  pid="$NEXT_PID"
   simulate_agent_start "vbw-dev" "$pid"
   simulate_agent_stop "$pid"
   simulate_session_stop
 
-  # All transient state should be clean
   [ ! -f ".vbw-planning/.task-verify-seen" ]
   [ ! -f ".vbw-planning/.active-agent" ]
   [ ! -f ".vbw-planning/.active-agent-count" ]
-  # Session marker preserved
   [ -f ".vbw-planning/.vbw-session" ]
 }
 
-@test "full chain: multi-agent start → advisory mismatch → matching execute task → session cleanup" {
+@test "full chain: multi-agent start - advisory mismatch - matching execute task - session cleanup" {
   cd "$TEST_TEMP_DIR"
 
-  # Start two agents
   local pid1 pid2
-  pid1=$(next_fake_pid)
-  pid2=$(next_fake_pid)
+  next_live_pid
+  pid1="$NEXT_PID"
+  next_live_pid
+  pid2="$NEXT_PID"
   simulate_agent_start "vbw-dev" "$pid1"
   simulate_agent_start "vbw-dev" "$pid2"
 
   run cat ".vbw-planning/.active-agent-count"
   [ "$output" = "2" ]
 
-  # Dev-01 finishes task — no matching commit → advisory only
   echo "$RANDOM" >> dummy.txt && git add dummy.txt && git commit -q -m "docs: unrelated change"
   run bash -c 'echo "{\"task_subject\": \"Execute 07-01: Create detail view\"}" | bash "'"$SCRIPTS_DIR"'/task-verify.sh"'
   [ "$status" -eq 0 ]
   echo "$output" | jq -e '.hookSpecificOutput.hookEventName == "TaskCompleted"' >/dev/null
   [ ! -f ".vbw-planning/.task-verify-seen" ]
 
-  # Dev-02 finishes task with matching commit → no block
   echo "$RANDOM" >> dummy.txt && git add dummy.txt && git commit -q -m "feat(07-02): wire navigation to detail view"
   run bash -c 'echo "{\"task_subject\": \"Execute 07-02: Wire navigation to detail view\"}" | bash "'"$SCRIPTS_DIR"'/task-verify.sh"'
   [ "$status" -eq 0 ]
   [ -z "$output" ]
 
-  # Both agents stop
   simulate_agent_stop "$pid1"
   run cat ".vbw-planning/.active-agent-count"
   [ "$output" = "1" ]
@@ -573,10 +537,8 @@ EOF
   simulate_agent_stop "$pid2"
   [ ! -f ".vbw-planning/.active-agent-count" ]
 
-  # Session ends
   simulate_session_stop
 
-  # Everything cleaned
   [ ! -f ".vbw-planning/.task-verify-seen" ]
   [ ! -f ".vbw-planning/.active-agent" ]
   [ ! -f ".vbw-planning/.agent-panes" ]
