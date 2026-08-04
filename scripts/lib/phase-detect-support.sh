@@ -383,7 +383,7 @@ phase_verification_assessment() {
           printf '%s\t%s\n' "pending" "qa_gate_output_missing"
           ;;
         PROCEED_TO_UAT)
-          if verification_is_stale "$verification_file"; then
+          if verification_is_stale "$verification_file" "$phase_dir"; then
             stale_reason="${VERIFICATION_FRESHNESS_REASON:-freshness_baseline_unavailable}"
             case "$stale_reason" in
               ""|fresh|missing_file) stale_reason="freshness_baseline_unavailable" ;;

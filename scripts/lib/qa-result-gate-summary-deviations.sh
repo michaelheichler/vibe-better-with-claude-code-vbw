@@ -101,6 +101,81 @@ source_plan_ids_for_summary() {
   [ -f "$plan_file" ] && summary_plan_id_from_plan_file "$plan_file"
 }
 
+summary_deviation_matches_any_signature() {
+  local accepted_signatures="${1:-}"
+  local source_plan_ids="${2:-}"
+  local source_path="${3:-}"
+  local deviation_text="${4:-}"
+  local source_plan_id=""
+  local signature=""
+  while IFS= read -r source_plan_id; do
+    [ -n "$source_plan_id" ] || continue
+    signature=$(bash "$TRACK_UAT_DEVIATIONS_SCRIPT" signature "$source_plan_id" "$source_path" "$deviation_text" 2>/dev/null || true)
+    [ -n "$signature" ] || return 1
+    if printf '%s\n' "$accepted_signatures" | grep -Fx -- "$signature" >/dev/null 2>&1; then
+      return 0
+    fi
+  done <<< "$source_plan_ids"
+  return 1
+}
+
+round_classification_scan_is_valid() {
+  local phase_dir="${1:-}"
+  local scan_dir="${2:-}"
+  local summary_file="${3:-}"
+  local deviation_text="${4:-}"
+  local round_plan_dir="${5:-}"
+  phase_dir="${phase_dir%/}"
+  scan_dir="${scan_dir%/}"
+  round_plan_dir="${round_plan_dir%/}"
+  [ -n "$phase_dir" ] && [ -n "$scan_dir" ] && [ -n "$round_plan_dir" ] || return 1
+  [ "$scan_dir" != "$phase_dir" ] && [ "$scan_dir" = "$round_plan_dir" ] || return 1
+  [ -d "$round_plan_dir" ] && [ -f "$summary_file" ] && [ -n "$deviation_text" ] || return 1
+  case "$summary_file" in
+    "$scan_dir"/*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+round_classification_pair_matches_deviation() {
+  local deviation_text="${1:-}"
+  local classified_pairs="${2:-}"
+  local classification_id=""
+  local classification_type=""
+  local bare_id=""
+  # Invariant: no rejected pair has matched, variant: unread classification pairs.
+  while IFS=$'\t' read -r classification_id classification_type; do
+    [ -n "$classification_id" ] && [ -n "$classification_type" ] || return 1
+    case "$classification_type" in
+      process-exception|plan-amendment)
+        bare_id="${classification_id#FAIL-}"
+        [[ "$bare_id" =~ ^[[:alnum:]_.-]+$ ]] || return 1
+        if printf '%s\n' "$deviation_text" | grep -Fw -- "$bare_id" >/dev/null 2>&1 \
+          || printf '%s\n' "$deviation_text" | grep -Fw -- "FAIL-$bare_id" >/dev/null 2>&1; then
+          return 0
+        fi
+        ;;
+      code-fix|doc-fix) ;;
+      *) return 1 ;;
+    esac
+  done <<< "$classified_pairs"
+  return 1
+}
+
+summary_deviation_matches_round_classification() {
+  local phase_dir="${1:-}"
+  local scan_dir="${2:-}"
+  local summary_file="${3:-}"
+  local deviation_text="${4:-}"
+  local round_plan_dir="${5:-}"
+  local classified_pairs=""
+  round_classification_scan_is_valid "$phase_dir" "$scan_dir" "$summary_file" "$deviation_text" "$round_plan_dir" || return 1
+  type collect_fail_classification_id_type_pairs_in_dir >/dev/null 2>&1 || return 1
+  classified_pairs=$(collect_fail_classification_id_type_pairs_in_dir "$round_plan_dir" 2>/dev/null) || return 1
+  [ -n "$classified_pairs" ] || return 1
+  round_classification_pair_matches_deviation "$deviation_text" "$classified_pairs"
+}
+
 summary_deviation_is_accepted() {
   local phase_dir="${1:-}"
   local summary_file="${2:-}"
@@ -108,9 +183,6 @@ summary_deviation_is_accepted() {
   local accepted_signatures="${4:-}"
   local source_path=""
   local source_plan_ids=""
-  local source_plan_id=""
-  local signature=""
-  local saw_source_plan=false
 
   [ -n "$accepted_signatures" ] || return 1
   [ -x "$TRACK_UAT_DEVIATIONS_SCRIPT" ] || return 1
@@ -128,18 +200,80 @@ summary_deviation_is_accepted() {
   fi
   [ -n "$source_plan_ids" ] || return 1
 
-  while IFS= read -r source_plan_id; do
-    [ -n "$source_plan_id" ] || continue
-    saw_source_plan=true
-    signature=$(bash "$TRACK_UAT_DEVIATIONS_SCRIPT" signature "$source_plan_id" "$source_path" "$deviation_text" 2>/dev/null || true)
-    [ -n "$signature" ] || return 1
-    if printf '%s\n' "$accepted_signatures" | grep -Fx -- "$signature" >/dev/null 2>&1; then
-      return 0
-    fi
-  done <<< "$source_plan_ids"
+  summary_deviation_matches_any_signature "$accepted_signatures" "$source_plan_ids" "$source_path" "$deviation_text"
+}
 
-  [ "$saw_source_plan" != true ] && return 1
-  return 1
+count_yaml_summary_deviations() {
+  extract_frontmatter_array_items "${1:-}" deviations | awk '
+    { lc=tolower($0); if (lc ~ /^none\.?$/ || lc ~ /^n\/a\.?$/ || lc ~ /^na\.?$/ || lc ~ /^no deviations/) next; count++ }
+    END { print count + 0 }
+  ' 2>/dev/null
+}
+
+count_body_summary_deviations() {
+  awk '
+    BEGIN { count=0; found=0 }
+    /^## Deviations/ || /^### Deviations/ { found=1; in_comment=0; next }
+    found && (/^## / || /^### /) { found=0; next }
+    found && /^[[:space:]]*$/ { next }
+    found && /^[[:space:]]*<!--/ {
+      in_comment=1
+      if ($0 ~ /-->/) in_comment=0
+      next
+    }
+    found && in_comment {
+      if ($0 ~ /-->/) in_comment=0
+      next
+    }
+    found {
+      line=$0
+      sub(/^- /, "", line)
+      gsub(/^[[:space:]]+|[[:space:]]+$/, "", line)
+      if (tolower(line) ~ /^\*\*n(one|\/a|a)\*\*/ || tolower(line) ~ /^\*\*no deviations\*\*/) next
+      sub(/^\*\*[^*]+\*\*:?[[:space:]]*/, "", line)
+      if (line == "") next
+      lc = tolower(line)
+      if (lc ~ /^none(\.[[:space:]].*|\.?)$/ || lc ~ /^n\/a(\.[[:space:]].*|\.?)$/ || lc ~ /^na(\.[[:space:]].*|\.?)$/ || lc ~ /^no deviations($|[.:].*)/) next
+      count++
+    }
+    END { print count }
+  ' "${1:-}" 2>/dev/null
+}
+
+count_summary_fallback_deviations() {
+  local summary_file="${1:-}"
+  local yaml_count=""
+  yaml_count=$(count_yaml_summary_deviations "$summary_file")
+  if [ "${yaml_count:-0}" -eq 0 ] 2>/dev/null; then
+    count_body_summary_deviations "$summary_file"
+  else
+    printf '%s\n' "$yaml_count"
+  fi
+}
+
+count_deviations_in_summary() {
+  local phase_dir="${1:-}"
+  local scan_dir="${2:-}"
+  local summary_file="${3:-}"
+  local round_plan_dir="${4:-}"
+  local accepted_signatures="${5:-}"
+  local deviations=0
+  if type extract_summary_deviations >/dev/null 2>&1; then
+    while IFS= read -r deviation_text; do
+      [ -n "$deviation_text" ] || continue
+      if summary_deviation_is_accepted "$phase_dir" "$summary_file" "$deviation_text" "$accepted_signatures"; then
+        continue
+      fi
+      if [ -n "$round_plan_dir" ] && summary_deviation_matches_round_classification \
+        "$phase_dir" "$scan_dir" "$summary_file" "$deviation_text" "$round_plan_dir"; then
+        continue
+      fi
+      deviations=$((deviations + 1))
+    done < <(extract_summary_deviations "$summary_file" 2>/dev/null || true)
+  else
+    deviations=$(count_summary_fallback_deviations "$summary_file")
+  fi
+  printf '%s\n' "$deviations"
 }
 
 # Count active, non-placeholder deviations across SUMMARY.md files in a given directory.
@@ -150,65 +284,16 @@ summary_deviation_is_accepted() {
 count_deviations_in_dir() {
   local phase_dir="${1:-}"
   local scan_dir="${2:-${1:-}}"
+  local round_plan_dir="${3:-}"
   local accepted_signatures=""
   local total=0
   [ -d "$scan_dir" ] || { echo 0; return; }
   if [ -x "$TRACK_UAT_DEVIATIONS_SCRIPT" ]; then
     accepted_signatures=$(bash "$TRACK_UAT_DEVIATIONS_SCRIPT" accepted-signatures "$phase_dir" 2>/dev/null || true)
   fi
-  while IFS= read -r _cdf_file; do
-    [ -f "$_cdf_file" ] || continue
-    local _cdf_devs
-    if type extract_summary_deviations >/dev/null 2>&1; then
-      _cdf_devs=0
-      while IFS= read -r _cdf_deviation; do
-        [ -n "$_cdf_deviation" ] || continue
-        if summary_deviation_is_accepted "$phase_dir" "$_cdf_file" "$_cdf_deviation" "$accepted_signatures"; then
-          continue
-        fi
-        _cdf_devs=$((_cdf_devs + 1))
-      done < <(extract_summary_deviations "$_cdf_file" 2>/dev/null || true)
-    else
-      _cdf_devs=$(extract_frontmatter_array_items "$_cdf_file" deviations | awk '
-        BEGIN { count=0 }
-        {
-          lc = tolower($0)
-          if (lc ~ /^none\.?$/ || lc ~ /^n\/a\.?$/ || lc ~ /^na\.?$/ || lc ~ /^no deviations/) next
-          count++
-        }
-        END { print count }
-      ' 2>/dev/null)
-      if [ "${_cdf_devs:-0}" -eq 0 ]; then
-      _cdf_devs=$(awk '
-        BEGIN { count=0; found=0 }
-          /^## Deviations/ || /^### Deviations/ { found=1; in_comment=0; next }
-        found && (/^## / || /^### /) { found=0; next }
-        found && /^[[:space:]]*$/ { next }
-          found && /^[[:space:]]*<!--/ {
-            in_comment=1
-            if ($0 ~ /-->/) in_comment=0
-            next
-          }
-          found && in_comment {
-            if ($0 ~ /-->/) in_comment=0
-            next
-          }
-        found {
-          line=$0
-          sub(/^- /, "", line)
-          gsub(/^[[:space:]]+|[[:space:]]+$/, "", line)
-          if (tolower(line) ~ /^\*\*n(one|\/a|a)\*\*/ || tolower(line) ~ /^\*\*no deviations\*\*/) next
-          sub(/^\*\*[^*]+\*\*:?[[:space:]]*/, "", line)
-          if (line == "") next
-          lc = tolower(line)
-          if (lc ~ /^none(\.[[:space:]].*|\.?)$/ || lc ~ /^n\/a(\.[[:space:]].*|\.?)$/ || lc ~ /^na(\.[[:space:]].*|\.?)$/ || lc ~ /^no deviations($|[.:].*)/) next
-          count++
-        }
-        END { print count }
-      ' "$_cdf_file" 2>/dev/null)
-      fi
-    fi
-    total=$((total + ${_cdf_devs:-0}))
+  while IFS= read -r summary_file; do
+    [ -f "$summary_file" ] || continue
+    total=$((total + $(count_deviations_in_summary "$phase_dir" "$scan_dir" "$summary_file" "$round_plan_dir" "$accepted_signatures")))
   done < <(find "$scan_dir" -maxdepth 1 ! -name '.*' \( -name '*-SUMMARY.md' -o -name 'SUMMARY.md' \) 2>/dev/null | (sort -V 2>/dev/null || sort))
   echo "$total"
 }

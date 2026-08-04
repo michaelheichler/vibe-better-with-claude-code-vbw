@@ -30,6 +30,18 @@ teardown() {
   [ -z "$output" ]
 }
 
+@test "payload role grammar accepts numeric team suffixes only" {
+  run bash -c 'source "$1"; vbw_active_agent_normalize_payload_role "$2"' _ \
+    "$SCRIPTS_DIR/lib/active-agent-state.sh" "team-dev-2"
+  [ "$status" -eq 0 ]
+  [ "$output" = "dev" ]
+
+  run bash -c 'source "$1"; vbw_active_agent_normalize_payload_role "$2"' _ \
+    "$SCRIPTS_DIR/lib/active-agent-state.sh" "team-dev-helper"
+  [ "$status" -eq 1 ]
+  [ -z "$output" ]
+}
+
 @test "current role rejects stale marker when session role count is zero" {
   local session_id="session-stale"
   mkdir -p "$PLANNING_DIR/.active-agents/$session_id"

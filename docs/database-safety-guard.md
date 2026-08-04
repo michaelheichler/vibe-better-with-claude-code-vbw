@@ -4,9 +4,11 @@ LLMs with Bash access will occasionally run destructive database commands during
 
 ## How It Works
 
-A PreToolUse hook (`bash-guard.sh`) intercepts **every** Bash command before it reaches the shell. It pattern-matches against a blocklist of known destructive commands and blocks matches with exit code 2 (fail-closed). The command never executes.
+A PreToolUse hook (`bash-guard.sh`) intercepts **every** Bash command before it reaches the shell. It selects an enforcement level first. Enforce blocks a matching destructive command with exit code 2, advisory logs the event and allows the command, and off exits silently.
 
 This fires on the **tool**, not the agent. Every Bash command from every Bash-capable agent, QA, Dev, Debugger, Lead, Docs, and Scout, passes through the same gate. Scout also gets read-only command-shape checks when its role can be detected. When Claude Code omits per-call agent identity, VBW uses current-session active-agent state when a safe session id is available, so a Scout in one terminal/session does not make another session inherit Scout restrictions. If no safe session id exists, VBW keeps the conservative legacy/global fallback. There is no way around hook execution because Claude Code enforces hooks at the platform level, before the command reaches the shell.
+
+Guards use three enforcement levels. Outside a VBW project they are off and exit silently. In an idle VBW project they are advisory, logging blocked events without blocking the tool. During a live VBW execution they enforce the existing exit-2 blocks.
 
 ```text
 Agent wants to run: php artisan migrate:fresh --seed
@@ -21,22 +23,20 @@ Agent wants to run: php artisan migrate:fresh --seed
                     |  bash-guard.sh      |
                     +─────────┬──────────+
                               |
-                 +────────────v────────────+
-                 | Scout read-only block?    |
-                 +──┬───────────────────┬──+
-                block              no block
-                  |          +────────v────────+
-               exit 2       | Generic override?|
-               (BLOCK)      +──┬───────────┬──+
-                             yes          no
-                              |      +─────v──────+
-                           exit 0   | Pattern    |
-                           (allow)  | match?     |
-                                    +──┬──────┬──+
-                                    yes      no
-                                     |        |
-                                  exit 2   exit 0
-                                  (BLOCK)  (allow)
+                    +─────────v──────────+
+                    | Enforcement level?  |
+                    +──┬────────┬────────+
+                     off      advisory   enforce
+                      |          |          |
+                   exit 0   log and allow  | checks
+                                           |
+                              +────────────v────────────+
+                              | Destructive match?      |
+                              +──────────┬───────────────+
+                                   yes   |   no
+                                    |    |
+                                 exit 2 exit 0
+                                 (BLOCK) (allow)
 ```
 
 The agent gets an error message explaining why the command was blocked and adapts, typically falling back to read-only queries or the test suite.
@@ -101,7 +101,7 @@ One regex per line, same format as the default `config/destructive-commands.txt`
 
 ## Design Decisions
 
-**Fail-closed.** If jq is missing, input is unparseable, or anything unexpected happens, the guard blocks the command (exit 2). It never fails open.
+**Fail-closed during enforcement.** If jq is missing, input is unparseable, or anything unexpected happens, the guard blocks the command (exit 2) while enforcement is active.
 
 **Tool-level first, role-aware where needed.** The hook matches on `Bash` tool calls, so adding a new Bash-capable agent does not create a destructive-command gap. Scout's extra read-only checks are role-aware best-effort guardrails using hook payload/env/active-agent markers when available. They are command-shape filters, not a complete shell sandbox. These Scout checks block obvious shell evaluation containers (`eval`, static shell `-c` forms including quoted/absolute interpreters and simple control/grouping wrappers, command/process substitution). They also block shell writes, git/API mutations, and sensitive-file reads. `SubagentStart`/`SubagentStop` maintain session-local `.active-agents/{session_id}/active-agent-roles` counts when a safe session id exists. Ambiguous Bash/Write calls then inherit Scout-safe restrictions only from the current session. Root `.active-agent*` files remain aggregate display/legacy fallback state. When no safe session id is available, VBW uses them conservatively. If an anonymous stop leaves role totals impossible to trust, VBW preserves the active-agent count but discards unreliable role markers instead of keeping stale Scout claims.
 

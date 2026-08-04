@@ -2112,6 +2112,162 @@ create_round_summary_with_files() {
   } > "${round_dir}/R${round}-SUMMARY.md"
 }
 
+create_classified_fail_round() {
+  local deviation_text="${1}"
+  local classification_type="${2:-process-exception}"
+  local classification_id="${3:-DEV-04}"
+  local round_dir="$PHASE_DIR/remediation/qa/round-01"
+  cat > "$PHASE_DIR/01-VERIFICATION.md" <<'VERIF'
+---
+writer: write-verification.sh
+result: FAIL
+---
+## Checks
+| ID | Category | Description | Status | Evidence |
+|----|----------|-------------|--------|----------|
+| DEV-04 | must_have | Source process exception | FAIL | Accepted |
+VERIF
+  mkdir -p "$round_dir"
+  printf 'stage=verify\nround=01\n' > "$PHASE_DIR/remediation/qa/.qa-remediation-stage"
+  cat > "$round_dir/R01-PLAN.md" <<PLAN
+---
+round: 01
+plan: R01
+fail_classifications:
+  - {id: "$classification_id", type: "$classification_type", rationale: "Round-local classification"}
+---
+PLAN
+  cat > "$round_dir/R01-SUMMARY.md" <<SUMMARY
+---
+plan: R01
+status: complete
+commit_hashes: []
+files_modified:
+  - "01-test-phase/remediation/qa/round-01/R01-SUMMARY.md"
+deviations:
+  - "$deviation_text"
+---
+SUMMARY
+  cat > "$round_dir/R01-VERIFICATION.md" <<'VERIF'
+---
+writer: write-verification.sh
+result: PARTIAL
+plans_verified:
+  - R01
+---
+## Checks
+| ID | Category | Description | Status | Evidence |
+|----|----------|-------------|--------|----------|
+| FAIL-DEV-04 | must_have | Round-local process exception | FAIL | Accepted |
+VERIF
+}
+
+@test "classified process-exception FAIL and deviation proceed to UAT" {
+  create_classified_fail_round "DEV-04 process-exception: accepted structural tooling exception"
+
+  run bash "$SCRIPT" "$PHASE_DIR"
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"qa_gate_classified_fail_exemption=true"* ]]
+  [[ "$output" == *"qa_gate_exempt_fail_count=1"* ]]
+  [[ "$output" == *"qa_gate_deviation_count=0"* ]]
+  [[ "$output" == *"qa_gate_routing=PROCEED_TO_UAT"* ]]
+}
+
+@test "classified FAIL with unmatched deviation remains blocked" {
+  create_classified_fail_round "Unclassified process exception: accepted structural tooling exception"
+
+  run bash "$SCRIPT" "$PHASE_DIR"
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"qa_gate_classified_fail_exemption=true"* ]]
+  [[ "$output" == *"qa_gate_deviation_count=1"* ]]
+  [[ "$output" == *"qa_gate_deviation_override=true"* ]]
+  [[ "$output" == *"qa_gate_routing=QA_RERUN_REQUIRED"* ]]
+}
+
+@test "classified FAIL with invalid classification remains blocked" {
+  create_classified_fail_round "DEV-04 process-exception: invalid classification type" "invalid-type"
+
+  run bash "$SCRIPT" "$PHASE_DIR"
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"qa_gate_classifications_invalid=true"* ]]
+  [[ "$output" == *"qa_gate_routing=REMEDIATION_REQUIRED"* ]]
+}
+
+@test "malformed fail classification entries do not misalign id and type pairs" {
+  local plan_dir="$TEST_DIR/round-plans"
+  mkdir -p "$plan_dir"
+  cat > "$plan_dir/R01-PLAN.md" <<'PLAN'
+---
+fail_classifications:
+  - {id: "FAIL-01", type: "code-fix"}
+  - {id: "FAIL-02"}
+  - {type: "process-exception"}
+  - {id: "FAIL-03", type: "code-fix"}
+---
+PLAN
+
+  run bash -c 'source "$1"; collect_fail_classification_id_type_pairs_in_dir "$2"' _ \
+    "$REPO_ROOT/scripts/lib/qa-result-gate-fail-classifications.sh" "$plan_dir"
+
+  [ "$status" -eq 0 ]
+  expected=$'FAIL-01\tcode-fix\nFAIL-03\tcode-fix'
+  [ "$output" = "$expected" ]
+}
+
+@test "multiline fail classification entries route matching deviations" {
+  local plan_dir="$TEST_DIR/round-plans"
+  mkdir -p "$plan_dir"
+  cat > "$plan_dir/R01-PLAN.md" <<'PLAN'
+---
+fail_classifications:
+  - id: "FAIL-01"
+    type: "process-exception"
+    rationale: "Block style continuation fields"
+  - {id: "FAIL-02",
+     type: "plan-amendment",
+     rationale: "Wrapped flow style continuation"}
+---
+PLAN
+
+  run bash -c 'source "$1"; collect_fail_classification_id_type_pairs_in_dir "$2"' _ \
+    "$REPO_ROOT/scripts/lib/qa-result-gate-fail-classifications.sh" "$plan_dir"
+
+  [ "$status" -eq 0 ]
+  expected=$'FAIL-01\tprocess-exception\nFAIL-02\tplan-amendment'
+  [ "$output" = "$expected" ]
+  local classified_pairs="$output"
+
+  run bash -c 'source "$1"; round_classification_pair_matches_deviation "$2" "$3"' _ \
+    "$REPO_ROOT/scripts/lib/qa-result-gate-summary-deviations.sh" \
+    "FAIL-01 accepted process exception" "$classified_pairs"
+  [ "$status" -eq 0 ]
+
+  run bash -c 'source "$1"; round_classification_pair_matches_deviation "$2" "$3"' _ \
+    "$REPO_ROOT/scripts/lib/qa-result-gate-summary-deviations.sh" \
+    "FAIL-02 accepted plan amendment" "$classified_pairs"
+  [ "$status" -eq 0 ]
+
+  run bash -c 'source "$1"; round_classification_pair_matches_deviation "$2" "$3"' _ \
+    "$REPO_ROOT/scripts/lib/qa-result-gate-summary-deviations.sh" \
+    "FAIL-03 unclassified deviation" "$classified_pairs"
+  [ "$status" -eq 1 ]
+}
+
+@test "classification ids with dots match exact deviation text only" {
+  local classified_pairs=$'DEV.04\tprocess-exception'
+
+  run bash -c 'source "$1"; round_classification_pair_matches_deviation "$2" "$3"' _ \
+    "$REPO_ROOT/scripts/lib/qa-result-gate-summary-deviations.sh" "DEVX04" "$classified_pairs"
+  [ "$status" -eq 1 ]
+
+  run bash -c 'source "$1"; round_classification_pair_matches_deviation "$2" "$3"' _ \
+    "$REPO_ROOT/scripts/lib/qa-result-gate-summary-deviations.sh" "DEV.04" "$classified_pairs"
+  [ "$status" -eq 0 ]
+}
+
 @test "metadata-only round with phase-level deviations → REMEDIATION_REQUIRED" {
   create_source_fail_verif "FAIL-01" "Deviation still needs a real fix"
   # Phase-level SUMMARY.md has real deviations
@@ -3500,6 +3656,74 @@ VERIF
   [[ "$output" == *"qa_gate_routing=REMEDIATION_REQUIRED"* ]]
 }
 
+@test "done archived-round path drift proceeds and broken verification names its diagnosis" {
+  PHASE_DIR="$TEST_DIR/.vbw-planning/phases/05-adversarial-review-and-fix"
+  mkdir -p "$PHASE_DIR/remediation/qa/round-01"
+
+  cat > "$PHASE_DIR/05-VERIFICATION.md" <<'VERIF'
+---
+phase: 05
+result: PARTIAL
+writer: write-verification.sh
+plans_verified:
+  - 05-01
+---
+## Must-Have Checks
+| ID | Category | Description | Status | Evidence |
+|----|----------|-------------|--------|----------|
+| DEV-01 | must_have | Archived plan needs its rationale | FAIL | Missing |
+VERIF
+  cat > "$PHASE_DIR/05-01-PLAN.md" <<'PLAN'
+---
+plan: 05-01
+title: Archived phase fixture
+---
+PLAN
+  cat > "$PHASE_DIR/remediation/qa/round-01/R01-SUMMARY.md" <<'SUMMARY'
+---
+plan: R01
+status: complete
+commit_hashes: []
+files_modified:
+  - ".vbw-planning/milestones/v1/phases/05-adversarial-review-and-fix/05-01-PLAN.md"
+deviations: []
+---
+SUMMARY
+  cat > "$PHASE_DIR/remediation/qa/round-01/R01-PLAN.md" <<'PLAN'
+---
+round: 01
+title: Archived phase fixture
+fail_classifications:
+  - {id: "DEV-01", type: "plan-amendment", source_plan: "05-01-PLAN.md", rationale: "The original plan records the completed approach"}
+---
+PLAN
+  cat > "$PHASE_DIR/remediation/qa/round-01/R01-VERIFICATION.md" <<'VERIF'
+---
+writer: write-verification.sh
+result: PASS
+plans_verified:
+  - R01
+---
+VERIF
+  printf 'stage=done\nround=01\n' > "$PHASE_DIR/remediation/qa/.qa-remediation-stage"
+
+  run bash "$SCRIPT" "$PHASE_DIR"
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"qa_gate_result=PASS"* ]]
+  [[ "$output" == *"qa_gate_fail_count=0"* ]]
+  [[ "$output" == *"qa_gate_deviation_count=0"* ]]
+  [[ "$output" == *"qa_gate_known_issue_count=0"* ]]
+  [[ "$output" == *"qa_gate_routing=PROCEED_TO_UAT"* ]]
+
+  printf 'stage=verify\nround=01\n' > "$PHASE_DIR/remediation/qa/.qa-remediation-stage"
+  run bash "$SCRIPT" "$PHASE_DIR"
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"qa_gate_plan_amendment_evidence_missing=true"* ]]
+  [[ "$output" == *"qa_gate_routing=REMEDIATION_REQUIRED"* ]]
+}
+
 @test "done-stage missing round verification → QA_RERUN_REQUIRED" {
   create_verif "write-verification.sh" "PASS"
   mkdir -p "$PHASE_DIR/remediation/qa/round-01"
@@ -3761,8 +3985,87 @@ VERIF
   [[ "$output" == *"qa_gate_routing=REMEDIATION_REQUIRED"* ]]
 }
 
-@test "absolute documentation and repo-hygiene paths do not satisfy code-fix evidence" {
+@test "doc-fix classification accepts the named documentation path" {
   init_git_repo
+  baseline_commit=$(commit_repo_file "README.md" "original documentation")
+  create_source_fail_verif "FAIL-01" "The README content is incorrect" "$baseline_commit"
+  commit_repo_file "README.md" "corrected documentation" >/dev/null
+
+  mkdir -p "$PHASE_DIR/remediation/qa/round-01"
+  printf 'stage=verify\nround=01\nround_started_at_commit=%s\n' "$baseline_commit" > "$PHASE_DIR/remediation/qa/.qa-remediation-stage"
+
+  create_round_summary_with_files "$PHASE_DIR/remediation/qa/round-01" "01" \
+    '  - "README.md"'
+
+  cat > "$PHASE_DIR/remediation/qa/round-01/R01-PLAN.md" <<'PLAN'
+---
+round: 01
+title: Correct documentation content
+fail_classifications:
+  - {id: "FAIL-01", type: "doc-fix", path: "README.md", rationale: "The documentation is the product surface"}
+---
+PLAN
+  cat > "$PHASE_DIR/remediation/qa/round-01/R01-VERIFICATION.md" <<'VERIF'
+---
+writer: write-verification.sh
+result: PASS
+plans_verified:
+  - R01
+---
+## Checks
+| ID | Category | Description | Status | Evidence |
+|----|----------|-------------|--------|----------|
+| MH-01 | must_have | Documentation content corrected | PASS | Done |
+VERIF
+
+  run bash "$SCRIPT" "$PHASE_DIR"
+
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"qa_gate_process_exception_evidence_missing=true"* ]]
+  [[ "$output" == *"qa_gate_routing=PROCEED_TO_UAT"* ]]
+}
+
+@test "doc-fix classification rejects an unrelated documentation path" {
+  init_git_repo
+  baseline_commit=$(commit_repo_file "README.md" "original documentation")
+  create_source_fail_verif "FAIL-01" "The README content is incorrect" "$baseline_commit"
+  commit_repo_file "docs/other.md" "unrelated documentation" >/dev/null
+
+  mkdir -p "$PHASE_DIR/remediation/qa/round-01"
+  printf 'stage=verify\nround=01\nround_started_at_commit=%s\n' "$baseline_commit" > "$PHASE_DIR/remediation/qa/.qa-remediation-stage"
+
+  create_round_summary_with_files "$PHASE_DIR/remediation/qa/round-01" "01" \
+    '  - "docs/other.md"'
+
+  cat > "$PHASE_DIR/remediation/qa/round-01/R01-PLAN.md" <<'PLAN'
+---
+round: 01
+title: Wrong documentation path
+fail_classifications:
+  - {id: "FAIL-01", type: "doc-fix", path: "README.md", rationale: "The README is the product surface"}
+---
+PLAN
+  cat > "$PHASE_DIR/remediation/qa/round-01/R01-VERIFICATION.md" <<'VERIF'
+---
+writer: write-verification.sh
+result: PASS
+plans_verified:
+  - R01
+---
+## Checks
+| ID | Category | Description | Status | Evidence |
+|----|----------|-------------|--------|----------|
+| MH-01 | must_have | Documentation content corrected | PASS | Done |
+VERIF
+
+  run bash "$SCRIPT" "$PHASE_DIR"
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"qa_gate_doc_fix_evidence_missing=true"* ]]
+  [[ "$output" == *"qa_gate_routing=REMEDIATION_REQUIRED"* ]]
+}
+
+@test "absolute documentation and repo-hygiene paths do not satisfy code-fix evidence" {
   mkdir -p "$TEST_DIR/docs"
   : > "$TEST_DIR/README.md"
   : > "$TEST_DIR/docs/remediation-notes.md"
@@ -4617,7 +4920,7 @@ VERIF
   [[ "$gate_extract_body" != *"while IFS= read -r item"* ]]
   [[ "$gate_extract_body" != *"printf '%s' \"\$item\" | jq"* ]]
   [[ "$gate_extract_body" == *"jq -Rsc"* ]]
-  [[ "$gate_cover_body" == *"@json"* ]]
+  [[ "$gate_cover_body" == *"group_by([.test, .file])"* ]]
   [[ "$gate_disposition_body" == *"@json"* ]]
 }
 
@@ -5269,6 +5572,18 @@ VERIF
 
   [ "$status" -eq 0 ]
   [[ "$output" == *"qa_gate_routing=REMEDIATION_REQUIRED"* ]]
+}
+
+@test "known-issue coverage accepts one raw error variant per test and file pair" {
+  run bash -c 'source "$1"; json_object_array_covers_full_issue_objects '"'"'[{"test":"KnownIssueTests","file":"Tests/KnownIssueTests.swift","error":"first wording"},{"test":"KnownIssueTests","file":"Tests/KnownIssueTests.swift","error":"normalized wording"}]'"'"' '"'"'[{"test":"KnownIssueTests","file":"Tests/KnownIssueTests.swift","error":"first wording"}]'"'"'' _ "$REPO_ROOT/scripts/lib/qa-result-gate-known-issues.sh"
+
+  [ "$status" -eq 0 ]
+}
+
+@test "known-issue coverage rejects an error variant outside the carried pair" {
+  run bash -c 'source "$1"; json_object_array_covers_full_issue_objects '"'"'[{"test":"KnownIssueTests","file":"Tests/KnownIssueTests.swift","error":"first wording"},{"test":"KnownIssueTests","file":"Tests/KnownIssueTests.swift","error":"normalized wording"}]'"'"' '"'"'[{"test":"KnownIssueTests","file":"Tests/KnownIssueTests.swift","error":"wrong wording"}]'"'"'' _ "$REPO_ROOT/scripts/lib/qa-result-gate-known-issues.sh"
+
+  [ "$status" -eq 1 ]
 }
 
 @test "metadata-only round with partial fail classification coverage → REMEDIATION_REQUIRED" {

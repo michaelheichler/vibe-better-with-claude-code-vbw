@@ -150,6 +150,8 @@ if is_teammate_spawn_tool; then
 
   if [ -n "$MODEL_ROLE" ]; then
     if RESOLVED_MODEL=$(bash "$SCRIPT_DIR/resolve-agent-model.sh" "$MODEL_ROLE" "$PROJECT_ROOT/.vbw-planning/config.json" "$SCRIPT_DIR/../config/model-profiles.json" 2>/dev/null) && [ -n "$RESOLVED_MODEL" ]; then
+      SPAWN_ALIAS=$(bash "$SCRIPT_DIR/detect-models.sh" --alias-map 2>/dev/null | awk -F'\t' -v id="$RESOLVED_MODEL" '$1 == id { print $2; exit }')
+      [ -n "$SPAWN_ALIAS" ] && RESOLVED_MODEL="$SPAWN_ALIAS"
       MODEL_CHANGED=true
       if echo "$INPUT" | jq -e --arg model "$RESOLVED_MODEL" '(.tool_input.model? // null) == $model' >/dev/null 2>&1; then
         MODEL_CHANGED=false

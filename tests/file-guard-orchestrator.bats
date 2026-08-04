@@ -31,7 +31,6 @@ teardown() {
 
   for field in agent_type agent_id; do
     identity="vbw:vbw-scout"
-    [ "$field" = "agent_id" ] && identity="scout-01"
     input=$(jq -n --arg field "$field" --arg identity "$identity" \
       '{session_id:"session-A",tool_name:"Write",tool_input:{file_path:"CLAUDE.md",content:"blocked"}} + {($field):$identity}')
 
