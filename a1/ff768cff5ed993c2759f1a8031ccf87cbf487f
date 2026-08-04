@@ -1,0 +1,20 @@
+tests/qa-result-gate.bats
+  s_55c34ee548bef4::t_9bed16de8df99a 2115-2122,2124,2129-2199
+  s_55c34ee548bef4::t_7e067f4e771d82 2123,2125-2128
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "a1ff768cff5ed993c2759f1a8031ccf87cbf487f",
+  "prompts": {},
+  "sessions": {
+    "s_55c34ee548bef4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e2c40e1d-1763-4ad0-a1b3-bd1755008e2b",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
