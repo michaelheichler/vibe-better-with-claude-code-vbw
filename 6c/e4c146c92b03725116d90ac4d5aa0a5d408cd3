@@ -1,0 +1,32 @@
+scripts/lib/qa-result-gate-fail-classifications.sh
+  s_55c34ee548bef4::t_130fc5ffcb2a66 27,30
+  s_55c34ee548bef4::t_acdb566e3bf31f 160-161,165-167,171-172
+  s_55c34ee548bef4::t_4c78ecc1a249a8 264
+  s_55c34ee548bef4::t_0ea14b90c13942 237
+  s_55c34ee548bef4::t_b3d3cc893eae3c 224,227,229
+  s_55c34ee548bef4::t_df215cd1f411ee 220-223,225-226,228,230-231,251-263,265-266,268-271
+  s_55c34ee548bef4::t_65b41b1a511fe2 2
+  s_55c34ee548bef4::t_c3adecd19e25f9 7,9-12,15,18-19,23,26
+  s_55c34ee548bef4::t_c232399ec127e2 98,232-236,238-250,267,272
+  s_55c34ee548bef4::t_69edabf33d2bb4 77-96
+  s_55c34ee548bef4::t_f66386d480b9aa 97
+  s_55c34ee548bef4::t_60baa1847009de 99
+scripts/qa-result-gate.sh
+  s_55c34ee548bef4::t_46a09b05bff38c 482-495,517-538,541-545
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "6ce4c146c92b03725116d90ac4d5aa0a5d408cd3",
+  "prompts": {},
+  "sessions": {
+    "s_55c34ee548bef4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e2c40e1d-1763-4ad0-a1b3-bd1755008e2b",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
