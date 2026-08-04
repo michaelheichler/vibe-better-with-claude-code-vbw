@@ -216,18 +216,27 @@ count_body_summary_deviations() {
     /^## Deviations/ || /^### Deviations/ { found=1; in_comment=0; next }
     found && (/^## / || /^### /) { found=0; next }
     found && /^[[:space:]]*$/ { next }
-    found && /^[[:space:]]*<!--/ { in_comment=1; if ($0 ~ /-->/) in_comment=0; next }
-    found && in_comment { if ($0 ~ /-->/) in_comment=0; next }
+    found && /^[[:space:]]*<!--/ {
+      in_comment=1
+      if ($0 ~ /-->/) in_comment=0
+      next
+    }
+    found && in_comment {
+      if ($0 ~ /-->/) in_comment=0
+      next
+    }
     found {
-      line=$0; sub(/^- /, "", line); gsub(/^[[:space:]]+|[[:space:]]+$/, "", line)
+      line=$0
+      sub(/^- /, "", line)
+      gsub(/^[[:space:]]+|[[:space:]]+$/, "", line)
       if (tolower(line) ~ /^\*\*n(one|\/a|a)\*\*/ || tolower(line) ~ /^\*\*no deviations\*\*/) next
       sub(/^\*\*[^*]+\*\*:?[[:space:]]*/, "", line)
       if (line == "") next
-      lower_line=tolower(line)
-      if (lower_line ~ /^none(\.[[:space:]].*|\.?)$/ || lower_line ~ /^n\/a(\.[[:space:]].*|\.?)$/ || lower_line ~ /^na(\.[[:space:]].*|\.?)$/ || lower_line ~ /^no deviations($|[.:].*)/) next
+      lc = tolower(line)
+      if (lc ~ /^none(\.[[:space:]].*|\.?)$/ || lc ~ /^n\/a(\.[[:space:]].*|\.?)$/ || lc ~ /^na(\.[[:space:]].*|\.?)$/ || lc ~ /^no deviations($|[.:].*)/) next
       count++
     }
-    END { print count + 0 }
+    END { print count }
   ' "${1:-}" 2>/dev/null
 }
 
