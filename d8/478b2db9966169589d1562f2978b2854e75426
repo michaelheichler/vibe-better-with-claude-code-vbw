@@ -1,0 +1,68 @@
+scripts/extract-verified-items.sh
+  s_86d58b85ce2aee::t_9e7c1f274fc1a8 7,9-12
+  s_86d58b85ce2aee::t_b199f99afc4c0b 60-62
+tests/extract-verified-items.bats
+  s_86d58b85ce2aee::t_144ac7a7852e7c 330
+  s_86d58b85ce2aee::t_2c7dee08fe579a 331-340,347
+testing/verify-shared-contracts.sh
+  s_86d58b85ce2aee::t_f0ebef936ae03f 133
+commands/vibe.md
+  s_86d58b85ce2aee::t_bb3c4cdbe32c17 61
+  s_86d58b85ce2aee::t_0921fe5b01cb25 127,131,135,139,143,147,151,155,159,165,175
+references/ask-user-question.md
+  s_86d58b85ce2aee::t_3d19f0bb1259ea 14-15
+  s_86d58b85ce2aee::t_66c8844d15a26f 19
+  s_86d58b85ce2aee::t_aa7981477e231a 36,38,40,42,44,46,48,50,52,54,56-57,59-61,63,65,69,76
+  s_86d58b85ce2aee::t_8a56c02914ba90 77-91
+  s_86d58b85ce2aee::t_55ec858dafce31 3-5
+testing/verify-commands-contract/base-contracts.bash
+  s_86d58b85ce2aee::t_1bebc101c8940d 166-167
+  s_86d58b85ce2aee::t_114c7ed41dea28 174
+  s_86d58b85ce2aee::t_48432bfd944ec0 183-185
+testing/verify-commands-contract/vibe-lifecycle.bash
+  s_86d58b85ce2aee::t_6702d22896cf55 3-10,12-18
+  s_449a4f5dfa749e::t_f2c60a299e74df 21
+commands/verify.md
+  s_86d58b85ce2aee::t_350a8415e9b3cb 501-505
+  s_86d58b85ce2aee::t_7540e488d7344c 496,498-499,506-507
+  s_86d58b85ce2aee::t_84b6bc98bdd70f 500
+commands/qa.md
+  s_86d58b85ce2aee::t_c4c0d317725cd2 295-305
+references/vibe-mode-execute.md
+  s_86d58b85ce2aee::t_559c56f6855f93 3
+testing/verify-askuserquestion-contract.sh
+  s_86d58b85ce2aee::t_385f7e79acbdff 441-446
+  s_86d58b85ce2aee::t_f1cbdaebc52fa8 577-579
+testing/verify-commands-contract/verification-guardrails.bash
+  s_86d58b85ce2aee::t_528a5c9741585d 38
+  s_86d58b85ce2aee::t_9958a3e7cc2241 89-100
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "d8478b2db9966169589d1562f2978b2854e75426",
+  "prompts": {},
+  "humans": {
+    "h_49622c3802c0ed": {
+      "author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  },
+  "sessions": {
+    "s_449a4f5dfa749e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-avbw-dev-5705b3974276536f",
+        "model": "unknown"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    },
+    "s_86d58b85ce2aee": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "07d7797e-6c7f-4c9c-bdd0-a2660d0d8697",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
