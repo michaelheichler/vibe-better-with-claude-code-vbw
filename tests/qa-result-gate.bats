@@ -3500,6 +3500,74 @@ VERIF
   [[ "$output" == *"qa_gate_routing=REMEDIATION_REQUIRED"* ]]
 }
 
+@test "done archived-round path drift proceeds and broken verification names its diagnosis" {
+  PHASE_DIR="$TEST_DIR/.vbw-planning/phases/05-adversarial-review-and-fix"
+  mkdir -p "$PHASE_DIR/remediation/qa/round-01"
+
+  cat > "$PHASE_DIR/05-VERIFICATION.md" <<'VERIF'
+---
+phase: 05
+result: PARTIAL
+writer: write-verification.sh
+plans_verified:
+  - 05-01
+---
+## Must-Have Checks
+| ID | Category | Description | Status | Evidence |
+|----|----------|-------------|--------|----------|
+| DEV-01 | must_have | Archived plan needs its rationale | FAIL | Missing |
+VERIF
+  cat > "$PHASE_DIR/05-01-PLAN.md" <<'PLAN'
+---
+plan: 05-01
+title: Archived phase fixture
+---
+PLAN
+  cat > "$PHASE_DIR/remediation/qa/round-01/R01-SUMMARY.md" <<'SUMMARY'
+---
+plan: R01
+status: complete
+commit_hashes: []
+files_modified:
+  - ".vbw-planning/milestones/v1/phases/05-adversarial-review-and-fix/05-01-PLAN.md"
+deviations: []
+---
+SUMMARY
+  cat > "$PHASE_DIR/remediation/qa/round-01/R01-PLAN.md" <<'PLAN'
+---
+round: 01
+title: Archived phase fixture
+fail_classifications:
+  - {id: "DEV-01", type: "plan-amendment", source_plan: "05-01-PLAN.md", rationale: "The original plan records the completed approach"}
+---
+PLAN
+  cat > "$PHASE_DIR/remediation/qa/round-01/R01-VERIFICATION.md" <<'VERIF'
+---
+writer: write-verification.sh
+result: PASS
+plans_verified:
+  - R01
+---
+VERIF
+  printf 'stage=done\nround=01\n' > "$PHASE_DIR/remediation/qa/.qa-remediation-stage"
+
+  run bash "$SCRIPT" "$PHASE_DIR"
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"qa_gate_result=PASS"* ]]
+  [[ "$output" == *"qa_gate_fail_count=0"* ]]
+  [[ "$output" == *"qa_gate_deviation_count=0"* ]]
+  [[ "$output" == *"qa_gate_known_issue_count=0"* ]]
+  [[ "$output" == *"qa_gate_routing=PROCEED_TO_UAT"* ]]
+
+  printf 'stage=verify\nround=01\n' > "$PHASE_DIR/remediation/qa/.qa-remediation-stage"
+  run bash "$SCRIPT" "$PHASE_DIR"
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"qa_gate_plan_amendment_evidence_missing=true"* ]]
+  [[ "$output" == *"qa_gate_routing=REMEDIATION_REQUIRED"* ]]
+}
+
 @test "done-stage missing round verification → QA_RERUN_REQUIRED" {
   create_verif "write-verification.sh" "PASS"
   mkdir -p "$PHASE_DIR/remediation/qa/round-01"

@@ -499,6 +499,7 @@ fi
 case "$RESULT" in
   PASS)
     if [ "$FAIL_COUNT" -gt 0 ] 2>/dev/null; then
+      echo "qa_gate_fail_count_positive=true"
       echo "qa_gate_routing=REMEDIATION_REQUIRED"
     elif [ "$ROUND_SUMMARY_NONTERMINAL" = "true" ]; then
       echo "qa_gate_round_summary_nonterminal=true"
@@ -510,6 +511,7 @@ case "$RESULT" in
       echo "qa_gate_round_summary_missing=true"
       echo "qa_gate_routing=REMEDIATION_REQUIRED"
     elif [ "$ROUND_PLAN_MISSING" = "true" ]; then
+      echo "qa_gate_round_plan_missing=true"
       echo "qa_gate_routing=REMEDIATION_REQUIRED"
     elif [ "$ROUND_CHANGE_EVIDENCE_UNAVAILABLE" = "true" ] && [ "$ROUND_CODE_FIX_COUNT" -gt 0 ] 2>/dev/null; then
       echo "qa_gate_round_change_evidence_unavailable=true"
@@ -520,6 +522,7 @@ case "$RESULT" in
     elif [ "$IN_REMEDIATION" = "true" ] && [ "$SUMMARY_SCOPE_DIR" != "$PHASE_DIR" ] \
       && [ "$ROUND_KNOWN_ISSUE_CONTRACT_REQUIRED" = "true" ] \
       && [ "$ROUND_KNOWN_ISSUES_VALID" != "true" ]; then
+      echo "qa_gate_known_issue_contract_invalid=true"
       echo "qa_gate_routing=REMEDIATION_REQUIRED"
     elif [ "$IN_REMEDIATION" = "true" ] && [ "$SUMMARY_SCOPE_DIR" != "$PHASE_DIR" ] && [ "$ROUND_CLASSIFICATIONS_VALID" != "true" ]; then
       if [ "$METADATA_ONLY_ROUND" = "true" ]; then
@@ -527,14 +530,17 @@ case "$RESULT" in
         echo "qa_gate_metadata_only_override=true"
         echo "qa_gate_phase_deviation_count=$PHASE_DEVIATION_COUNT"
       fi
+      echo "qa_gate_classifications_invalid=true"
       echo "qa_gate_routing=REMEDIATION_REQUIRED"
     elif [ "$IN_REMEDIATION" = "true" ] && [ "$SUMMARY_SCOPE_DIR" != "$PHASE_DIR" ] && [ "$METADATA_ONLY_ROUND" != "true" ] && [ "$ROUND_CODE_FIX_COUNT" -gt 0 ] 2>/dev/null && ! paths_include_code_fix_evidence "$PHASE_DIR" <<< "$ROUND_ALL_RECORDED_PATHS"; then
+      echo "qa_gate_code_fix_evidence_missing=true"
       echo "qa_gate_routing=REMEDIATION_REQUIRED"
-    elif [ "$IN_REMEDIATION" = "true" ] && [ "$SUMMARY_SCOPE_DIR" != "$PHASE_DIR" ] && [ "$ROUND_PLAN_AMENDMENT_COUNT" -gt 0 ] 2>/dev/null && {
+    elif [ "$IN_REMEDIATION" = "true" ] && [ "$SUMMARY_SCOPE_DIR" != "$PHASE_DIR" ] && [ "$ROUND_PLAN_AMENDMENT_COUNT" -gt 0 ] 2>/dev/null && [ "${_gate_stage:-none}" != "done" ] && {
       [ "$ROUND_PLAN_AMENDMENT_SOURCE_PLAN_COUNT" -ne "$ROUND_PLAN_AMENDMENT_COUNT" ] 2>/dev/null \
         || ! plan_amendment_source_plans_are_valid "$PHASE_DIR" <<< "$ROUND_PLAN_AMENDMENT_SOURCE_PLANS" \
         || ! paths_cover_required_original_plan_artifacts "$PHASE_DIR" "$ROUND_PLAN_AMENDMENT_SOURCE_PLANS" <<< "$ROUND_ALL_RECORDED_PATHS";
     }; then
+      echo "qa_gate_plan_amendment_evidence_missing=true"
       echo "qa_gate_routing=REMEDIATION_REQUIRED"
     elif [ "$DEVIATION_COUNT" -gt 0 ] && { [ "$IN_REMEDIATION" = "false" ] || [ "$SUMMARY_SCOPE_DIR" != "$PHASE_DIR" ]; }; then
       echo "qa_gate_deviation_override=true"
@@ -546,6 +552,7 @@ case "$RESULT" in
       PHASE_DEVIATION_COUNT=$(count_deviations_in_dir "$PHASE_DIR" "$PHASE_DIR")
       if [ "$ROUND_CODE_FIX_COUNT" -gt 0 ] 2>/dev/null; then
         echo "qa_gate_metadata_only_override=true"
+        echo "qa_gate_metadata_only_code_fix=true"
         echo "qa_gate_phase_deviation_count=$PHASE_DEVIATION_COUNT"
         echo "qa_gate_routing=REMEDIATION_REQUIRED"
       elif [ "$ROUND_DOC_FIX_COUNT" -gt 0 ] 2>/dev/null \
