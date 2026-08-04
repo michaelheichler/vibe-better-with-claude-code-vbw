@@ -1,0 +1,28 @@
+tests/resolve-agent-model.bats
+  s_ef82bfd9ee37ed::t_b5aaa21311d9a3 18,95,124,136,154,189
+  s_ef82bfd9ee37ed::t_c4be7cd6314cd5 73
+  s_ef82bfd9ee37ed::t_c91196ab1bd60f 24,32,128,144,162
+  s_ef82bfd9ee37ed::t_fdf2da1510cba4 41-72,74-78
+tests/resolve-agent-reasoning.bats
+  s_ef82bfd9ee37ed::t_2e2c4acab565c9 172
+tests/detect-models.bats
+  s_ef82bfd9ee37ed::t_a06a0165a0705d 69
+  s_ef82bfd9ee37ed::t_cf6198e5eb32e4 80
+  s_ef82bfd9ee37ed::t_1b34f6605dde7d 24-29
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "fd77087ab6e82566519560e0fb276a275669ece5",
+  "prompts": {},
+  "sessions": {
+    "s_ef82bfd9ee37ed": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "41f89902-2bb1-4545-a5ea-81f49ca08704",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
