@@ -279,8 +279,8 @@ path_pattern_components_match_at() {
   local target_segment pattern_segment
   local target_count="${#_FG_TARGET_COMPONENTS[@]}" pattern_count="${#_FG_PATTERN_COMPONENTS[@]}"
   cache_key="$target_index:$pattern_index"
-  if [ -n "${_FG_PATTERN_MATCH_CACHE[$cache_key]+set}" ]; then
-    return "${_FG_PATTERN_MATCH_CACHE[$cache_key]}"
+  if [ -n "${_FG_PATTERN_MATCH_CACHE["$cache_key"]+set}" ]; then
+    return "${_FG_PATTERN_MATCH_CACHE["$cache_key"]}"
   fi
   if [ "$pattern_index" -eq "$pattern_count" ]; then
     result=1
@@ -304,7 +304,7 @@ path_pattern_components_match_at() {
       esac
     fi
   fi
-  _FG_PATTERN_MATCH_CACHE[$cache_key]="$result"
+  _FG_PATTERN_MATCH_CACHE["$cache_key"]="$result"
   return "$result"
 }
 
