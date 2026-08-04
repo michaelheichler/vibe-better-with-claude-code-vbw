@@ -1,0 +1,33 @@
+scripts/verification-freshness.sh
+  s_55c34ee548bef4::t_73d38cffd80cf6 125
+  s_55c34ee548bef4::t_7202c2780b361d 49,53-55,58-60,62-67,69-71
+  s_55c34ee548bef4::t_3eac060e10e4b6 68
+  s_55c34ee548bef4::t_3fdb7ee6adcfc7 20,48,51-52,56-57
+  s_55c34ee548bef4::t_82474294900c8d 21-47,50
+  s_55c34ee548bef4::t_a04256c91e520a 2
+  s_55c34ee548bef4::t_3129480f496999 116
+  s_55c34ee548bef4::t_20f0f1c2d05622 3
+tests/phase-detect.bats
+  s_55c34ee548bef4::t_3f583547417e3e 2994,2998
+  s_55c34ee548bef4::t_079fe15ba51307 2972-2973,2975-2979,2981-2993,2995-2997,2999-3004,3006-3012
+  s_55c34ee548bef4::t_42e7106ac87d21 3005
+  s_55c34ee548bef4::t_603679d9ff4cbc 2974,2980
+scripts/lib/phase-detect-support.sh
+  s_55c34ee548bef4::t_fd3a7f56e4234e 386
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "47270310b805e3ae097491cf287fccd13c93175d",
+  "prompts": {},
+  "sessions": {
+    "s_55c34ee548bef4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e2c40e1d-1763-4ad0-a1b3-bd1755008e2b",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
