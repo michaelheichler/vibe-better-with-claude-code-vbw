@@ -28,6 +28,41 @@ vbw_guard_execution_is_live() {
   return 1
 }
 
+vbw_guard_project_root() {
+  local start_dir="${1:-$PWD}" dir
+  if [ -n "${VBW_CONFIG_ROOT:-}" ] && {
+    [ -f "$VBW_CONFIG_ROOT/.vbw-planning/config.json" ] ||
+    [ -d "$VBW_CONFIG_ROOT/.vbw-planning/phases" ];
+  }; then
+    printf '%s\n' "$VBW_CONFIG_ROOT"
+    return 0
+  fi
+  dir=$(cd "$start_dir" 2>/dev/null && pwd -P) || return 1
+  while [ "$dir" != "/" ]; do
+    if [ -f "$dir/.vbw-planning/config.json" ] || [ -d "$dir/.vbw-planning/phases" ]; then
+      printf '%s\n' "$dir"
+      return 0
+    fi
+    dir=$(dirname "$dir")
+  done
+  return 1
+}
+
+vbw_guard_agent_role_present() {
+  local hook_input="${1:-}" candidate payload_type payload_id
+  for candidate in "${VBW_AGENT_ROLE:-}" "${VBW_ACTIVE_AGENT:-}"; do
+    [ -n "$candidate" ] || continue
+    vbw_active_agent_normalize_role "$candidate" >/dev/null 2>&1 && return 0
+  done
+  payload_type=$(printf '%s' "$hook_input" | jq -r '.agent_type // ""' 2>/dev/null) || payload_type=""
+  payload_id=$(printf '%s' "$hook_input" | jq -r '.agent_id // .agent_name // .agentName // ""' 2>/dev/null) || payload_id=""
+  for candidate in "$payload_type" "$payload_id"; do
+    [ -n "$candidate" ] || continue
+    vbw_active_agent_normalize_payload_role "$candidate" >/dev/null 2>&1 && return 0
+  done
+  return 1
+}
+
 vbw_guard_enforcement_level() {
   local project_root="${1:-}" hook_input="${2:-}" session_id=""
   local planning_dir="${project_root}/.vbw-planning"
@@ -36,7 +71,7 @@ vbw_guard_enforcement_level() {
     printf 'off\n'
     return 0
   }
-  if [ -n "${VBW_AGENT_ROLE:-}" ] || [ -n "${VBW_ACTIVE_AGENT:-}" ]; then
+  if vbw_guard_agent_role_present "$hook_input"; then
     printf 'enforce\n'
     return 0
   fi
@@ -56,3 +91,4 @@ vbw_guard_enforcement_level() {
   fi
   printf 'advisory\n'
 }
+

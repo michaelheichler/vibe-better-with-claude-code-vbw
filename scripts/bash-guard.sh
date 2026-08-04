@@ -6,17 +6,10 @@ INPUT=$(cat 2>/dev/null) || exit 0
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PLUGIN_ROOT="$(dirname "$SCRIPT_DIR")"
 
-if [ -f "$SCRIPT_DIR/lib/vbw-config-root.sh" ]; then
-  . "$SCRIPT_DIR/lib/vbw-config-root.sh"
-  find_vbw_root "$SCRIPT_DIR" >/dev/null 2>&1 || true
-fi
-PROJECT_ROOT="${VBW_CONFIG_ROOT:-}"
-if [ ! -f "$PROJECT_ROOT/.vbw-planning/config.json" ] && [ ! -d "$PROJECT_ROOT/.vbw-planning/phases" ]; then
-  PROJECT_ROOT=""
-fi
 . "$SCRIPT_DIR/lib/active-agent-state.sh"
 . "$SCRIPT_DIR/lib/orchestrator-identity.sh"
 . "$SCRIPT_DIR/lib/guard-enforcement.sh"
+PROJECT_ROOT=$(vbw_guard_project_root "$PWD") || PROJECT_ROOT=""
 GUARD_LEVEL=$(vbw_guard_enforcement_level "$PROJECT_ROOT" "$INPUT")
 [ "$GUARD_LEVEL" = "off" ] && exit 0
 if ! command -v jq >/dev/null 2>&1; then
@@ -28,12 +21,6 @@ COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command // ""' 2>/dev/null) || exit
 [ -z "$COMMAND" ] && exit 0
 
 # Parse failures block because unvalidated commands cannot be trusted.
-
-if [ -z "${VBW_PLANNING_DIR:-}" ] && [ -f "$SCRIPT_DIR/lib/vbw-config-root.sh" ]; then
-  if source "$SCRIPT_DIR/lib/vbw-config-root.sh" 2>/dev/null; then
-    find_vbw_root "$SCRIPT_DIR" >/dev/null 2>&1 || true
-  fi
-fi
 
 PLANNING_DIR="$PROJECT_ROOT/.vbw-planning"
 DEFAULT_PATTERNS="$PLUGIN_ROOT/config/destructive-commands.txt"
@@ -52,17 +39,29 @@ if [ -n "$_BG_PAYLOAD_AGENT_TYPE" ] || [ -n "$_BG_PAYLOAD_AGENT_ID" ]; then
   _BG_PAYLOAD_HAS_AGENT=true
 fi
 
+guard_log_event() {
+  local message="$1" level="${GUARD_LEVEL:-enforce}"
+  jq -cn --arg message "$message" --arg level "$level" --arg agent "${ACTIVE_AGENT_ROLE:-unknown}" \
+    '{event:"guard_block",level:$level,message:$message,agent:$agent}' \
+    >> "$PLANNING_DIR/.event-log.jsonl" 2>/dev/null || true
+}
+
 guard_block() {
   local message="$*"
   if [ "$GUARD_LEVEL" = "enforce" ]; then
+    if declare -F log_block_event >/dev/null 2>&1; then
+      log_block_event "$message"
+    else
+      guard_log_event "$message"
+    fi
     printf '%s\n' "$message" >&2
     exit 2
   fi
-  jq -cn --arg message "$message" --arg agent "${ACTIVE_AGENT_ROLE:-unknown}" \
-    '{event:"guard_block",level:"advisory",message:$message,agent:$agent}' \
-    >> "$PLANNING_DIR/.event-log.jsonl" 2>/dev/null || true
+  guard_log_event "$message"
   exit 0
 }
+
+# Parse failures block because unvalidated commands cannot be trusted.
 
 detect_agent_role() {
   local candidate role

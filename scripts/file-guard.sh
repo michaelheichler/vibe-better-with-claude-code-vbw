@@ -17,12 +17,9 @@ fi
 if [ -f "$_FG_SCRIPT_DIR/lib/guard-enforcement.sh" ]; then
   . "$_FG_SCRIPT_DIR/lib/guard-enforcement.sh"
 fi
-_FG_SHARED_ROOT_RESOLVED=false
 if [ -f "$_FG_SCRIPT_DIR/lib/vbw-config-root.sh" ]; then
   if source "$_FG_SCRIPT_DIR/lib/vbw-config-root.sh" 2>/dev/null; then
-    if find_vbw_root "$_FG_SCRIPT_DIR" >/dev/null 2>&1; then
-      _FG_SHARED_ROOT_RESOLVED=true
-    fi
+    find_vbw_root >/dev/null 2>&1 || true
   fi
 fi
 
@@ -58,46 +55,37 @@ to_abs_path() {
   resolve_lexical_path "$base"
 }
 
-find_project_root() {
-  local dir="$PWD"
-  while [ "$dir" != "/" ]; do
-    if [ -f "$dir/.vbw-planning/config.json" ] || [ -d "$dir/.vbw-planning/phases" ]; then
-      echo "$dir"
-      return 0
-    fi
-    dir=$(dirname "$dir")
-  done
-  return 1
-}
-
-if [ "$_FG_SHARED_ROOT_RESOLVED" = "true" ] && [ -n "${VBW_CONFIG_ROOT:-}" ] && [ -n "${VBW_PLANNING_DIR:-}" ] && [ -f "$VBW_PLANNING_DIR/config.json" ]; then
-  PROJECT_ROOT="$VBW_CONFIG_ROOT"
-  PHASES_DIR="$VBW_PLANNING_DIR/phases"
+PROJECT_ROOT=$(vbw_guard_project_root "$PWD") || PROJECT_ROOT=""
+if [ -n "$PROJECT_ROOT" ]; then
+  PHASES_DIR="$PROJECT_ROOT/.vbw-planning/phases"
 else
-  PROJECT_ROOT=$(find_project_root) || PROJECT_ROOT=""
-  if [ -n "$PROJECT_ROOT" ]; then
-    PHASES_DIR="$PROJECT_ROOT/.vbw-planning/phases"
-  else
-    PHASES_DIR=""
-  fi
+  PHASES_DIR=""
 fi
 
 guard_log_event() {
-  local message="$1"
+  local message="$1" level="${2:-${GUARD_LEVEL:-enforce}}"
   [ -d "$PROJECT_ROOT/.vbw-planning" ] || return 0
-  jq -cn --arg message "$message" --arg agent "${ACTIVE_AGENT_ROLE:-unknown}" \
-    '{event:"guard_block",level:"advisory",message:$message,agent:$agent}' \
+  jq -cn --arg message "$message" --arg level "$level" --arg agent "${ACTIVE_AGENT_ROLE:-unknown}" \
+    '{event:"guard_block",level:$level,message:$message,agent:$agent}' \
     >> "$PROJECT_ROOT/.vbw-planning/.event-log.jsonl" 2>/dev/null || true
 }
 
 guard_block() {
   local message="$*"
   if [ "$GUARD_LEVEL" = "enforce" ]; then
+    guard_log_event "$message"
     printf '%s\n' "$message" >&2
     exit 2
   fi
   guard_log_event "$message"
   exit 0
+}
+
+guard_block_always() {
+  local message="$*"
+  guard_log_event "$message" enforce
+  printf '%s\n' "$message" >&2
+  exit 2
 }
 
 GUARD_LEVEL=$(vbw_guard_enforcement_level "$PROJECT_ROOT" "$INPUT")
@@ -177,7 +165,7 @@ case "$FILE_PATH_LC" in
         summary-*|*-summary.*) _FG_TYPE="SUMMARY" ;;
         context-*|*-context.*) _FG_TYPE="CONTEXT" ;;
       esac
-      guard_block "Blocked: wrong naming convention for $_FG_TYPE artifact. Use {NN}-${_FG_TYPE}.md (e.g., 01-${_FG_TYPE}.md), not ${_FG_TYPE}-{NN}.md ($_BASENAME_CHECK)"
+      guard_block_always "Blocked: wrong naming convention for $_FG_TYPE artifact. Use {NN}-${_FG_TYPE}.md (e.g., 01-${_FG_TYPE}.md), not ${_FG_TYPE}-{NN}.md ($_BASENAME_CHECK)"
     fi
     ;;
 esac
@@ -203,7 +191,7 @@ if [ -n "${VBW_CLAUDE_SIDECHAIN_ROOT:-}" ] && [ -n "${VBW_CLAUDE_SIDECHAIN_HOST_
   esac
 
   if [ "$_FG_SIDECHAIN_BLOCK" = "true" ]; then
-    guard_block "Blocked: Claude sidechain write target
+    guard_block_always "Blocked: Claude sidechain write target
 blocked target: $_FG_BLOCKED_TARGET
 host repo: $VBW_CLAUDE_SIDECHAIN_HOST_ROOT
 retry: retry the same Write/Edit with an absolute path under the host repo, not the Claude sidechain path.
@@ -227,7 +215,7 @@ fi
 case "$FILE_PATH" in
   *.vbw-planning/milestones/*/phases"/"*)
     # Other milestone root files must fall through because archival writes SHIPPED.md and moves STATE.md and ROADMAP.md.
-    guard_block "Blocked: writes to archived milestone phases are not allowed ($FILE_PATH)"
+    guard_block_always "Blocked: writes to archived milestone phases are not allowed ($FILE_PATH)"
     ;;
   *.vbw-planning/*/remediation/uat/round-*/R[0-9]*-SUMMARY.md|\
   *.vbw-planning/*/remediation/qa/round-*/R[0-9]*-SUMMARY.md)
@@ -247,7 +235,7 @@ case "$FILE_PATH" in
       case "$_FG_SUM_STATUS" in
         complete|completed|partial|failed) ;;
         *)
-          guard_block "Blocked: SUMMARY.md status '${_FG_SUM_STATUS}' is not terminal (must be complete|partial|failed)"
+          guard_block_always "Blocked: SUMMARY.md status '${_FG_SUM_STATUS}' is not terminal (must be complete|partial|failed)"
           ;;
       esac
     fi
