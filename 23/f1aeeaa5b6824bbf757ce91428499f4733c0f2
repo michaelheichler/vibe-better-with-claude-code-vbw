@@ -1,0 +1,26 @@
+.vbw-planning/phases/02-qa-and-verification-gate-correctness/02-03-PLAN.md
+  s_55c34ee548bef4::t_6739622497bf22 30-31
+  s_55c34ee548bef4::t_5620024e91aacf 100-101
+  s_55c34ee548bef4::t_a9bcc7f4a61627 1-10,13-29,34-40,44-57,60-76,80-99,102-142
+  s_55c34ee548bef4::t_c3a0082f7f6147 41-43
+  s_55c34ee548bef4::t_e1ef51ab7a242c 32-33
+  s_55c34ee548bef4::t_9ddb70730fa9d3 58-59
+  s_55c34ee548bef4::t_6ec4f67f00143f 11-12
+  s_55c34ee548bef4::t_7bdd4ae04fdfd5 77-79
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "23f1aeeaa5b6824bbf757ce91428499f4733c0f2",
+  "prompts": {},
+  "sessions": {
+    "s_55c34ee548bef4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e2c40e1d-1763-4ad0-a1b3-bd1755008e2b",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
