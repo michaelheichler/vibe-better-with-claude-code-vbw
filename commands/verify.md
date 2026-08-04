@@ -580,7 +580,7 @@ The realized value includes non-wheel LCID stock trades instead of intended whee
 #### Example
 
 - Raw response: `Fail (Image attached)`
-- Expect rejected rows under the matching account.
+- Checkpoint expectation: The import preview should group rejected rows under the matching account.
 - The attachment was not visible.
 - Persist: `Import preview does not group rejected rows under the matching account.`
 - Persist: `The referenced attachment was not visible.`

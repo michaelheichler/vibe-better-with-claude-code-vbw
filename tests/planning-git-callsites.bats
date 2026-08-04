@@ -25,6 +25,12 @@ load test_helper
   [ "$output" -eq 1 ]
 }
 
+@test "vibe command retains three bare planning-git commit boundaries" {
+  local count
+  count=$(grep -cF 'bash /tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}/scripts/planning-git.sh commit-boundary' "$PROJECT_ROOT/commands/vibe.md")
+  [ "$count" -eq 3 ]
+}
+
 @test "planning-git callsites support VBW_PLUGIN_ROOT fallback" {
   local count
   count=$(grep -R -c 'VBW_PLUGIN_ROOT.*/scripts/planning-git.sh' "$PROJECT_ROOT/commands" "$PROJECT_ROOT/references" 2>/dev/null | awk -F: '{s+=$NF} END{print s}')

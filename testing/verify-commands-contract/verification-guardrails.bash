@@ -85,6 +85,25 @@ while IFS= read -r vibe_line || [ -n "$vibe_line" ]; do
       ;;
   esac
 done < "$VIBE_SOURCE" > "$VIBE_FILE"
+for lazy_vibe_pointer in \
+  'Read `{LINK}/references/vibe-uat-remediation.md` and follow it. `{LINK}` is the first line of the Context block output.' \
+  'Read `{LINK}/references/vibe-mode-bootstrap.md` and follow it. `{LINK}` is the first line of the Context block output.' \
+  'Read `{LINK}/references/vibe-mode-milestone-uat-recovery.md` and follow it. `{LINK}` is the first line of the Context block output.' \
+  'Read `{LINK}/references/vibe-mode-plan.md` and follow it. `{LINK}` is the first line of the Context block output.' \
+  'Read `{LINK}/references/vibe-mode-execute.md` and follow it. `{LINK}` is the first line of the Context block output.' \
+  'Read `{LINK}/references/vibe-mode-verify.md` and follow it. `{LINK}` is the first line of the Context block output.' \
+  'Read `{LINK}/references/vibe-mode-add-phase.md` and follow it. `{LINK}` is the first line of the Context block output.' \
+  'Read `{LINK}/references/vibe-mode-insert-phase.md` and follow it. `{LINK}` is the first line of the Context block output.' \
+  'Read `{LINK}/references/vibe-mode-remove-phase.md` and follow it. `{LINK}` is the first line of the Context block output.' \
+  'Read `{LINK}/references/vibe-mode-archive.md` and follow it. `{LINK}` is the first line of the Context block output.' \
+  'Before handling a team shutdown, Read `{LINK}/references/subagent-contracts.md` and follow its contract. `{LINK}` is the first line of the Context block output.' \
+  'Before rendering output, read `{LINK}/references/vbw-brand-essentials.md` and follow it. `{LINK}` is the first line of the Context block output. Skip this read for Verify mode because UAT files use plain markdown.'; do
+  if grep -Fqx "$lazy_vibe_pointer" "$VIBE_SOURCE"; then
+    pass "vibe: routes lazy reference ${lazy_vibe_pointer#*references/}"
+  else
+    fail "vibe: missing lazy reference route ${lazy_vibe_pointer#*references/}"
+  fi
+done
 for lazy_vibe_reference in \
   "$ROOT/references/vibe-uat-remediation.md" \
   "$ROOT/references/vibe-mode-bootstrap.md" \

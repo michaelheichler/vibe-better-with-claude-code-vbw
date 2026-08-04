@@ -1,6 +1,6 @@
 **Execute-mode invariant:** Parallel execution is only valid when dependency-aware routing finds real parallel delegate work and the live tool set can create real team-scoped teammates. If routing selects serialized subagents, turbo/internal direct, or real team semantics cannot be established, execute mode must fall back to explicit non-team execution. Never simulate a team with background `Agent` spawns that lack `team_name`.
 
-Read `{LINK}/references/subagent-contracts.md`, then read `{LINK}/references/execute-protocol.md` and follow both. `{LINK}` is the first line of the `/vbw:vibe` Context block output.
+Read `/tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}/references/subagent-contracts.md`, then read `/tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}/references/execute-protocol.md` and follow both.
 
 This mode delegates entirely to the protocol file. **Orchestrator read-scope:** Do NOT read product source files. Your job is orchestration: read plans, check summaries, and spawn Dev for remaining work. If you need product-code understanding to route or sequence, delegate that to Dev.
 
