@@ -1,0 +1,54 @@
+references/vibe-input-parsing.md
+  s_55c34ee548bef4::t_b58740308d2af9 383
+  s_55c34ee548bef4::t_e768c88b8a7181 275-276,279
+  s_55c34ee548bef4::t_ad713bbb33f3c7 398
+  s_55c34ee548bef4::t_f52d2ad8535015 267,269-270,273-274
+scripts/qa-result-gate.sh
+  s_55c34ee548bef4::t_0440f9db7e3d29 417-418
+  s_55c34ee548bef4::t_5191580932b498 375,379
+  s_55c34ee548bef4::t_50b56f0c1824a6 551-556
+  s_55c34ee548bef4::t_e2e15aac59bdc6 398,402,404-409
+scripts/lib/qa-result-gate-known-issues.sh
+  s_55c34ee548bef4::t_43999bb90dab52 144
+  s_55c34ee548bef4::t_15a050f205ce67 120-124,130-131,138,141-143,145-149
+  s_55c34ee548bef4::t_98d028a713381c 150
+scripts/lib/qa-result-gate-fail-classifications.sh
+  s_55c34ee548bef4::t_aa242079cf4724 149
+  s_55c34ee548bef4::t_0219306dc25931 60
+  s_55c34ee548bef4::t_db3c3ed3682b69 81-86
+  s_55c34ee548bef4::t_b454e98e922b2c 87-89
+references/execute-qa-result-gating.md
+  s_55c34ee548bef4::t_8fdf97c2aa9fde 71,75,79,83
+  s_55c34ee548bef4::t_22399d26d05411 68-69,73
+  s_55c34ee548bef4::t_b35a3fd8fb5f61 52
+  s_55c34ee548bef4::t_eb8c9ced529f28 53,56,58
+  s_55c34ee548bef4::t_c1ae4dbe5ad94d 150
+  s_55c34ee548bef4::t_75a1f1cd5964cf 60,62-63,66-67
+  s_55c34ee548bef4::t_e50e307ed6bd75 160
+scripts/lib/qa-result-gate-path-evidence.sh
+  s_55c34ee548bef4::t_92784c1d705112 520-550
+templates/REMEDIATION-PLAN.md
+  s_55c34ee548bef4::t_66fba528ab4140 14
+tests/qa-result-gate.bats
+  s_55c34ee548bef4::t_67668fc9d65e5e 3764,3766-3803
+  s_55c34ee548bef4::t_d5421bf704f962 5353-5363
+  s_55c34ee548bef4::t_e8958f9f2338ce 3804-3844
+  s_55c34ee548bef4::t_17013c063cca3b 4699
+  s_55c34ee548bef4::t_dcac3ed5f05d06 5364
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "f313968d8fb7c342ea295f964fa8636c836a49f9",
+  "prompts": {},
+  "sessions": {
+    "s_55c34ee548bef4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e2c40e1d-1763-4ad0-a1b3-bd1755008e2b",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
