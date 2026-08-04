@@ -699,14 +699,23 @@ gh_api_uses_explicit_get() {
 
 scout_git_segments_are_readonly() {
   local command="$1"
-  local segment segments
+  local segment segments token git_segment found_git
 
   segments=$(printf '%s' "$command" | tr ';|&' '\n')
   while IFS= read -r segment; do
-    if echo "$segment" | grep -qE '^[[:space:]]*git[[:space:]]+'; then
-      if ! echo "$segment" | grep -qE '^[[:space:]]*git([[:space:]]+(-C|-c|--git-dir|--work-tree|--namespace)(=|[[:space:]]+)[^[:space:]]+|[[:space:]]+(--no-pager|--bare|--literal-pathspecs|--[[:alnum:]-]+(=[^[:space:]]+)?))*[[:space:]]+(status|log|show|diff|ls-files|grep|rev-parse|cat-file|ls-tree|blame|describe)([[:space:]]|$)'; then
-        return 1
+    [ "$(segment_command_token "$segment")" = git ] || continue
+    git_segment=""
+    found_git=0
+    while IFS= read -r token; do
+      if [ "$found_git" -eq 1 ]; then
+        git_segment="$git_segment $token"
+      elif [ "$token" = git ]; then
+        git_segment=git
+        found_git=1
       fi
+    done <<< "$(shell_visible_tokens "$segment")"
+    if ! echo "$git_segment" | grep -qE '^git([[:space:]]+(-C|-c|--git-dir|--work-tree|--namespace)(=|[[:space:]]+)[^[:space:]]+|[[:space:]]+(--no-pager|--bare|--literal-pathspecs|--[[:alnum:]-]+(=[^[:space:]]+)?))*[[:space:]]+(status|log|show|diff|ls-files|grep|rev-parse|cat-file|ls-tree|blame|describe)([[:space:]]|$)'; then
+      return 1
     fi
   done <<< "$segments"
 

@@ -154,6 +154,13 @@ new_test_project() {
   [[ "$output" == *"destructive command detected"* ]]
 }
 
+@test "bash-guard: wrapped git alias payloads remain executable evidence" {
+  TEST_PROJECT=$(new_test_project qa-sudo-git-alias-payload)
+  run_role_bash_guard dev "$TEST_PROJECT" "sudo git foo 'prisma migrate reset'"
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"destructive command detected"* ]]
+}
+
 @test "bash-guard: quoted destructive evidence does not trigger the pattern blocklist" {
   TEST_PROJECT=$(new_test_project destructive-evidence)
   run_role_bash_guard dev "$TEST_PROJECT" 'echo "artisan migrate:fresh output"'
