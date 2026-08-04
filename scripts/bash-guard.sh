@@ -563,7 +563,7 @@ command_has_quoted_executable_payload() {
     command_token=$(segment_command_token "$segment") || continue
     is_shell_interpreter_token "$command_token" && continue
     case "$command_token" in
-      echo|printf|print|cat|grep|egrep|fgrep|awk|sed|jq|git)
+      echo|printf|print|cat|grep|egrep|fgrep|awk|sed|jq)
         continue
         ;;
     esac
