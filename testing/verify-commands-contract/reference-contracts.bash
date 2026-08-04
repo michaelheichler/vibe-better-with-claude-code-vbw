@@ -75,13 +75,7 @@ done < <(grep -RhoE '\$\{CLAUDE_PLUGIN_ROOT\}/[A-Za-z0-9._/*{}-]+' "${TRACKED_CO
 
 echo ""
 echo "--- UAT Remediation TodoWrite disambiguation ---"
-uat_section="$(
-  awk '
-    /^### Mode: UAT Remediation$/ { in_section=1; next }
-    in_section && /^### Mode:/ { exit }
-    in_section { print }
-  ' "$VIBE_FILE"
-)"
+uat_section=$(cat "$ROOT/references/vibe-uat-remediation.md")
 if grep -q '\*\*TodoWrite progress list (NON-NEGOTIABLE' <<< "$uat_section"; then
   pass "UAT Remediation step 4 explicitly references TodoWrite"
 else

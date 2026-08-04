@@ -25,6 +25,12 @@ load test_helper
   [ "$output" -eq 1 ]
 }
 
+@test "vibe command retains three bare planning-git commit boundaries" {
+  local count
+  count=$(grep -cF 'bash /tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}/scripts/planning-git.sh commit-boundary' "$PROJECT_ROOT/commands/vibe.md")
+  [ "$count" -eq 3 ]
+}
+
 @test "planning-git callsites support VBW_PLUGIN_ROOT fallback" {
   local count
   count=$(grep -R -c 'VBW_PLUGIN_ROOT.*/scripts/planning-git.sh' "$PROJECT_ROOT/commands" "$PROJECT_ROOT/references" 2>/dev/null | awk -F: '{s+=$NF} END{print s}')
@@ -56,7 +62,7 @@ load test_helper
     "$PROJECT_ROOT/references/vibe-input-parsing.md" \
     "$PROJECT_ROOT/references/vibe-uat-remediation.md" \
     "$PROJECT_ROOT"/references/vibe-mode-*.md | wc -l | tr -d ' ')
-  [ "$c" -eq 12 ]
+  [ "$c" -eq 9 ]
   c=$(grep -c 'PG_SCRIPT="/tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}/scripts/planning-git.sh"' "$PROJECT_ROOT/commands/discuss.md")
   [ "$c" -eq 1 ]
   c=$(grep -c 'PG_SCRIPT="/tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}/scripts/planning-git.sh"' "$PROJECT_ROOT/commands/debug.md")
@@ -71,7 +77,6 @@ load test_helper
 }
 
 @test "planning-git callsites reject CLAUDE_PLUGIN_ROOT assignment form" {
-  # Catches old PG_SCRIPT="${CLAUDE_PLUGIN_ROOT:-}/scripts/planning-git.sh" regression (F3)
   run bash -c "grep -R -n 'CLAUDE_PLUGIN_ROOT:-.*planning-git' \"$PROJECT_ROOT/commands\" \"$PROJECT_ROOT/references\" 2>/dev/null"
   [ "$status" -eq 1 ]
 }
@@ -79,7 +84,7 @@ load test_helper
 @test "planning-git callsite count is exact" {
   local fallback_count
   fallback_count=$(grep -R -cE 'PG_SCRIPT="/tmp/.vbw-plugin-root-link-\$\{CLAUDE_SESSION_ID:-default\}/scripts/planning-git.sh"|PG_SCRIPT="\$\{VBW_PLUGIN_ROOT\}/scripts/planning-git.sh"' "$PROJECT_ROOT/commands" "$PROJECT_ROOT/references" 2>/dev/null | awk -F: '{s+=$NF} END{print s}')
-  [ "$fallback_count" -eq 21 ] || { echo "Unexpected planning-git callsite count: $fallback_count"; false; }
+  [ "$fallback_count" -eq 18 ] || { echo "Unexpected planning-git callsite count: $fallback_count"; false; }
 }
 
 @test "planning-git callsites do not use sort -V fallback resolver" {
@@ -117,10 +122,8 @@ load test_helper
     local reader_count
     reader_count=$(grep -c 'echo /tmp/.vbw-plugin-root-link-' "$file" 2>/dev/null || true)
     [ "$reader_count" -gt 0 ] || continue
-    # Preamble must assign SESSION_KEY with CLAUDE_SESSION_ID:-default
     grep -q 'SESSION_KEY="${CLAUDE_SESSION_ID:-default}"' "$file" || \
       { echo "$(basename "$file"): preamble missing SESSION_KEY=\"\${CLAUDE_SESSION_ID:-default}\" assignment"; return 1; }
-    # Reader references must use CLAUDE_SESSION_ID:-default
     local mismatched
     mismatched=$(grep 'echo /tmp/.vbw-plugin-root-link-' "$file" | grep -v 'CLAUDE_SESSION_ID:-default' || true)
     [ -z "$mismatched" ] || { echo "$(basename "$file"): reader with unsupported session key fallback: $mismatched"; return 1; }

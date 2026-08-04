@@ -161,73 +161,39 @@ else
   fail "ask-user-question: shared reference missing"
 fi
 
-if [ -f "$ASK_USER_QUESTION_REF" ] && grep -Fq 'Source note:' "$ASK_USER_QUESTION_REF"; then
-  pass "ask-user-question: source note present"
+if [ -f "$ASK_USER_QUESTION_REF" ] \
+  && grep -Fq 'Use a short header' "$ASK_USER_QUESTION_REF" \
+  && (grep -Fq '2 to 4 options' "$ASK_USER_QUESTION_REF" || grep -Fq '2-4 options' "$ASK_USER_QUESTION_REF") \
+  && (grep -Fq 'no more than 4 questions' "$ASK_USER_QUESTION_REF" || grep -Fq '1-4 questions' "$ASK_USER_QUESTION_REF"); then
+  pass "ask-user-question: documents bounded structured choices"
 else
-  fail "ask-user-question: missing source note"
+  fail "ask-user-question: missing bounded structured choice guidance"
 fi
 
-if [ -f "$ASK_USER_QUESTION_REF" ] && grep -Fq 'Last reviewed:' "$ASK_USER_QUESTION_REF"; then
-  pass "ask-user-question: last reviewed metadata present"
+if [ -f "$ASK_USER_QUESTION_REF" ] \
+  && (grep -Fq 'Other path' "$ASK_USER_QUESTION_REF" || grep -Fq '`Other` path' "$ASK_USER_QUESTION_REF") \
+  && grep -Fq 'open-ended answer' "$ASK_USER_QUESTION_REF" \
+  && grep -Fq 'Ask the follow-up as plain text, process the response' "$ASK_USER_QUESTION_REF"; then
+  pass "ask-user-question: documents freeform handoff"
 else
-  fail "ask-user-question: missing last reviewed metadata"
+  fail "ask-user-question: missing freeform handoff guidance"
 fi
 
-if [ -f "$ASK_USER_QUESTION_REF" ] && grep -Fq 'Keep headers short' "$ASK_USER_QUESTION_REF"; then
-  pass "ask-user-question: documents short-header rule"
+if [ -f "$ASK_USER_QUESTION_REF" ] \
+  && (grep -Fq '### Structured choice' "$ASK_USER_QUESTION_REF" || grep -Fq '### Example: structured single-select' "$ASK_USER_QUESTION_REF") \
+  && (grep -Fq '### Open answer' "$ASK_USER_QUESTION_REF" || grep -Fq '### Example: intentional freeform' "$ASK_USER_QUESTION_REF") \
+  && (grep -Fq '### Decision gate' "$ASK_USER_QUESTION_REF" || grep -Fq '### Example: decision gate' "$ASK_USER_QUESTION_REF"); then
+  pass "ask-user-question: includes structured, open, and gate examples"
 else
-  fail "ask-user-question: missing short-header rule"
+  fail "ask-user-question: missing question examples"
 fi
 
-if [ -f "$ASK_USER_QUESTION_REF" ] && grep -Eq '2-4 options' "$ASK_USER_QUESTION_REF"; then
-  pass "ask-user-question: documents 2-4 option sweet spot"
+if [ -f "$ASK_USER_QUESTION_REF" ] \
+  && grep -Fq 'Do not hedge' "$ASK_USER_QUESTION_REF" \
+  && grep -Fq 'Do not lecture' "$ASK_USER_QUESTION_REF"; then
+  pass "ask-user-question: prohibits hedging and lecturing"
 else
-  fail "ask-user-question: missing 2-4 option guidance"
-fi
-
-if [ -f "$ASK_USER_QUESTION_REF" ] && grep -Eq '1-4 questions' "$ASK_USER_QUESTION_REF"; then
-  pass "ask-user-question: documents 1-4 question guidance"
-else
-  fail "ask-user-question: missing 1-4 question guidance"
-fi
-
-if [ -f "$ASK_USER_QUESTION_REF" ] && grep -Fq '`Other` path' "$ASK_USER_QUESTION_REF"; then
-  pass "ask-user-question: documents built-in Other path"
-else
-  fail "ask-user-question: missing built-in Other path guidance"
-fi
-
-if [ -f "$ASK_USER_QUESTION_REF" ] && grep -Fq 'high-cardinality or unbounded' "$ASK_USER_QUESTION_REF"; then
-  pass "ask-user-question: documents intentional freeform boundary"
-else
-  fail "ask-user-question: missing intentional freeform boundary"
-fi
-
-if [ -f "$ASK_USER_QUESTION_REF" ] && grep -Eq '### Example[^[:alnum:]]+structured single-select' "$ASK_USER_QUESTION_REF" \
-  && grep -Eq '### Example[^[:alnum:]]+intentional freeform' "$ASK_USER_QUESTION_REF"; then
-  pass "ask-user-question: includes structured and freeform examples"
-else
-  fail "ask-user-question: missing structured/freeform example coverage"
-fi
-
-if [ -f "$ASK_USER_QUESTION_REF" ] && grep -Fq '### Freeform handoff' "$ASK_USER_QUESTION_REF" \
-  && grep -Fq 'stop using AskUserQuestion' "$ASK_USER_QUESTION_REF"; then
-  pass "ask-user-question: documents freeform handoff rule"
-else
-  fail "ask-user-question: missing freeform handoff rule"
-fi
-
-if [ -f "$ASK_USER_QUESTION_REF" ] && grep -Fq '## Anti-patterns' "$ASK_USER_QUESTION_REF" \
-  && grep -Fq 'Fake bounded menus' "$ASK_USER_QUESTION_REF"; then
-  pass "ask-user-question: includes anti-patterns section"
-else
-  fail "ask-user-question: missing anti-patterns section"
-fi
-
-if [ -f "$ASK_USER_QUESTION_REF" ] && grep -Eq '### Example[^[:alnum:]]+decision gate' "$ASK_USER_QUESTION_REF"; then
-  pass "ask-user-question: includes decision gate example"
-else
-  fail "ask-user-question: missing decision gate example"
+  fail "ask-user-question: missing plain-language safeguards"
 fi
 
 if [ -f "$ASK_USER_QUESTION_REF" ] && ! grep -Eiq 'github\.com/.*issues|fixes #[0-9]+|see #[0-9]+|issue #[0-9]+|parent.*#[0-9]+' "$ASK_USER_QUESTION_REF"; then

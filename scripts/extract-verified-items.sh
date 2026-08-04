@@ -3,6 +3,17 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
+if [ "$#" -gt 1 ]; then
+  echo "QA-VERIFIED ITEMS (do NOT generate UAT checkpoints for these):"
+  for phase_dir in "$@"; do
+    printf '  Phase: %s\n' "$(basename "$phase_dir")"
+    if ! VBW_EXTRACT_SUPPRESS_HEADER=1 bash "$0" "$phase_dir"; then
+      printf '  WARNING: failed to extract verified items for %s\n' "$phase_dir" >&2
+    fi
+  done
+  exit 0
+fi
+
 phase_dir="${1:-}"
 if [[ -z "$phase_dir" || ! -d "$phase_dir" ]]; then
   exit 0
@@ -46,7 +57,9 @@ if [[ ${#verif_files[@]} -eq 0 ]]; then
   exit 0
 fi
 
-echo "QA-VERIFIED ITEMS (do NOT generate UAT checkpoints for these):"
+if [ "${VBW_EXTRACT_SUPPRESS_HEADER:-0}" != 1 ]; then
+  echo "QA-VERIFIED ITEMS (do NOT generate UAT checkpoints for these):"
+fi
 
 for vf in "${verif_files[@]}"; do
   result=""

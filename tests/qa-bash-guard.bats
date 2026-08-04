@@ -430,12 +430,26 @@ EOF
   rm -rf "$fake_bin"
 }
 
+@test "bash-guard explains how to fix unrecognized agent evidence" {
+  local input
+  jq -n '{status:"running"}' > "$TEST_TEMP_DIR/.vbw-planning/.execution-state.json"
+  input=$(jq -n '{agent_type:"vbw-dev2",tool_input:{command:"git status"}}')
+
+  run bash -c 'unset VBW_AGENT_ROLE VBW_ACTIVE_AGENT; printf "%s\n" "$1" | bash "$2"' _ "$input" "$SCRIPTS_DIR/bash-guard.sh"
+
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"Respawn the worker with a recognized VBW role name such as vbw-dev."* ]]
+  [[ "$output" == *"The guard checks agent_type and agent_id, not subagent_type."* ]]
+  [[ "$output" == *"Use vbw-<role> or vbw-<role>-<digits>."* ]]
+}
+
 @test "bash-guard classifies explicit Scout payload" {
   local field identity input
   rm -rf "$TEST_TEMP_DIR/.vbw-planning/.active-agents"
 
   for field in agent_type agent_id; do
     identity="vbw:vbw-scout"
+    [ "$field" = "agent_id" ] && identity="team-scout-01"
     input=$(jq -n --arg field "$field" --arg identity "$identity" \
       '{session_id:"session-A",tool_input:{command:"gh issue comment 1 --body blocked"}} + {($field):$identity}')
 

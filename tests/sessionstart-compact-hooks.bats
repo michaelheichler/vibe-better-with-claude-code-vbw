@@ -46,8 +46,7 @@ teardown() {
   cd "$TEST_TEMP_DIR"
   run bash "$SCRIPTS_DIR/session-start.sh"
   [ "$status" -eq 0 ]
-  # Should produce hookSpecificOutput JSON
-  echo "$output" | jq -e '.hookSpecificOutput.additionalContext' >/dev/null
+  echo "$output" | jq -e '.hookSpecificOutput.additionalContext | contains("VBW Bash: name workers vbw-<role> such as vbw-dev. The guard checks agent_type or agent_id, not subagent_type.")' >/dev/null
 }
 
 @test "session-start: self-heals STATE drift before additionalContext" {

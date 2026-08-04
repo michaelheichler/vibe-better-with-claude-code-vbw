@@ -1,7 +1,23 @@
 echo "=== Milestone Context Refresh Verification ==="
 mode_block() {
-  extract_heading_block "$VIBE_FILE" "$1" '^### Mode: '
+  local mode="$1"
+  local reference=""
+  case "$mode" in
+    "### Mode: Add Phase") reference="$ROOT/references/vibe-mode-add-phase.md" ;;
+    "### Mode: Insert Phase") reference="$ROOT/references/vibe-mode-insert-phase.md" ;;
+    "### Mode: Remove Phase") reference="$ROOT/references/vibe-mode-remove-phase.md" ;;
+    "### Mode: Archive") reference="$ROOT/references/vibe-mode-archive.md" ;;
+    *) extract_heading_block "$VIBE_FILE" "$mode" '^### Mode: ' ;;
+  esac
+  if [ -n "$reference" ]; then
+    if [ -f "$reference" ]; then
+      cat "$reference"
+    else
+      fail "vibe: $mode reference missing ${reference#"$ROOT/"}"
+    fi
+  fi
 }
+
 
 echo ""
 echo "=== Mode Block Helper Regression Verification ==="

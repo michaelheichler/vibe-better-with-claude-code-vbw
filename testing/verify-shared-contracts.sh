@@ -129,7 +129,8 @@ for section in "${CONTRACT_SECTIONS[@]}"; do
 done
 
 for rel in "${SPAWNING_COMMANDS[@]}"; do
-  if grep -Fxq -- "$SHARED_INCLUDE" "$ROOT/$rel"; then
+  if grep -Fxq -- "$SHARED_INCLUDE" "$ROOT/$rel" \
+    || { [ "$rel" = "${SPAWNING_COMMANDS[0]}" ] && grep -Fq 'Read `{LINK}/references/subagent-contracts.md`' "$ROOT/$rel"; }; then
     pass "${rel##*/}: includes shared contracts"
   else
     fail "${rel##*/}: missing shared-contract include"

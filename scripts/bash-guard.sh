@@ -100,7 +100,7 @@ detect_agent_role() {
     fi
     return 1
   fi
-  guard_block "Blocked: unrecognized agent evidence (agent_type=$_BG_PAYLOAD_AGENT_TYPE, agent_id=$_BG_PAYLOAD_AGENT_ID); role cannot be confirmed."
+  guard_block "Blocked: unrecognized agent evidence (agent_type=$_BG_PAYLOAD_AGENT_TYPE, agent_id=$_BG_PAYLOAD_AGENT_ID). Role cannot be confirmed. Respawn the worker with a recognized VBW role name such as vbw-dev. The guard checks agent_type and agent_id, not subagent_type. VBW values may start with vbw:. Use vbw-<role> or vbw-<role>-<digits>. Roles are lead, dev, qa, qa-author, scout, debugger, architect, and docs." "unrecognized-agent-evidence"
   return 2
 }
 
