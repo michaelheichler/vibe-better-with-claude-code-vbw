@@ -1,0 +1,24 @@
+tests/agent-spawn-guard.bats
+  s_86d58b85ce2aee::t_83f00b176e86fe 96-110
+hooks/hooks.json
+  s_86d58b85ce2aee::t_03e1a81b6f9876 74
+scripts/agent-spawn-guard.sh
+  s_86d58b85ce2aee::t_9f41969ec2e204 162-164
+  s_86d58b85ce2aee::t_2ce9a7ec61872b 47-55
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "4fd01ab0641f028b289d3985284bead18101cab2",
+  "prompts": {},
+  "sessions": {
+    "s_86d58b85ce2aee": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "07d7797e-6c7f-4c9c-bdd0-a2660d0d8697",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
