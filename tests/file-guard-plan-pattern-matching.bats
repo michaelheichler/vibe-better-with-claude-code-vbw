@@ -85,6 +85,18 @@ run_file_guard() {
   [[ "$output" == *"not in active plan's files_modified"* ]]
 }
 
+@test "mixed recursive and single-star globs preserve single-star boundaries" {
+  write_plan 'src/**/test/*.js'
+  mark_execution_running
+
+  run_file_guard 'src/a/b/test/x.js'
+  [ "$status" -eq 0 ]
+
+  run_file_guard 'src/a/b/test/x/y.js'
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"not in active plan's files_modified"* ]]
+}
+
 @test "contract allowed_paths matches a glob and rejects outside paths" {
   write_plan 'README.md'
   jq -n '{allowed_paths:["crates/phenprocoumon-core/**"],forbidden_paths:[]}' \

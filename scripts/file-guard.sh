@@ -271,17 +271,40 @@ normalize_path() {
   echo "$input_path"
 }
 
-path_pattern_component_count_matches() {
-  local target="$1" pattern="$2" target_count=1 pattern_count=1
-  while [[ "$target" == */* ]]; do
-    target="${target#*/}"
-    target_count=$((target_count + 1))
-  done
-  while [[ "$pattern" == */* ]]; do
-    pattern="${pattern#*/}"
-    pattern_count=$((pattern_count + 1))
-  done
-  [ "$target_count" -eq "$pattern_count" ]
+path_pattern_components_match_at() {
+  local target_index="$1" pattern_index="$2"
+  local target_segment pattern_segment
+  local target_count="${#_FG_TARGET_COMPONENTS[@]}" pattern_count="${#_FG_PATTERN_COMPONENTS[@]}"
+
+  if [ "$pattern_index" -eq "$pattern_count" ]; then
+    [ "$target_index" -eq "$target_count" ]
+    return
+  fi
+
+  pattern_segment="${_FG_PATTERN_COMPONENTS[$pattern_index]}"
+  if [ "$pattern_segment" = "**" ]; then
+    path_pattern_components_match_at "$target_index" "$((pattern_index + 1))" && return 0
+    [ "$target_index" -lt "$target_count" ] || return 1
+    path_pattern_components_match_at "$((target_index + 1))" "$pattern_index"
+    return
+  fi
+
+  [ "$target_index" -lt "$target_count" ] || return 1
+  target_segment="${_FG_TARGET_COMPONENTS[$target_index]}"
+  # shellcheck disable=SC2254 # Because quoting would disable lexical glob matching.
+  case "$target_segment" in
+    $pattern_segment)
+      path_pattern_components_match_at "$((target_index + 1))" "$((pattern_index + 1))"
+      ;;
+    *) return 1 ;;
+  esac
+}
+
+path_pattern_components_match() {
+  local target="$1" pattern="$2"
+  IFS='/' read -r -a _FG_TARGET_COMPONENTS <<< "$target"
+  IFS='/' read -r -a _FG_PATTERN_COMPONENTS <<< "$pattern"
+  path_pattern_components_match_at 0 0
 }
 
 # shellcheck disable=SC2254 # Because quoting would disable lexical glob matching.
@@ -301,17 +324,11 @@ path_matches_pattern() {
       IFS=',' read -r -a brace_alternatives <<< "$alternatives"
       for alternative in "${brace_alternatives[@]}"; do
         expanded_pattern="${prefix}${alternative}${suffix}"
-        [[ "$expanded_pattern" == *"**"* ]] || path_pattern_component_count_matches "$target" "$expanded_pattern" || continue
-        case "$target" in
-          $expanded_pattern) return 0 ;;
-        esac
+        path_pattern_components_match "$target" "$expanded_pattern" && return 0
       done
       ;;
     *"*"*|*"?"*|*"["*)
-      [[ "$pattern" == *"**"* ]] || path_pattern_component_count_matches "$target" "$pattern" || return 1
-      case "$target" in
-        $pattern) return 0 ;;
-      esac
+      path_pattern_components_match "$target" "$pattern" && return 0
       ;;
   esac
   return 1
