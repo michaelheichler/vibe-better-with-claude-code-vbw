@@ -2112,6 +2112,91 @@ create_round_summary_with_files() {
   } > "${round_dir}/R${round}-SUMMARY.md"
 }
 
+create_classified_fail_round() {
+  local deviation_text="${1}"
+  local classification_type="${2:-process-exception}"
+  local classification_id="${3:-DEV-04}"
+  local round_dir="$PHASE_DIR/remediation/qa/round-01"
+  cat > "$PHASE_DIR/01-VERIFICATION.md" <<'VERIF'
+---
+writer: write-verification.sh
+result: FAIL
+---
+## Checks
+| ID | Category | Description | Status | Evidence |
+|----|----------|-------------|--------|----------|
+| DEV-04 | must_have | Source process exception | FAIL | Accepted |
+VERIF
+  mkdir -p "$round_dir"
+  printf 'stage=verify\nround=01\n' > "$PHASE_DIR/remediation/qa/.qa-remediation-stage"
+  cat > "$round_dir/R01-PLAN.md" <<PLAN
+---
+round: 01
+plan: R01
+fail_classifications:
+  - {id: "$classification_id", type: "$classification_type", rationale: "Round-local classification"}
+---
+PLAN
+  cat > "$round_dir/R01-SUMMARY.md" <<SUMMARY
+---
+plan: R01
+status: complete
+commit_hashes: []
+files_modified:
+  - "01-test-phase/remediation/qa/round-01/R01-SUMMARY.md"
+deviations:
+  - "$deviation_text"
+---
+SUMMARY
+  cat > "$round_dir/R01-VERIFICATION.md" <<'VERIF'
+---
+writer: write-verification.sh
+result: PARTIAL
+plans_verified:
+  - R01
+---
+## Checks
+| ID | Category | Description | Status | Evidence |
+|----|----------|-------------|--------|----------|
+| FAIL-DEV-04 | must_have | Round-local process exception | FAIL | Accepted |
+VERIF
+}
+
+@test "classified process-exception FAIL and deviation proceed to UAT" {
+  create_classified_fail_round "DEV-04 process-exception: accepted structural tooling exception"
+
+  run bash "$SCRIPT" "$PHASE_DIR"
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"qa_gate_classified_fail_exemption=true"* ]]
+  [[ "$output" == *"qa_gate_exempt_fail_count=1"* ]]
+  [[ "$output" == *"qa_gate_deviation_count=0"* ]]
+  [[ "$output" == *"qa_gate_routing=PROCEED_TO_UAT"* ]]
+}
+
+@test "classified FAIL with unmatched deviation remains blocked" {
+  create_classified_fail_round "Unclassified process exception: accepted structural tooling exception"
+
+  run bash "$SCRIPT" "$PHASE_DIR"
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"qa_gate_classified_fail_exemption=true"* ]]
+  [[ "$output" == *"qa_gate_deviation_count=1"* ]]
+  [[ "$output" == *"qa_gate_deviation_override=true"* ]]
+  [[ "$output" == *"qa_gate_routing=QA_RERUN_REQUIRED"* ]]
+}
+
+@test "classified FAIL with invalid classification remains blocked" {
+  create_classified_fail_round "DEV-04 process-exception: invalid classification type" "invalid-type"
+
+  run bash "$SCRIPT" "$PHASE_DIR"
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"qa_gate_classifications_invalid=true"* ]]
+  [[ "$output" == *"qa_gate_routing=REMEDIATION_REQUIRED"* ]]
+}
+
+
 @test "metadata-only round with phase-level deviations → REMEDIATION_REQUIRED" {
   create_source_fail_verif "FAIL-01" "Deviation still needs a real fix"
   # Phase-level SUMMARY.md has real deviations
@@ -7188,8 +7273,6 @@ VERIF
   run bash "$SCRIPT" "$PHASE_DIR"
 
   [ "$status" -eq 0 ]
-  # Mixed round with code-fix present: change-evidence early-exit fires
-  # because ROUND_CODE_FIX_COUNT > 0, preserving the blocking behavior
   [[ "$output" == *"qa_gate_round_change_evidence_unavailable=true"* ]]
   [[ "$output" == *"qa_gate_routing=REMEDIATION_REQUIRED"* ]]
 }
