@@ -55,10 +55,6 @@ if [ -f "$CACHE" ] && [ -n "$(find "$CACHE" -mmin -60 2>/dev/null)" ]; then
   exit 0
 fi
 
-if [ -z "$CLAUDE_BIN" ]; then
-  exit 0
-fi
-
 ENTRY='\{value:"[^"]+",label:"[^"]+",description:"[^"]+"\}'
 
 extract_binary() {
@@ -88,13 +84,13 @@ extract_pricing_aliases() {
 
 TMP="$(mktemp "${CACHE}.XXXXXX")"
 trap 'rm -f "$TMP" "${TMP}.ids" "${TMP}.labeled"' EXIT
-if [ -n "$CLAUDE_BIN" ]; then
-  if [ -n "$ALIAS_MAP" ]; then
-    extract_alias_map >> "$TMP"
-  else
-    extract_binary >> "$TMP"
-    extract_pricing_aliases >> "$TMP"
-  fi
+if [ -n "$CLAUDE_BIN" ] && [ -n "$ALIAS_MAP" ]; then
+  extract_alias_map >> "$TMP"
+elif [ -n "$CLAUDE_BIN" ]; then
+  extract_binary >> "$TMP"
+fi
+if [ -z "$ALIAS_MAP" ]; then
+  extract_pricing_aliases >> "$TMP"
 fi
 if [ -n "$ALIAS_MAP" ]; then
   sort -u "$TMP" -o "$TMP" 2>/dev/null || true

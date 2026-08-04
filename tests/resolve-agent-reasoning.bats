@@ -169,6 +169,6 @@ set_config() {
   set_config '.model_profile = "budget"'
   run bash "$SCRIPTS_DIR/resolve-agent-settings.sh" docs "$CONFIG" "$CONFIG_DIR/model-profiles.json"
   [ "$status" -eq 0 ]
-  [[ "$output" == *"RESOLVED_MODEL='claude-haiku-4-5'"* ]]
+  [[ "$output" == *"RESOLVED_MODEL='haiku'"* ]]
   [[ "$output" == *"RESOLVED_REASONING=''"* ]]
 }

@@ -101,6 +101,12 @@ candidates_from() {
 
 resolve_alias() {
   local model="$1"
+  case "$model" in
+    opus|sonnet|haiku|fable|default)
+      printf '%s\n' "$model"
+      return 0
+      ;;
+  esac
   if [ -f "$PRICING_PATH" ]; then
     jq -r --arg m "$model" '.aliases[$m] // $m' "$PRICING_PATH" 2>/dev/null || printf '%s\n' "$model"
   else

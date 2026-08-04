@@ -31,13 +31,13 @@ run_fixture_resolver() {
 @test "resolves dev model from quality profile" {
   run bash "$SCRIPTS_DIR/resolve-agent-model.sh" dev "$TEST_TEMP_DIR/.vbw-planning/config.json" "$CONFIG_DIR/model-profiles.json"
   [ "$status" -eq 0 ]
-  [ "$output" = "claude-opus-5" ]
+  [ "$output" = "opus" ]
 }
 
 @test "resolves scout model from quality profile" {
   run bash "$SCRIPTS_DIR/resolve-agent-model.sh" scout "$TEST_TEMP_DIR/.vbw-planning/config.json" "$CONFIG_DIR/model-profiles.json"
   [ "$status" -eq 0 ]
-  [ "$output" = "claude-sonnet-5" ]
+  [ "$output" = "sonnet" ]
 }
 
 @test "resolves dev model from balanced profile" {
@@ -45,7 +45,7 @@ run_fixture_resolver() {
   mv "$TEST_TEMP_DIR/.vbw-planning/config.json.tmp" "$TEST_TEMP_DIR/.vbw-planning/config.json"
   run bash "$SCRIPTS_DIR/resolve-agent-model.sh" dev "$TEST_TEMP_DIR/.vbw-planning/config.json" "$CONFIG_DIR/model-profiles.json"
   [ "$status" -eq 0 ]
-  [ "$output" = "claude-sonnet-5" ]
+  [ "$output" = "sonnet" ]
 }
 
 @test "respects per-agent override" {
@@ -54,7 +54,7 @@ run_fixture_resolver() {
 
   run bash "$SCRIPTS_DIR/resolve-agent-model.sh" dev "$TEST_TEMP_DIR/.vbw-planning/config.json" "$CONFIG_DIR/model-profiles.json"
   [ "$status" -eq 0 ]
-  [ "$output" = "claude-opus-5" ]
+  [ "$output" = "opus" ]
 }
 
 @test "resolves custom alias in a single-value override" {
@@ -145,7 +145,7 @@ run_fixture_resolver() {
   export VBW_MODEL_CATALOG_FILE="$TEST_TEMP_DIR/no-catalog"
   run bash "$SCRIPTS_DIR/resolve-agent-model.sh" dev "$TEST_TEMP_DIR/.vbw-planning/config.json" "$CONFIG_DIR/model-profiles.json"
   [ "$status" -eq 0 ]
-  [ "$output" = "claude-opus-5" ]
+  [ "$output" = "opus" ]
 
   _fingerprint() {
     if command -v md5sum >/dev/null 2>&1; then
@@ -175,11 +175,11 @@ run_fixture_resolver() {
 
   run bash "$SCRIPTS_DIR/resolve-agent-model.sh" dev "$TEST_TEMP_DIR/.vbw-planning/config.json" "$CONFIG_DIR/model-profiles.json"
   [ "$status" -eq 0 ]
-  [ "$output" = "claude-opus-5" ]
+  [ "$output" = "opus" ]
 
   run bash "$SCRIPTS_DIR/resolve-agent-model.sh" dev "$alt_dir/.vbw-planning/config.json" "$CONFIG_DIR/model-profiles.json"
   [ "$status" -eq 0 ]
-  [ "$output" = "claude-sonnet-5" ]
+  [ "$output" = "sonnet" ]
 }
 
 @test "cache invalidates for same-path config edits within the same second" {
@@ -187,7 +187,7 @@ run_fixture_resolver() {
 
   run bash "$SCRIPTS_DIR/resolve-agent-model.sh" dev "$TEST_TEMP_DIR/.vbw-planning/config.json" "$CONFIG_DIR/model-profiles.json"
   [ "$status" -eq 0 ]
-  [ "$output" = "claude-opus-5" ]
+  [ "$output" = "opus" ]
 
   jq '.model_profile = "balanced"' "$TEST_TEMP_DIR/.vbw-planning/config.json" > "$TEST_TEMP_DIR/.vbw-planning/config.json.tmp"
   mv "$TEST_TEMP_DIR/.vbw-planning/config.json.tmp" "$TEST_TEMP_DIR/.vbw-planning/config.json"
@@ -195,7 +195,7 @@ run_fixture_resolver() {
 
   run bash "$SCRIPTS_DIR/resolve-agent-model.sh" dev "$TEST_TEMP_DIR/.vbw-planning/config.json" "$CONFIG_DIR/model-profiles.json"
   [ "$status" -eq 0 ]
-  [ "$output" = "claude-sonnet-5" ]
+  [ "$output" = "sonnet" ]
 }
 
 @test "cache invalidates when profiles file changes within the same second" {
@@ -205,7 +205,7 @@ run_fixture_resolver() {
 
   run bash "$SCRIPTS_DIR/resolve-agent-model.sh" dev "$TEST_TEMP_DIR/.vbw-planning/config.json" "$profiles_copy"
   [ "$status" -eq 0 ]
-  [ "$output" = "claude-opus-5" ]
+  [ "$output" = "opus" ]
 
   jq '.quality.dev = "sonnet"' "$profiles_copy" > "$profiles_copy.tmp"
   mv "$profiles_copy.tmp" "$profiles_copy"
@@ -213,7 +213,7 @@ run_fixture_resolver() {
 
   run bash "$SCRIPTS_DIR/resolve-agent-model.sh" dev "$TEST_TEMP_DIR/.vbw-planning/config.json" "$profiles_copy"
   [ "$status" -eq 0 ]
-  [ "$output" = "claude-sonnet-5" ]
+  [ "$output" = "sonnet" ]
 }
 
 @test "matrix string value resolves by effort" {
@@ -240,7 +240,7 @@ run_fixture_resolver() {
   mv "$TEST_TEMP_DIR/.vbw-planning/config.json.tmp" "$TEST_TEMP_DIR/.vbw-planning/config.json"
   run bash "$SCRIPTS_DIR/resolve-agent-model.sh" dev "$TEST_TEMP_DIR/.vbw-planning/config.json" "$CONFIG_DIR/model-profiles.json"
   [ "$status" -eq 0 ]
-  [ "$output" = "claude-opus-5" ]
+  [ "$output" = "opus" ]
 }
 
 @test "preference array picks first entry present in catalog" {

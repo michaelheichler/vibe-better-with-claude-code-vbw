@@ -35,11 +35,15 @@ make_fake_binary() {
   dm_cache_path
 }
 
-@test "no binary: empty output, exit 0, no cache write" {
+@test "no binary: pricing aliases remain in plain and labeled catalogs" {
   run bash "$SCRIPTS_DIR/detect-models.sh"
   [ "$status" -eq 0 ]
-  [ -z "$output" ]
-  [ ! -f "$DM_CACHE" ]
+  grep -Fxq "opus48" <<< "$output"
+  [ -f "$DM_CACHE" ]
+
+  run bash "$SCRIPTS_DIR/detect-models.sh" --labeled
+  [ "$status" -eq 0 ]
+  grep -Fq "$(printf 'opus48\topus48 -> claude-opus-4-8')" <<< "$output"
 }
 
 @test "catalog file hook emits its lines without probing" {
