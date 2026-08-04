@@ -7273,6 +7273,8 @@ VERIF
   run bash "$SCRIPT" "$PHASE_DIR"
 
   [ "$status" -eq 0 ]
+  # Mixed round with code-fix present: change-evidence early-exit fires
+  # because ROUND_CODE_FIX_COUNT > 0, preserving the blocking behavior
   [[ "$output" == *"qa_gate_round_change_evidence_unavailable=true"* ]]
   [[ "$output" == *"qa_gate_routing=REMEDIATION_REQUIRED"* ]]
 }
