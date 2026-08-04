@@ -23,18 +23,23 @@ function emit_value(v) {
   v = strip_quotes(v)
   if (v != "") print v
 }
-function strip_inline_comment(rest, i, ch, quote) {
+function strip_inline_comment(rest, i, ch, quote, escaped) {
   quote = ""
+  escaped = 0
   for (i = 1; i <= length(rest); i++) {
     ch = substr(rest, i, 1)
-    if (quote == "") {
-      if (ch == "\"" || ch == squote) {
-        quote = ch
-      } else if (ch == "#" && (i == 1 || substr(rest, i - 1, 1) ~ /[[:space:]]/)) {
-        return substr(rest, 1, i - 1)
+    if (quote != "") {
+      if (escaped) {
+        escaped = 0
+      } else if (ch == "\\" && quote == "\"") {
+        escaped = 1
+      } else if (ch == quote) {
+        quote = ""
       }
-    } else if (ch == quote) {
-      quote = ""
+    } else if (ch == "\"" || ch == squote) {
+      quote = ch
+    } else if (ch == "#" && (i == 1 || substr(rest, i - 1, 1) ~ /[[:space:]]/)) {
+      return substr(rest, 1, i - 1)
     }
   }
   return rest
@@ -87,7 +92,7 @@ in_fm && $0 ~ ("^" key ":[[:space:]]*") {
 in_fm && in_arr && /^[[:space:]]+- / {
   line = $0
   sub(/^[[:space:]]+- /, "", line)
-  emit_value(line)
+  emit_value(strip_inline_comment(line))
   next
 }
 in_fm && in_arr && /^[^[:space:]]/ { exit }
