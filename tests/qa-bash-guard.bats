@@ -120,6 +120,19 @@ new_test_project() {
   [[ "$output" == *"filesystem mutation command"* ]]
 }
 
+@test "bash-guard: read-write redirection does not hide filesystem mutations" {
+  TEST_PROJECT=$(new_test_project qa-read-write-redirect)
+  run_qa_bash_guard "$TEST_PROJECT" "<> /dev/null rm file"
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"filesystem mutation command"* ]]
+}
+
+@test "bash-guard: destructive text in git predicates is not executable evidence" {
+  TEST_PROJECT=$(new_test_project qa-git-predicate)
+  run_role_bash_guard dev "$TEST_PROJECT" "git log --grep='artisan migrate:fresh'"
+  [ "$status" -eq 0 ]
+}
+
 @test "bash-guard: quoted destructive evidence does not trigger the pattern blocklist" {
   TEST_PROJECT=$(new_test_project destructive-evidence)
   run_role_bash_guard dev "$TEST_PROJECT" 'echo "artisan migrate:fresh output"'

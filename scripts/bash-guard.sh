@@ -487,7 +487,7 @@ segment_command_token() {
       continue
     fi
     case "$token" in
-      '>'|'>>'|'<'|'<<'|'<<<'|'>|')
+      '>'|'>>'|'<'|'<<'|'<<<'|'<>'|'>|')
         skip_next=1
         continue
         ;;
@@ -539,6 +539,20 @@ segment_command_token() {
   return 1
 }
 
+segment_has_quoted_action_payload() {
+  local segment="$1"
+  local single_quote="'" double_quote='"'
+
+  case "$segment" in
+    *sudo[[:space:]]"$double_quote"*|*sudo[[:space:]]"$single_quote"*|\
+    *eval[[:space:]]"$double_quote"*|*eval[[:space:]]"$single_quote"*|\
+    *xargs[[:space:]]"$double_quote"*|*xargs[[:space:]]"$single_quote"*)
+      return 0
+      ;;
+  esac
+  segment_has_shell_c_invocation "$segment"
+}
+
 command_has_quoted_executable_payload() {
   local command="$1"
   local segment command_token visible match
@@ -549,10 +563,13 @@ command_has_quoted_executable_payload() {
     command_token=$(segment_command_token "$segment") || continue
     is_shell_interpreter_token "$command_token" && continue
     case "$command_token" in
-      echo|printf|print|cat|grep|egrep|fgrep|awk|sed|jq)
+      echo|printf|print|cat|grep|egrep|fgrep|awk|sed|jq|git)
         continue
         ;;
     esac
+    if ! segment_has_quoted_action_payload "$segment"; then
+      [ "$command_token" = "php" ] || continue
+    fi
     visible=$(shell_visible_tokens "$segment" | tr '\n' ' ')
     match=$(printf '%s\n' "$visible" | grep -ioE "$PATTERNS" | head -1) || true
     [ -n "$match" ] || continue
@@ -561,6 +578,7 @@ command_has_quoted_executable_payload() {
   done < <(printf '%s\n' "$command" | tr ';|&' '\n')
   return 1
 }
+
 
 command_has_filesystem_mutation() {
   local command="$1"
