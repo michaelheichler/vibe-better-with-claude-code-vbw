@@ -300,10 +300,6 @@ artifact_delivered() {
     artifact_mtime_is_current "$artifact" "$epoch"
     return
   fi
-  for artifact in "$PLANNING_DIR"/phases/*/*-"$suffix"; do
-    [ -f "$artifact" ] || continue
-    artifact_mtime_is_current "$artifact" "$epoch" && return 0
-  done
   return 1
 }
 
