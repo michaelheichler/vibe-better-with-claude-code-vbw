@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.40.0] - 2026-08-04
+
+### Added
+
+- **`vibe`** -- lazy mode loading. `/vbw:vibe` now injects about 53KB of instructions per invocation instead of 166KB. The twelve lifecycle mode references load on demand when their mode is routed, and twelve new contract assertions pin every route so a missing pointer fails the suite. Repeated invocations in one session no longer stack unused mode docs. (PR #21)
+- **`guards`** -- spawn guidance that reaches the main session. bash-guard's denial for an unrecognized agent identity now names the fix (respawn the worker with a recognized VBW role name such as `vbw-dev`), and the SessionStart context carries a one-line spawn rule so orchestrators learn it before the first spawn. (PR #21)
+
+### Changed
+
+- **`interaction`** -- rewrote the AskUserQuestion contract in shorter, plainer language: bounded 2-4 option menus, one authoritative freeform-handoff rule, examples verified against the current tool schema. (PR #21)
+- **`docs`** -- refreshed the README: factual intro, a three-sentence fork note, corrected script/test/agent counts in the accuracy table and its prose copies. (PR #22)
+
+### Fixed
+
+- **`verify`** -- repaired shell directives broken by an earlier punctuation cleanup (a period in place of a semicolon disabled the compact-suggestion and verified-items extraction lines) and restored a checkpoint-expectation example lost in the same pass. (PR #21)
+- **`qa`** -- removed duplicated skill-outcome and deviation-checkpoint guidance that could prompt an orchestrator to run the same helper twice. (PR #21)
+- **`scripts`** -- `extract-verified-items.sh` now labels output per phase, keeps going when one phase directory fails, and reports the failure on stderr instead of silently dropping the remaining phases. (PR #21)
+
 ## [1.37.1] - 2026-05-11
 
 ### Fixed
