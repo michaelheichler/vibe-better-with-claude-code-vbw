@@ -1,0 +1,26 @@
+tests/qa-gate.bats
+  s_55c34ee548bef4::t_8cc2847d150ef7 1-25,29-61,63-83,85-90,92,94-95,97-101,103,105-106,108
+  s_55c34ee548bef4::t_e5e4444139f353 91,96
+  s_55c34ee548bef4::t_dab13c6a3a73e5 84,104
+  s_55c34ee548bef4::t_78fef09b48551d 26-28
+  s_55c34ee548bef4::t_a60b9340f99188 102,107
+  s_55c34ee548bef4::t_4bd1383f3fec17 62,93
+scripts/qa-gate.sh
+  s_55c34ee548bef4::t_c3c718778b4c33 9-11,13-15,17-44,57-66
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "67b548e068c12f7278c232a34af7be33130fc96f",
+  "prompts": {},
+  "sessions": {
+    "s_55c34ee548bef4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e2c40e1d-1763-4ad0-a1b3-bd1755008e2b",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
