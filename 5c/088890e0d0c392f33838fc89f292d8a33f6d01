@@ -1,0 +1,93 @@
+.vbw-planning/phases/02-qa-and-verification-gate-correctness/02-01-SUMMARY.md
+  s_ef82bfd9ee37ed::t_21603eaba2beed 1-50
+.vbw-planning/phases/02-qa-and-verification-gate-correctness/02-02-SUMMARY.md
+  s_ef82bfd9ee37ed::t_5e05c42103d01f 1-49
+.vbw-planning/phases/02-qa-and-verification-gate-correctness/02-03-PLAN.md
+  s_ef82bfd9ee37ed::t_ae906fcdea4ed3 1-142
+.vbw-planning/phases/02-qa-and-verification-gate-correctness/02-03-SUMMARY.md
+  s_ef82bfd9ee37ed::t_e52962a2c48e59 1-54
+agents/vbw-qa.md
+  s_ef82bfd9ee37ed::t_20da660266f801 96,100,102
+commands/qa.md
+  s_ef82bfd9ee37ed::t_fa3482bc5389b3 315
+config/model-pricing.json
+  s_ef82bfd9ee37ed::t_d69a8abdd11f2e 19
+docs/database-safety-guard.md
+  s_ef82bfd9ee37ed::t_49819ed82d177d 7,11-12,26-39,104
+references/execute-qa-result-gating.md
+  s_ef82bfd9ee37ed::t_81437c26b35f7c 52-53,56,58,60,62-63,66-69,71,73,75,79,83,150,160-161
+references/model-profiles.md
+  s_ef82bfd9ee37ed::t_81c1cd6ff38693 265
+references/vibe-input-parsing.md
+  s_ef82bfd9ee37ed::t_7e16d4d286a505 267,269-270,273-276,279,383,398
+scripts/agent-spawn-guard.sh
+  s_ef82bfd9ee37ed::t_f9f7dc07cc2a9e 153-154
+scripts/bash-guard.sh
+  s_ef82bfd9ee37ed::t_fabaa0adea0535 3-28,30-50,52-53,57-59,61-63,91,103,128,131-132,135-137,151,981-983
+scripts/detect-models.sh
+  s_ef82bfd9ee37ed::t_ea5daae6cc0774 9-14,24-25,31,39-40,43,50-52,71-84,86-89,92-97,100
+scripts/file-guard.sh
+  s_ef82bfd9ee37ed::t_7fcf311346e5cc 4-9,12,15-60,94-98,106-110,135,147,157,173,199-203,215,223,243,372-381,401,405,409,418,444,454,460,477,552,562,565,574,609,614
+scripts/lib/active-agent-state.sh
+  s_ef82bfd9ee37ed::t_388654d5646bd7 69-93
+scripts/lib/guard-enforcement.sh
+  s_ef82bfd9ee37ed::t_7d5a60d6f7dbe7 1-100
+scripts/lib/phase-detect-support.sh
+  s_ef82bfd9ee37ed::t_34434b451f5dce 386
+scripts/lib/qa-result-gate-fail-classifications.sh
+  s_ef82bfd9ee37ed::t_eb9f4708fd54ec 60,63-96,115-123,134-143,193,279-331
+scripts/lib/qa-result-gate-known-issues.sh
+  s_ef82bfd9ee37ed::t_a4a25e2bdf282a 120-124,130-131,138,141-150
+scripts/lib/qa-result-gate-path-evidence.sh
+  s_ef82bfd9ee37ed::t_8a6327230c67b3 520-550
+scripts/lib/qa-result-gate-summary-deviations.sh
+  s_ef82bfd9ee37ed::t_461a51e69d96da 104-178,203-204,206-276,287,294-296
+scripts/lib/vbw-cache-key.sh
+  s_ef82bfd9ee37ed::t_ffd01ca023dee7 20-30
+scripts/qa-gate.sh
+  s_ef82bfd9ee37ed::t_01e11dd76916f7 9-11,13-15,17-44,57-66
+scripts/qa-result-gate.sh
+  s_ef82bfd9ee37ed::t_efbe5b717c69ac 201-205,379,383,402,406,408-413,421-422,482-495,517-538,541-546,558,569,577,580,582,587,599,602-607
+scripts/resolve-agent-model.sh
+  s_ef82bfd9ee37ed::t_64d852c1e7b732 6,56-57,72-76,78,92-94,102-145,156,164-165,184
+scripts/verification-freshness.sh
+  s_ef82bfd9ee37ed::t_72f0f1c89825af 32-72,74-83,128,137
+templates/REMEDIATION-PLAN.md
+  s_ef82bfd9ee37ed::t_569959567d75e0 14
+tests/active-agent-state.bats
+  s_ef82bfd9ee37ed::t_2cffd4797935ed 33-44
+tests/detect-models.bats
+  s_ef82bfd9ee37ed::t_b3f2decf907b1d 20-23,38,41-46,67,78
+tests/file-guard-plan-pattern-matching.bats
+  s_ef82bfd9ee37ed::t_7975c69c12188b 76,84,87,95
+tests/phase-detect.bats
+  s_ef82bfd9ee37ed::t_ad4427263e6d10 2972-3012
+tests/qa-bash-guard.bats
+  s_ef82bfd9ee37ed::t_a8ba5373a909bf 412-432
+tests/qa-file-guard.bats
+  s_ef82bfd9ee37ed::t_a8706482e1e02b 16-19,55-56,68,87-88,109-246
+tests/qa-gate.bats
+  s_ef82bfd9ee37ed::t_93f82cd93db119 1-120
+tests/qa-result-gate.bats
+  s_ef82bfd9ee37ed::t_b3c4e43a953838 2115-2270,3659-3726,3988-4028,4030-4068,4923,5577-5588
+tests/resolve-agent-model.bats
+  s_ef82bfd9ee37ed::t_b3b24ebe3bf1d2 15-30,60-133,161,163,257-278
+tests/role-isolation-runtime.bats
+  s_ef82bfd9ee37ed::t_643cc72b4842b1 349,356,358,378,384,386
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "5c088890e0d0c392f33838fc89f292d8a33f6d01",
+  "prompts": {},
+  "sessions": {
+    "s_ef82bfd9ee37ed": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "41f89902-2bb1-4545-a5ea-81f49ca08704",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
