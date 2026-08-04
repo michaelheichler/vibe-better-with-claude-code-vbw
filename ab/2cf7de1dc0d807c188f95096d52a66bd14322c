@@ -1,0 +1,30 @@
+scripts/bash-guard.sh
+  s_396441278312df::t_919ff1690d758e 555,558-559
+  s_73df5a413b66a3::t_a3cadba40a5661 560
+tests/qa-bash-guard.bats
+  s_396441278312df::t_005a97bd2fc435 150-156
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "ab2cf7de1dc0d807c188f95096d52a66bd14322c",
+  "prompts": {},
+  "sessions": {
+    "s_396441278312df": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8b693812-fc94-4ea6-be47-0ddb22b766f3",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    },
+    "s_73df5a413b66a3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d0f52638-37a5-4345-87a0-42e0efe396c2",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
