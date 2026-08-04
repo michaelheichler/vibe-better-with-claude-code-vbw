@@ -1,0 +1,20 @@
+tests/agent-shutdown-integration.bats
+  s_ef82bfd9ee37ed::t_21e3d3fe027955 444-453,462-464
+  s_ef82bfd9ee37ed::t_5c008d12fbfeb4 422
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "c8c88a7bd2b76ab8534676072ee8a9cfb4f7a123",
+  "prompts": {},
+  "sessions": {
+    "s_ef82bfd9ee37ed": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "41f89902-2bb1-4545-a5ea-81f49ca08704",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
