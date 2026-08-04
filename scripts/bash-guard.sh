@@ -709,7 +709,7 @@ scout_git_segments_are_readonly() {
     while IFS= read -r token; do
       if [ "$found_git" -eq 1 ]; then
         git_segment="$git_segment $token"
-      elif [ "$token" = git ]; then
+      elif [ "${token##*/}" = git ]; then
         git_segment=git
         found_git=1
       fi

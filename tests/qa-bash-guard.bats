@@ -161,6 +161,17 @@ new_test_project() {
   [[ "$output" == *"destructive command detected"* ]]
 }
 
+@test "bash-guard: git executable paths preserve inspection classification" {
+  TEST_PROJECT=$(new_test_project qa-git-executable-path)
+
+  run_role_bash_guard dev "$TEST_PROJECT" "/usr/bin/git log --grep='artisan migrate:fresh'"
+  [ "$status" -eq 0 ]
+
+  run_role_bash_guard dev "$TEST_PROJECT" "sudo /usr/bin/git foo 'prisma migrate reset'"
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"destructive command detected"* ]]
+}
+
 @test "bash-guard: quoted destructive evidence does not trigger the pattern blocklist" {
   TEST_PROJECT=$(new_test_project destructive-evidence)
   run_role_bash_guard dev "$TEST_PROJECT" 'echo "artisan migrate:fresh output"'
