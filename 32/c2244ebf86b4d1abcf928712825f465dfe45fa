@@ -1,0 +1,29 @@
+scripts/lib/qa-result-gate-summary-deviations.sh
+  s_55c34ee548bef4::t_4b9da39476acb5 74-91,101,111
+  s_55c34ee548bef4::t_85254335820a46 114,127,130,132-138,144,150-151,157-168
+  s_55c34ee548bef4::t_742ca26541158c 50,60-61,66
+  s_55c34ee548bef4::t_5073299a8d68e4 112,171-190,193-233,244-247
+  s_55c34ee548bef4::t_7db0d4ed486aab 115-126,128-129,139-143,145-149,152-153,169-170
+  s_55c34ee548bef4::t_651e8b34d7f606 7,9,11-13,16-17,19
+  s_55c34ee548bef4::t_a68465009fcda1 2
+  s_55c34ee548bef4::t_ccfe312e955a7a 237
+  s_55c34ee548bef4::t_8fda4251979be0 191-192
+scripts/qa-result-gate.sh
+  s_55c34ee548bef4::t_8dd0f8f8242564 201-205
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "32c2244ebf86b4d1abcf928712825f465dfe45fa",
+  "prompts": {},
+  "sessions": {
+    "s_55c34ee548bef4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e2c40e1d-1763-4ad0-a1b3-bd1755008e2b",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
