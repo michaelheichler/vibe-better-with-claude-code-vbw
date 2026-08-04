@@ -163,15 +163,15 @@ fi
 
 if [ -f "$ASK_USER_QUESTION_REF" ] \
   && grep -Fq 'Use a short header' "$ASK_USER_QUESTION_REF" \
-  && grep -Fq '2 to 4 options' "$ASK_USER_QUESTION_REF" \
-  && grep -Fq 'no more than 4 questions' "$ASK_USER_QUESTION_REF"; then
+  && (grep -Fq '2 to 4 options' "$ASK_USER_QUESTION_REF" || grep -Fq '2-4 options' "$ASK_USER_QUESTION_REF") \
+  && (grep -Fq 'no more than 4 questions' "$ASK_USER_QUESTION_REF" || grep -Fq '1-4 questions' "$ASK_USER_QUESTION_REF"); then
   pass "ask-user-question: documents bounded structured choices"
 else
   fail "ask-user-question: missing bounded structured choice guidance"
 fi
 
 if [ -f "$ASK_USER_QUESTION_REF" ] \
-  && grep -Fq 'Other path' "$ASK_USER_QUESTION_REF" \
+  && (grep -Fq 'Other path' "$ASK_USER_QUESTION_REF" || grep -Fq '`Other` path' "$ASK_USER_QUESTION_REF") \
   && grep -Fq 'open-ended answer' "$ASK_USER_QUESTION_REF" \
   && grep -Fq 'plain text before presenting another menu' "$ASK_USER_QUESTION_REF"; then
   pass "ask-user-question: documents freeform handoff"
@@ -180,9 +180,9 @@ else
 fi
 
 if [ -f "$ASK_USER_QUESTION_REF" ] \
-  && grep -Fq '### Structured choice' "$ASK_USER_QUESTION_REF" \
-  && grep -Fq '### Open answer' "$ASK_USER_QUESTION_REF" \
-  && grep -Fq '### Decision gate' "$ASK_USER_QUESTION_REF"; then
+  && (grep -Fq '### Structured choice' "$ASK_USER_QUESTION_REF" || grep -Fq '### Example: structured single-select' "$ASK_USER_QUESTION_REF") \
+  && (grep -Fq '### Open answer' "$ASK_USER_QUESTION_REF" || grep -Fq '### Example: intentional freeform' "$ASK_USER_QUESTION_REF") \
+  && (grep -Fq '### Decision gate' "$ASK_USER_QUESTION_REF" || grep -Fq '### Example: decision gate' "$ASK_USER_QUESTION_REF"); then
   pass "ask-user-question: includes structured, open, and gate examples"
 else
   fail "ask-user-question: missing question examples"

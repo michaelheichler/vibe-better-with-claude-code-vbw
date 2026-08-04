@@ -58,7 +58,7 @@ If `planning_dir_exists=false`: display "Run /vbw:init first to set up your proj
 
 ### Mode: Bootstrap
 
-Read `{LINK}/references/vibe-mode-bootstrap.md` and follow it. `{LINK}` is the first line of the Context block output.
+Read `{LINK}/references/vibe-mode-bootstrap.md` and follow it. `{LINK}` is the first line of the plugin-root/state block in the Context output, labeled `first line is LINK`.
 
 ### Mode: Scope
 
@@ -124,45 +124,45 @@ Read `{LINK}/references/vibe-mode-bootstrap.md` and follow it. `{LINK}` is the f
 
 ### Mode: UAT Remediation
 
-Read `{LINK}/references/vibe-uat-remediation.md` and follow it. `{LINK}` is the first line of the Context block output.
+Read `{LINK}/references/vibe-uat-remediation.md` and follow it. `{LINK}` is the first line of the plugin-root/state block in the Context output, labeled `first line is LINK`.
 
 ### Mode: Milestone UAT Recovery
 
-Read `{LINK}/references/vibe-mode-milestone-uat-recovery.md` and follow it. `{LINK}` is the first line of the Context block output.
+Read `{LINK}/references/vibe-mode-milestone-uat-recovery.md` and follow it. `{LINK}` is the first line of the plugin-root/state block in the Context output, labeled `first line is LINK`.
 
 ### Mode: Plan
 
-Read `{LINK}/references/vibe-mode-plan.md` and follow it. `{LINK}` is the first line of the Context block output.
+Read `{LINK}/references/vibe-mode-plan.md` and follow it. `{LINK}` is the first line of the plugin-root/state block in the Context output, labeled `first line is LINK`.
 
 ### Mode: Execute
 
-Read `{LINK}/references/vibe-mode-execute.md` and follow it. `{LINK}` is the first line of the Context block output.
+Read `{LINK}/references/vibe-mode-execute.md` and follow it. `{LINK}` is the first line of the plugin-root/state block in the Context output, labeled `first line is LINK`.
 
 ### Mode: Verify
 
-Read `{LINK}/references/vibe-mode-verify.md` and follow it. `{LINK}` is the first line of the Context block output.
+Read `{LINK}/references/vibe-mode-verify.md` and follow it. `{LINK}` is the first line of the plugin-root/state block in the Context output, labeled `first line is LINK`.
 
 ### Mode: Add Phase
 
-Read `{LINK}/references/vibe-mode-add-phase.md` and follow it. `{LINK}` is the first line of the Context block output.
+Read `{LINK}/references/vibe-mode-add-phase.md` and follow it. `{LINK}` is the first line of the plugin-root/state block in the Context output, labeled `first line is LINK`.
 
 ### Mode: Insert Phase
 
-Read `{LINK}/references/vibe-mode-insert-phase.md` and follow it. `{LINK}` is the first line of the Context block output.
+Read `{LINK}/references/vibe-mode-insert-phase.md` and follow it. `{LINK}` is the first line of the plugin-root/state block in the Context output, labeled `first line is LINK`.
 
 ### Mode: Remove Phase
 
-Read `{LINK}/references/vibe-mode-remove-phase.md` and follow it. `{LINK}` is the first line of the Context block output.
+Read `{LINK}/references/vibe-mode-remove-phase.md` and follow it. `{LINK}` is the first line of the plugin-root/state block in the Context output, labeled `first line is LINK`.
 
 ### Mode: Archive
 
-Read `{LINK}/references/vibe-mode-archive.md` and follow it. `{LINK}` is the first line of the Context block output.
+Read `{LINK}/references/vibe-mode-archive.md` and follow it. `{LINK}` is the first line of the plugin-root/state block in the Context output, labeled `first line is LINK`.
 
 ### Pure-Vibe Phase Loop
 
 After Execute mode completes (autonomy=pure-vibe only): if more unbuilt phases exist, auto-continue to next phase (Plan + Execute). Loop until `next_phase_state=all_done` or error. Other autonomy levels: STOP after phase.
 
-Before handling a team shutdown, Read `{LINK}/references/subagent-contracts.md` and follow its contract. `{LINK}` is the first line of the Context block output.
+Before handling a team shutdown, Read `{LINK}/references/subagent-contracts.md` and follow its contract. `{LINK}` is the first line of the plugin-root/state block in the Context output, labeled `first line is LINK`.
 
 **CRITICAL: Between iterations:** Before starting the next phase's Plan mode, inspect the prior Execute delegation marker and state. Only when the prior run persisted `delegation_mode=team` with a real `TEAM_NAME`, follow the team-shutdown contract.
 
@@ -172,7 +172,7 @@ After the shared shutdown completes, run Post-shutdown residual cleanup. The tea
 
 ## Output Format
 
-Before rendering output, read `{LINK}/references/vbw-brand-essentials.md` and follow it. `{LINK}` is the first line of the Context block output. Skip this read for Verify mode because UAT files use plain markdown.
+Before rendering output, read `{LINK}/references/vbw-brand-essentials.md` and follow it. `{LINK}` is the first line of the plugin-root/state block in the Context output, labeled `first line is LINK`. Skip this read for Verify mode because UAT files use plain markdown.
 
 Per-mode output:
 - **Bootstrap:** project-defined banner + transition to scoping

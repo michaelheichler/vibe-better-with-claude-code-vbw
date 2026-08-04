@@ -130,7 +130,7 @@ done
 
 for rel in "${SPAWNING_COMMANDS[@]}"; do
   if grep -Fxq -- "$SHARED_INCLUDE" "$ROOT/$rel" \
-    || { [ "$rel" = "commands/vibe.md" ] && grep -Fq 'Read `{LINK}/references/subagent-contracts.md`' "$ROOT/$rel"; }; then
+    || { [ "$rel" = "${SPAWNING_COMMANDS[0]}" ] && grep -Fq 'Read `{LINK}/references/subagent-contracts.md`' "$ROOT/$rel"; }; then
     pass "${rel##*/}: includes shared contracts"
   else
     fail "${rel##*/}: missing shared-contract include"

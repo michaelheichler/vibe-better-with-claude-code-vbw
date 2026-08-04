@@ -493,11 +493,19 @@ options:
 The tool automatically provides a freeform "Other" option for the user to describe issues.
 
 **Summary-deviation checkpoint prompt:** When the current checkpoint is a prefilled `D{NN}` summary-deviation review, present the deviation text and source metadata instead of a product scenario.
-The CHECKPOINT display must include `Deviation: {text}` and `Source: {source_path} ({source_plan})`. Include `Deviation Signature: {signature}` only to distinguish similar deviations.
+The CHECKPOINT display must be self-contained: include `Deviation: {text}` and `Source: {source_path} ({source_plan})`. Include `Deviation Signature: {signature}` only to distinguish similar deviations.
 
-The AskUserQuestion value must include the same lines. Ask whether the deviation is non-blocking for this phase. The generic artifact expectation alone is not enough.
+The AskUserQuestion `question` value MUST also be self-contained. Include the same `Deviation: {text}` and `Source: {source_path} ({source_plan})` lines, then ask: `Accept this documented deviation as non-blocking for this phase?`
+The generic artifact expectation alone is not enough. It must not be the only visible AskUserQuestion question for a prefilled `D{NN}` summary-deviation checkpoint.
 
-Use three labels: `Pass` accepts the deviation, `Track Todo` accepts it and adds a todo, and `Skip` leaves it unaccepted. Normal product checkpoints keep `Pass` and `Skip`. Record freeform text as an issue when it rejects the deviation or exposes a defect, except for the todo-intent path in Step 6.
+Use three labels for this checkpoint type only:
+- `Pass` → `Accept this deviation as non-blocking for this phase`
+- `Track Todo` → `Accept this deviation and add a VBW todo`
+- `Skip` → `Leave this deviation unaccepted for now`
+Normal product checkpoints keep `Pass` and `Skip`. Record freeform text as an issue when it rejects the deviation or exposes a defect, except for the todo-intent path in Step 6.
+
+This stays within the AskUserQuestion four-option limit. Normal product checkpoints keep only `Pass` and `Skip`.
+
 
 **AskUserQuestion is a tool call (NON-NEGOTIABLE):** You MUST invoke AskUserQuestion via the tool_use mechanism, never emit the question parameters as text, JSON, or any other inline format in your response body. If AskUserQuestion appears in your text output instead of as a tool call, the checkpoint will not be presented to the user and the session will end prematurely.
 

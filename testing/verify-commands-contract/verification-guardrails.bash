@@ -35,7 +35,7 @@ append_vibe_reference() {
   if [ -f "$reference" ]; then
     cat "$reference"
   else
-    fail "vibe: missing referenced file ${reference#"$ROOT/"}"
+    fail "vibe: missing referenced file ${reference#"$ROOT/"}" >&2
   fi
 }
 while IFS= read -r vibe_line || [ -n "$vibe_line" ]; do
@@ -86,18 +86,18 @@ while IFS= read -r vibe_line || [ -n "$vibe_line" ]; do
   esac
 done < "$VIBE_SOURCE" > "$VIBE_FILE"
 for lazy_vibe_pointer in \
-  'Read `{LINK}/references/vibe-uat-remediation.md` and follow it. `{LINK}` is the first line of the Context block output.' \
-  'Read `{LINK}/references/vibe-mode-bootstrap.md` and follow it. `{LINK}` is the first line of the Context block output.' \
-  'Read `{LINK}/references/vibe-mode-milestone-uat-recovery.md` and follow it. `{LINK}` is the first line of the Context block output.' \
-  'Read `{LINK}/references/vibe-mode-plan.md` and follow it. `{LINK}` is the first line of the Context block output.' \
-  'Read `{LINK}/references/vibe-mode-execute.md` and follow it. `{LINK}` is the first line of the Context block output.' \
-  'Read `{LINK}/references/vibe-mode-verify.md` and follow it. `{LINK}` is the first line of the Context block output.' \
-  'Read `{LINK}/references/vibe-mode-add-phase.md` and follow it. `{LINK}` is the first line of the Context block output.' \
-  'Read `{LINK}/references/vibe-mode-insert-phase.md` and follow it. `{LINK}` is the first line of the Context block output.' \
-  'Read `{LINK}/references/vibe-mode-remove-phase.md` and follow it. `{LINK}` is the first line of the Context block output.' \
-  'Read `{LINK}/references/vibe-mode-archive.md` and follow it. `{LINK}` is the first line of the Context block output.' \
-  'Before handling a team shutdown, Read `{LINK}/references/subagent-contracts.md` and follow its contract. `{LINK}` is the first line of the Context block output.' \
-  'Before rendering output, read `{LINK}/references/vbw-brand-essentials.md` and follow it. `{LINK}` is the first line of the Context block output. Skip this read for Verify mode because UAT files use plain markdown.'; do
+  'Read `{LINK}/references/vibe-uat-remediation.md` and follow it. `{LINK}` is the first line of the plugin-root/state block in the Context output, labeled `first line is LINK`.' \
+  'Read `{LINK}/references/vibe-mode-bootstrap.md` and follow it. `{LINK}` is the first line of the plugin-root/state block in the Context output, labeled `first line is LINK`.' \
+  'Read `{LINK}/references/vibe-mode-milestone-uat-recovery.md` and follow it. `{LINK}` is the first line of the plugin-root/state block in the Context output, labeled `first line is LINK`.' \
+  'Read `{LINK}/references/vibe-mode-plan.md` and follow it. `{LINK}` is the first line of the plugin-root/state block in the Context output, labeled `first line is LINK`.' \
+  'Read `{LINK}/references/vibe-mode-execute.md` and follow it. `{LINK}` is the first line of the plugin-root/state block in the Context output, labeled `first line is LINK`.' \
+  'Read `{LINK}/references/vibe-mode-verify.md` and follow it. `{LINK}` is the first line of the plugin-root/state block in the Context output, labeled `first line is LINK`.' \
+  'Read `{LINK}/references/vibe-mode-add-phase.md` and follow it. `{LINK}` is the first line of the plugin-root/state block in the Context output, labeled `first line is LINK`.' \
+  'Read `{LINK}/references/vibe-mode-insert-phase.md` and follow it. `{LINK}` is the first line of the plugin-root/state block in the Context output, labeled `first line is LINK`.' \
+  'Read `{LINK}/references/vibe-mode-remove-phase.md` and follow it. `{LINK}` is the first line of the plugin-root/state block in the Context output, labeled `first line is LINK`.' \
+  'Read `{LINK}/references/vibe-mode-archive.md` and follow it. `{LINK}` is the first line of the plugin-root/state block in the Context output, labeled `first line is LINK`.' \
+  'Before handling a team shutdown, Read `{LINK}/references/subagent-contracts.md` and follow its contract. `{LINK}` is the first line of the plugin-root/state block in the Context output, labeled `first line is LINK`.' \
+  'Before rendering output, read `{LINK}/references/vbw-brand-essentials.md` and follow it. `{LINK}` is the first line of the plugin-root/state block in the Context output, labeled `first line is LINK`. Skip this read for Verify mode because UAT files use plain markdown.'; do
   if grep -Fqx "$lazy_vibe_pointer" "$VIBE_SOURCE"; then
     pass "vibe: routes lazy reference ${lazy_vibe_pointer#*references/}"
   else

@@ -327,23 +327,24 @@ EOF
 @test "extract-verified-items handles brownfield VERIFICATION.md with only check-mark lines" {
   local phase_dir="$TEST_TEMP_DIR/phases/01-core"
   mkdir -p "$phase_dir"
-  cat > "$phase_dir/01-VERIFICATION.md" <<'EOF'
----
-result: PASS
-passed: 2
-failed: 0
-total: 2
----
-
-✓ **MH-01** - Build passes
-✓ **MH-02** - Tests pass
-EOF
+  em_dash=$(printf '\342\200\224')
+  printf '%s\n' \
+    '---' \
+    'result: PASS' \
+    'passed: 2' \
+    'failed: 0' \
+    'total: 2' \
+    '---' \
+    '' \
+    "✓ **MH-01** ${em_dash} Build passes" \
+    '✓ **MH-02** - Tests pass' > "$phase_dir/01-VERIFICATION.md"
 
   run bash "$SCRIPTS_DIR/extract-verified-items.sh" "$phase_dir"
 
   [ "$status" -eq 0 ]
   [[ "$output" == *"QA-VERIFIED ITEMS"* ]]
   [[ "$output" == *"MH-01"* ]]
+  [[ "$output" != *"Build passes"* ]]
   [[ "$output" == *"MH-02"* ]]
 }
 

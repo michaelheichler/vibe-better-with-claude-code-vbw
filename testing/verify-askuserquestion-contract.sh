@@ -438,11 +438,12 @@ else
   fail "execute-protocol: summary-deviation prompt block extracted"
 fi
 
-for prompt_target in \
-  "verify:$VERIFY_DEVIATION_PROMPT_BLOCK" \
-  "execute-protocol:$EXECUTE_DEVIATION_PROMPT_BLOCK"; do
-  prompt_label="${prompt_target%%:*}"
-  prompt_block="${prompt_target#*:}"
+for prompt_label in verify execute-protocol; do
+  if [ "$prompt_label" = verify ]; then
+    prompt_block="$VERIFY_DEVIATION_PROMPT_BLOCK"
+  else
+    prompt_block="$EXECUTE_DEVIATION_PROMPT_BLOCK"
+  fi
   checkpoint_display_block="$(extract_bullet_block_from_text "$prompt_block" 'CHECKPOINT display must be self-contained' || true)"
   modal_question_block="$(extract_bullet_block_from_text "$prompt_block" 'AskUserQuestion `question` value MUST also be self-contained' || true)"
 
@@ -573,9 +574,9 @@ require_text_literal "list-todos: unfiltered hints preserve /vbw:vibe N" "/vbw:v
 require_text_literal "list-todos: unfiltered hints preserve /vbw:fix N" "/vbw:fix N" "$LIST_TODOS_UNFILTERED_HINTS"
 require_text_literal "list-todos: unfiltered hints preserve /vbw:debug N" "/vbw:debug N" "$LIST_TODOS_UNFILTERED_HINTS"
 require_text_literal "list-todos: unfiltered hints preserve /vbw:research N" "/vbw:research N" "$LIST_TODOS_UNFILTERED_HINTS"
-require_text_regex "list-todos: unfiltered hints preserve remove N" '(^|[[:space:]])remove N([[:space:]]|$)' "$LIST_TODOS_UNFILTERED_HINTS"
-require_text_regex "list-todos: filtered hints preserve remove N" '(^|[[:space:]])remove N([[:space:]]|$)' "$LIST_TODOS_FILTERED_HINTS"
-require_text_regex "list-todos: filtered hints preserve delete N" '(^|[[:space:]])delete N([[:space:]]|$)' "$LIST_TODOS_FILTERED_HINTS"
+require_text_regex "list-todos: unfiltered hints preserve remove N" '(^|[[:space:]])remove N([[:space:],]|$)' "$LIST_TODOS_UNFILTERED_HINTS"
+require_text_regex "list-todos: filtered hints preserve remove N" '(^|[[:space:]])remove N([[:space:],]|$)' "$LIST_TODOS_FILTERED_HINTS"
+require_text_regex "list-todos: filtered hints preserve delete N" '(^|[[:space:]])delete N([[:space:],]|$)' "$LIST_TODOS_FILTERED_HINTS"
 require_text_literal "list-todos: filtered hints preserve rerun-unfiltered guard" "rerun unfiltered /vbw:list-todos before using /vbw:vibe N, /vbw:fix N, /vbw:debug N, or /vbw:research N" "$LIST_TODOS_FILTERED_HINTS"
 
 
