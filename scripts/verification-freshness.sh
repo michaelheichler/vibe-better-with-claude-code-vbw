@@ -1,6 +1,18 @@
 #!/bin/bash
-set -u
+# shellcheck disable=SC2034
+# verification-freshness.sh: shared helpers for determining whether a
+# VERIFICATION.md artifact is stale relative to current product-code state.
+#
+# Contract:
+# - verification_is_stale FILE returns 0 when the verification should be treated
+#   as stale/pending, 1 when it is fresh or the file is missing, and sets
+#   VERIFICATION_FRESHNESS_REASON to a short diagnostic token.
+# - When FILE is empty or does not exist, returns 1 with reason "missing_file".
+# - Any git/provenance error fails closed to stale. Under heavy parallel test
+#   load, transient git subprocess failures must not be misclassified as fresh.
 
+# Contributors must not edit these 4 version-sync files (CLAUDE.md Version
+# Management), so a release bump commit must not mark every phase stale.
 FRESHNESS_EXCLUDE_PATHSPEC=(
   ':!.vbw-planning' ':!CLAUDE.md' ':!VERSION'
   ':!.claude-plugin/plugin.json' ':!.claude-plugin/marketplace.json' ':!marketplace.json'
