@@ -6,9 +6,42 @@ PLANNING_DIR="${VBW_PLANNING_DIR:-.vbw-planning}"
 [ ! -d "$PLANNING_DIR" ] && exit 0
 
 _QG_SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+_QG_SUPPORT_LOADED=false
+_QG_SUPPORT_READY=true
+
 if [ -f "$_QG_SCRIPT_DIR/summary-utils.sh" ]; then
-  . "$_QG_SCRIPT_DIR/summary-utils.sh"
+  if ! . "$_QG_SCRIPT_DIR/summary-utils.sh" >/dev/null 2>&1; then
+    _QG_SUPPORT_READY=false
+  fi
 else
+  _QG_SUPPORT_READY=false
+fi
+
+for _qg_dependency in \
+  verification-freshness.sh \
+  lib/phase-detect-support.sh \
+  resolve-verification-path.sh \
+  qa-result-gate.sh \
+  track-known-issues.sh \
+  lib/qa-result-gate-path-evidence.sh \
+  lib/qa-result-gate-fail-classifications.sh \
+  lib/qa-result-gate-known-issues.sh \
+  lib/qa-result-gate-summary-deviations.sh \
+  lib/track-known-issues-parsers.sh; do
+  [ -r "$_QG_SCRIPT_DIR/$_qg_dependency" ] || _QG_SUPPORT_READY=false
+done
+
+if [ "$_QG_SUPPORT_READY" = true ]; then
+  _SCRIPT_DIR_PD="$_QG_SCRIPT_DIR"
+  if ! . "$_QG_SCRIPT_DIR/verification-freshness.sh" >/dev/null 2>&1 ||
+     ! . "$_QG_SCRIPT_DIR/lib/phase-detect-support.sh" >/dev/null 2>&1; then
+    _QG_SUPPORT_READY=false
+  else
+    _QG_SUPPORT_LOADED=true
+  fi
+fi
+
+if [ "$_QG_SUPPORT_READY" = false ] && ! declare -F count_complete_summaries >/dev/null 2>&1; then
   count_complete_summaries() { echo "0"; }
 fi
 
@@ -21,7 +54,16 @@ SUMMARIES_TOTAL=0
 for phase_dir in "$PLANNING_DIR/phases"/*/; do
   [ -d "$phase_dir" ] || continue
   PLANS=$(ls -1 "$phase_dir"*-PLAN.md 2>/dev/null | wc -l | tr -d ' ')
-  SUMMARIES=$(count_complete_summaries "$phase_dir")
+  if [ "$_QG_SUPPORT_LOADED" = true ]; then
+    COMPLETE_SUMMARIES=$(count_complete_summaries "$phase_dir")
+    if phase_execution_is_satisfied "$phase_dir" "$PLANS" "$COMPLETE_SUMMARIES"; then
+      SUMMARIES="$PLANS"
+    else
+      SUMMARIES=0
+    fi
+  else
+    SUMMARIES=$(count_complete_summaries "$phase_dir")
+  fi
   PLANS_TOTAL=$(( PLANS_TOTAL + PLANS ))
   SUMMARIES_TOTAL=$(( SUMMARIES_TOTAL + SUMMARIES ))
 done
