@@ -1,0 +1,19 @@
+scripts/verification-freshness.sh
+  s_55c34ee548bef4::t_4f71ab2040db36 2-12,14-15
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "aee9cb29947f89e7316b3781b229b2ef5600726d",
+  "prompts": {},
+  "sessions": {
+    "s_55c34ee548bef4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e2c40e1d-1763-4ad0-a1b3-bd1755008e2b",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
