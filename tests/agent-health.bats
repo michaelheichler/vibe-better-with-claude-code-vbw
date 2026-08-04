@@ -534,6 +534,27 @@ EOF
   kill "$live_pid" 2>/dev/null || true
 }
 
+@test "agent-health: missing PID identity falls back to live PID cleanup" {
+  cd "$TEST_TEMP_DIR"
+  export VBW_AGENT_STOP_GRACE_SECONDS=1
+  local live_pid marker artifact_file epoch
+  marker="$TEST_TEMP_DIR/missing-identity-terminated"
+  artifact_file="$TEST_TEMP_DIR/.vbw-planning/phases/01-missing/01-01-SUMMARY.md"
+  mkdir -p "$(dirname "$artifact_file")"
+  epoch=$(date +%s)
+  printf '# complete\n' > "$artifact_file"
+  (trap 'printf terminated > "$marker"; exit 0' TERM; while true; do sleep 1; done) & live_pid=$!
+  mkdir -p "$HEALTH_DIR"
+  jq -n --arg pid "$live_pid" --arg artifact "$artifact_file" --argjson epoch "$epoch" \
+    '{pid:$pid,key:"missing-identity",role:"dev",started_epoch:$epoch,artifact_path:$artifact}' \
+    > "$HEALTH_DIR/missing-identity.json"
+
+  run bash -c "echo '{\"session_id\":\"session-missing-identity\",\"agent_id\":\"missing-identity\",\"agent_type\":\"vbw-dev\"}' | VBW_PLANNING_DIR='$TEST_TEMP_DIR/.vbw-planning' HEALTH_DIR='$HEALTH_DIR' bash '$SCRIPTS_DIR/agent-health.sh' idle"
+  [ "$status" -eq 0 ]
+  [ -f "$marker" ]
+  wait "$live_pid" 2>/dev/null || true
+}
+
 @test "agent-health: pre-existing artifact does not terminate a live agent" {
   cd "$TEST_TEMP_DIR"
   unset HEALTH_DIR

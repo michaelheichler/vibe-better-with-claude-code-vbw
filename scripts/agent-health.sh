@@ -253,45 +253,58 @@ pid_identity_matches() {
   local file="$1" pid="$2" recorded current
   case "$pid" in ''|0|*[!0-9]*) return 1 ;; esac
   recorded=$(jq -r '.pid_identity // ""' "$file" 2>/dev/null)
-  [ -n "$recorded" ] || return 1
+  if [ -z "$recorded" ]; then
+    vbw_active_agent_pid_is_live "$pid"
+    return
+  fi
   current=$(process_start_identity "$pid")
   [ -n "$current" ] && [ "$current" = "$recorded" ]
 }
 
 normalize_artifact_path() {
-  local path="$1" planning_abs relative artifact_dir artifact_base
+  local path="$1" planning_abs artifact_dir artifact_base
   planning_abs=$(cd "$PLANNING_DIR" 2>/dev/null && pwd -P) || return 1
   if [[ "$path" = /* ]]; then
     artifact_dir=$(cd "$(dirname "$path")" 2>/dev/null && pwd -P) || return 1
-    artifact_base=$(basename "$path")
-    path="$artifact_dir/$artifact_base"
-  fi
-  relative="${path#"$planning_abs"/}"
-  if [ "$relative" != "$path" ]; then
-    printf '%s' "$path"
-  elif [[ "$path" = /* ]]; then
-    return 1
   else
-    printf '%s/%s' "$planning_abs" "${path#./}"
+    artifact_dir=$(cd "$planning_abs/$(dirname "$path")" 2>/dev/null && pwd -P) || return 1
   fi
+  artifact_base=$(basename "$path")
+  path="$artifact_dir/$artifact_base"
+  case "$path" in
+    "$planning_abs"|"$planning_abs"/*) printf '%s' "$path" ;;
+    *) return 1 ;;
+  esac
 }
 
-artifact_delivered() {
-  local file="$1" role="$2" suffix epoch artifact mtime artifact_path
-  suffix=$(artifact_suffix_for_role "$role") || return 1
-  epoch=$(jq -r '.started_epoch // 0' "$file" 2>/dev/null)
-  [ "$epoch" -gt 0 ] || return 1
-  artifact_path=$(jq -r '.artifact_path // ""' "$file" 2>/dev/null)
-  [ -n "$artifact_path" ] || return 1
-  artifact=$(normalize_artifact_path "$artifact_path") || return 1
-  case "$artifact" in *-"$suffix") ;; *) return 1 ;; esac
-  [ -f "$artifact" ] || return 1
+artifact_mtime_is_current() {
+  local artifact="$1" epoch="$2" mtime
   if [ "$(uname -s)" = "Darwin" ]; then
     mtime=$(stat -f %m "$artifact" 2>/dev/null || echo 0)
   else
     mtime=$(stat -c %Y "$artifact" 2>/dev/null || echo 0)
   fi
   [ "$mtime" -ge "$epoch" ]
+}
+
+artifact_delivered() {
+  local file="$1" role="$2" suffix epoch artifact artifact_path
+  suffix=$(artifact_suffix_for_role "$role") || return 1
+  epoch=$(jq -r '.started_epoch // 0' "$file" 2>/dev/null)
+  [ "$epoch" -gt 0 ] || return 1
+  artifact_path=$(jq -r '.artifact_path // ""' "$file" 2>/dev/null)
+  if [ -n "$artifact_path" ]; then
+    artifact=$(normalize_artifact_path "$artifact_path") || return 1
+    case "$artifact" in *-"$suffix") ;; *) return 1 ;; esac
+    [ -f "$artifact" ] || return 1
+    artifact_mtime_is_current "$artifact" "$epoch"
+    return
+  fi
+  for artifact in "$PLANNING_DIR"/phases/*/*-"$suffix"; do
+    [ -f "$artifact" ] || continue
+    artifact_mtime_is_current "$artifact" "$epoch" && return 0
+  done
+  return 1
 }
 
 can_terminate_pid() {
