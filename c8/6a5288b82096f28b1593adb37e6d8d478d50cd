@@ -1,0 +1,21 @@
+scripts/file-guard.sh
+  s_ef82bfd9ee37ed::t_a8baa3069c8319 12-14
+scripts/bash-guard.sh
+  s_ef82bfd9ee37ed::t_eb9e68e0b125c9 12-14
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "c86a5288b82096f28b1593adb37e6d8d478d50cd",
+  "prompts": {},
+  "sessions": {
+    "s_ef82bfd9ee37ed": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "41f89902-2bb1-4545-a5ea-81f49ca08704",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
