@@ -1,6 +1,12 @@
 echo "=== Milestone Context Refresh Verification ==="
 mode_block() {
-  extract_heading_block "$VIBE_FILE" "$1" '^### Mode: '
+  case "$1" in
+    "### Mode: Add Phase") cat "$ROOT/references/vibe-mode-add-phase.md" ;;
+    "### Mode: Insert Phase") cat "$ROOT/references/vibe-mode-insert-phase.md" ;;
+    "### Mode: Remove Phase") cat "$ROOT/references/vibe-mode-remove-phase.md" ;;
+    "### Mode: Archive") cat "$ROOT/references/vibe-mode-archive.md" ;;
+    *) extract_heading_block "$VIBE_FILE" "$1" '^### Mode: ' ;;
+  esac
 }
 
 echo ""

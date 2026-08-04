@@ -13,7 +13,23 @@ disable-model-invocation: true
 
 @${CLAUDE_PLUGIN_ROOT}/references/ask-user-question.md
 
-@${CLAUDE_PLUGIN_ROOT}/references/subagent-contracts.md
+## Context
+
+Working directory:
+```
+!`pwd`
+```
+Plugin root and pre-computed state (first line is `LINK`, remaining lines are `PD`):
+```
+!`SESSION_KEY="${CLAUDE_SESSION_ID:-default}"; L="/tmp/.vbw-plugin-root-link-${SESSION_KEY}"; R="$L/scripts/resolve-phase-state.sh"; [ -f "$R" ] || R="${CLAUDE_PLUGIN_ROOT:-}/scripts/resolve-phase-state.sh"; [ -f "$R" ] || { echo "VBW: plugin root unavailable. Restart this session to recreate $L." >&2; exit 1; }; bash "$R"`
+```
+
+Config:
+```
+!`cat .vbw-planning/config.json 2>/dev/null || echo "No config found"`
+```
+
+!`bash "/tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}/scripts/suggest-compact.sh" execute 2>/dev/null || true`
 
 ## Input Parsing
 
@@ -42,7 +58,7 @@ If `planning_dir_exists=false`: display "Run /vbw:init first to set up your proj
 
 ### Mode: Bootstrap
 
-@${CLAUDE_PLUGIN_ROOT}/references/vibe-mode-bootstrap.md
+Read `{LINK}/references/vibe-mode-bootstrap.md` and follow it. `{LINK}` is the first line of the Context block output.
 
 ### Mode: Scope
 
@@ -67,12 +83,7 @@ If `planning_dir_exists=false`: display "Run /vbw:init first to set up your proj
    - **Deferred Ideas:** out-of-scope ideas mentioned during steps 2-3
 7. **Scope commit boundary (conditional):**
    ```bash
-  PG_SCRIPT="/tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}/scripts/planning-git.sh"
-   if [ -f "$PG_SCRIPT" ]; then
-     bash "$PG_SCRIPT" commit-boundary "scope milestone" .vbw-planning/config.json
-   else
-     echo "⚠ VBW: planning-git.sh unavailable. Skipping planning git boundary commit." >&2
-   fi
+   bash /tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}/scripts/planning-git.sh commit-boundary "scope milestone" .vbw-planning/config.json
    ```
    Behavior: `planning_tracking=commit` commits `.vbw-planning/` if changed (ROADMAP.md, STATE.md, CONTEXT.md, phase dirs). Other modes no-op.
 8. Display "Scoping complete. {N} phases created." STOP. Do not auto-continue to planning.
@@ -89,12 +100,7 @@ If `planning_dir_exists=false`: display "Run /vbw:init first to set up your proj
 2. Read `/tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}/references/discussion-engine.md` and follow its protocol for the target phase.
 3. **Discussion commit boundary (conditional):**
    ```bash
-  PG_SCRIPT="/tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}/scripts/planning-git.sh"
-   if [ -f "$PG_SCRIPT" ]; then
-     bash "$PG_SCRIPT" commit-boundary "discuss phase {NN}" .vbw-planning/config.json
-   else
-     echo "⚠ VBW: planning-git.sh unavailable. Skipping planning git boundary commit." >&2
-   fi
+   bash /tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}/scripts/planning-git.sh commit-boundary "discuss phase {NN}" .vbw-planning/config.json
    ```
    Behavior: `planning_tracking=commit` commits `{NN}-CONTEXT.md` and `discovery.json` if changed. Other modes no-op.
 4. Run `bash /tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}/scripts/suggest-next.sh vibe`.
@@ -111,57 +117,54 @@ If `planning_dir_exists=false`: display "Run /vbw:init first to set up your proj
 2. Read `/tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}/references/discussion-engine.md` and follow its protocol for the target phase. Pass "Discussion mode: assumptions" to the engine. Step 1.7 handles the assumptions workflow (codebase analysis, assumption formation, user correction, capture).
 3. **Discussion commit boundary (conditional):**
    ```bash
-  PG_SCRIPT="/tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}/scripts/planning-git.sh"
-   if [ -f "$PG_SCRIPT" ]; then
-     bash "$PG_SCRIPT" commit-boundary "assumptions phase {NN}" .vbw-planning/config.json
-   else
-     echo "⚠ VBW: planning-git.sh unavailable. Skipping planning git boundary commit." >&2
-   fi
+   bash /tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}/scripts/planning-git.sh commit-boundary "assumptions phase {NN}" .vbw-planning/config.json
    ```
    Behavior: `planning_tracking=commit` commits `{NN}-CONTEXT.md` and `discovery.json` if changed. Other modes no-op.
 4. Run `bash /tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}/scripts/suggest-next.sh vibe`.
 
 ### Mode: UAT Remediation
 
-@${CLAUDE_PLUGIN_ROOT}/references/vibe-uat-remediation.md
+Read `{LINK}/references/vibe-uat-remediation.md` and follow it. `{LINK}` is the first line of the Context block output.
 
 ### Mode: Milestone UAT Recovery
 
-@${CLAUDE_PLUGIN_ROOT}/references/vibe-mode-milestone-uat-recovery.md
+Read `{LINK}/references/vibe-mode-milestone-uat-recovery.md` and follow it. `{LINK}` is the first line of the Context block output.
 
 ### Mode: Plan
 
-@${CLAUDE_PLUGIN_ROOT}/references/vibe-mode-plan.md
+Read `{LINK}/references/vibe-mode-plan.md` and follow it. `{LINK}` is the first line of the Context block output.
 
 ### Mode: Execute
 
-@${CLAUDE_PLUGIN_ROOT}/references/vibe-mode-execute.md
+Read `{LINK}/references/vibe-mode-execute.md` and follow it. `{LINK}` is the first line of the Context block output.
 
 ### Mode: Verify
 
-@${CLAUDE_PLUGIN_ROOT}/references/vibe-mode-verify.md
+Read `{LINK}/references/vibe-mode-verify.md` and follow it. `{LINK}` is the first line of the Context block output.
 
 ### Mode: Add Phase
 
-@${CLAUDE_PLUGIN_ROOT}/references/vibe-mode-add-phase.md
+Read `{LINK}/references/vibe-mode-add-phase.md` and follow it. `{LINK}` is the first line of the Context block output.
 
 ### Mode: Insert Phase
 
-@${CLAUDE_PLUGIN_ROOT}/references/vibe-mode-insert-phase.md
+Read `{LINK}/references/vibe-mode-insert-phase.md` and follow it. `{LINK}` is the first line of the Context block output.
 
 ### Mode: Remove Phase
 
-@${CLAUDE_PLUGIN_ROOT}/references/vibe-mode-remove-phase.md
+Read `{LINK}/references/vibe-mode-remove-phase.md` and follow it. `{LINK}` is the first line of the Context block output.
 
 ### Mode: Archive
 
-@${CLAUDE_PLUGIN_ROOT}/references/vibe-mode-archive.md
+Read `{LINK}/references/vibe-mode-archive.md` and follow it. `{LINK}` is the first line of the Context block output.
 
 ### Pure-Vibe Phase Loop
 
 After Execute mode completes (autonomy=pure-vibe only): if more unbuilt phases exist, auto-continue to next phase (Plan + Execute). Loop until `next_phase_state=all_done` or error. Other autonomy levels: STOP after phase.
 
-**CRITICAL: Between iterations:** Before starting the next phase's Plan mode, inspect the prior Execute delegation marker and state. Only when the prior run persisted `delegation_mode=team` with a real `TEAM_NAME`, follow the team-shutdown contract in `references/subagent-contracts.md`.
+Before handling a team shutdown, Read `{LINK}/references/subagent-contracts.md` and follow its contract. `{LINK}` is the first line of the Context block output.
+
+**CRITICAL: Between iterations:** Before starting the next phase's Plan mode, inspect the prior Execute delegation marker and state. Only when the prior run persisted `delegation_mode=team` with a real `TEAM_NAME`, follow the team-shutdown contract.
 
 Shutdown invariant: acknowledge every `shutdown_request` by calling SendMessage with `shutdown_response`, then stop.
 
@@ -169,7 +172,7 @@ After the shared shutdown completes, run Post-shutdown residual cleanup. The tea
 
 ## Output Format
 
-Follow @${CLAUDE_PLUGIN_ROOT}/references/vbw-brand-essentials.md for all output except Verify mode (UAT files use plain markdown. Do NOT read brand-essentials during verification).
+Before rendering output, read `{LINK}/references/vbw-brand-essentials.md` and follow it. `{LINK}` is the first line of the Context block output. Skip this read for Verify mode because UAT files use plain markdown.
 
 Per-mode output:
 - **Bootstrap:** project-defined banner + transition to scoping
@@ -184,21 +187,3 @@ Per-mode output:
 Rules: Phase Banner (double-line box), ◆ running, ✓ complete, ✗ failed, ○ skipped, Metrics Block, Next Up Block, no ANSI color codes.
 
 Run `bash /tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}/scripts/suggest-next.sh vibe {result}` for Next Up suggestions.
-
-## Context
-
-Working directory:
-```
-!`pwd`
-```
-Plugin root and pre-computed state (first line is `LINK`, remaining lines are `PD`):
-```
-!`SESSION_KEY="${CLAUDE_SESSION_ID:-default}"; L="/tmp/.vbw-plugin-root-link-${SESSION_KEY}"; R="$L/scripts/resolve-phase-state.sh"; [ -f "$R" ] || R="${CLAUDE_PLUGIN_ROOT:-}/scripts/resolve-phase-state.sh"; [ -f "$R" ] || { echo "VBW: plugin root unavailable. Restart this session to recreate $L." >&2; exit 1; }; bash "$R"`
-```
-
-Config:
-```
-!`cat .vbw-planning/config.json 2>/dev/null || echo "No config found"`
-```
-
-!`SESSION_KEY="${CLAUDE_SESSION_ID:-default}"; L="/tmp/.vbw-plugin-root-link-${SESSION_KEY}"; i=0; while [ ! -L "$L" ] && [ $i -lt 20 ]; do sleep 0.1; i=$((i+1)); done; bash "$L/scripts/suggest-compact.sh" execute 2>/dev/null || true`

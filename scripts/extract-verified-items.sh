@@ -3,6 +3,13 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
+if [ "$#" -gt 1 ]; then
+  for phase_dir in "$@"; do
+    bash "$0" "$phase_dir"
+  done
+  exit 0
+fi
+
 phase_dir="${1:-}"
 if [[ -z "$phase_dir" || ! -d "$phase_dir" ]]; then
   exit 0

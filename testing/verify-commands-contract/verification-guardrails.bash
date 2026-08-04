@@ -85,6 +85,21 @@ while IFS= read -r vibe_line || [ -n "$vibe_line" ]; do
       ;;
   esac
 done < "$VIBE_SOURCE" > "$VIBE_FILE"
+for lazy_vibe_reference in \
+  "$ROOT/references/vibe-uat-remediation.md" \
+  "$ROOT/references/vibe-mode-bootstrap.md" \
+  "$ROOT/references/vibe-mode-milestone-uat-recovery.md" \
+  "$ROOT/references/vibe-mode-plan.md" \
+  "$ROOT/references/vibe-mode-execute.md" \
+  "$ROOT/references/vibe-mode-verify.md" \
+  "$ROOT/references/vibe-mode-add-phase.md" \
+  "$ROOT/references/vibe-mode-insert-phase.md" \
+  "$ROOT/references/vibe-mode-remove-phase.md" \
+  "$ROOT/references/vibe-mode-archive.md" \
+  "$ROOT/references/subagent-contracts.md" \
+  "$ROOT/references/vbw-brand-essentials.md"; do
+  append_vibe_reference "$lazy_vibe_reference" >> "$VIBE_FILE"
+done
 QA_FILE="$COMMANDS_DIR/qa.md"
 VERIFY_FILE="$COMMANDS_DIR/verify.md"
 

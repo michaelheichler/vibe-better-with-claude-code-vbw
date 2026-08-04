@@ -3,7 +3,7 @@ name: vbw:qa
 category: monitoring
 hidden: true
 disable-model-invocation: true
-description: Run deep verification on completed phase work using the QA agent.
+description: Verify completed phase work.
 argument-hint: [phase-number] [--tier=quick|standard|deep] [--effort=thorough|balanced|fast|turbo]
 allowed-tools: Read, Write, Bash, Glob, Grep, Agent, Skill, LSP
 ---
@@ -74,7 +74,7 @@ fi`
 ```
 
 ```text
-!`L="/tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}"; i=0; while [ ! -L "$L" ] && [ $i -lt 20 ]; do sleep 0.1; i=$((i+1)); done; bash "$L/scripts/suggest-compact.sh" qa 2>/dev/null || true`
+!`bash "/tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}/scripts/suggest-compact.sh" qa 2>/dev/null || true`
 ```
 
 ## Guard
@@ -159,7 +159,11 @@ When routed here, skip the standard phase-resolution Steps entirely. Instead:
 
     If `QA_REASONING` is non-empty, also pass `effort: "${QA_REASONING}"`. If `QA_REASONING` is empty, do NOT include effort (the resolved model rejects the parameter).
 
-    Before composing the QA task description, evaluate installed skills visible in your system context, read each skill's description and select all materially helpful installed skills for this verification pass, including adjacent/supporting domain skills surfaced by the prompt, logs, error text, related files, or stack context, not just the single most direct skill. The QA prompt MUST begin with exactly one explicit skill outcome block: use `<skill_activation>{For each selected skill: "Call Skill({skill-name})"}</skill_activation>` when one or more installed skills are preselected at orchestration time, or `<skill_no_activation>Evaluated installed skills for this task. No skills were preselected at orchestration time. Reason: {brief task-specific reason}.</skill_no_activation>` when none are preselected. Silent omission of both blocks is invalid. After evaluating, state the skill outcome in your response (e.g., "Skills: activating {skill-name}" or "Skills: none preselected, {reason}") so the user has visibility before the agent is spawned. Example: if the prompt or error mentions SwiftData, include `swiftdata` alongside relevant test/build/debug skills. After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting. Do not scan entire skill folders or read unrelated references.
+    Before composing the QA task description, evaluate installed skills visible in your system context. Read each selected skill description. Select every materially helpful skill for this verification pass. Include supporting domain skills surfaced by the prompt, logs, error text, related files, or stack context.
+
+    The QA prompt MUST begin with exactly one skill outcome block. Use `<skill_activation>{For each selected skill: "Call Skill({skill-name})"}</skill_activation>` when skills are preselected. Otherwise use `<skill_no_activation>Evaluated installed skills for this task. No skills were preselected at orchestration time. Reason: {brief task-specific reason}.</skill_no_activation>`. Do not omit both blocks.
+
+    State the skill outcome in your response before spawning the agent. For example, write "Skills: activating {skill-name}" or "Skills: none preselected, {reason}". If the prompt or error mentions SwiftData, include `swiftdata` with relevant test, build, and debug skills. After calling `Skill(...)`, read any referenced files that matter to the task. Do not scan whole skill folders or unrelated references.
 
   If one or more skills were preselected, run `bash "{plugin-root}/scripts/extract-skill-follow-up-files.sh" "{all preselected skill names from the activation block}" 2>/dev/null || true` before spawning the debug-session QA agent. If the helper prints a `<skill_follow_up_files>` block, paste it immediately after the follow-up-read sentence in the spawned payload. Otherwise omit that block.
 
@@ -388,7 +392,7 @@ Note: Continuous verification handled by hooks. This command is for deep, on-dem
 
     ```
 
-**Discovered Issues:** If the QA agent reported pre-existing failures, out-of-scope bugs, or issues unrelated to this phase's work, de-duplicate by test name and file (keep first error message when the same test+file pair has different messages) and append after the result box. Cap the list at 20 entries, if more exist, show the first 20 and append `... and {N} more`:
+**Discovered Issues:** Collect pre-existing failures, out-of-scope bugs, and unrelated issues. De-duplicate by test name and file. Keep the first message for duplicate pairs. Append the list after the result box. Show at most 20 entries. If more exist, append `... and {N} more`:
 ```text
   Discovered Issues:
     ⚠ testName (path/to/file): error message

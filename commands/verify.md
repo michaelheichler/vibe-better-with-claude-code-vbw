@@ -59,7 +59,7 @@ _refresh_phase_detect() {
   printf '%s' "$PD" > "$P"
   return 0
 }
-if ! _refresh_phase_detect. then
+if ! _refresh_phase_detect; then
   PD="phase_detect_error=true"
   printf '%s\n' "$PD" > "$P"
 fi
@@ -71,7 +71,7 @@ else
 fi`
 ```
 
-!`L="/tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}"; i=0; while [ ! -L "$L" ] && [ $i -lt 20 ]; do sleep 0.1; i=$((i+1)); done. bash "$L/scripts/suggest-compact.sh" verify 2>/dev/null || true`
+!`bash "/tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}/scripts/suggest-compact.sh" verify 2>/dev/null || true`
 
 Pre-computed verify context (PLAN/SUMMARY aggregation):
 ```
@@ -122,7 +122,7 @@ _refresh_phase_detect() {
   printf '%s' "$PD" > "$P"
   return 0
 }
-if ! _refresh_phase_detect. then
+if ! _refresh_phase_detect; then
   PD="phase_detect_error=true"
   printf '%s\n' "$PD" > "$P"
 fi
@@ -146,7 +146,7 @@ fi`
 
 QA verification summary (pre-extracted from VERIFICATION.md):
 ```
-!`SESSION_KEY="${CLAUDE_SESSION_ID:-default}"; L="/tmp/.vbw-plugin-root-link-${SESSION_KEY}"; if [ -L "$L" ] && [ -f "$L/scripts/extract-verified-items.sh" ]; then for d in .vbw-planning/phases/*/; do bash "$L/scripts/extract-verified-items.sh" "$d" 2>/dev/null. done. fi`
+!`bash "/tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}/scripts/extract-verified-items.sh" .vbw-planning/phases/*/ 2>/dev/null || true`
 ```
 
 ## Guard
@@ -341,7 +341,7 @@ When routed here, skip the standard phase-resolution Steps entirely. Instead:
 
 ### 2. Handle optional re-verification, then compile once
 
-- Determine re-verification state for `PDIR` without compiling context:
+**Re-verification state:** Determine it for `PDIR` without compiling context.
   - For auto-detected routing, use `next_phase_state=needs_reverification` from Context above.
   - For an explicit target, ignore the auto-detected `next_phase_state`. Prepare re-verification only when that target's own current UAT status is `issues_found` and its UAT remediation stage is `done` or `verify`.
 - If the active target needs re-verification:
@@ -409,14 +409,9 @@ When routed here, skip the standard phase-resolution Steps entirely. Instead:
 **Full-scope mode** (`verify_scope=full`): Standard verification of all phase plans. Use the rules below as-is.
 
 **Summary deviation review prefill (NON-NEGOTIABLE):** Before generating plan checkpoints, inspect the parsed `SUMMARY_DEVIATION:` records from the verify context.
-- For each record, create one `D{NN}` checkpoint at the top of the UAT `## Tests` section, before any generated `P...` or `PR...` tests. Number these as `D01`, `D02`, etc. in the stable order they appear in the verify context.
-- These are review checkpoints, not pre-recorded failures. Their `**Result:**` field starts empty. Do NOT mark them as `issue` unless the human explicitly rejects the deviation or describes a real bug.
-- Include deterministic identity metadata so later accepted deviations can be suppressed:
-  - `**Source:** Summary deviation review`
-  - `**Deviation Signature:** {signature}`
-  - `**Source Plan:** {source_plan}`
-  - `**Source Summary:** {source_path}`
-  - `**Deviation:** {text}`
+**Create checkpoints:** For each record, create one `D{NN}` checkpoint before generated `P...` or `PR...` tests. Number them in their stable verify-context order.
+**Review status:** These are not pre-recorded failures. Start `**Result:**` empty. Mark `issue` only when the human rejects the deviation or reports a real bug.
+**Identity metadata:** Write `**Source:** Summary deviation review`, `**Deviation Signature:** {signature}`, `**Source Plan:** {source_plan}`, `**Source Summary:** {source_path}`, and `**Deviation:** {text}`.
 - Write `**Expected:** Human confirms whether this documented deviation is acceptable for this phase.`
 - Initial frontmatter `total_tests` includes these `D{NN}` review checkpoints plus generated plan checkpoints. Initial `issues` remains `0`, unresolved review checkpoints are counted as incomplete until the human answers.
 - If there are no `SUMMARY_DEVIATION:` records, do not create any prefilled deviation checkpoints.
@@ -438,7 +433,7 @@ For each plan in `VERIFY_CONTEXT`:
 - ✗ Execute a script and verify it passes
 - ✗ Run a linter, type-checker, or build command
 
-If a plan only contains backend/test/script changes with no user-facing behavior, generate a scenario that asks the human to verify the *effect* is visible (e.g., "confirm the migration preview no longer shows phantom entries") rather than asking them to run the tests themselves.
+For backend, test, or script changes, ask the human to verify a visible effect. For example, ask them to confirm that the migration preview no longer shows phantom entries. Do not ask them to run tests.
 
 **What belongs in UAT (ask the user):**
 - Visual/UI correctness ("Does the migration preview show the correct symbols?")
@@ -454,9 +449,9 @@ If a plan only contains backend/test/script changes with no user-facing behavior
 - Verifying file existence or structure
 - Any check that can be performed programmatically via Bash, Grep, or Glob
 
-**Skill-aware exclusion:** If any active skill, tool, or MCP server gives the model UI automation capabilities (e.g., describe-UI, tap/click simulation, accessibility inspection, screenshot capture, DOM querying), then UI interactions that can be verified programmatically via those capabilities also belong in QA, not UAT. Only include scenarios that require true human judgment, subjective quality, visual design assessment, domain-specific data correctness, or hardware-dependent behavior that available tooling cannot automate.
+**Skill-aware exclusion:** UI checks that available skills, tools, or MCP servers can automate belong in QA, not UAT. This includes describe-UI, tap or click simulation, accessibility inspection, screenshot capture, and DOM queries. Include only human judgment, subjective quality, visual design assessment, domain data correctness, or hardware-dependent behavior that available tooling cannot automate.
 
-If a plan's work is purely internal (refactor, test infrastructure, script changes) with no user-facing behavior, generate a single lightweight checkpoint asking the user to confirm the app still works as expected from their perspective, rather than asking them to run automated checks.
+For purely internal work, create one lightweight checkpoint. Ask the user to confirm that the app still works from their perspective. Do not ask them to run automated checks.
 
 Write the initial UAT file at `{phase-dir}/{uat_path}` (using the pre-computed `uat_path` from Step 1) using the `templates/UAT.md` format. If the parent directory doesn't exist (e.g., `remediation/uat/round-01/`), create it first.
 - Populate YAML frontmatter: phase, plan_count, status=in_progress, started=today, total_tests
@@ -498,15 +493,11 @@ options:
 The tool automatically provides a freeform "Other" option for the user to describe issues.
 
 **Summary-deviation checkpoint prompt:** When the current checkpoint is a prefilled `D{NN}` summary-deviation review, present the deviation text and source metadata instead of a product scenario.
-- The CHECKPOINT display must be self-contained: include a compact `Deviation: {text}` line from the entry's `**Deviation:**` field and `Source: {source_path} ({source_plan})` from `**Source Summary:**` and `**Source Plan:**`. Include `Deviation Signature: {signature}` only when it helps distinguish similar deviations.
-- The AskUserQuestion `question` value MUST also be self-contained. Include the same compact `Deviation: {text}` and `Source: {source_path} ({source_plan})` lines in the tool question, then ask: `Accept this documented deviation as non-blocking for this phase?`
-- The generic artifact expectation, `Expected: Human confirms whether this documented deviation is acceptable for this phase.`, is not enough by itself. It must not be the only visible AskUserQuestion question for a prefilled `D{NN}` summary-deviation checkpoint.
-- Use three visible option labels for this checkpoint type only:
-  - `Pass` → `Accept this deviation as non-blocking for this phase`
-  - `Track Todo` → `Accept this deviation and add a VBW todo`
-  - `Skip` → `Leave this deviation unaccepted for now`
-- This stays within the AskUserQuestion four-option limit. Normal product checkpoints keep only the `Pass` and `Skip` visible labels.
-- freeform/Other → record the text as a real UAT issue if it describes why the deviation is unacceptable or exposes a product defect, except for the summary-deviation todo-intent path in Step 6.
+The CHECKPOINT display must include `Deviation: {text}` and `Source: {source_path} ({source_plan})`. Include `Deviation Signature: {signature}` only to distinguish similar deviations.
+
+The AskUserQuestion value must include the same lines. Ask whether the deviation is non-blocking for this phase. The generic artifact expectation alone is not enough.
+
+Use three labels: `Pass` accepts the deviation, `Track Todo` accepts it and adds a todo, and `Skip` leaves it unaccepted. Normal product checkpoints keep `Pass` and `Skip`. Record freeform text as an issue when it rejects the deviation or exposes a defect, except for the todo-intent path in Step 6.
 
 **AskUserQuestion is a tool call (NON-NEGOTIABLE):** You MUST invoke AskUserQuestion via the tool_use mechanism, never emit the question parameters as text, JSON, or any other inline format in your response body. If AskUserQuestion appears in your text output instead of as a tool call, the checkpoint will not be presented to the user and the session will end prematurely.
 
@@ -518,11 +509,11 @@ The tool automatically provides a freeform "Other" option for the user to descri
 
 Map the AskUserQuestion response:
 
-**"Pass" selected:** Record as passed. For a prefilled summary-deviation `D{NN}` checkpoint, also write `**Disposition:** accepted-process-exception` and preserve the deviation metadata fields. Do not add a todo for plain `Pass`, it means the deviation is accepted as non-blocking without follow-up tracking. **However**, if the user's response also mentions a separate bug/issue (e.g., "Pass, but I noticed X is broken"), record the test as passed AND capture the separate observation as a discovered issue (see Step 7a).
+**"Pass" selected:** Record as passed. For a prefilled summary-deviation `D{NN}` checkpoint, write `**Disposition:** accepted-process-exception`. Preserve its metadata. A plain `Pass` needs no todo. If the response also names a separate bug, record the checkpoint as passed and capture the observation as a discovered issue (see Step 7a).
 
 **"Track Todo" selected:** Valid only for a prefilled summary-deviation `D{NN}` checkpoint. Record `**Result:** pass`, write `**Disposition:** accepted-process-exception`, preserve all deviation identity metadata, and mark this checkpoint as accepted-and-tracked for Step 8. Do not introduce a fourth `Result` value. The todo ref comes only from `track-uat-deviations.sh todo-from-uat` after the UAT result is written. never invent it in prose.
 
-**"Skip" selected:** Record as skipped. For a prefilled summary-deviation `D{NN}` checkpoint, write `**Disposition:** skipped-by-user` and do not add it to the accepted-deviation registry. **However**, if the user selected "Skip" but also typed additional text describing a bug/issue (e.g., the response body contains "but the sidebar is broken" alongside the Skip selection), record the test as skipped AND capture the additional text as a discovered issue (see Step 7a). The additional text is the response content beyond the option selection itself.
+**"Skip" selected:** Record as skipped. For a prefilled summary-deviation `D{NN}` checkpoint, write `**Disposition:** skipped-by-user`. Do not add it to the accepted-deviation registry. If the user also describes a bug, record the checkpoint as skipped and capture the added text as a discovered issue (see Step 7a). The added text is the response beyond the option selection.
 
 **Freeform text (via "Other"):** Apply case-insensitive matching in this order after normalization.
 
@@ -543,7 +534,7 @@ Map the AskUserQuestion response:
 
 **Summary-deviation todo intent:** Before generic skip/pass matching, apply this shortcut only for a prefilled summary-deviation `D{NN}` checkpoint. Use marker-first ordering after normalization and contraction canonicalization: if the text contains explicit rejection/blocking/acceptance-refusal markers (`unacceptable`, `reject`, `blocking`, `blocker`, `do not continue`, `cannot continue`, `will not continue`, `do not proceed`, `cannot proceed`, `not ok`, `not okay`, `cannot accept`, `do not accept`, `will not accept`, `unable to accept`, `refuse to accept`, or `not acceptable`), record `**Result:** issue` with `**Disposition:** rejected-by-user` even when todo words are also present. Treat `not ok` and `not okay` as equivalent rejection markers because `ok` and `okay` are equivalent pass-intent words elsewhere. Examples: `can't continue, track this` canonicalizes to `cannot continue, track this`, `not ok, track this` remains rejected, `can't accept this, track this` and `can’t accept this, track this` canonicalize to `cannot accept this, track this`, and `not acceptable, add to todo` remains a rejected UAT issue. Only when no rejection/blocking/acceptance-refusal marker is present should high-confidence follow-up intent (`/vbw:todo`, `todo`, `to-do`, `add to todo`, `add to to-do`, `track this`, `track it`, `backlog`, or `follow up later`) record `**Result:** pass`, `**Disposition:** accepted-process-exception`, preserve deviation metadata, and mark the checkpoint as accepted-and-tracked for Step 8.
 
-**Observation extraction guard:** Only create a discovered issue when text after a separator includes a defect/issue signal (e.g., broken, bug, error, wrong, missing, not working, fails, crash, exception, regression, problem, still). The word "still" is a defect signal because in UAT context it means an expected fix was not applied (e.g., "X still shows Y" = the behavior persists unchanged = issue). **Exception:** "still" followed by a positive word (works, working, fine, good, correct, properly, functioning, responsive, loads, launches, runs, ok, okay, passes, functions, operates, running) is temporal (meaning "continues to work"), NOT a defect signal, do NOT create a discovered issue. Examples: "pass, it still works fine" → pass (no discovered issue), "pass, but it still shows the old value" → pass + discovered issue. If trailing text is neutral/positive only (e.g., "pass: looks great"), do NOT create a discovered issue.
+**Observation extraction guard:** Create a discovered issue only when text after a separator has a defect signal. Signals include broken, bug, error, wrong, missing, not working, fails, crash, exception, regression, problem, and still. In UAT, `still` normally signals an unapplied fix. But `still` followed by a positive word is temporal, not a defect signal. Positive words include works, fine, good, correct, loads, runs, okay, passes, and functions. For example, "pass, it still works fine" has no discovered issue. "pass, but it still shows the old value" is a pass plus a discovered issue. Do not create an issue from neutral or positive trailing text.
 
 **Dual-intent tie-break (pass + skip in one response):**
 - If the response explicitly defers the **current checkpoint** (e.g., "skip this checkpoint", "skip for now", "can't test right now"), classify checkpoint outcome as **skip**.
@@ -575,23 +566,24 @@ Create a synthesized, remediation-ready issue description. Infer severity from k
 
 </issue_capture_rules>
 
-<examples>
+### Examples
 
-<example>
+#### Example
 Raw response: "LCID still wrong after resync (Image attached)"
-Checkpoint expectation: "After resync, the wheel preview should only show the LCID wheel history for sell-to-open puts, the 100-share assignment, and the active sell-to-open call."
-Visible attachment evidence: "Screenshot shows LCID still missing or incorrect after resync, and the wheel preview realized value appears to include non-wheel LCID stock trades."
-Expected persisted `Description`: "LCID remains missing or incorrect after resync. the wheel preview realized value appears to include non-wheel LCID stock trades instead of only the intended wheel history: sell-to-open puts, the 100-share assignment, and the active sell-to-open call."
-</example>
+Checkpoint expectation: LCID history must include sell-to-open puts.
+It must include the 100-share assignment and active sell-to-open call.
+Visible attachment evidence: LCID remains missing or incorrect after resync.
+The realized value appears to include non-wheel stock trades.
+Expected persisted `Description`: LCID remains missing or incorrect after resync.
+The realized value includes non-wheel LCID stock trades instead of intended wheel history.
 
-<example>
-Raw response: "Fail (Image attached)"
-Checkpoint expectation: "The import preview should group rejected rows under the matching account."
-Attachment state: "Attachment was referenced but is not visible to the model in this turn."
-Expected persisted `Description`: "Import preview does not satisfy the checkpoint expectation that rejected rows are grouped under the matching account. The referenced attachment was not visible in this turn, so no screenshot-specific evidence was available."
-</example>
+#### Example
 
-</examples>
+- Raw response: `Fail (Image attached)`
+- Expect rejected rows under the matching account.
+- The attachment was not visible.
+- Persist: `Import preview does not group rejected rows under the matching account.`
+- Persist: `The referenced attachment was not visible.`
 
 | Keywords | Severity |
 | --- | --- |

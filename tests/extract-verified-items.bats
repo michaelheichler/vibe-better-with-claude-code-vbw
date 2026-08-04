@@ -54,6 +54,46 @@ EOF
   [[ "$output" == *"MH-02"* ]]
 }
 
+@test "extract-verified-items accepts multiple phase directories" {
+  local first="$TEST_TEMP_DIR/phases/01-core"
+  local second="$TEST_TEMP_DIR/phases/02-ui"
+  mkdir -p "$first" "$second"
+  cat > "$first/01-VERIFICATION.md" <<'EOF'
+---
+result: PASS
+passed: 1
+failed: 0
+total: 1
+---
+
+## Must-Have Checks
+
+| # | ID | Description | Status | Evidence |
+|---|---|---|---|---|
+| 1 | MH-01 | Core check | **PASS** | OK |
+EOF
+  cat > "$second/02-VERIFICATION.md" <<'EOF'
+---
+result: PASS
+passed: 1
+failed: 0
+total: 1
+---
+
+## Must-Have Checks
+
+| # | ID | Description | Status | Evidence |
+|---|---|---|---|---|
+| 1 | MH-02 | UI check | **PASS** | OK |
+EOF
+
+  run bash "$SCRIPTS_DIR/extract-verified-items.sh" "$first" "$second"
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"MH-01"* ]]
+  [[ "$output" == *"MH-02"* ]]
+}
+
 @test "extract-verified-items reads brownfield plain VERIFICATION.md" {
   local phase_dir="$TEST_TEMP_DIR/phases/01-core"
   mkdir -p "$phase_dir"
@@ -160,7 +200,6 @@ EOF
 @test "extract-verified-items includes round VERIFICATION.md when stage=done" {
   local phase_dir="$TEST_TEMP_DIR/phases/03-ui"
   mkdir -p "$phase_dir/remediation/qa/round-02"
-  # Phase-level frozen as FAIL
   cat > "$phase_dir/03-VERIFICATION.md" <<'EOF'
 ---
 result: FAIL
@@ -176,7 +215,6 @@ total: 10
 | 1 | MH-01 | Build passes | **FAIL** | Error |
 | 2 | MH-02 | Tests pass | **FAIL** | Red |
 EOF
-  # Round file has PASS
   cat > "$phase_dir/remediation/qa/round-02/R02-VERIFICATION.md" <<'EOF'
 ---
 result: PASS
@@ -198,7 +236,6 @@ EOF
 
   [ "$status" -eq 0 ]
   [[ "$output" == *"QA-VERIFIED ITEMS"* ]]
-  # Only the authoritative round PASS items should appear after remediation is done
   [[ "$output" == *"PASS MH-01: Build passes"* ]]
   [[ "$output" == *"PASS MH-02: Tests pass"* ]]
   [[ "$output" != *"FAIL MH-01: Build passes"* ]]
@@ -248,7 +285,7 @@ EOF
   run bash "$SCRIPTS_DIR/extract-verified-items.sh" "$phase_dir"
 
   [ "$status" -eq 0 ]
-  # Non-numeric round defaults to 01, should still find round-01 file
+  [[ "$output" == *"QA-VERIFIED ITEMS"* ]]
 }
 
 @test "extract-verified-items does not read round file when stage is not done" {
@@ -282,7 +319,6 @@ EOF
 
   [ "$status" -eq 0 ]
   [[ "$output" == *"QA-VERIFIED ITEMS"* ]]
-  # Only phase-level FAIL, round file should NOT be included (stage != done)
   [[ "$output" != *"PASS MH-01: Build passes"* ]]
   [[ "$output" == *"FAIL"* ]]
   [[ "$output" != *"Fixed"* ]]
@@ -291,7 +327,6 @@ EOF
 @test "extract-verified-items handles brownfield VERIFICATION.md with only check-mark lines" {
   local phase_dir="$TEST_TEMP_DIR/phases/01-core"
   mkdir -p "$phase_dir"
-  # Old format with only ✓ lines (no ⚠ lines)
   cat > "$phase_dir/01-VERIFICATION.md" <<'EOF'
 ---
 result: PASS
@@ -300,8 +335,8 @@ failed: 0
 total: 2
 ---
 
-✓ **MH-01** — Build passes
-✓ **MH-02** — Tests pass
+✓ **MH-01** - Build passes
+✓ **MH-02** - Tests pass
 EOF
 
   run bash "$SCRIPTS_DIR/extract-verified-items.sh" "$phase_dir"
@@ -315,7 +350,6 @@ EOF
 @test "extract-verified-items handles brownfield VERIFICATION.md with only warning lines" {
   local phase_dir="$TEST_TEMP_DIR/phases/01-core"
   mkdir -p "$phase_dir"
-  # Old format with only ⚠ lines (no ✓ lines)
   cat > "$phase_dir/01-VERIFICATION.md" <<'EOF'
 ---
 result: FAIL
@@ -324,8 +358,8 @@ failed: 2
 total: 2
 ---
 
-⚠ **MH-01** — Build fails
-⚠ **MH-02** — Tests fail
+⚠ **MH-01** - Build fails
+⚠ **MH-02** - Tests fail
 EOF
 
   run bash "$SCRIPTS_DIR/extract-verified-items.sh" "$phase_dir"
