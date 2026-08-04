@@ -346,17 +346,16 @@ JSON
   [ "$status" -eq 0 ]
 }
 
-@test "file-guard: files_modified still blocks undeclared writes while execution-state is running" {
+@test "file-guard: files_modified directory scope allows sibling writes while execution-state is running" {
   cd "$TEST_TEMP_DIR"
   create_plan_with_files
   cat > "$TEST_TEMP_DIR/.vbw-planning/.execution-state.json" <<'JSON'
 {"phase":1,"phase_name":"test","status":"running","effort":"balanced","correlation_id":"corr-123","plans":[]}
 JSON
 
-  INPUT='{"tool_name":"Write","tool_input":{"file_path":"src/undeclared.js","content":"bad"}}'
+  INPUT='{"tool_name":"Write","tool_input":{"file_path":"src/undeclared.js","content":"ok"}}'
   run bash -c "VBW_AGENT_ROLE=dev echo '$INPUT' | VBW_AGENT_ROLE=dev bash '$SCRIPTS_DIR/file-guard.sh'"
-  [ "$status" -eq 2 ]
-  [[ "$output" == *"not in active plan's files_modified"* ]]
+  [ "$status" -eq 0 ]
 
   INPUT='{"tool_name":"Write","tool_input":{"file_path":"src/allowed.js","content":"ok"}}'
   run bash -c "VBW_AGENT_ROLE=dev echo '$INPUT' | VBW_AGENT_ROLE=dev bash '$SCRIPTS_DIR/file-guard.sh'"
@@ -376,14 +375,13 @@ JSON
   [ "$status" -eq 0 ]
 }
 
-@test "file-guard: live delegated-workflow marker enforces files_modified" {
+@test "file-guard: live delegated-workflow marker uses directory scope" {
   cd "$TEST_TEMP_DIR"
   create_plan_with_files
   CLAUDE_SESSION_ID="session-marker" VBW_PLANNING_DIR="$TEST_TEMP_DIR/.vbw-planning" \
     bash "$SCRIPTS_DIR/delegated-workflow.sh" set fix balanced subagent
 
-  INPUT='{"tool_name":"Write","tool_input":{"file_path":"src/undeclared.js","content":"bad"}}'
+  INPUT='{"tool_name":"Write","tool_input":{"file_path":"src/undeclared.js","content":"ok"}}'
   run bash -c "VBW_AGENT_ROLE=dev echo '$INPUT' | VBW_AGENT_ROLE=dev bash '$SCRIPTS_DIR/file-guard.sh'"
-  [ "$status" -eq 2 ]
-  [[ "$output" == *"not in active plan's files_modified"* ]]
+  [ "$status" -eq 0 ]
 }
