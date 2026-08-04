@@ -1,56 +1,33 @@
 #!/usr/bin/env bash
+set -u
 
 extract_fail_classification_field() {
   local file_path="${1:-}"
   local field_name="${2:-}"
-  [ -f "$file_path" ] || return 0
-  [ -n "$field_name" ] || return 0
+  [ -f "$file_path" ] && [ -n "$field_name" ] || return 0
   awk -v field="$field_name" '
-    function trim(v) {
-      gsub(/^[[:space:]]+|[[:space:]]+$/, "", v)
-      return v
-    }
-    function emit(v) {
-      gsub(/[",}\]]/, "", v)
-      v = trim(v)
-      if (v != "") print v
-    }
-    BEGIN {
-      in_fm = 0
-      in_fc = 0
-    }
-    NR == 1 && /^---[[:space:]]*$/ { in_fm = 1; next }
+    function trim(v) { gsub(/^[[:space:]]+|[[:space:]]+$/, "", v); return v }
+    function emit(v) { gsub(/[",}\]]/, "", v); v=trim(v); if (v != "") print v }
+    BEGIN { in_fm=0; in_fc=0 }
+    NR == 1 && /^---[[:space:]]*$/ { in_fm=1; next }
     in_fm && /^---[[:space:]]*$/ { exit }
     in_fm && /^fail_classifications:/ {
-      rest = $0
-      sub(/^fail_classifications:[[:space:]]*/, "", rest)
+      rest=$0; sub(/^fail_classifications:[[:space:]]*/, "", rest)
       if (rest ~ /^\[/) {
         while (match(rest, field ":[[:space:]]*[^,}]+")) {
-          value = substr(rest, RSTART, RLENGTH)
-          sub("^" field ":[[:space:]]*", "", value)
-          emit(value)
-          rest = substr(rest, RSTART + RLENGTH)
+          value=substr(rest, RSTART, RLENGTH); sub("^" field ":[[:space:]]*", "", value)
+          emit(value); rest=substr(rest, RSTART + RLENGTH)
         }
         exit
       }
-      in_fc = 1
-      next
+      in_fc=1; next
     }
     in_fm && in_fc && /^[[:space:]]+- / {
-      line = $0
-      if (match(line, field ":[[:space:]]*[^,}]+")) {
-        value = substr(line, RSTART, RLENGTH)
-        sub("^" field ":[[:space:]]*", "", value)
-        emit(value)
-      }
+      line=$0
+      if (match(line, field ":[[:space:]]*[^,}]+")) { value=substr(line, RSTART, RLENGTH); sub("^" field ":[[:space:]]*", "", value); emit(value) }
       next
     }
-    in_fm && in_fc && $0 ~ ("^[[:space:]]+" field ":") {
-      line = $0
-      sub("^[[:space:]]*" field ":[[:space:]]*", "", line)
-      emit(line)
-      next
-    }
+    in_fm && in_fc && $0 ~ ("^[[:space:]]+" field ":") { line=$0; sub("^[[:space:]]*" field ":[[:space:]]*", "", line); emit(line); next }
     in_fm && in_fc && /^[^[:space:]]/ { exit }
   ' "$file_path" 2>/dev/null
 }
@@ -94,6 +71,29 @@ collect_fail_classification_source_plans_in_dir() {
   while IFS= read -r _cfc_plan; do
     [ -f "$_cfc_plan" ] || continue
     extract_fail_classification_source_plans "$_cfc_plan"
+  done < <(find "$scan_dir" -maxdepth 1 ! -name '.*' \( -name '*-PLAN.md' -o -name 'PLAN.md' \) 2>/dev/null | (sort -V 2>/dev/null || sort))
+}
+
+collect_fail_classification_id_type_pairs_in_dir() {
+  local scan_dir="${1:-}"
+  local _cfc_plan=""
+  local _cfc_ids=""
+  local _cfc_types=""
+  local _cfc_id_count=0
+  local _cfc_type_count=0
+  [ -d "$scan_dir" ] || return 0
+  while IFS= read -r _cfc_plan; do
+    [ -f "$_cfc_plan" ] || continue
+    _cfc_ids=$(extract_fail_classification_ids "$_cfc_plan" | awk 'NF')
+    _cfc_types=$(extract_fail_classification_types "$_cfc_plan" | awk 'NF')
+    _cfc_id_count=$(printf '%s\n' "$_cfc_ids" | awk 'NF { count++ } END { print count + 0 }')
+    _cfc_type_count=$(printf '%s\n' "$_cfc_types" | awk 'NF { count++ } END { print count + 0 }')
+    if [ "$_cfc_id_count" -ne "$_cfc_type_count" ] 2>/dev/null; then
+      return 1
+    fi
+    if [ "$_cfc_id_count" -gt 0 ] 2>/dev/null; then
+      paste <(printf '%s\n' "$_cfc_ids") <(printf '%s\n' "$_cfc_types")
+    fi
   done < <(find "$scan_dir" -maxdepth 1 ! -name '.*' \( -name '*-PLAN.md' -o -name 'PLAN.md' \) 2>/dev/null | (sort -V 2>/dev/null || sort))
 }
 
@@ -157,34 +157,19 @@ extract_fail_ids_from_verification() {
   local file_path="${1:-}"
   [ -f "$file_path" ] || return 0
   awk -F'|' '
-    function trim(v) {
-      gsub(/^[[:space:]]+|[[:space:]]+$/, "", v)
-      return v
-    }
-    !/^\|/ { header_found = 0; next }
+    function trim(v) { gsub(/^[[:space:]]+|[[:space:]]+$/, "", v); return v }
+    !/^\|/ { header_found=0; next }
     /^\|/ {
       if ($0 ~ /^\|[[:space:]-]+(\|[[:space:]-]+)+\|?[[:space:]]*$/) next
       if (!header_found) {
-        status_col = 0
-        id_col = 0
-        for (i = 2; i < NF; i++) {
-          cell = trim($i)
-          if (cell == "Status") status_col = i
-          if (cell == "ID") id_col = i
-        }
-        if (status_col > 0) header_found = 1
+        status_col=0; id_col=0
+        for (i=2; i<NF; i++) { cell=trim($i); if (cell == "Status") status_col=i; if (cell == "ID") id_col=i }
+        if (status_col > 0) header_found=1
         next
       }
       if (status_col > 0) {
-        status = trim($(status_col))
-        gsub(/\*+/, "", status)
-        status = trim(status)
-        if (status == "FAIL") {
-          fail_index++
-          fail_id = (id_col > 0) ? trim($(id_col)) : ""
-          if (fail_id == "") fail_id = sprintf("FAIL-ROW-%02d", fail_index)
-          print fail_id
-        }
+        status=trim($(status_col)); gsub(/\*+/, "", status); status=trim(status)
+        if (status == "FAIL") { fail_index++; fail_id=(id_col > 0) ? trim($(id_col)) : ""; if (fail_id == "") fail_id=sprintf("FAIL-ROW-%02d", fail_index); print fail_id }
       }
     }
   ' "$file_path" 2>/dev/null
@@ -231,4 +216,57 @@ classification_ids_cover_source_fail_ids() {
     fi
   done <<< "$source_fail_ids"
   return 0
+}
+
+classification_id_matches_fail_id() {
+  local source_fail_id="${1:-}"
+  local classification_id="${2:-}"
+  local bare_source_fail_id=""
+  local bare_classification_id=""
+  [ -n "$source_fail_id" ] && [ -n "$classification_id" ] || return 1
+  bare_source_fail_id="${source_fail_id#FAIL-}"
+  bare_classification_id="${classification_id#FAIL-}"
+  [ "$bare_source_fail_id" = "$bare_classification_id" ]
+}
+
+classification_pairs_match_fail_id() {
+  local source_fail_id="${1:-}"
+  local classified_pairs="${2:-}"
+  local classification_id=""
+  local classification_type=""
+  # Invariant: no earlier pair matched, variant: unread classification pairs.
+  while IFS=$'\t' read -r classification_id classification_type; do
+    [ -n "$classification_id" ] && [ -n "$classification_type" ] || continue
+    case "$classification_type" in
+      process-exception|plan-amendment)
+        if classification_id_matches_fail_id "$source_fail_id" "$classification_id"; then
+          return 0
+        fi
+        ;;
+    esac
+  done <<< "$classified_pairs"
+  return 1
+}
+
+count_fail_ids_with_round_classifications() {
+  local verification_path="${1:-}"
+  local plan_dir="${2:-}"
+  local source_fail_ids=""
+  local classified_pairs=""
+  local source_fail_id=""
+  local exempt_count=0
+  [ -f "$verification_path" ] || { printf '0\n'; return 0; }
+  [ -d "$plan_dir" ] || { printf '0\n'; return 0; }
+  source_fail_ids=$(extract_fail_ids_from_verification "$verification_path")
+  [ -n "$source_fail_ids" ] || { printf '0\n'; return 0; }
+  classified_pairs=$(collect_fail_classification_id_type_pairs_in_dir "$plan_dir" 2>/dev/null) || { printf '0\n'; return 0; }
+  [ -n "$classified_pairs" ] || { printf '0\n'; return 0; }
+  # Invariant: exempt_count covers matched FAIL ids seen so far, variant: unread source FAIL ids.
+  while IFS= read -r source_fail_id; do
+    [ -n "$source_fail_id" ] || continue
+    if classification_pairs_match_fail_id "$source_fail_id" "$classified_pairs"; then
+      exempt_count=$((exempt_count + 1))
+    fi
+  done <<< "$source_fail_ids"
+  printf '%s\n' "$exempt_count"
 }

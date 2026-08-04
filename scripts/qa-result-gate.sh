@@ -479,6 +479,20 @@ if [ "$IN_REMEDIATION" = "true" ] && [ "$SUMMARY_SCOPE_DIR" != "$PHASE_DIR" ]; t
   fi
 fi
 
+EXEMPT_FAIL_COUNT=0
+UNRESOLVED_FAIL_COUNT="$FAIL_COUNT"
+if [ "$IN_REMEDIATION" = "true" ] && [ "$SUMMARY_SCOPE_DIR" != "$PHASE_DIR" ] \
+  && [ "$ROUND_CLASSIFICATIONS_VALID" = "true" ]; then
+  _exempt_fail_count=$(count_fail_ids_with_round_classifications "$VERIF_PATH" "$PLAN_SCOPE_DIR" 2>/dev/null || printf '0')
+  case "${_exempt_fail_count:-}" in
+    ''|*[!0-9]*) _exempt_fail_count=0 ;;
+  esac
+  if [ "$_exempt_fail_count" -le "$FAIL_COUNT" ] 2>/dev/null; then
+    EXEMPT_FAIL_COUNT="$_exempt_fail_count"
+    UNRESOLVED_FAIL_COUNT=$((FAIL_COUNT - EXEMPT_FAIL_COUNT))
+  fi
+fi
+
 echo "qa_gate_writer=${WRITER:-missing}"
 echo "qa_gate_result=${RESULT:-missing}"
 echo "qa_gate_fail_count=$FAIL_COUNT"
@@ -500,9 +514,35 @@ if [ -z "$RESULT" ]; then
   exit 0
 fi
 
+CLASSIFIED_FAIL_EXEMPTION_REPORTED=false
+case "$RESULT" in
+  FAIL|PARTIAL)
+    if [ "$IN_REMEDIATION" = "true" ] && [ "$SUMMARY_SCOPE_DIR" != "$PHASE_DIR" ] \
+      && [ "$ROUND_CLASSIFICATIONS_VALID" = "true" ] \
+      && [ "$FAIL_COUNT" -gt 0 ] 2>/dev/null \
+      && [ "$UNRESOLVED_FAIL_COUNT" -eq 0 ] 2>/dev/null; then
+      echo "qa_gate_classified_fail_exemption=true"
+      echo "qa_gate_exempt_fail_count=$EXEMPT_FAIL_COUNT"
+      CLASSIFIED_FAIL_EXEMPTION_REPORTED=true
+      RESULT=PASS
+    else
+      if [ "$IN_REMEDIATION" = "true" ] && [ "$SUMMARY_SCOPE_DIR" != "$PHASE_DIR" ] \
+        && [ "$ROUND_CLASSIFICATIONS_VALID" != "true" ]; then
+        echo "qa_gate_classifications_invalid=true"
+      fi
+      echo "qa_gate_routing=REMEDIATION_REQUIRED"
+      exit 0
+    fi
+    ;;
+esac
+
 case "$RESULT" in
   PASS)
-    if [ "$FAIL_COUNT" -gt 0 ] 2>/dev/null; then
+    if [ "$EXEMPT_FAIL_COUNT" -gt 0 ] 2>/dev/null && [ "$CLASSIFIED_FAIL_EXEMPTION_REPORTED" != "true" ]; then
+      echo "qa_gate_classified_fail_exemption=true"
+      echo "qa_gate_exempt_fail_count=$EXEMPT_FAIL_COUNT"
+    fi
+    if [ "$UNRESOLVED_FAIL_COUNT" -gt 0 ] 2>/dev/null; then
       echo "qa_gate_fail_count_positive=true"
       echo "qa_gate_routing=REMEDIATION_REQUIRED"
     elif [ "$ROUND_SUMMARY_NONTERMINAL" = "true" ]; then
