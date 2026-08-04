@@ -409,6 +409,18 @@ EOF
   [ "$status" -eq 0 ]
 }
 
+@test "bash-guard explains how to fix unrecognized agent evidence" {
+  local input
+  input=$(jq -n '{agent_type:"vbw-dev2",tool_input:{command:"git status"}}')
+
+  run bash -c 'unset VBW_AGENT_ROLE VBW_ACTIVE_AGENT; printf "%s\n" "$1" | bash "$2"' _ "$input" "$SCRIPTS_DIR/bash-guard.sh"
+
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"Respawn the worker with a recognized VBW role name such as vbw-dev."* ]]
+  [[ "$output" == *"The guard checks agent_type and agent_id, not subagent_type."* ]]
+  [[ "$output" == *"Use vbw-<role> or vbw-<role>-<digits>."* ]]
+}
+
 @test "bash-guard classifies explicit Scout payload" {
   local field identity input
   rm -rf "$TEST_TEMP_DIR/.vbw-planning/.active-agents"

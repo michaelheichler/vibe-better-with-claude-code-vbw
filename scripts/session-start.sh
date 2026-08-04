@@ -949,7 +949,7 @@ else
   fi
 fi
 
-CTX="VBW project detected."
+CTX="VBW project detected. VBW Bash: name workers vbw-<role> such as vbw-dev. The guard checks agent_type or agent_id, not subagent_type."
 CTX="$CTX Shipped milestones: ${has_shipped}."
 CTX="$CTX Phase: ${phase_pos}/${phase_total} (${phase_name}) -- ${phase_status}."
 CTX="$CTX Progress: ${progress_pct}%."
