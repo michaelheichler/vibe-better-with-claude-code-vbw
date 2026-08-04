@@ -17,11 +17,10 @@ teardown() {
 dm_cache_path() {
   local bin="$CLAUDE_CODE_EXECPATH"
   [ -f "$bin" ] || bin=""
-  local stamp="0:0"
-  if [ -n "$bin" ]; then
-    stamp="$(stat -f '%m:%z' "$bin" 2>/dev/null || stat -c '%Y:%s' "$bin" 2>/dev/null || echo 0:0)"
-  fi
-  DM_CACHE="/tmp/vbw-models-$(vbw_hash_path "bin:${bin:-none}:${stamp}")"
+  local pricing="$CONFIG_DIR/model-pricing.json"
+  local source
+  source=$(bash -c '. "$1"; vbw_model_cache_source "$2" "$3"' _ "$SCRIPTS_DIR/lib/vbw-cache-key.sh" "$bin" "$pricing")
+  DM_CACHE="/tmp/vbw-models-$(vbw_hash_path "$source")"
   export DM_CACHE
 }
 
@@ -36,11 +35,15 @@ make_fake_binary() {
   dm_cache_path
 }
 
-@test "no binary: empty output, exit 0, no cache write" {
+@test "no binary: pricing aliases remain in plain and labeled catalogs" {
   run bash "$SCRIPTS_DIR/detect-models.sh"
   [ "$status" -eq 0 ]
-  [ -z "$output" ]
-  [ ! -f "$DM_CACHE" ]
+  grep -Fxq "opus48" <<< "$output"
+  [ -f "$DM_CACHE" ]
+
+  run bash "$SCRIPTS_DIR/detect-models.sh" --labeled
+  [ "$status" -eq 0 ]
+  grep -Fq "$(printf 'opus48\topus48 -> claude-opus-4-8')" <<< "$output"
 }
 
 @test "catalog file hook emits its lines without probing" {
@@ -61,6 +64,7 @@ make_fake_binary() {
   grep -Fxq "claude-haiku-4-5" <<< "$output"
   grep -Fxq "sol" <<< "$output"
   grep -Fxq "kimi3" <<< "$output"
+  grep -Fxq "opus48" <<< "$output"
   ! grep -Fxq "claude-opus-4-1" <<< "$output"
   [ -f "$DM_CACHE" ]
 }
@@ -71,6 +75,7 @@ make_fake_binary() {
   [ "$status" -eq 0 ]
   grep -Fq "$(printf 'sol\tGPT-5.6 Sol')" <<< "$output"
   grep -Fq "$(printf 'claude-opus-5\tClaude (built-in)')" <<< "$output"
+  grep -Fq "$(printf 'opus48\topus48 -> claude-opus-4-8')" <<< "$output"
 }
 
 @test "fresh cache served without probing" {

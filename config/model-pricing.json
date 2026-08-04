@@ -16,6 +16,7 @@
   "aliases": {
     "fable": "claude-fable-5",
     "opus": "claude-opus-5",
+    "opus48": "claude-opus-4-8",
     "sonnet": "claude-sonnet-5",
     "haiku": "claude-haiku-4-5",
     "default": "claude-sonnet-5"

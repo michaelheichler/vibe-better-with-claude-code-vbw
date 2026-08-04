@@ -21,13 +21,14 @@
 #   CLAUDE_CODE_EXECPATH    Claude Code binary (default: command -v claude)
 #
 # Results cached 1h at /tmp/vbw-models-<hash>. Failures are cached too. The
-# cache identity carries the binary mtime and size, so a re-patched binary
-# advertising a different catalog invalidates the cache on its next run.
+# cache identity carries binary and pricing-file mtimes and sizes, so changes
+# to either source invalidate the cache on its next run.
 # resolve-agent-model.sh mirrors this identity byte for byte.
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PRICING_PATH="$SCRIPT_DIR/../config/model-pricing.json"
 CACHE_KEY_LIB="$SCRIPT_DIR/lib/vbw-cache-key.sh"
 hash_path() {
   bash -c '. "$1"; vbw_hash_path "$2"' _ "$CACHE_KEY_LIB" "$1"
@@ -46,20 +47,11 @@ fi
 CLAUDE_BIN="${CLAUDE_CODE_EXECPATH:-$(command -v claude || true)}"
 [ -f "$CLAUDE_BIN" ] || CLAUDE_BIN=""
 
-BIN_STAMP="0:0"
-if [ -n "$CLAUDE_BIN" ]; then
-  BIN_STAMP="$(stat -f '%m:%z' "$CLAUDE_BIN" 2>/dev/null || stat -c '%Y:%s' "$CLAUDE_BIN" 2>/dev/null || echo 0:0)"
-fi
-
-SRC="bin:${CLAUDE_BIN:-none}:${BIN_STAMP}"
+SRC="$(bash -c '. "$1"; vbw_model_cache_source "$2" "$3"' _ "$CACHE_KEY_LIB" "$CLAUDE_BIN" "$PRICING_PATH")"
 CACHE_SUFFIX="${LABELED:+-labeled}${ALIAS_MAP:+-aliasmap}"
 CACHE="/tmp/vbw-models-$(hash_path "$SRC")${CACHE_SUFFIX}"
 if [ -f "$CACHE" ] && [ -n "$(find "$CACHE" -mmin -60 2>/dev/null)" ]; then
   cat "$CACHE"
-  exit 0
-fi
-
-if [ -z "$CLAUDE_BIN" ]; then
   exit 0
 fi
 
@@ -81,21 +73,31 @@ extract_alias_map() {
     | sed -E 's/^([a-z]+):"(.*)"$/\2\t\1/' || true
 }
 
-TMP="$(mktemp "${CACHE}.XXXXXX")"
-trap 'rm -f "$TMP"' EXIT
-if [ -n "$CLAUDE_BIN" ]; then
-  if [ -n "$ALIAS_MAP" ]; then
-    extract_alias_map >> "$TMP"
+extract_pricing_aliases() {
+  [ -f "$PRICING_PATH" ] || return 0
+  if [ -n "$LABELED" ]; then
+    jq -r '.aliases // {} | to_entries[] | [.key, (.key + " -> " + .value)] | @tsv' "$PRICING_PATH" 2>/dev/null || true
   else
-    extract_binary >> "$TMP"
+    jq -r '.aliases // {} | keys[]' "$PRICING_PATH" 2>/dev/null || true
   fi
+}
+
+TMP="$(mktemp "${CACHE}.XXXXXX")"
+trap 'rm -f "$TMP" "${TMP}.ids" "${TMP}.labeled"' EXIT
+if [ -n "$CLAUDE_BIN" ] && [ -n "$ALIAS_MAP" ]; then
+  extract_alias_map >> "$TMP"
+elif [ -n "$CLAUDE_BIN" ]; then
+  extract_binary >> "$TMP"
+fi
+if [ -z "$ALIAS_MAP" ]; then
+  extract_pricing_aliases >> "$TMP"
 fi
 if [ -n "$ALIAS_MAP" ]; then
   sort -u "$TMP" -o "$TMP" 2>/dev/null || true
 elif [ -z "$LABELED" ]; then
   cut -f1 "$TMP" | sort -u > "${TMP}.ids" && mv "${TMP}.ids" "$TMP"
 else
-  sort -u "$TMP" -o "$TMP" 2>/dev/null || true
+  awk -F '\t' '!seen[$1]++' "$TMP" | sort -u > "${TMP}.labeled" && mv "${TMP}.labeled" "$TMP"
 fi
 mv "$TMP" "$CACHE" 2>/dev/null || true
 trap - EXIT
