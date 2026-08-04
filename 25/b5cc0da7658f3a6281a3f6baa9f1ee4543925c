@@ -1,0 +1,21 @@
+tests/bump-version.bats
+  s_86d58b85ce2aee::t_dc2610d0c825e3 90-108
+scripts/bump-version.sh
+  s_86d58b85ce2aee::t_38ed09ca12618a 58-72
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "25b5cc0da7658f3a6281a3f6baa9f1ee4543925c",
+  "prompts": {},
+  "sessions": {
+    "s_86d58b85ce2aee": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "07d7797e-6c7f-4c9c-bdd0-a2660d0d8697",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
