@@ -18,7 +18,7 @@ ac_results:
   - criterion: "Behavior preserved: only pure helper functions move. No release, smoke, installation, or hook workflow moves out of rtk-manager.sh, and no dispatcher or aggregation logic moves out of qa-result-gate.sh"
     verdict: "pass"
     evidence: "bats tests/qa-result-gate.bats passed 184 tests, bats tests/rtk-manager.bats passed 104 tests, and testing/run-all.sh passed 3783 BATS checks"
-  - criterion: "qa-result-gate.sh keeps its SCRIPT_DIR assignment via $0 at line 41"
+  - criterion: "qa-result-gate.sh keeps its SCRIPT_DIR assignment via $0 at line 11"
     verdict: "pass"
     evidence: "scripts/qa-result-gate.sh retains SCRIPT_DIR assignment through $0"
   - criterion: "The non-contiguous late-helper island moves with the other helpers"
@@ -30,16 +30,16 @@ ac_results:
   - criterion: "No function moved is executed at source time. Sourcing order matches the existing scripts/lib precedent"
     verdict: "pass"
     evidence: "All five libraries contain definitions only and are sourced after main-script initialization"
-  - criterion: "scripts/lib/qa-result-gate-path-evidence.sh provides 33 path, canonicalization, and git evidence helpers"
+  - criterion: "scripts/lib/qa-result-gate-path-evidence.sh provides 34 path, canonicalization, and git evidence helpers"
     verdict: "pass"
     evidence: "31946eb6 and exact body comparison against the pre-split source"
-  - criterion: "scripts/lib/qa-result-gate-fail-classifications.sh provides 12 FAIL classification helpers"
+  - criterion: "scripts/lib/qa-result-gate-fail-classifications.sh provides 20 FAIL classification helpers"
     verdict: "pass"
     evidence: "31946eb6 and exact body comparison against the pre-split source"
   - criterion: "scripts/lib/qa-result-gate-known-issues.sh provides 7 known-issue JSON helpers"
     verdict: "pass"
     evidence: "4d3fbb26 and exact body comparison against the pre-split source"
-  - criterion: "scripts/lib/qa-result-gate-summary-deviations.sh provides 5 summary deviation helpers"
+  - criterion: "scripts/lib/qa-result-gate-summary-deviations.sh provides 13 summary deviation helpers"
     verdict: "pass"
     evidence: "4d3fbb26 and exact body comparison against the pre-split source"
   - criterion: "scripts/lib/rtk-manager-environment.sh provides 31 environment helpers"
@@ -60,8 +60,8 @@ The QA gate now sources four focused helper libraries, and the RTK manager sourc
 
 ## Tasks Completed
 
-- `31946eb6`: Extracted 33 path-evidence helpers and 12 fail-classification helpers.
-- `4d3fbb26`: Extracted 7 known-issue helpers and 5 summary-deviation helpers, then updated the structural span test.
+- `31946eb6`: Extracted 34 path-evidence helpers and 20 fail-classification helpers.
+- `4d3fbb26`: Extracted 7 known-issue helpers and 13 summary-deviation helpers, then updated the structural span test.
 - `bfe4c9d0`: Extracted 31 RTK environment helpers and updated the RTK contract fixture for effective sourced content.
 
 ## What Was Built
@@ -75,10 +75,10 @@ The QA gate now sources four focused helper libraries, and the RTK manager sourc
 ### QA Gate
 
 - `scripts/qa-result-gate.sh`: Sources four helper libraries and retains dispatcher, aggregation, diagnostics, and routing logic.
-- `scripts/lib/qa-result-gate-path-evidence.sh`: Contains 33 path and git evidence helpers.
-- `scripts/lib/qa-result-gate-fail-classifications.sh`: Contains 12 FAIL classification helpers.
+- `scripts/lib/qa-result-gate-path-evidence.sh`: Contains 34 path and git evidence helpers.
+- `scripts/lib/qa-result-gate-fail-classifications.sh`: Contains 20 FAIL classification helpers.
 - `scripts/lib/qa-result-gate-known-issues.sh`: Contains 7 known-issue JSON helpers.
-- `scripts/lib/qa-result-gate-summary-deviations.sh`: Contains 5 summary deviation helpers.
+- `scripts/lib/qa-result-gate-summary-deviations.sh`: Contains 13 summary deviation helpers.
 - `tests/qa-result-gate.bats`: Reads known-issue helper spans from the new library.
 
 ### RTK

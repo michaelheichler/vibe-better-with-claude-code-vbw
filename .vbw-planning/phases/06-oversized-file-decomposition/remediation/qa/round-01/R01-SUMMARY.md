@@ -17,7 +17,8 @@ files_modified:
   - .vbw-planning/phases/06-oversized-file-decomposition/06-01-PLAN.md
   - .vbw-planning/phases/06-oversized-file-decomposition/06-03-PLAN.md
   - .vbw-planning/phases/06-oversized-file-decomposition/remediation/qa/round-01/R01-SUMMARY.md
-deviations: []
+deviations:
+  - "deviation-06-02-behavior-change: accepted-process-exception because 06-02-SUMMARY.md records ref:0f9b3be3 as an approved behavior change."
 known_issue_outcomes: []
 ---
 
@@ -54,4 +55,4 @@ None assigned to this task.
 No deviations.
 
 ## Accepted Process Exception
-- `deviation-06-02-behavior-change`: accepted because `06-02-PLAN.md` already specifies ref:0f9b3be3 as an approved behavior change and requires the corresponding SUMMARY deviation entry. No source-plan amendment applies.
+- `deviation-06-02-behavior-change`: accepted because `06-02-SUMMARY.md` records ref:0f9b3be3 as an approved behavior change and includes the corresponding deviation entry. No source-plan amendment applies.
