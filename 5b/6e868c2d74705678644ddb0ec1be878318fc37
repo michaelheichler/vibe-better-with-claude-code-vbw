@@ -1,0 +1,50 @@
+.vbw-planning/phases/06-oversized-file-decomposition/06-03-SUMMARY.md
+  s_ef82bfd9ee37ed::t_6baceee24eae23 42
+  s_ef82bfd9ee37ed::t_3547d3a57a445e 64
+  s_ef82bfd9ee37ed::t_448a5efb3dbfda 36
+  s_ef82bfd9ee37ed::t_847e693dda5e22 63
+  s_ef82bfd9ee37ed::t_ae6cc19149c238 21
+  s_ef82bfd9ee37ed::t_157854d5c9d2e8 33
+  s_ef82bfd9ee37ed::t_2f7a2c813c58a4 78-79,81
+.vbw-planning/phases/06-oversized-file-decomposition/06-01-PLAN.md
+  s_ef82bfd9ee37ed::t_8492c6d31d3344 49-51
+  s_ef82bfd9ee37ed::t_22c3b13f016796 43-47
+  s_ef82bfd9ee37ed::t_31d37b9c564081 80-82
+  s_ef82bfd9ee37ed::t_78998bf45b96de 53
+  s_ef82bfd9ee37ed::t_551eac0ffe6909 55,57
+  s_ef82bfd9ee37ed::t_d4eeed165fa388 149-157
+  s_ef82bfd9ee37ed::t_8fe2d9ad221a17 107-113
+  s_ef82bfd9ee37ed::t_ae7a076b52b3f4 116-124
+  s_ef82bfd9ee37ed::t_bf30c39c41f26a 85-87
+  s_ef82bfd9ee37ed::t_9dfd35386f6800 38-40
+  s_ef82bfd9ee37ed::t_f2db1383955451 76-79
+  s_ef82bfd9ee37ed::t_532a6f950815b0 48
+  s_ef82bfd9ee37ed::t_31923722f4f192 52
+.vbw-planning/phases/06-oversized-file-decomposition/remediation/qa/round-01/R01-SUMMARY.md
+  s_ef82bfd9ee37ed::t_e45d5326de4c50 20-21
+  s_ef82bfd9ee37ed::t_ab36ba2c7ffffd 58
+.vbw-planning/phases/06-oversized-file-decomposition/06-03-PLAN.md
+  s_ef82bfd9ee37ed::t_5b404a08a55ac7 74-76
+  s_ef82bfd9ee37ed::t_7474cb5365009a 23
+  s_ef82bfd9ee37ed::t_fb41c87c0eefd2 24
+  s_ef82bfd9ee37ed::t_73a315acbc8ef2 26
+  s_ef82bfd9ee37ed::t_b642588e57d6ea 34
+  s_ef82bfd9ee37ed::t_e5763b9697d462 18
+  s_ef82bfd9ee37ed::t_a0d8e663e3e619 56
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "5b6e868c2d74705678644ddb0ec1be878318fc37",
+  "prompts": {},
+  "sessions": {
+    "s_ef82bfd9ee37ed": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "41f89902-2bb1-4545-a5ea-81f49ca08704",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
