@@ -413,6 +413,43 @@ EOF
   [ "$status" -eq 0 ]
 }
 
+@test "tmux-watchdog clears session-scoped registrations after stale lock" {
+  cd "$TEST_TEMP_DIR"
+  local fakebin
+  fakebin="$TEST_TEMP_DIR/fakebin"
+  mkdir -p "$fakebin" ".vbw-planning/.active-agent-count.lock" \
+    ".vbw-planning/.active-agents/session-A" ".vbw-planning/.compacting"
+
+  cat > "$fakebin/tmux" <<'EOF'
+#!/bin/bash
+case "$1" in
+  has-session|list-clients)
+    exit 0
+    ;;
+  *)
+    exit 0
+    ;;
+esac
+EOF
+  chmod +x "$fakebin/tmux"
+  cat > "$fakebin/sleep" <<'EOF'
+#!/bin/bash
+exit 0
+EOF
+  chmod +x "$fakebin/sleep"
+
+  echo "scout" > ".vbw-planning/.active-agents/session-A/active-agent"
+  echo "1" > ".vbw-planning/.active-agents/session-A/active-agent-count"
+
+  run env PATH="$fakebin:$PATH" VBW_PLANNING_DIR="$TEST_TEMP_DIR/.vbw-planning" \
+    bash "$SCRIPTS_DIR/tmux-watchdog.sh" test-session
+  [ "$status" -eq 0 ]
+  [ ! -d ".vbw-planning/.active-agents" ]
+  [ ! -d ".vbw-planning/.active-agent-count.lock" ]
+  [ ! -f ".vbw-planning/.active-agent" ]
+  [ ! -f ".vbw-planning/.active-agent-count" ]
+}
+
 @test "session-stop preserves live execute delegated workflow marker" {
   cd "$TEST_TEMP_DIR"
   echo '{"phase":1,"status":"running","effort":"balanced","correlation_id":"corr-123","plans":[]}' > ".vbw-planning/.execution-state.json"

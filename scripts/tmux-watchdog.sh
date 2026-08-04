@@ -31,7 +31,7 @@ log() {
 cleanup_detached_agent_state() {
   if command -v vbw_active_agent_clear_all >/dev/null 2>&1; then
     vbw_active_agent_clear_all "$PLANNING_DIR"
-    if [ -e "$PLANNING_DIR/.active-agent" ] || [ -e "$PLANNING_DIR/.active-agent-count" ]; then
+    if [ -e "$PLANNING_DIR/.active-agent" ] || [ -e "$PLANNING_DIR/.active-agent-count" ] || [ -d "$PLANNING_DIR/.active-agents" ]; then
       rm -rf "$PLANNING_DIR/.active-agent-count.lock" 2>/dev/null || true
       vbw_active_agent_clear_all "$PLANNING_DIR"
     fi
