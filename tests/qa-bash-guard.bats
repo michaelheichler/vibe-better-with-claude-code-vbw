@@ -409,6 +409,27 @@ EOF
   [ "$status" -eq 0 ]
 }
 
+@test "malformed bash guard input blocks during live execution" {
+  jq -n '{status:"running"}' > "$TEST_TEMP_DIR/.vbw-planning/.execution-state.json"
+  run bash -c 'unset VBW_AGENT_ROLE VBW_ACTIVE_AGENT; printf "%s" "not-json" | bash "$1"' _ \
+    "$SCRIPTS_DIR/bash-guard.sh"
+  [ "$status" -eq 2 ]
+}
+
+@test "advisory logging remains visible without jq" {
+  local fake_bin jq_bin input
+  fake_bin=$(mktemp -d)
+  jq_bin=$(command -v jq)
+  printf '#!/bin/sh\nexit 127\n' > "$fake_bin/jq"
+  chmod +x "$fake_bin/jq"
+  input=$(printf '%s' '{"tool_input":{"command":"rm -rf build/"}}')
+  run bash -c 'cd "$1"; unset VBW_AGENT_ROLE VBW_ACTIVE_AGENT CLAUDE_SESSION_ID; PATH="$2:/usr/bin:/bin"; printf "%s" "$3" | bash "$4"' _ \
+    "$TEST_TEMP_DIR" "$fake_bin" "$input" "$SCRIPTS_DIR/bash-guard.sh"
+  [ "$status" -eq 0 ]
+  [ "$("$jq_bin" -s length "$TEST_TEMP_DIR/.vbw-planning/.event-log.jsonl")" -ge 1 ]
+  rm -rf "$fake_bin"
+}
+
 @test "bash-guard classifies explicit Scout payload" {
   local field identity input
   rm -rf "$TEST_TEMP_DIR/.vbw-planning/.active-agents"

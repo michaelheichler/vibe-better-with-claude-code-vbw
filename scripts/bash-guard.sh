@@ -1,8 +1,5 @@
 #!/bin/bash
 set -u
-INPUT=$(cat 2>/dev/null) || exit 0
-[ -z "$INPUT" ] && exit 0
-
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PLUGIN_ROOT="$(dirname "$SCRIPT_DIR")"
 
@@ -13,17 +10,44 @@ PLUGIN_ROOT="$(dirname "$SCRIPT_DIR")"
 . "$SCRIPT_DIR/lib/orchestrator-identity.sh" || { printf 'Blocked: VBW guard library failed to load (%s)\n' "$SCRIPT_DIR/lib/orchestrator-identity.sh" >&2; exit 2; }
 . "$SCRIPT_DIR/lib/guard-enforcement.sh" || { printf 'Blocked: VBW guard library failed to load (%s)\n' "$SCRIPT_DIR/lib/guard-enforcement.sh" >&2; exit 2; }
 PROJECT_ROOT=$(vbw_guard_project_root "$PWD") || PROJECT_ROOT=""
-GUARD_LEVEL=$(vbw_guard_enforcement_level "$PROJECT_ROOT" "$INPUT")
+GUARD_LEVEL=$(vbw_guard_enforcement_level "$PROJECT_ROOT" "")
 [ "$GUARD_LEVEL" = "off" ] && exit 0
 PLANNING_DIR="$PROJECT_ROOT/.vbw-planning"
 
 guard_log_event() {
-  local message="$1" level="${GUARD_LEVEL:-enforce}"
-  jq -cn --arg message "$message" --arg level "$level" --arg agent "${ACTIVE_AGENT_ROLE:-unknown}" \
+  local message="$1" level="${GUARD_LEVEL:-enforce}" agent="${ACTIVE_AGENT_ROLE:-unknown}"
+  if command -v jq >/dev/null 2>&1 && jq -cn --arg message "$message" --arg level "$level" --arg agent "$agent" \
     '{event:"guard_block",level:$level,message:$message,agent:$agent}' \
-    >> "$PLANNING_DIR/.event-log.jsonl" 2>/dev/null || true
+    >> "$PLANNING_DIR/.event-log.jsonl" 2>/dev/null; then
+    return 0
+  fi
+  message=$(printf '%s' "$message" | tr '\r\n' ' ' | sed 's/\\/\\\\/g; s/"/\\"/g')
+  agent=$(printf '%s' "$agent" | tr '\r\n' ' ' | sed 's/\\/\\\\/g; s/"/\\"/g')
+  printf '{"event":"guard_block","level":"%s","message":"%s","agent":"%s"}\n' \
+    "$level" "$message" "$agent" >> "$PLANNING_DIR/.event-log.jsonl" 2>/dev/null || true
 }
 
+guard_block() {
+  local message="$1" matched="${2:-$1}"
+  if [ "$GUARD_LEVEL" = "enforce" ]; then
+    if declare -F log_block_event >/dev/null 2>&1; then
+      log_block_event "$matched"
+    else
+      guard_log_event "$message"
+    fi
+    printf '%s\n' "$message" >&2
+    exit 2
+  fi
+  guard_log_event "$message"
+  exit 0
+}
+
+if ! INPUT=$(cat 2>/dev/null); then
+  guard_block "Blocked: unable to read bash guard input"
+fi
+[ -n "$INPUT" ] || guard_block "Blocked: empty bash guard input"
+GUARD_LEVEL=$(vbw_guard_enforcement_level "$PROJECT_ROOT" "$INPUT")
+[ "$GUARD_LEVEL" = "off" ] && exit 0
 if ! command -v jq >/dev/null 2>&1; then
   [ "$GUARD_LEVEL" = "enforce" ] || { guard_log_event "Blocked: jq not available, cannot validate bash command"; exit 0; }
   printf '%s\n' "Blocked: jq not available, cannot validate bash command" >&2
@@ -53,23 +77,6 @@ _BG_PAYLOAD_HAS_AGENT=false
 if [ -n "$_BG_PAYLOAD_AGENT_TYPE" ] || [ -n "$_BG_PAYLOAD_AGENT_ID" ]; then
   _BG_PAYLOAD_HAS_AGENT=true
 fi
-
-guard_block() {
-  local message="$1" matched="${2:-$1}"
-  if [ "$GUARD_LEVEL" = "enforce" ]; then
-    if declare -F log_block_event >/dev/null 2>&1; then
-      log_block_event "$matched"
-    else
-      guard_log_event "$message"
-    fi
-    printf '%s\n' "$message" >&2
-    exit 2
-  fi
-  guard_log_event "$message"
-  exit 0
-}
-
-# Parse failures block because unvalidated commands cannot be trusted.
 
 detect_agent_role() {
   local candidate role

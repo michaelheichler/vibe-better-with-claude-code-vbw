@@ -8,15 +8,17 @@ vbw_guard_execution_is_live() {
   if [ -f "$state_file" ]; then
     exec_status=$(jq -r '.status // ""' "$state_file" 2>/dev/null) || exec_status=""
     if [ "$exec_status" = "running" ]; then
-      now=$(date +%s 2>/dev/null || echo 0)
+      now=$(date +%s 2>/dev/null) || now=""
       if [ "$(uname)" = "Darwin" ]; then
-        mtime=$(stat -f %m "$state_file" 2>/dev/null || echo 0)
+        mtime=$(stat -f %m "$state_file" 2>/dev/null) || mtime=""
       else
-        mtime=$(stat -c %Y "$state_file" 2>/dev/null || echo 0)
+        mtime=$(stat -c %Y "$state_file" 2>/dev/null) || mtime=""
       fi
-      age=$((now - mtime))
-      if [ "$age" -ge 0 ] && [ "$age" -lt 14400 ]; then
-        return 0
+      if [[ "$now" =~ ^[1-9][0-9]*$ ]] && [[ "$mtime" =~ ^[1-9][0-9]*$ ]]; then
+        age=$((now - mtime))
+        if [ "$age" -ge 0 ] && [ "$age" -lt 14400 ]; then
+          return 0
+        fi
       fi
     fi
   fi
@@ -45,6 +47,10 @@ vbw_guard_project_root() {
     fi
     dir=$(dirname "$dir")
   done
+  if [ -f "/.vbw-planning/config.json" ] || [ -d "/.vbw-planning/phases" ]; then
+    printf '/\n'
+    return 0
+  fi
   return 1
 }
 

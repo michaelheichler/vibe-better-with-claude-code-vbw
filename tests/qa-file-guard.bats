@@ -149,6 +149,26 @@ teardown() {
   [ "$status" -eq 2 ]
 }
 
+@test "malformed file guard input blocks during live execution" {
+  make_live_execution
+  run bash -c 'unset VBW_AGENT_ROLE VBW_ACTIVE_AGENT; printf "%s" "not-json" | bash "$1"' _ \
+    "$SCRIPTS_DIR/file-guard.sh"
+  [ "$status" -eq 2 ]
+}
+
+@test "timestamp probe failure is not live execution" {
+  local fake_bin
+  fake_bin=$(mktemp -d)
+  printf '#!/bin/sh\nexit 1\n' > "$fake_bin/date"
+  printf '#!/bin/sh\nexit 1\n' > "$fake_bin/stat"
+  chmod +x "$fake_bin/date" "$fake_bin/stat"
+  make_live_execution
+  run bash -c 'source "$1"; PATH="$2:$PATH"; vbw_guard_execution_is_live "$3"' _ \
+    "$SCRIPTS_DIR/lib/guard-enforcement.sh" "$fake_bin" "$TEST_TEMP_DIR"
+  [ "$status" -eq 1 ]
+  rm -rf "$fake_bin"
+}
+
 @test "bare payload agent ids do not claim a VBW role" {
   local input
   input=$(jq -n '{session_id:"session-A",agent_id:"scout-01",tool_name:"Write",tool_input:{file_path:"src/file.js",content:"ok"}}')

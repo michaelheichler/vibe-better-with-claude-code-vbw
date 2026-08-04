@@ -1,10 +1,5 @@
 #!/bin/bash
 set -u
-INPUT=$(cat 2>/dev/null) || exit 0
-[ -z "$INPUT" ] && exit 0
-
-FILE_PATH=$(echo "$INPUT" | jq -r '.tool_input.file_path // ""' 2>/dev/null) || exit 0
-[ -z "$FILE_PATH" ] && exit 0
 _FG_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 [ -f "$_FG_SCRIPT_DIR/lib/active-agent-state.sh" ] || { printf 'Blocked: VBW guard library missing (%s)\n' "$_FG_SCRIPT_DIR/lib/active-agent-state.sh" >&2; exit 2; }
 [ -f "$_FG_SCRIPT_DIR/lib/orchestrator-identity.sh" ] || { printf 'Blocked: VBW guard library missing (%s)\n' "$_FG_SCRIPT_DIR/lib/orchestrator-identity.sh" >&2; exit 2; }
@@ -17,6 +12,52 @@ if [ -f "$_FG_SCRIPT_DIR/lib/vbw-config-root.sh" ]; then
     find_vbw_root >/dev/null 2>&1 || true
   fi
 fi
+PROJECT_ROOT=$(vbw_guard_project_root "$PWD") || PROJECT_ROOT=""
+if [ -n "$PROJECT_ROOT" ]; then
+  PHASES_DIR="$PROJECT_ROOT/.vbw-planning/phases"
+else
+  PHASES_DIR=""
+fi
+GUARD_LEVEL=$(vbw_guard_enforcement_level "$PROJECT_ROOT" "")
+[ "$GUARD_LEVEL" = "off" ] && exit 0
+
+guard_log_event() {
+  local message="$1" level="${2:-${GUARD_LEVEL:-enforce}}" agent="${ACTIVE_AGENT_ROLE:-unknown}"
+  [ -d "$PROJECT_ROOT/.vbw-planning" ] || return 0
+  if command -v jq >/dev/null 2>&1 && jq -cn --arg message "$message" --arg level "$level" --arg agent "$agent" \
+    '{event:"guard_block",level:$level,message:$message,agent:$agent}' \
+    >> "$PROJECT_ROOT/.vbw-planning/.event-log.jsonl" 2>/dev/null; then
+    return 0
+  fi
+  message=$(printf '%s' "$message" | tr '\r\n' ' ' | sed 's/\\/\\\\/g; s/"/\\"/g')
+  agent=$(printf '%s' "$agent" | tr '\r\n' ' ' | sed 's/\\/\\\\/g; s/"/\\"/g')
+  printf '{"event":"guard_block","level":"%s","message":"%s","agent":"%s"}\n' \
+    "$level" "$message" "$agent" >> "$PROJECT_ROOT/.vbw-planning/.event-log.jsonl" 2>/dev/null || true
+}
+
+guard_block() {
+  local message="$*"
+  if [ "$GUARD_LEVEL" = "enforce" ]; then
+    guard_log_event "$message"
+    printf '%s\n' "$message" >&2
+    exit 2
+  fi
+  guard_log_event "$message"
+  exit 0
+}
+
+INPUT=$(cat 2>/dev/null) || guard_block "Blocked: unable to read file guard input"
+[ -n "$INPUT" ] || guard_block "Blocked: empty file guard input"
+GUARD_LEVEL=$(vbw_guard_enforcement_level "$PROJECT_ROOT" "$INPUT")
+[ "$GUARD_LEVEL" = "off" ] && exit 0
+if ! FILE_PATH=$(printf '%s' "$INPUT" | jq -r '.tool_input.file_path // ""' 2>/dev/null); then
+  guard_block "Blocked: invalid file guard input"
+fi
+[ -z "$FILE_PATH" ] && exit 0
+case "$FILE_PATH" in
+  *$'\n'*) guard_block "Blocked: newline in file path" ;;
+esac
+
 
 resolve_lexical_path() {
   local base="$1" probe suffix resolved_probe
@@ -50,44 +91,12 @@ to_abs_path() {
   resolve_lexical_path "$base"
 }
 
-PROJECT_ROOT=$(vbw_guard_project_root "$PWD") || PROJECT_ROOT=""
-if [ -n "$PROJECT_ROOT" ]; then
-  PHASES_DIR="$PROJECT_ROOT/.vbw-planning/phases"
-else
-  PHASES_DIR=""
-fi
-
-guard_log_event() {
-  local message="$1" level="${2:-${GUARD_LEVEL:-enforce}}"
-  [ -d "$PROJECT_ROOT/.vbw-planning" ] || return 0
-  jq -cn --arg message "$message" --arg level "$level" --arg agent "${ACTIVE_AGENT_ROLE:-unknown}" \
-    '{event:"guard_block",level:$level,message:$message,agent:$agent}' \
-    >> "$PROJECT_ROOT/.vbw-planning/.event-log.jsonl" 2>/dev/null || true
-}
-
-guard_block() {
-  local message="$*"
-  if [ "$GUARD_LEVEL" = "enforce" ]; then
-    guard_log_event "$message"
-    printf '%s\n' "$message" >&2
-    exit 2
-  fi
-  guard_log_event "$message"
-  exit 0
-}
-
 guard_block_always() {
   local message="$*"
   guard_log_event "$message" enforce
   printf '%s\n' "$message" >&2
   exit 2
 }
-
-GUARD_LEVEL=$(vbw_guard_enforcement_level "$PROJECT_ROOT" "$INPUT")
-[ "$GUARD_LEVEL" = "off" ] && exit 0
-case "$FILE_PATH" in
-  *$'\n'*) guard_block "Blocked: newline in file path" ;;
-esac
 
 normalize_agent_role() {
   command -v vbw_active_agent_normalize_role >/dev/null 2>&1 || return 1
