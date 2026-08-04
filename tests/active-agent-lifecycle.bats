@@ -5,7 +5,8 @@ load test_helper
 @test "agent-start rejects malformed explicit role suffixes" {
   setup_temp_dir
   mkdir -p "$TEST_TEMP_DIR/.vbw-planning"
-  echo '{"agent_type":"vbw-dev-foo","pid":"$$"}' | bash -c "cd '$TEST_TEMP_DIR' && bash '$SCRIPTS_DIR/agent-start.sh'"
+  run bash -c "cd '$TEST_TEMP_DIR' && echo '{\"agent_type\":\"vbw-dev-foo\",\"pid\":\"\$\$\"}' | bash '$SCRIPTS_DIR/agent-start.sh'"
+  [ "$status" -eq 0 ]
   [ ! -f "$TEST_TEMP_DIR/.vbw-planning/.active-agent" ]
   [ ! -f "$TEST_TEMP_DIR/.vbw-planning/.active-agent-count" ]
   teardown_temp_dir
