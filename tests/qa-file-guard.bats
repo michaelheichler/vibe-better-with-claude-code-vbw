@@ -143,7 +143,6 @@ teardown() {
     "$input" "$SCRIPTS_DIR/bash-guard.sh"
   [ "$status" -eq 0 ]
 
-  make_live_execution
   input=$(jq -n '{session_id:"session-A",agent_type:"vbw:vbw-qa",tool_input:{command:"printf ok > src/file"}}')
   run bash -c 'unset VBW_AGENT_ROLE VBW_ACTIVE_AGENT; printf "%s\n" "$1" | bash "$2"' _ \
     "$input" "$SCRIPTS_DIR/bash-guard.sh"

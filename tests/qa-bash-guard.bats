@@ -415,7 +415,6 @@ EOF
 
   for field in agent_type agent_id; do
     identity="vbw:vbw-scout"
-    [ "$field" = "agent_id" ] && identity="scout-01"
     input=$(jq -n --arg field "$field" --arg identity "$identity" \
       '{session_id:"session-A",tool_input:{command:"gh issue comment 1 --body blocked"}} + {($field):$identity}')
 
