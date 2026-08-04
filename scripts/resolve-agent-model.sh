@@ -3,6 +3,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PRICING_PATH="$SCRIPT_DIR/../config/model-pricing.json"
 CACHE_KEY_LIB="$SCRIPT_DIR/lib/vbw-cache-key.sh"
 hash_path() {
   bash -c '. "$1"; vbw_hash_path "$2"' _ "$CACHE_KEY_LIB" "$1"
@@ -86,9 +87,9 @@ CATALOG_EXTRA=""
 CATALOG_LOADED=false
 load_catalog() {
   if [ "$CATALOG_LOADED" = false ]; then
-    CATALOG=$(bash "$SCRIPT_DIR/detect-models.sh" 2>/dev/null) || CATALOG=""
-    CATALOG_EXTRA=$(jq -r '(.model_catalog_extra // [])[]' "$CONFIG_PATH" 2>/dev/null || true)
-    CATALOG_LOADED=true
+    printf -v CATALOG '%s' "$(bash "$SCRIPT_DIR/detect-models.sh" 2>/dev/null || true)"
+    printf -v CATALOG_EXTRA '%s' "$(jq -r '(.model_catalog_extra // [])[]' "$CONFIG_PATH" 2>/dev/null || true)"
+    printf -v CATALOG_LOADED '%s' true
   fi
 }
 
@@ -96,8 +97,17 @@ candidates_from() {
   jq -r "($1) // empty | if type == \"array\" then .[] else . end" "$CONFIG_PATH" 2>/dev/null || true
 }
 
+resolve_alias() {
+  local model="$1"
+  if [ -f "$PRICING_PATH" ]; then
+    jq -r --arg m "$model" '.aliases[$m] // $m' "$PRICING_PATH" 2>/dev/null || printf '%s\n' "$model"
+  else
+    printf '%s\n' "$model"
+  fi
+}
+
 pick_model() {
-  local first="" count=0 c chosen=""
+  local first="" count=0 c chosen="" canonical=""
   local all=""
   while IFS= read -r c; do
     [ -z "$c" ] && continue
@@ -106,6 +116,7 @@ pick_model() {
     all="${all}${c}"$'\n'
   done
   [ "$count" -eq 0 ] && return 0
+  first=$(resolve_alias "$first")
   if [ "$count" -eq 1 ]; then
     echo "$first"
     return 0
@@ -115,8 +126,9 @@ pick_model() {
     local haystack="${CATALOG}"$'\n'"${CATALOG_EXTRA}"
     while IFS= read -r c; do
       [ -z "$c" ] && continue
-      if grep -Fxq -- "$c" <<< "$haystack"; then
-        chosen="$c"
+      canonical=$(resolve_alias "$c")
+      if grep -Fxq -- "$canonical" <<< "$haystack" || [ "$canonical" != "$c" ]; then
+        chosen="$canonical"
         break
       fi
     done <<< "$all"
@@ -138,7 +150,7 @@ if [ -z "$MODEL" ]; then
     echo "Invalid model_profile '$PROFILE'. Valid: quality, balanced, budget" >&2
     exit 1
   fi
-  MODEL=$(jq -r ".$PROFILE.$AGENT" "$PROFILES_PATH")
+  MODEL=$(resolve_alias "$(jq -r ".$PROFILE.$AGENT" "$PROFILES_PATH")")
 fi
 
 if [[ "$MODEL" =~ $MODEL_SHAPE ]]; then
