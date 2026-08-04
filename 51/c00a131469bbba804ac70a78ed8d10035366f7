@@ -1,0 +1,23 @@
+tests/hooks-bash-classifier.bats
+  s_ef82bfd9ee37ed::t_a18c33e43f0468 1326
+scripts/tmux-watchdog.sh
+  s_ef82bfd9ee37ed::t_1fb11ecf3e61d7 70-71,73-86,95-97,100-106
+  s_ef82bfd9ee37ed::t_f01a214515af09 34-37
+  s_ef82bfd9ee37ed::t_56ecf61fd79e16 72,87-94,98-99,107-118,144
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "51c00a131469bbba804ac70a78ed8d10035366f7",
+  "prompts": {},
+  "sessions": {
+    "s_ef82bfd9ee37ed": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "41f89902-2bb1-4545-a5ea-81f49ca08704",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
