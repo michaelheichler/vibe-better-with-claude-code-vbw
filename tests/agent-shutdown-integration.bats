@@ -419,6 +419,7 @@ EOF
   fakebin="$TEST_TEMP_DIR/fakebin"
   mkdir -p "$fakebin" ".vbw-planning/.active-agent-count.lock" \
     ".vbw-planning/.active-agents/session-A" ".vbw-planning/.compacting"
+  touch ".vbw-planning/.active-agent-count.lock/owner"
 
   cat > "$fakebin/tmux" <<'EOF'
 #!/bin/bash
@@ -440,6 +441,16 @@ EOF
 
   echo "scout" > ".vbw-planning/.active-agents/session-A/active-agent"
   echo "1" > ".vbw-planning/.active-agents/session-A/active-agent-count"
+  echo "scout 1" > ".vbw-planning/.active-agents/session-A/active-agent-roles"
+  echo "12345 scout" > ".vbw-planning/.active-agents/session-A/active-agent-role-pids"
+  echo "scout" > ".vbw-planning/.active-agent"
+  echo "1" > ".vbw-planning/.active-agent-count"
+  echo "scout 1" > ".vbw-planning/.active-agent-roles"
+  echo "12345 scout" > ".vbw-planning/.active-agent-role-pids"
+  [ -f ".vbw-planning/.active-agent" ]
+  [ -f ".vbw-planning/.active-agent-count" ]
+  [ -f ".vbw-planning/.active-agent-roles" ]
+  [ -f ".vbw-planning/.active-agent-role-pids" ]
 
   run env PATH="$fakebin:$PATH" VBW_PLANNING_DIR="$TEST_TEMP_DIR/.vbw-planning" \
     bash "$SCRIPTS_DIR/tmux-watchdog.sh" test-session
@@ -448,6 +459,9 @@ EOF
   [ ! -d ".vbw-planning/.active-agent-count.lock" ]
   [ ! -f ".vbw-planning/.active-agent" ]
   [ ! -f ".vbw-planning/.active-agent-count" ]
+  [ ! -f ".vbw-planning/.active-agent-roles" ]
+  [ ! -f ".vbw-planning/.active-agent-role-pids" ]
+  [ ! -f ".vbw-planning/.active-agent-count.lock/owner" ]
 }
 
 @test "session-stop preserves live execute delegated workflow marker" {
