@@ -1,0 +1,20 @@
+scripts/file-guard.sh
+  s_396441278312df::t_68ccfd34084878 282-283
+  s_396441278312df::t_b9b51bf47ef714 307
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "6141758cca04d241f29c6824458a93751daafc2b",
+  "prompts": {},
+  "sessions": {
+    "s_396441278312df": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8b693812-fc94-4ea6-be47-0ddb22b766f3",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
