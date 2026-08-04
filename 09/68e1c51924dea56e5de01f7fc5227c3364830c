@@ -1,0 +1,23 @@
+tests/file-guard-plan-pattern-matching.bats
+  s_396441278312df::t_b6f78e92a1167e 88-99
+scripts/file-guard.sh
+  s_396441278312df::t_6fc83370556467 274-279,281-293,295-307,327,331
+  s_396441278312df::t_e1d42e149cb510 280
+  s_396441278312df::t_85fb9cba247b4d 294
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "0968e1c51924dea56e5de01f7fc5227c3364830c",
+  "prompts": {},
+  "sessions": {
+    "s_396441278312df": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8b693812-fc94-4ea6-be47-0ddb22b766f3",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
