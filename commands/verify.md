@@ -504,7 +504,7 @@ Use three labels for this checkpoint type only:
 - `Skip` → `Leave this deviation unaccepted for now`
 Normal product checkpoints keep `Pass` and `Skip`. Record freeform text as an issue when it rejects the deviation or exposes a defect, except for the todo-intent path in Step 6.
 
-This stays within the AskUserQuestion four-option limit. Normal product checkpoints keep only `Pass` and `Skip`.
+This stays within the AskUserQuestion four-option limit.
 
 
 **AskUserQuestion is a tool call (NON-NEGOTIABLE):** You MUST invoke AskUserQuestion via the tool_use mechanism, never emit the question parameters as text, JSON, or any other inline format in your response body. If AskUserQuestion appears in your text output instead of as a tool call, the checkpoint will not be presented to the user and the session will end prematurely.

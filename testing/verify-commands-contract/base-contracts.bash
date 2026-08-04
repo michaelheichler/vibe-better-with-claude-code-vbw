@@ -173,7 +173,7 @@ fi
 if [ -f "$ASK_USER_QUESTION_REF" ] \
   && (grep -Fq 'Other path' "$ASK_USER_QUESTION_REF" || grep -Fq '`Other` path' "$ASK_USER_QUESTION_REF") \
   && grep -Fq 'open-ended answer' "$ASK_USER_QUESTION_REF" \
-  && grep -Fq 'plain text before presenting another menu' "$ASK_USER_QUESTION_REF"; then
+  && grep -Fq 'Ask the follow-up as plain text, process the response' "$ASK_USER_QUESTION_REF"; then
   pass "ask-user-question: documents freeform handoff"
 else
   fail "ask-user-question: missing freeform handoff guidance"

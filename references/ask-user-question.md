@@ -35,7 +35,7 @@ Use AskUserQuestion for a real, bounded decision. Use plain text when the user n
 
 Ask one question at a time when the next question depends on the answer. Batch independent questions in one call. Ask 1-4 questions in a call.
 
-Claude Code provides an `Other` path for structured choices. Treat it as a valid freeform answer. If the user chooses Other to explain, ask for and process the explanation in plain text before presenting another menu. Accept hybrid answers such as `#2, without pagination`.
+Claude Code provides an `Other` path for structured choices. See **Freeform handoff** for how to process it. Accept hybrid answers such as `#2, without pagination`.
 
 ## Intentional freeform
 
@@ -84,7 +84,6 @@ Do not set a question-level `preview`. Use previews only when the host supports 
 
 Batch independent questions in one call. Sequence dependent questions across separate calls when one answer determines the next question.
 
-If a user chooses `Other` for a freeform explanation, wait for and process the plain-text response before presenting another menu.
 
 ## Final check
 
