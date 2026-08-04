@@ -6,28 +6,38 @@ INPUT=$(cat 2>/dev/null) || exit 0
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PLUGIN_ROOT="$(dirname "$SCRIPT_DIR")"
 
-[ -f "$SCRIPT_DIR/lib/active-agent-state.sh" ] || exit 2
-[ -f "$SCRIPT_DIR/lib/orchestrator-identity.sh" ] || exit 2
-[ -f "$SCRIPT_DIR/lib/guard-enforcement.sh" ] || exit 2
+[ -f "$SCRIPT_DIR/lib/active-agent-state.sh" ] || { printf 'Blocked: VBW guard library missing (%s)\n' "$SCRIPT_DIR/lib/active-agent-state.sh" >&2; exit 2; }
+[ -f "$SCRIPT_DIR/lib/orchestrator-identity.sh" ] || { printf 'Blocked: VBW guard library missing (%s)\n' "$SCRIPT_DIR/lib/orchestrator-identity.sh" >&2; exit 2; }
+[ -f "$SCRIPT_DIR/lib/guard-enforcement.sh" ] || { printf 'Blocked: VBW guard library missing (%s)\n' "$SCRIPT_DIR/lib/guard-enforcement.sh" >&2; exit 2; }
 . "$SCRIPT_DIR/lib/active-agent-state.sh" || exit 2
 . "$SCRIPT_DIR/lib/orchestrator-identity.sh" || exit 2
 . "$SCRIPT_DIR/lib/guard-enforcement.sh" || exit 2
 PROJECT_ROOT=$(vbw_guard_project_root "$PWD") || PROJECT_ROOT=""
 GUARD_LEVEL=$(vbw_guard_enforcement_level "$PROJECT_ROOT" "$INPUT")
-[ -n "$GUARD_LEVEL" ] || exit 2
 [ "$GUARD_LEVEL" = "off" ] && exit 0
+PLANNING_DIR="$PROJECT_ROOT/.vbw-planning"
+
+guard_log_event() {
+  local message="$1" level="${GUARD_LEVEL:-enforce}"
+  jq -cn --arg message "$message" --arg level "$level" --arg agent "${ACTIVE_AGENT_ROLE:-unknown}" \
+    '{event:"guard_block",level:$level,message:$message,agent:$agent}' \
+    >> "$PLANNING_DIR/.event-log.jsonl" 2>/dev/null || true
+}
+
 if ! command -v jq >/dev/null 2>&1; then
-  [ "$GUARD_LEVEL" = "enforce" ] || exit 0
+  [ "$GUARD_LEVEL" = "enforce" ] || { guard_log_event "Blocked: jq not available, cannot validate bash command"; exit 0; }
   printf '%s\n' "Blocked: jq not available, cannot validate bash command" >&2
   exit 2
 fi
 
-COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command // ""' 2>/dev/null) || exit 2
+if ! COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command // ""' 2>/dev/null); then
+  [ "$GUARD_LEVEL" = "enforce" ] || { guard_log_event "Blocked: invalid bash command payload"; exit 0; }
+  exit 2
+fi
 [ -z "$COMMAND" ] && exit 0
 
 # Parse failures block because unvalidated commands cannot be trusted.
 
-PLANNING_DIR="$PROJECT_ROOT/.vbw-planning"
 DEFAULT_PATTERNS="$PLUGIN_ROOT/config/destructive-commands.txt"
 LOCAL_PATTERNS="$PLANNING_DIR/destructive-commands.local.txt"
 if [ -f "$SCRIPT_DIR/lib/active-agent-state.sh" ]; then
@@ -43,13 +53,6 @@ _BG_PAYLOAD_HAS_AGENT=false
 if [ -n "$_BG_PAYLOAD_AGENT_TYPE" ] || [ -n "$_BG_PAYLOAD_AGENT_ID" ]; then
   _BG_PAYLOAD_HAS_AGENT=true
 fi
-
-guard_log_event() {
-  local message="$1" level="${GUARD_LEVEL:-enforce}"
-  jq -cn --arg message "$message" --arg level "$level" --arg agent "${ACTIVE_AGENT_ROLE:-unknown}" \
-    '{event:"guard_block",level:$level,message:$message,agent:$agent}' \
-    >> "$PLANNING_DIR/.event-log.jsonl" 2>/dev/null || true
-}
 
 guard_block() {
   local message="$1" matched="${2:-$1}"

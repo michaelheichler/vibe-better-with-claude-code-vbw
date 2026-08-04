@@ -6,9 +6,9 @@ INPUT=$(cat 2>/dev/null) || exit 0
 FILE_PATH=$(echo "$INPUT" | jq -r '.tool_input.file_path // ""' 2>/dev/null) || exit 0
 [ -z "$FILE_PATH" ] && exit 0
 _FG_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-[ -f "$_FG_SCRIPT_DIR/lib/active-agent-state.sh" ] || exit 2
-[ -f "$_FG_SCRIPT_DIR/lib/orchestrator-identity.sh" ] || exit 2
-[ -f "$_FG_SCRIPT_DIR/lib/guard-enforcement.sh" ] || exit 2
+[ -f "$_FG_SCRIPT_DIR/lib/active-agent-state.sh" ] || { printf 'Blocked: VBW guard library missing (%s)\n' "$_FG_SCRIPT_DIR/lib/active-agent-state.sh" >&2; exit 2; }
+[ -f "$_FG_SCRIPT_DIR/lib/orchestrator-identity.sh" ] || { printf 'Blocked: VBW guard library missing (%s)\n' "$_FG_SCRIPT_DIR/lib/orchestrator-identity.sh" >&2; exit 2; }
+[ -f "$_FG_SCRIPT_DIR/lib/guard-enforcement.sh" ] || { printf 'Blocked: VBW guard library missing (%s)\n' "$_FG_SCRIPT_DIR/lib/guard-enforcement.sh" >&2; exit 2; }
 . "$_FG_SCRIPT_DIR/lib/active-agent-state.sh" || exit 2
 . "$_FG_SCRIPT_DIR/lib/orchestrator-identity.sh" || exit 2
 . "$_FG_SCRIPT_DIR/lib/guard-enforcement.sh" || exit 2
@@ -84,9 +84,10 @@ guard_block_always() {
 }
 
 GUARD_LEVEL=$(vbw_guard_enforcement_level "$PROJECT_ROOT" "$INPUT")
-[ -n "$GUARD_LEVEL" ] || exit 2
 [ "$GUARD_LEVEL" = "off" ] && exit 0
-case "$FILE_PATH" in *$'\n'*) exit 2 ;; esac
+case "$FILE_PATH" in
+  *$'\n'*) guard_block "Blocked: newline in file path" ;;
+esac
 
 normalize_agent_role() {
   command -v vbw_active_agent_normalize_role >/dev/null 2>&1 || return 1

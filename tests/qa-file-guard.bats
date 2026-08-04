@@ -167,6 +167,7 @@ teardown() {
     "$input" "$SCRIPTS_DIR/bash-guard.sh"
   [ "$status" -eq 2 ]
   jq -s . "$TEST_TEMP_DIR/.vbw-planning/.event-log.jsonl" >/dev/null
+  [ "$(jq -s 'length >= 1' "$TEST_TEMP_DIR/.vbw-planning/.event-log.jsonl")" = true ]
 }
 
 @test "active plan scope expands declared files to their directory" {
