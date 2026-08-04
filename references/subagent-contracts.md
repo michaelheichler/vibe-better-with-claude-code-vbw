@@ -46,6 +46,8 @@ Call sites must copy this invariant byte-for-byte:
 Non-team invariant: omit `team_name`, `run_in_background`, `isolation`, and all worktree cwd fields.
 ```
 
+For VBW agents, set `subagent_type` to `<plugin>:<agent-name>`. For example, `vbw:vbw-dev` is correct. Bare `vbw-dev` is wrong.
+
 ## No-Tool Circuit Breaker
 
 At every non-team subagent return site, inspect returned text before artifact validation, summary finalization, deterministic gates, or state advancement. If it says tools, shell/Bash, filesystem, edits, or API-session access are unavailable, treat that as a platform/tool provisioning failure. Stop without advancing state, report the failed role and stage or task, and do not retry the same prompt. Do not consume the normal retry budget. Repeating a no-tool spawn cannot fix tool provisioning and wastes tokens.
