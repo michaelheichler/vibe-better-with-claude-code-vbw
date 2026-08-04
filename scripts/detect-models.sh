@@ -6,9 +6,12 @@
 # detection works offline with zero credentials and zero third-party calls.
 # Patched binaries advertise injected models in the same structures.
 #
-# Usage: detect-models.sh [--labeled]
-#   default    stdout = model ids, one per line
-#   --labeled  stdout = id<TAB>description lines (for matrix proposals)
+# Usage: detect-models.sh [--labeled|--alias-map]
+#   default      stdout = model ids, one per line
+#   --labeled    stdout = id<TAB>description lines (for matrix proposals)
+#   --alias-map  stdout = full-id<TAB>tier-alias lines, built-in tiers only
+#                (opus/sonnet/haiku/fable). Spawn tools accept only the tier
+#                alias for built-in models, not the full catalog id.
 #
 # Always exit 0. Empty output means "no catalog available" and callers fall
 # back to static tier names.
@@ -32,9 +35,11 @@ hash_path() {
 
 LABELED=""
 [ "${1:-}" = "--labeled" ] && LABELED="1"
+ALIAS_MAP=""
+[ "${1:-}" = "--alias-map" ] && ALIAS_MAP="1"
 
 if [ -n "${VBW_MODEL_CATALOG_FILE:-}" ]; then
-  cat "$VBW_MODEL_CATALOG_FILE" 2>/dev/null || true
+  [ -n "$ALIAS_MAP" ] || cat "$VBW_MODEL_CATALOG_FILE" 2>/dev/null || true
   exit 0
 fi
 
@@ -47,7 +52,8 @@ if [ -n "$CLAUDE_BIN" ]; then
 fi
 
 SRC="bin:${CLAUDE_BIN:-none}:${BIN_STAMP}"
-CACHE="/tmp/vbw-models-$(hash_path "$SRC")${LABELED:+-labeled}"
+CACHE_SUFFIX="${LABELED:+-labeled}${ALIAS_MAP:+-aliasmap}"
+CACHE="/tmp/vbw-models-$(hash_path "$SRC")${CACHE_SUFFIX}"
 if [ -f "$CACHE" ] && [ -n "$(find "$CACHE" -mmin -60 2>/dev/null)" ]; then
   cat "$CACHE"
   exit 0
@@ -70,12 +76,23 @@ extract_binary() {
     | sed 's/^ *//; s/ = /\t/' | grep -E '^[A-Za-z0-9._:/[-]+(\[1m\])?\t' || true
 }
 
+extract_alias_map() {
+  grep -aoE '(opus|sonnet|haiku|fable):"claude-[a-z0-9-]+"' "$CLAUDE_BIN" 2>/dev/null \
+    | sed -E 's/^([a-z]+):"(.*)"$/\2\t\1/' || true
+}
+
 TMP="$(mktemp "${CACHE}.XXXXXX")"
 trap 'rm -f "$TMP"' EXIT
 if [ -n "$CLAUDE_BIN" ]; then
-  extract_binary >> "$TMP"
+  if [ -n "$ALIAS_MAP" ]; then
+    extract_alias_map >> "$TMP"
+  else
+    extract_binary >> "$TMP"
+  fi
 fi
-if [ -z "$LABELED" ]; then
+if [ -n "$ALIAS_MAP" ]; then
+  sort -u "$TMP" -o "$TMP" 2>/dev/null || true
+elif [ -z "$LABELED" ]; then
   cut -f1 "$TMP" | sort -u > "${TMP}.ids" && mv "${TMP}.ids" "$TMP"
 else
   sort -u "$TMP" -o "$TMP" 2>/dev/null || true
