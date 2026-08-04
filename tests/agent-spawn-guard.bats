@@ -93,6 +93,21 @@ spawn_input() {
   [ "$(printf '%s' "$output" | jq -r '.hookSpecificOutput.updatedInput.model')" = "resolved-dev" ]
 }
 
+@test "agent-spawn-guard maps built-in ids and records completion" {
+  jq '.model_matrix.dev.balanced = ["claude-sonnet-5"]' \
+    "$TEST_TEMP_DIR/.vbw-planning/config.json" > "$TEST_TEMP_DIR/.vbw-planning/config.json.tmp"
+  mv "$TEST_TEMP_DIR/.vbw-planning/config.json.tmp" "$TEST_TEMP_DIR/.vbw-planning/config.json"
+  local input
+  input=$(spawn_input)
+
+  run_spawn_guard "$input"
+
+  [ "$status" -eq 0 ]
+  [ "$(printf '%s' "$output" | jq -r '.hookSpecificOutput.updatedInput.model')" = "sonnet" ]
+  grep -q 'agent-spawn-guard start' "$TEST_TEMP_DIR/.vbw-planning/.hook-errors.log"
+  grep -q 'agent-spawn-guard complete' "$TEST_TEMP_DIR/.vbw-planning/.hook-errors.log"
+}
+
 @test "agent-spawn-guard leaves non-VBW spawns untouched" {
   local input
   input=$(spawn_input | jq '.tool_input.subagent_type = "other-agent" | .tool_input.model = "caller-model"')
