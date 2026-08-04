@@ -66,6 +66,25 @@ vbw_active_agent_normalize_role() {
   return 1
 }
 
+vbw_active_agent_normalize_payload_role() {
+  local lower role
+  lower=$(printf '%s' "${1:-}" | tr '[:upper:]' '[:lower:]')
+  case "$lower" in
+    @vbw:*) lower="${lower#@vbw:}" ;;
+    vbw:*) lower="${lower#vbw:}" ;;
+  esac
+  if [[ "$lower" == vbw-* ]]; then
+    vbw_active_agent_normalize_strict_role "$lower"
+    return
+  fi
+  for role in lead dev qa-author qa scout debugger architect docs; do
+    case "$lower" in
+      "team-$role"|"team-$role-"*) printf '%s' "$role"; return 0 ;;
+    esac
+  done
+  return 1
+}
+
 
 vbw_active_agent_session_dir() { printf '%s/.active-agents/%s\n' "$1" "$2"; }
 _vbw_active_agent_state_dir() {

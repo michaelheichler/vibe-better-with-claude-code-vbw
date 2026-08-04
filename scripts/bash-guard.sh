@@ -1,20 +1,33 @@
 #!/bin/bash
 set -u
-# Parse failures block because unvalidated commands cannot be trusted.
-
-if ! command -v jq >/dev/null 2>&1; then
-  echo "Blocked: jq not available, cannot validate bash command" >&2
-  exit 2
-fi
-
-INPUT=$(cat 2>/dev/null) || exit 2
-[ -z "$INPUT" ] && exit 2
-
-COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command // ""' 2>/dev/null) || exit 2
-[ -z "$COMMAND" ] && exit 0  # No command = nothing to check
+INPUT=$(cat 2>/dev/null) || exit 0
+[ -z "$INPUT" ] && exit 0
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PLUGIN_ROOT="$(dirname "$SCRIPT_DIR")"
+
+if [ -f "$SCRIPT_DIR/lib/vbw-config-root.sh" ]; then
+  . "$SCRIPT_DIR/lib/vbw-config-root.sh"
+  find_vbw_root "$SCRIPT_DIR" >/dev/null 2>&1 || true
+fi
+PROJECT_ROOT="${VBW_CONFIG_ROOT:-}"
+if [ ! -f "$PROJECT_ROOT/.vbw-planning/config.json" ] && [ ! -d "$PROJECT_ROOT/.vbw-planning/phases" ]; then
+  PROJECT_ROOT=""
+fi
+. "$SCRIPT_DIR/lib/active-agent-state.sh"
+. "$SCRIPT_DIR/lib/orchestrator-identity.sh"
+. "$SCRIPT_DIR/lib/guard-enforcement.sh"
+GUARD_LEVEL=$(vbw_guard_enforcement_level "$PROJECT_ROOT" "$INPUT")
+[ "$GUARD_LEVEL" = "off" ] && exit 0
+if ! command -v jq >/dev/null 2>&1; then
+  printf '%s\n' "Blocked: jq not available, cannot validate bash command" >&2
+  exit 2
+fi
+
+COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command // ""' 2>/dev/null) || exit 2
+[ -z "$COMMAND" ] && exit 0
+
+# Parse failures block because unvalidated commands cannot be trusted.
 
 if [ -z "${VBW_PLANNING_DIR:-}" ] && [ -f "$SCRIPT_DIR/lib/vbw-config-root.sh" ]; then
   if source "$SCRIPT_DIR/lib/vbw-config-root.sh" 2>/dev/null; then
@@ -22,7 +35,7 @@ if [ -z "${VBW_PLANNING_DIR:-}" ] && [ -f "$SCRIPT_DIR/lib/vbw-config-root.sh" ]
   fi
 fi
 
-PLANNING_DIR="${VBW_PLANNING_DIR:-.vbw-planning}"
+PLANNING_DIR="$PROJECT_ROOT/.vbw-planning"
 DEFAULT_PATTERNS="$PLUGIN_ROOT/config/destructive-commands.txt"
 LOCAL_PATTERNS="$PLANNING_DIR/destructive-commands.local.txt"
 if [ -f "$SCRIPT_DIR/lib/active-agent-state.sh" ]; then
@@ -39,6 +52,18 @@ if [ -n "$_BG_PAYLOAD_AGENT_TYPE" ] || [ -n "$_BG_PAYLOAD_AGENT_ID" ]; then
   _BG_PAYLOAD_HAS_AGENT=true
 fi
 
+guard_block() {
+  local message="$*"
+  if [ "$GUARD_LEVEL" = "enforce" ]; then
+    printf '%s\n' "$message" >&2
+    exit 2
+  fi
+  jq -cn --arg message "$message" --arg agent "${ACTIVE_AGENT_ROLE:-unknown}" \
+    '{event:"guard_block",level:"advisory",message:$message,agent:$agent}' \
+    >> "$PLANNING_DIR/.event-log.jsonl" 2>/dev/null || true
+  exit 0
+}
+
 detect_agent_role() {
   local candidate role
   for candidate in "${VBW_AGENT_ROLE:-}" "${VBW_ACTIVE_AGENT:-}"; do
@@ -49,7 +74,7 @@ detect_agent_role() {
   done
   for candidate in "$_BG_PAYLOAD_AGENT_TYPE" "$_BG_PAYLOAD_AGENT_ID"; do
     [ -z "$candidate" ] && continue
-    role=$(vbw_active_agent_normalize_role "$candidate") || continue
+    role=$(vbw_active_agent_normalize_payload_role "$candidate") || continue
     printf '%s' "$role"
     return 0
   done
@@ -61,7 +86,7 @@ detect_agent_role() {
     fi
     return 1
   fi
-  printf 'Blocked: unrecognized agent evidence (agent_type=%s, agent_id=%s); role cannot be confirmed.\n' "$_BG_PAYLOAD_AGENT_TYPE" "$_BG_PAYLOAD_AGENT_ID" >&2
+  guard_block "Blocked: unrecognized agent evidence (agent_type=$_BG_PAYLOAD_AGENT_TYPE, agent_id=$_BG_PAYLOAD_AGENT_ID); role cannot be confirmed."
   return 2
 }
 
@@ -110,9 +135,7 @@ block_readonly_agent_command() {
     *) role_label="Agent" ;;
   esac
 
-  echo "Blocked: $role_label Bash is read-only ($reason)" >&2
-  log_block_event "${ACTIVE_AGENT_ROLE:-unknown}:$reason"
-  exit 2
+  guard_block "Blocked: $role_label Bash is read-only ($reason)"
 }
 
 has_shell_file_write_redirection() {
@@ -942,11 +965,9 @@ fi
 
 if command_matches_patterns "$COMMAND"; then
   MATCHED=$(command_pattern_match "$COMMAND")
-  echo "Blocked: destructive command detected ($MATCHED)" >&2
-  echo "Hint: Use VBW_ALLOW_DESTRUCTIVE=1 to override, or run outside VBW." >&2
-  echo "See: config/destructive-commands.txt for the full blocklist." >&2
-  log_block_event "$MATCHED"
-
+  guard_block "Blocked: destructive command detected ($MATCHED)
+Hint: Use VBW_ALLOW_DESTRUCTIVE=1 to override, or run outside VBW.
+See: config/destructive-commands.txt for the full blocklist."
   exit 2
 fi
 

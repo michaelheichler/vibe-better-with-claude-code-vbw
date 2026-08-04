@@ -14,6 +14,9 @@ fi
 if [ -f "$_FG_SCRIPT_DIR/lib/orchestrator-identity.sh" ]; then
   . "$_FG_SCRIPT_DIR/lib/orchestrator-identity.sh"
 fi
+if [ -f "$_FG_SCRIPT_DIR/lib/guard-enforcement.sh" ]; then
+  . "$_FG_SCRIPT_DIR/lib/guard-enforcement.sh"
+fi
 _FG_SHARED_ROOT_RESOLVED=false
 if [ -f "$_FG_SCRIPT_DIR/lib/vbw-config-root.sh" ]; then
   if source "$_FG_SCRIPT_DIR/lib/vbw-config-root.sh" 2>/dev/null; then
@@ -79,9 +82,35 @@ else
   fi
 fi
 
+guard_log_event() {
+  local message="$1"
+  [ -d "$PROJECT_ROOT/.vbw-planning" ] || return 0
+  jq -cn --arg message "$message" --arg agent "${ACTIVE_AGENT_ROLE:-unknown}" \
+    '{event:"guard_block",level:"advisory",message:$message,agent:$agent}' \
+    >> "$PROJECT_ROOT/.vbw-planning/.event-log.jsonl" 2>/dev/null || true
+}
+
+guard_block() {
+  local message="$*"
+  if [ "$GUARD_LEVEL" = "enforce" ]; then
+    printf '%s\n' "$message" >&2
+    exit 2
+  fi
+  guard_log_event "$message"
+  exit 0
+}
+
+GUARD_LEVEL=$(vbw_guard_enforcement_level "$PROJECT_ROOT" "$INPUT")
+[ "$GUARD_LEVEL" = "off" ] && exit 0
+
 normalize_agent_role() {
   command -v vbw_active_agent_normalize_role >/dev/null 2>&1 || return 1
   vbw_active_agent_normalize_role "$1"
+}
+
+normalize_payload_agent_role() {
+  command -v vbw_active_agent_normalize_payload_role >/dev/null 2>&1 || return 1
+  vbw_active_agent_normalize_payload_role "$1"
 }
 
 _FG_PAYLOAD_AGENT_TYPE=$(printf '%s' "$INPUT" | jq -r '.agent_type // ""' 2>/dev/null) || _FG_PAYLOAD_AGENT_TYPE=""
@@ -108,7 +137,7 @@ detect_agent_role() {
   done
   for candidate in "$_FG_PAYLOAD_AGENT_TYPE" "$_FG_PAYLOAD_AGENT_ID"; do
     [ -z "$candidate" ] && continue
-    role=$(normalize_agent_role "$candidate") || continue
+    role=$(normalize_payload_agent_role "$candidate") || continue
     printf '%s' "$role"
     return 0
   done
@@ -120,7 +149,7 @@ detect_agent_role() {
     fi
     return 1
   fi
-  printf 'Blocked: unrecognized agent evidence (agent_type=%s, agent_id=%s); role cannot be confirmed.\n' "$_FG_PAYLOAD_AGENT_TYPE" "$_FG_PAYLOAD_AGENT_ID" >&2
+  guard_block "Blocked: unrecognized agent evidence (agent_type=$_FG_PAYLOAD_AGENT_TYPE, agent_id=$_FG_PAYLOAD_AGENT_ID); role cannot be confirmed."
   return 2
 }
 
@@ -148,8 +177,7 @@ case "$FILE_PATH_LC" in
         summary-*|*-summary.*) _FG_TYPE="SUMMARY" ;;
         context-*|*-context.*) _FG_TYPE="CONTEXT" ;;
       esac
-      echo "Blocked: wrong naming convention for $_FG_TYPE artifact. Use {NN}-${_FG_TYPE}.md (e.g., 01-${_FG_TYPE}.md), not ${_FG_TYPE}-{NN}.md ($_BASENAME_CHECK)" >&2
-      exit 2
+      guard_block "Blocked: wrong naming convention for $_FG_TYPE artifact. Use {NN}-${_FG_TYPE}.md (e.g., 01-${_FG_TYPE}.md), not ${_FG_TYPE}-{NN}.md ($_BASENAME_CHECK)"
     fi
     ;;
 esac
@@ -175,14 +203,11 @@ if [ -n "${VBW_CLAUDE_SIDECHAIN_ROOT:-}" ] && [ -n "${VBW_CLAUDE_SIDECHAIN_HOST_
   esac
 
   if [ "$_FG_SIDECHAIN_BLOCK" = "true" ]; then
-    {
-      echo "Blocked: Claude sidechain write target"
-      echo "blocked target: $_FG_BLOCKED_TARGET"
-      echo "host repo: $VBW_CLAUDE_SIDECHAIN_HOST_ROOT"
-      echo "retry: retry the same Write/Edit with an absolute path under the host repo, not the Claude sidechain path."
-      echo "reason: VBW will not merge or use writes made inside Claude's internal sidechain."
-    } >&2
-    exit 2
+    guard_block "Blocked: Claude sidechain write target
+blocked target: $_FG_BLOCKED_TARGET
+host repo: $VBW_CLAUDE_SIDECHAIN_HOST_ROOT
+retry: retry the same Write/Edit with an absolute path under the host repo, not the Claude sidechain path.
+reason: VBW will not merge or use writes made inside Claude's internal sidechain."
   fi
 fi
 
@@ -194,8 +219,7 @@ if [ "$ACTIVE_AGENT_ROLE" = "scout" ] && [ -n "$PROJECT_ROOT" ]; then
       :
       ;;
     *)
-      echo "Blocked: Scout-safe active-agent context is read-only outside .vbw-planning/" >&2
-      exit 2
+      guard_block "Blocked: Scout-safe active-agent context is read-only outside .vbw-planning/"
       ;;
   esac
 fi
@@ -203,8 +227,7 @@ fi
 case "$FILE_PATH" in
   *.vbw-planning/milestones/*/phases"/"*)
     # Other milestone root files must fall through because archival writes SHIPPED.md and moves STATE.md and ROADMAP.md.
-    echo "Blocked: writes to archived milestone phases are not allowed ($FILE_PATH)" >&2
-    exit 2
+    guard_block "Blocked: writes to archived milestone phases are not allowed ($FILE_PATH)"
     ;;
   *.vbw-planning/*/remediation/uat/round-*/R[0-9]*-SUMMARY.md|\
   *.vbw-planning/*/remediation/qa/round-*/R[0-9]*-SUMMARY.md)
@@ -224,8 +247,7 @@ case "$FILE_PATH" in
       case "$_FG_SUM_STATUS" in
         complete|completed|partial|failed) ;;
         *)
-          echo "Blocked: SUMMARY.md status '${_FG_SUM_STATUS}' is not terminal (must be complete|partial|failed)" >&2
-          exit 2
+          guard_block "Blocked: SUMMARY.md status '${_FG_SUM_STATUS}' is not terminal (must be complete|partial|failed)"
           ;;
       esac
     fi
@@ -354,6 +376,16 @@ path_matches_pattern() {
   return 1
 }
 
+path_matches_declared_scope() {
+  local target="$1" declared="$2" declared_dir
+  path_matches_pattern "$target" "$declared" && return 0
+  declared_dir=$(dirname "$declared")
+  if [ "$declared_dir" = "." ] || [ -z "$declared_dir" ]; then
+    return 1
+  fi
+  path_matches_pattern "$target" "${declared_dir%/}/**"
+}
+
 NORM_TARGET=$(normalize_path "$FILE_PATH")
 
 CONFIG_PATH="$PROJECT_ROOT/.vbw-planning/config.json"
@@ -373,18 +405,15 @@ if [ "$WORKTREE_ISOLATION" != "off" ] && [ -n "$ACTIVE_AGENT_ROLE" ]; then
         *vbw-*) AGENT_NAME_SHORT="${AGENT_NAME_SHORT##*vbw-}" ;;
       esac
       if [ -z "$AGENT_NAME_SHORT" ]; then
-        echo "Blocked: worktree mapping cannot be resolved for role '$ACTIVE_AGENT_ROLE'" >&2
-        exit 2
+        guard_block "Blocked: worktree mapping cannot be resolved for role '$ACTIVE_AGENT_ROLE'"
       fi
       WORKTREE_MAP_FILE="$PROJECT_ROOT/.vbw-planning/.agent-worktrees/${AGENT_NAME_SHORT}.json"
       if [ ! -f "$WORKTREE_MAP_FILE" ]; then
-        echo "Blocked: worktree mapping missing for agent '$AGENT_NAME_SHORT'" >&2
-        exit 2
+        guard_block "Blocked: worktree mapping missing for agent '$AGENT_NAME_SHORT'"
       fi
       WORKTREE_PATH=$(jq -r '.worktree_path // ""' "$WORKTREE_MAP_FILE" 2>/dev/null) || WORKTREE_PATH=""
       if [ -z "$WORKTREE_PATH" ]; then
-        echo "Blocked: worktree mapping has no path for agent '$AGENT_NAME_SHORT'" >&2
-        exit 2
+        guard_block "Blocked: worktree mapping has no path for agent '$AGENT_NAME_SHORT'"
       fi
       WORKTREE_ABS=$(to_abs_path "$WORKTREE_PATH")
       TARGET_ABS=$(to_abs_path "$FILE_PATH")
@@ -393,8 +422,7 @@ if [ "$WORKTREE_ISOLATION" != "off" ] && [ -n "$ACTIVE_AGENT_ROLE" ]; then
           :
           ;;
         *)
-          echo "Blocked: write outside worktree boundary (expected prefix: $WORKTREE_ABS, got: $TARGET_ABS)" >&2
-          exit 2
+          guard_block "Blocked: write outside worktree boundary (expected prefix: $WORKTREE_ABS, got: $TARGET_ABS)"
           ;;
       esac
       ;;
@@ -420,8 +448,7 @@ if [ -d "$CONTRACT_DIR" ]; then
             NORM_FORBIDDEN="${forbidden#./}"
             NORM_FORBIDDEN="${NORM_FORBIDDEN%/}"
             if [ "$NORM_TARGET" = "$NORM_FORBIDDEN" ] || [[ "$NORM_TARGET" == "$NORM_FORBIDDEN"/* ]]; then
-              echo "Blocked: $NORM_TARGET is a forbidden path in contract (${CONTRACT_FILE})" >&2
-              exit 2
+              guard_block "Blocked: $NORM_TARGET is a forbidden path in contract (${CONTRACT_FILE})"
             fi
           done <<< "$FORBIDDEN"
         fi
@@ -431,14 +458,13 @@ if [ -d "$CONTRACT_DIR" ]; then
           while IFS= read -r allowed; do
             [ -z "$allowed" ] && continue
             NORM_ALLOWED="${allowed#./}"
-            if path_matches_pattern "$NORM_TARGET" "$NORM_ALLOWED"; then
+            if path_matches_declared_scope "$NORM_TARGET" "$NORM_ALLOWED"; then
               IN_SCOPE=true
               break
             fi
           done <<< "$ALLOWED"
           if [ "$IN_SCOPE" = "false" ]; then
-            echo "Blocked: $NORM_TARGET not in contract allowed_paths (${CONTRACT_FILE})" >&2
-            exit 2
+            guard_block "Blocked: $NORM_TARGET not in contract allowed_paths (${CONTRACT_FILE})"
           fi
         fi
       fi
@@ -455,8 +481,7 @@ if [ "$ACTIVE_AGENT_ROLE" = "qa" ] && [ -n "$PROJECT_ROOT" ]; then
       :
       ;;
     *)
-      echo "Blocked: role 'qa' cannot write outside .vbw-planning/" >&2
-      exit 2
+      guard_block "Blocked: role 'qa' cannot write outside .vbw-planning/"
       ;;
   esac
 fi
@@ -531,8 +556,7 @@ if [ "$_DG_TARGET_IN_PROJECT" = true ] && [ -z "${VBW_AGENT_ROLE:-}" ] && [ -z "
         :
         ;;
       *)
-        echo "Blocked: orchestrator cannot write product files during delegated workflow (effort=$_DG_EFFORT). Delegate via Task tool to Dev/Debugger subagent." >&2
-        exit 2
+        guard_block "Blocked: orchestrator cannot write product files during delegated workflow (effort=$_DG_EFFORT). Delegate via Task tool to Dev/Debugger subagent."
         ;;
     esac
   fi
@@ -542,12 +566,10 @@ AGENT_ROLE="$ACTIVE_AGENT_ROLE"
 if [ -n "$AGENT_ROLE" ]; then
   case "$AGENT_ROLE" in
     lead|architect|qa)
-      echo "Blocked: role '${AGENT_ROLE}' cannot write outside .vbw-planning/" >&2
-      exit 2
+      guard_block "Blocked: role '${AGENT_ROLE}' cannot write outside .vbw-planning/"
       ;;
     scout)
-      echo "Blocked: role 'scout' is read-only" >&2
-      exit 2
+      guard_block "Blocked: role 'scout' is read-only"
       ;;
     dev|debugger)
       ;;
@@ -556,35 +578,7 @@ if [ -n "$AGENT_ROLE" ]; then
   esac
 fi
 
-execution_is_live() {
-  local exec_state="$PROJECT_ROOT/.vbw-planning/.execution-state.json"
-  local exec_status now mtime age marker_status marker_live
-  if [ -f "$exec_state" ]; then
-    exec_status=$(jq -r '.status // ""' "$exec_state" 2>/dev/null) || exec_status=""
-    if [ "$exec_status" = "running" ]; then
-      now=$(date +%s 2>/dev/null || echo 0)
-      if [ "$(uname)" = "Darwin" ]; then
-        mtime=$(stat -f %m "$exec_state" 2>/dev/null || echo 0)
-      else
-        mtime=$(stat -c %Y "$exec_state" 2>/dev/null || echo 0)
-      fi
-      age=$((now - mtime))
-      if [ "$age" -ge 0 ] && [ "$age" -lt 14400 ]; then
-        return 0
-      fi
-    fi
-  fi
-  if [ -f "$PROJECT_ROOT/.vbw-planning/.delegated-workflow.json" ]; then
-    marker_status=$(VBW_PLANNING_DIR="$PROJECT_ROOT/.vbw-planning" bash "${_FG_SCRIPT_DIR}/delegated-workflow.sh" status-json 2>/dev/null) || marker_status=""
-    if [ -n "$marker_status" ]; then
-      marker_live=$(echo "$marker_status" | jq -r '.live // false' 2>/dev/null) || marker_live="false"
-      [ "$marker_live" = "true" ] && return 0
-    fi
-  fi
-  return 1
-}
-
-execution_is_live || exit 0
+vbw_guard_execution_is_live "$PROJECT_ROOT" || exit 0
 
 ACTIVE_PLAN=""
 for PLAN_FILE in "$PHASES_DIR"/*/*-PLAN.md; do
@@ -619,10 +613,9 @@ DECLARED_FILES=$(awk '
 while IFS= read -r declared; do
   [ -z "$declared" ] && continue
   NORM_DECLARED=$(normalize_path "$declared")
-  if path_matches_pattern "$NORM_TARGET" "$NORM_DECLARED"; then
+  if path_matches_declared_scope "$NORM_TARGET" "$NORM_DECLARED"; then
     exit 0
   fi
 done <<< "$DECLARED_FILES"
 
-echo "Blocked: $NORM_TARGET is not in active plan's files_modified ($ACTIVE_PLAN)" >&2
-exit 2
+guard_block "Blocked: $NORM_TARGET is not in active plan's files_modified ($ACTIVE_PLAN)"
