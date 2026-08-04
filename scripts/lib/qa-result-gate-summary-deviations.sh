@@ -1,22 +1,37 @@
 #!/usr/bin/env bash
-set -u
 
+# Extract a single scalar from YAML frontmatter. This intentionally matches
+# compile-verify-context.sh's simple frontmatter lookup for plan identity.
 extract_frontmatter_scalar_value() {
   local file_path="${1:-}"
   local key_name="${2:-}"
-  [ -f "$file_path" ] && [ -n "$key_name" ] || return 0
+  [ -f "$file_path" ] || return 0
+  [ -n "$key_name" ] || return 0
   awk -v key="$key_name" '
-    function trim(v) { gsub(/^[[:space:]]+|[[:space:]]+$/, "", v); return v }
-    function strip_quotes(v, first, last) {
-      first=substr(v,1,1); last=substr(v,length(v),1)
-      if (first == "\"" && last == "\"") return substr(v,2,length(v)-2)
-      if (first == squote && last == squote) { v=substr(v,2,length(v)-2); gsub(squote squote,squote,v) }
+    function trim(v) {
+      gsub(/^[[:space:]]+|[[:space:]]+$/, "", v)
       return v
     }
-    BEGIN { in_fm=0; squote=sprintf("%c",39) }
-    NR == 1 && /^---[[:space:]]*$/ { in_fm=1; next }
+    function strip_quotes(v, first, last) {
+      first = substr(v, 1, 1)
+      last = substr(v, length(v), 1)
+      if (first == "\"" && last == "\"") return substr(v, 2, length(v) - 2)
+      if (first == squote && last == squote) {
+        v = substr(v, 2, length(v) - 2); gsub(squote squote, squote, v)
+        return v
+      }
+      return v
+    }
+    BEGIN { in_fm = 0; squote = sprintf("%c", 39) }
+    NR == 1 && /^---[[:space:]]*$/ { in_fm = 1; next }
     in_fm && /^---[[:space:]]*$/ { exit }
-    in_fm && $0 ~ ("^" key ":[[:space:]]*") { value=$0; sub("^" key ":[[:space:]]*", "", value); value=strip_quotes(trim(value)); if (value != "") print value; exit }
+    in_fm && $0 ~ ("^" key ":[[:space:]]*") {
+      value = $0
+      sub("^" key ":[[:space:]]*", "", value)
+      value = strip_quotes(trim(value))
+      if (value != "") print value
+      exit
+    }
   ' "$file_path" 2>/dev/null
 }
 
@@ -47,26 +62,41 @@ summary_plan_id_from_plan_file() {
 }
 
 source_plan_ids_for_summary() {
-  local summary_file="${1:-}" summary_dir="" summary_base="" summary_prefix="" round_summary_base="" plan_file=""
+  local summary_file="${1:-}"
+  local summary_dir=""
+  local summary_base=""
+  local summary_prefix=""
+  local round_summary_base=""
+  local plan_file=""
+
   [ -f "$summary_file" ] || return 0
   summary_dir=$(dirname "$summary_file")
   summary_base=$(basename "$summary_file")
+
   if [ "$summary_base" = "SUMMARY.md" ]; then
     plan_file="$summary_dir/PLAN.md"
     [ -f "$plan_file" ] && summary_plan_id_from_plan_file "$plan_file"
     return 0
   fi
+
   case "$summary_base" in
-    *-SUMMARY.md) summary_prefix="${summary_base%-SUMMARY.md}" ;;
-    *) return 0 ;;
+    *-SUMMARY.md)
+      summary_prefix="${summary_base%-SUMMARY.md}"
+      ;;
+    *)
+      return 0
+      ;;
   esac
+
   if [[ "$summary_dir" == */round-* ]] && [[ "$summary_prefix" =~ ^R[0-9][0-9]$ ]]; then
     round_summary_base="$summary_prefix"
     while IFS= read -r plan_file; do
-      [ -f "$plan_file" ] && summary_plan_id_from_plan_file "$plan_file"
+      [ -f "$plan_file" ] || continue
+      summary_plan_id_from_plan_file "$plan_file"
     done < <(find "$summary_dir" -maxdepth 1 ! -name '.*' \( -name "${round_summary_base}-PLAN.md" -o -name "${round_summary_base}-*-PLAN.md" \) 2>/dev/null | (sort -V 2>/dev/null || sort))
     return 0
   fi
+
   plan_file="$summary_dir/${summary_prefix}-PLAN.md"
   [ -f "$plan_file" ] && summary_plan_id_from_plan_file "$plan_file"
 }
@@ -87,28 +117,6 @@ summary_deviation_matches_any_signature() {
     fi
   done <<< "$source_plan_ids"
   return 1
-}
-
-summary_deviation_is_accepted() {
-  local phase_dir="${1:-}"
-  local summary_file="${2:-}"
-  local deviation_text="${3:-}"
-  local accepted_signatures="${4:-}"
-  local source_path=""
-  local source_plan_ids=""
-  [ -n "$accepted_signatures" ] || return 1
-  [ -x "$TRACK_UAT_DEVIATIONS_SCRIPT" ] || return 1
-  [ -f "$summary_file" ] && [ -n "$deviation_text" ] || return 1
-  phase_dir="${phase_dir%/}"
-  source_path="${summary_file#"$phase_dir/"}"
-  [ -n "$source_path" ] || return 1
-  if type summary_deviation_source_plan_candidates >/dev/null 2>&1; then
-    source_plan_ids=$(summary_deviation_source_plan_candidates "$summary_file" 2>/dev/null || true)
-  else
-    source_plan_ids=$(source_plan_ids_for_summary "$summary_file")
-  fi
-  [ -n "$source_plan_ids" ] || return 1
-  summary_deviation_matches_any_signature "$accepted_signatures" "$source_plan_ids" "$source_path" "$deviation_text"
 }
 
 round_classification_scan_is_valid() {
@@ -168,6 +176,33 @@ summary_deviation_matches_round_classification() {
   round_classification_pair_matches_deviation "$deviation_text" "$classified_pairs"
 }
 
+summary_deviation_is_accepted() {
+  local phase_dir="${1:-}"
+  local summary_file="${2:-}"
+  local deviation_text="${3:-}"
+  local accepted_signatures="${4:-}"
+  local source_path=""
+  local source_plan_ids=""
+
+  [ -n "$accepted_signatures" ] || return 1
+  [ -x "$TRACK_UAT_DEVIATIONS_SCRIPT" ] || return 1
+  [ -f "$summary_file" ] || return 1
+  [ -n "$deviation_text" ] || return 1
+
+  phase_dir="${phase_dir%/}"
+  source_path="${summary_file#"$phase_dir/"}"
+  [ -n "$source_path" ] || return 1
+
+  if type summary_deviation_source_plan_candidates >/dev/null 2>&1; then
+    source_plan_ids=$(summary_deviation_source_plan_candidates "$summary_file" 2>/dev/null || true)
+  else
+    source_plan_ids=$(source_plan_ids_for_summary "$summary_file")
+  fi
+  [ -n "$source_plan_ids" ] || return 1
+
+  summary_deviation_matches_any_signature "$accepted_signatures" "$source_plan_ids" "$source_path" "$deviation_text"
+}
+
 count_yaml_summary_deviations() {
   extract_frontmatter_array_items "${1:-}" deviations | awk '
     { lc=tolower($0); if (lc ~ /^none\.?$/ || lc ~ /^n\/a\.?$/ || lc ~ /^na\.?$/ || lc ~ /^no deviations/) next; count++ }
@@ -215,10 +250,11 @@ count_deviations_in_summary() {
   local accepted_signatures="${5:-}"
   local deviations=0
   if type extract_summary_deviations >/dev/null 2>&1; then
-    # Invariant: deviations counts active entries processed, variant: unread entries in this summary.
     while IFS= read -r deviation_text; do
       [ -n "$deviation_text" ] || continue
-      summary_deviation_is_accepted "$phase_dir" "$summary_file" "$deviation_text" "$accepted_signatures" && continue
+      if summary_deviation_is_accepted "$phase_dir" "$summary_file" "$deviation_text" "$accepted_signatures"; then
+        continue
+      fi
       if [ -n "$round_plan_dir" ] && summary_deviation_matches_round_classification \
         "$phase_dir" "$scan_dir" "$summary_file" "$deviation_text" "$round_plan_dir"; then
         continue
@@ -231,6 +267,11 @@ count_deviations_in_summary() {
   printf '%s\n' "$deviations"
 }
 
+# Count active, non-placeholder deviations across SUMMARY.md files in a given directory.
+# Accepted UAT process exceptions are suppressed using the same signature identity
+# emitted by compile-verify-context.sh; when that identity cannot be derived, the
+# gate fails closed and counts the deviation as active.
+# Arguments: $1 = phase directory, $2 = directory to scan for SUMMARY.md files
 count_deviations_in_dir() {
   local phase_dir="${1:-}"
   local scan_dir="${2:-${1:-}}"
@@ -241,7 +282,6 @@ count_deviations_in_dir() {
   if [ -x "$TRACK_UAT_DEVIATIONS_SCRIPT" ]; then
     accepted_signatures=$(bash "$TRACK_UAT_DEVIATIONS_SCRIPT" accepted-signatures "$phase_dir" 2>/dev/null || true)
   fi
-  # Invariant: total is active deviations in processed summaries, variant: unread summaries.
   while IFS= read -r summary_file; do
     [ -f "$summary_file" ] || continue
     total=$((total + $(count_deviations_in_summary "$phase_dir" "$scan_dir" "$summary_file" "$round_plan_dir" "$accepted_signatures")))
