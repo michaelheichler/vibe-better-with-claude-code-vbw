@@ -198,7 +198,11 @@ RESULT=$(awk '
 
 FAIL_COUNT=$(count_fail_rows_in_verification "$VERIF_PATH")
 
-DEVIATION_COUNT=$(count_deviations_in_dir "$PHASE_DIR" "$SUMMARY_SCOPE_DIR")
+if [ "$IN_REMEDIATION" = "true" ] && [ "$SUMMARY_SCOPE_DIR" != "$PHASE_DIR" ]; then
+  DEVIATION_COUNT=$(count_deviations_in_dir "$PHASE_DIR" "$SUMMARY_SCOPE_DIR" "$PLAN_SCOPE_DIR")
+else
+  DEVIATION_COUNT=$(count_deviations_in_dir "$PHASE_DIR" "$SUMMARY_SCOPE_DIR")
+fi
 
 ROUND_SOURCE_VERIFICATION_MISSING="false"
 if [ "$IN_REMEDIATION" = "true" ] && [ "$SUMMARY_SCOPE_DIR" != "$PHASE_DIR" ]; then
