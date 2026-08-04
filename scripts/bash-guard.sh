@@ -1,28 +1,67 @@
 #!/bin/bash
 set -u
-# Parse failures block because unvalidated commands cannot be trusted.
-
-if ! command -v jq >/dev/null 2>&1; then
-  echo "Blocked: jq not available, cannot validate bash command" >&2
-  exit 2
-fi
-
-INPUT=$(cat 2>/dev/null) || exit 2
-[ -z "$INPUT" ] && exit 2
-
-COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command // ""' 2>/dev/null) || exit 2
-[ -z "$COMMAND" ] && exit 0  # No command = nothing to check
-
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PLUGIN_ROOT="$(dirname "$SCRIPT_DIR")"
 
-if [ -z "${VBW_PLANNING_DIR:-}" ] && [ -f "$SCRIPT_DIR/lib/vbw-config-root.sh" ]; then
-  if source "$SCRIPT_DIR/lib/vbw-config-root.sh" 2>/dev/null; then
-    find_vbw_root "$SCRIPT_DIR" >/dev/null 2>&1 || true
+[ -f "$SCRIPT_DIR/lib/active-agent-state.sh" ] || { printf 'Blocked: VBW guard library missing (%s)\n' "$SCRIPT_DIR/lib/active-agent-state.sh" >&2; exit 2; }
+[ -f "$SCRIPT_DIR/lib/orchestrator-identity.sh" ] || { printf 'Blocked: VBW guard library missing (%s)\n' "$SCRIPT_DIR/lib/orchestrator-identity.sh" >&2; exit 2; }
+[ -f "$SCRIPT_DIR/lib/guard-enforcement.sh" ] || { printf 'Blocked: VBW guard library missing (%s)\n' "$SCRIPT_DIR/lib/guard-enforcement.sh" >&2; exit 2; }
+. "$SCRIPT_DIR/lib/active-agent-state.sh" || { printf 'Blocked: VBW guard library failed to load (%s)\n' "$SCRIPT_DIR/lib/active-agent-state.sh" >&2; exit 2; }
+. "$SCRIPT_DIR/lib/orchestrator-identity.sh" || { printf 'Blocked: VBW guard library failed to load (%s)\n' "$SCRIPT_DIR/lib/orchestrator-identity.sh" >&2; exit 2; }
+. "$SCRIPT_DIR/lib/guard-enforcement.sh" || { printf 'Blocked: VBW guard library failed to load (%s)\n' "$SCRIPT_DIR/lib/guard-enforcement.sh" >&2; exit 2; }
+PROJECT_ROOT=$(vbw_guard_project_root "$PWD") || PROJECT_ROOT=""
+GUARD_LEVEL=$(vbw_guard_enforcement_level "$PROJECT_ROOT" "")
+[ "$GUARD_LEVEL" = "off" ] && exit 0
+PLANNING_DIR="$PROJECT_ROOT/.vbw-planning"
+
+guard_log_event() {
+  local message="$1" level="${GUARD_LEVEL:-enforce}" agent="${ACTIVE_AGENT_ROLE:-${VBW_ACTIVE_AGENT:-unknown}}"
+  if command -v jq >/dev/null 2>&1 && jq -cn --arg message "$message" --arg level "$level" --arg agent "$agent" \
+    '{event:"guard_block",level:$level,message:$message,agent:$agent}' \
+    >> "$PLANNING_DIR/.event-log.jsonl" 2>/dev/null; then
+    return 0
   fi
+  message=$(printf '%s' "$message" | tr '\r\n' ' ' | sed 's/\\/\\\\/g; s/"/\\"/g' | tr -d '[:cntrl:]')
+  agent=$(printf '%s' "$agent" | tr '\r\n' ' ' | sed 's/\\/\\\\/g; s/"/\\"/g' | tr -d '[:cntrl:]')
+  printf '{"event":"guard_block","level":"%s","message":"%s","agent":"%s"}\n' \
+    "$level" "$message" "$agent" >> "$PLANNING_DIR/.event-log.jsonl" 2>/dev/null || true
+}
+
+guard_block() {
+  local message="$1" matched="${2:-$1}"
+  if [ "$GUARD_LEVEL" = "enforce" ]; then
+    if declare -F log_block_event >/dev/null 2>&1; then
+      log_block_event "$matched"
+    else
+      guard_log_event "$message"
+    fi
+    printf '%s\n' "$message" >&2
+    exit 2
+  fi
+  guard_log_event "$message"
+  exit 0
+}
+
+if ! INPUT=$(cat 2>/dev/null); then
+  guard_block "Blocked: unable to read bash guard input"
+fi
+[ -n "$INPUT" ] || guard_block "Blocked: empty bash guard input"
+GUARD_LEVEL=$(vbw_guard_enforcement_level "$PROJECT_ROOT" "$INPUT")
+[ "$GUARD_LEVEL" = "off" ] && exit 0
+if ! command -v jq >/dev/null 2>&1; then
+  [ "$GUARD_LEVEL" = "enforce" ] || { guard_log_event "Blocked: jq not available, cannot validate bash command"; exit 0; }
+  printf '%s\n' "Blocked: jq not available, cannot validate bash command" >&2
+  exit 2
 fi
 
-PLANNING_DIR="${VBW_PLANNING_DIR:-.vbw-planning}"
+if ! COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command // ""' 2>/dev/null); then
+  [ "$GUARD_LEVEL" = "enforce" ] || { guard_log_event "Blocked: invalid bash command payload"; exit 0; }
+  exit 2
+fi
+[ -z "$COMMAND" ] && exit 0
+
+# Parse failures block because unvalidated commands cannot be trusted.
+
 DEFAULT_PATTERNS="$PLUGIN_ROOT/config/destructive-commands.txt"
 LOCAL_PATTERNS="$PLANNING_DIR/destructive-commands.local.txt"
 if [ -f "$SCRIPT_DIR/lib/active-agent-state.sh" ]; then
@@ -49,7 +88,7 @@ detect_agent_role() {
   done
   for candidate in "$_BG_PAYLOAD_AGENT_TYPE" "$_BG_PAYLOAD_AGENT_ID"; do
     [ -z "$candidate" ] && continue
-    role=$(vbw_active_agent_normalize_role "$candidate") || continue
+    role=$(vbw_active_agent_normalize_payload_role "$candidate") || continue
     printf '%s' "$role"
     return 0
   done
@@ -61,7 +100,7 @@ detect_agent_role() {
     fi
     return 1
   fi
-  printf 'Blocked: unrecognized agent evidence (agent_type=%s, agent_id=%s). Role cannot be confirmed. Respawn the worker with a recognized VBW role name such as vbw-dev. The guard checks agent_type and agent_id, not subagent_type. VBW values may start with vbw:. Use vbw-<role> or vbw-<role>-<digits>. Roles are lead, dev, qa, qa-author, scout, debugger, architect, and docs.\n' "$_BG_PAYLOAD_AGENT_TYPE" "$_BG_PAYLOAD_AGENT_ID" >&2
+  guard_block "Blocked: unrecognized agent evidence (agent_type=$_BG_PAYLOAD_AGENT_TYPE, agent_id=$_BG_PAYLOAD_AGENT_ID). Role cannot be confirmed. Respawn the worker with a recognized VBW role name such as vbw-dev. The guard checks agent_type and agent_id, not subagent_type. VBW values may start with vbw:. Use vbw-<role> or vbw-<role>-<digits>. Roles are lead, dev, qa, qa-author, scout, debugger, architect, and docs." "unrecognized-agent-evidence"
   return 2
 }
 
@@ -86,17 +125,16 @@ for PFILE in "$DEFAULT_PATTERNS" "$LOCAL_PATTERNS"; do
 done
 
 log_block_event() {
-  local matched="$1"
-  local preview matched_esc agent timestamp
+  local matched="$1" preview agent timestamp
 
   if [ -d "$PLANNING_DIR" ]; then
-    preview=$(echo "$COMMAND" | head -c 40)
+    preview=$(printf '%s' "$COMMAND" | head -c 40 | tr '\r\n' ' ')
+    matched=$(printf '%s' "$matched" | tr '\r\n' ' ')
     agent="${ACTIVE_AGENT_ROLE:-${VBW_ACTIVE_AGENT:-unknown}}"
     timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ" 2>/dev/null || date +"%s")
-    preview=$(echo "$preview" | sed 's/"/\\"/g')
-    matched_esc=$(echo "$matched" | sed 's/"/\\"/g')
-    printf '{"event":"bash_guard_block","command_preview":"%s","pattern_matched":"%s","agent":"%s","timestamp":"%s"}\n' \
-      "$preview" "$matched_esc" "$agent" "$timestamp" >> "$PLANNING_DIR/.event-log.jsonl" 2>/dev/null
+    jq -cn --arg preview "$preview" --arg matched "$matched" --arg agent "$agent" --arg timestamp "$timestamp" \
+      '{event:"bash_guard_block",command_preview:$preview,pattern_matched:$matched,agent:$agent,timestamp:$timestamp}' \
+      >> "$PLANNING_DIR/.event-log.jsonl" 2>/dev/null || true
   fi
 }
 
@@ -110,9 +148,7 @@ block_readonly_agent_command() {
     *) role_label="Agent" ;;
   esac
 
-  echo "Blocked: $role_label Bash is read-only ($reason)" >&2
-  log_block_event "${ACTIVE_AGENT_ROLE:-unknown}:$reason"
-  exit 2
+  guard_block "Blocked: $role_label Bash is read-only ($reason)"
 }
 
 has_shell_file_write_redirection() {
@@ -942,12 +978,9 @@ fi
 
 if command_matches_patterns "$COMMAND"; then
   MATCHED=$(command_pattern_match "$COMMAND")
-  echo "Blocked: destructive command detected ($MATCHED)" >&2
-  echo "Hint: Use VBW_ALLOW_DESTRUCTIVE=1 to override, or run outside VBW." >&2
-  echo "See: config/destructive-commands.txt for the full blocklist." >&2
-  log_block_event "$MATCHED"
-
-  exit 2
+  guard_block "Blocked: destructive command detected ($MATCHED)
+Hint: Use VBW_ALLOW_DESTRUCTIVE=1 to override, or run outside VBW.
+See: config/destructive-commands.txt for the full blocklist." "$MATCHED"
 fi
 
 exit 0

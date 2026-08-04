@@ -117,28 +117,36 @@ json_object_array_covers_full_issue_objects() {
   if jq -e -n \
     --slurpfile required "$required_file" \
     --slurpfile candidate "$candidate_file" '
-      def issue_key: [.test, .file, .error] | @json;
+      def valid_issue:
+        type == "object"
+        and (.test | type == "string")
+        and (.file | type == "string")
+        and (.error | type == "string");
       ($required[0] // empty) as $required_array |
       ($candidate[0] // empty) as $candidate_array |
       if (($required_array | type) != "array") or (($candidate_array | type) != "array") then
         false
       else
-        (reduce ($candidate_array[] | select(
-          type == "object"
-          and (.test | type == "string")
-          and (.file | type == "string")
-          and (.error | type == "string")
-        )) as $candidate ({}; .[$candidate | issue_key] = true)) as $candidate_index |
+        ([ $required_array[] | select(valid_issue and .test != "") ]
+          | group_by([.test, .file])) as $required_pairs |
         all($required_array[];
           if type != "object" then
             false
           elif ((.test | type) == "string" and .test == "") then
             true
-          elif ((.test | type) != "string") or ((.file | type) != "string") or ((.error | type) != "string") then
-            false
           else
-            ($candidate_index[issue_key] // false) == true
+            valid_issue
           end
+        )
+        and all($required_pairs[];
+          . as $pair |
+          any($candidate_array[];
+            . as $candidate |
+            valid_issue
+            and .test == $pair[0].test
+            and .file == $pair[0].file
+            and any($pair[]; .error == $candidate.error)
+          )
         )
       end
     ' >/dev/null 2>&1; then

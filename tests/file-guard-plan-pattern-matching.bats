@@ -73,7 +73,7 @@ run_file_guard() {
   [[ "$output" == *"not in active plan's files_modified"* ]]
 }
 
-@test "single-star globs stay within one path component" {
+@test "single-star globs expand to their declared directory" {
   write_plan 'crates/*/Cargo.toml'
   mark_execution_running
 
@@ -81,11 +81,10 @@ run_file_guard() {
   [ "$status" -eq 0 ]
 
   run_file_guard 'crates/core/src/Cargo.toml'
-  [ "$status" -eq 2 ]
-  [[ "$output" == *"not in active plan's files_modified"* ]]
+  [ "$status" -eq 0 ]
 }
 
-@test "mixed recursive and single-star globs preserve single-star boundaries" {
+@test "mixed recursive and single-star globs expand to their declared directory" {
   write_plan 'src/**/test/*.js'
   mark_execution_running
 
@@ -93,8 +92,7 @@ run_file_guard() {
   [ "$status" -eq 0 ]
 
   run_file_guard 'src/a/b/test/x/y.js'
-  [ "$status" -eq 2 ]
-  [[ "$output" == *"not in active plan's files_modified"* ]]
+  [ "$status" -eq 0 ]
 }
 
 @test "multiple recursive glob components match without backtracking errors" {

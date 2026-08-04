@@ -3,6 +3,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PRICING_PATH="$SCRIPT_DIR/../config/model-pricing.json"
 CACHE_KEY_LIB="$SCRIPT_DIR/lib/vbw-cache-key.sh"
 hash_path() {
   bash -c '. "$1"; vbw_hash_path "$2"' _ "$CACHE_KEY_LIB" "$1"
@@ -52,11 +53,8 @@ fi
 
 _MODELS_BIN="${CLAUDE_CODE_EXECPATH:-$(command -v claude || true)}"
 [ -f "$_MODELS_BIN" ] || _MODELS_BIN=""
-_MODELS_STAMP="0:0"
-if [ -n "$_MODELS_BIN" ]; then
-  _MODELS_STAMP="$(stat -f '%m:%z' "$_MODELS_BIN" 2>/dev/null || stat -c '%Y:%s' "$_MODELS_BIN" 2>/dev/null || echo 0:0)"
-fi
-_MODELS_CACHE="/tmp/vbw-models-$(hash_path "bin:${_MODELS_BIN:-none}:${_MODELS_STAMP}")"
+_MODELS_SOURCE="$(bash -c '. "$1"; vbw_model_cache_source "$2" "$3"' _ "$CACHE_KEY_LIB" "$_MODELS_BIN" "$PRICING_PATH")"
+_MODELS_CACHE="/tmp/vbw-models-$(hash_path "$_MODELS_SOURCE")"
 if [ -n "${VBW_MODEL_CATALOG_FILE:-}" ]; then
   if [ -f "$VBW_MODEL_CATALOG_FILE" ]; then
     MODELS_HASH=$(file_content_fingerprint "$VBW_MODEL_CATALOG_FILE")
@@ -71,8 +69,13 @@ fi
 
 CONFIG_HASH=$(file_content_fingerprint "$CONFIG_PATH")
 PROFILES_HASH=$(file_content_fingerprint "$PROFILES_PATH")
+if [ -f "$PRICING_PATH" ]; then
+  PRICING_HASH=$(file_content_fingerprint "$PRICING_PATH")
+else
+  PRICING_HASH="none"
+fi
 PATH_HASH=$(hash_path "${CONFIG_PATH}|${PROFILES_PATH}")
-CACHE_FILE="/tmp/vbw-model-${AGENT}-${PATH_HASH}-${CONFIG_HASH}-${PROFILES_HASH}-${MODELS_HASH}"
+CACHE_FILE="/tmp/vbw-model-${AGENT}-${PATH_HASH}-${CONFIG_HASH}-${PROFILES_HASH}-${MODELS_HASH}-${PRICING_HASH}"
 if [ -f "$CACHE_FILE" ]; then
   _cached=$(cat "$CACHE_FILE")
   if [[ "$_cached" =~ $MODEL_SHAPE ]]; then
@@ -86,14 +89,58 @@ CATALOG_EXTRA=""
 CATALOG_LOADED=false
 load_catalog() {
   if [ "$CATALOG_LOADED" = false ]; then
-    CATALOG=$(bash "$SCRIPT_DIR/detect-models.sh" 2>/dev/null) || CATALOG=""
-    CATALOG_EXTRA=$(jq -r '(.model_catalog_extra // [])[]' "$CONFIG_PATH" 2>/dev/null || true)
-    CATALOG_LOADED=true
+    printf -v CATALOG '%s' "$(bash "$SCRIPT_DIR/detect-models.sh" 2>/dev/null || true)"
+    printf -v CATALOG_EXTRA '%s' "$(jq -r '(.model_catalog_extra // [])[]' "$CONFIG_PATH" 2>/dev/null || true)"
+    printf -v CATALOG_LOADED '%s' true
   fi
 }
 
 candidates_from() {
   jq -r "($1) // empty | if type == \"array\" then .[] else . end" "$CONFIG_PATH" 2>/dev/null || true
+}
+
+resolve_alias() {
+  local model="$1"
+  case "$model" in
+    opus|sonnet|haiku|fable|default)
+      printf '%s\n' "$model"
+      return 0
+      ;;
+  esac
+  if [ -f "$PRICING_PATH" ]; then
+    jq -r --arg m "$model" '.aliases[$m] // $m' "$PRICING_PATH" 2>/dev/null || printf '%s\n' "$model"
+  else
+    printf '%s\n' "$model"
+  fi
+}
+
+resolve_catalog_alias() {
+  local model="$1"
+  if [ -f "$PRICING_PATH" ]; then
+    jq -r --arg m "$model" '.aliases[$m] // $m' "$PRICING_PATH" 2>/dev/null || printf '%s\n' "$model"
+  else
+    printf '%s\n' "$model"
+  fi
+}
+
+emit_catalog_choice() {
+  local model="$1" canonical="$2"
+  case "$model" in
+    opus|sonnet|haiku|fable|default) printf '%s\n' "$model" ;;
+    *) printf '%s\n' "$canonical" ;;
+  esac
+}
+
+pick_catalog_model() {
+  local candidates="$1" haystack="$2" c catalog_model
+  while IFS= read -r c; do
+    [ -z "$c" ] && continue
+    catalog_model=$(resolve_catalog_alias "$c")
+    if grep -Fxq -- "$catalog_model" <<< "$haystack" || { case "$c" in opus|sonnet|haiku|fable|default) false ;; *) [ "$catalog_model" != "$c" ] ;; esac; }; then
+      emit_catalog_choice "$c" "$catalog_model"
+      return 0
+    fi
+  done <<< "$candidates"
 }
 
 pick_model() {
@@ -106,6 +153,7 @@ pick_model() {
     all="${all}${c}"$'\n'
   done
   [ "$count" -eq 0 ] && return 0
+  first=$(resolve_alias "$first")
   if [ "$count" -eq 1 ]; then
     echo "$first"
     return 0
@@ -113,13 +161,8 @@ pick_model() {
   load_catalog
   if [ -n "$CATALOG" ]; then
     local haystack="${CATALOG}"$'\n'"${CATALOG_EXTRA}"
-    while IFS= read -r c; do
-      [ -z "$c" ] && continue
-      if grep -Fxq -- "$c" <<< "$haystack"; then
-        chosen="$c"
-        break
-      fi
-    done <<< "$all"
+    chosen=$(pick_catalog_model "$all" "$haystack")
+
   fi
   echo "${chosen:-$first}"
 }
@@ -138,7 +181,7 @@ if [ -z "$MODEL" ]; then
     echo "Invalid model_profile '$PROFILE'. Valid: quality, balanced, budget" >&2
     exit 1
   fi
-  MODEL=$(jq -r ".$PROFILE.$AGENT" "$PROFILES_PATH")
+  MODEL=$(resolve_alias "$(jq -r ".$PROFILE.$AGENT" "$PROFILES_PATH")")
 fi
 
 if [[ "$MODEL" =~ $MODEL_SHAPE ]]; then

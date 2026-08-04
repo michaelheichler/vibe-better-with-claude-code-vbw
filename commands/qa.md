@@ -322,7 +322,7 @@ Note: Continuous verification handled by hooks. This command is for deep, on-dem
           - Plans for `plans_verified` / `plan_ref`: {current round R{RR}-PLAN.md path(s) only}
           - Summaries for current-round execution evidence: {current round R{RR}-SUMMARY.md path(s) only}
           - Do NOT include phase-root PLAN.md/SUMMARY.md files in plans_verified or plan_ref for round-scoped output.
-          - Any original FAIL not resolved by code-fix, plan-amendment, or documented process-exception is still a FAIL, even if the remediation round's own must_haves pass.
+          - Any original FAIL not resolved by code-fix, plan-amendment, documented process-exception, or doc-fix is still a FAIL, even if the remediation round's own must_haves pass. A doc-fix requires a documentation-content subject and the named documentation path in files_modified.
         - Otherwise, verify full phase scope.
           - Plans: {paths to phase PLAN.md files}
           - Summaries: {paths to phase SUMMARY.md files}

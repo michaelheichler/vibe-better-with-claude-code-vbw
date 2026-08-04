@@ -517,6 +517,37 @@ paths_include_code_fix_evidence() {
   return 1
 }
 
+paths_include_documentation_fix_evidence() {
+  local phase_dir="${1:-}"
+  local required_paths="${2:-}"
+  local changed_paths=""
+  local required_path=""
+  local changed_path=""
+  local canonical_required=""
+  local canonical_changed=""
+  local found=false
+
+  changed_paths=$(cat)
+  while IFS= read -r required_path; do
+    required_path=$(normalize_recorded_path "$required_path")
+    [ -n "$required_path" ] || return 1
+    canonical_required=$(canonicalize_phase_path "$required_path" "$phase_dir")
+    path_is_documentation_artifact "$canonical_required" || return 1
+    found=false
+    while IFS= read -r changed_path; do
+      changed_path=$(normalize_recorded_path "$changed_path")
+      [ -n "$changed_path" ] || continue
+      canonical_changed=$(canonicalize_phase_path "$changed_path" "$phase_dir")
+      if [ "$canonical_required" = "$canonical_changed" ]; then
+        found=true
+        break
+      fi
+    done <<< "$changed_paths"
+    [ "$found" = true ] || return 1
+  done <<< "$required_paths"
+  [ -n "$required_paths" ]
+}
+
 paths_include_process_exception_evidence() {
   local phase_dir="${1:-}"
   while IFS= read -r path; do

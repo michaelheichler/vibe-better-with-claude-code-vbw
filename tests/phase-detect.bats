@@ -2969,6 +2969,47 @@ EOF
   grep -q "qa_reason=working_tree_changed" <<< "$output"
 }
 
+@test "qa_status ignores unrelated tracked and untracked working-tree dirt" {
+  mkdir -p .vbw-planning/phases/01-test
+  cat > .vbw-planning/phases/01-test/01-PLAN.md <<'EOF'
+---
+files_modified: [app.py]
+files_touched: [app.py]
+---
+EOF
+  printf '%s\n' '---' 'status: complete' '---' '# Summary' 'Done.' > .vbw-planning/phases/01-test/01-SUMMARY.md
+  echo "# My Project" > .vbw-planning/PROJECT.md
+
+  echo 'print("clean")' > app.py
+  echo 'tracked' > unrelated.txt
+  git add app.py unrelated.txt
+  git commit -m "phase product" --quiet
+  verified_commit="$(git rev-parse HEAD)"
+
+  printf '%s\n' \
+    '---' \
+    'result: PASS' \
+    'writer: write-verification.sh' \
+    'plans_verified:' \
+    '  - 01' \
+    "verified_at_commit: ${verified_commit}" \
+    '---' \
+    '# Verification' \
+    'Passed.' > .vbw-planning/phases/01-test/01-VERIFICATION.md
+
+  echo 'changed elsewhere' > unrelated.txt
+  echo 'untracked elsewhere' > elsewhere.sh
+
+  run_phase_detect
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -q "qa_status=passed" || {
+    echo "# DIAG: full phase-detect.sh output follows" >&3
+    echo "$output" >&3
+    false
+  }
+  grep -q "qa_reason=none" <<< "$output"
+}
+
 @test "qa_status is pending when structured phase PASS fails qa-result-gate" {
   mkdir -p .vbw-planning/phases/01-test
   echo "# Plan" > .vbw-planning/phases/01-test/01-PLAN.md

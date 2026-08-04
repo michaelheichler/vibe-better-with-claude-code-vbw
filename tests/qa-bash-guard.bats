@@ -409,8 +409,30 @@ EOF
   [ "$status" -eq 0 ]
 }
 
+@test "malformed bash guard input blocks during live execution" {
+  jq -n '{status:"running"}' > "$TEST_TEMP_DIR/.vbw-planning/.execution-state.json"
+  run bash -c 'unset VBW_AGENT_ROLE VBW_ACTIVE_AGENT; printf "%s" "not-json" | bash "$1"' _ \
+    "$SCRIPTS_DIR/bash-guard.sh"
+  [ "$status" -eq 2 ]
+}
+
+@test "advisory logging remains visible without jq" {
+  local fake_bin jq_bin input
+  fake_bin=$(mktemp -d)
+  jq_bin=$(command -v jq)
+  printf '#!/bin/sh\nexit 127\n' > "$fake_bin/jq"
+  chmod +x "$fake_bin/jq"
+  input=$(printf '%s' '{"tool_input":{"command":"rm -rf build/"}}')
+  run bash -c 'cd "$1"; unset VBW_AGENT_ROLE CLAUDE_SESSION_ID; VBW_ACTIVE_AGENT="$(printf "dev\t")"; export VBW_ACTIVE_AGENT; PATH="$2:/usr/bin:/bin"; printf "%s" "$3" | bash "$4"' _ \
+    "$TEST_TEMP_DIR" "$fake_bin" "$input" "$SCRIPTS_DIR/bash-guard.sh"
+  [ "$status" -eq 0 ]
+  [ "$("$jq_bin" -s length "$TEST_TEMP_DIR/.vbw-planning/.event-log.jsonl")" -ge 1 ]
+  rm -rf "$fake_bin"
+}
+
 @test "bash-guard explains how to fix unrecognized agent evidence" {
   local input
+  jq -n '{status:"running"}' > "$TEST_TEMP_DIR/.vbw-planning/.execution-state.json"
   input=$(jq -n '{agent_type:"vbw-dev2",tool_input:{command:"git status"}}')
 
   run bash -c 'unset VBW_AGENT_ROLE VBW_ACTIVE_AGENT; printf "%s\n" "$1" | bash "$2"' _ "$input" "$SCRIPTS_DIR/bash-guard.sh"
@@ -427,7 +449,7 @@ EOF
 
   for field in agent_type agent_id; do
     identity="vbw:vbw-scout"
-    [ "$field" = "agent_id" ] && identity="scout-01"
+    [ "$field" = "agent_id" ] && identity="team-scout-01"
     input=$(jq -n --arg field "$field" --arg identity "$identity" \
       '{session_id:"session-A",tool_input:{command:"gh issue comment 1 --body blocked"}} + {($field):$identity}')
 

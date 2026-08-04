@@ -29,8 +29,58 @@ extract_verified_at_commit() {
   ' "$verif_file" 2>/dev/null || true
 }
 
+if ! declare -F summary_extract_frontmatter_array_items >/dev/null 2>&1; then
+  summary_extract_frontmatter_array_items() {
+    local file_path="$1" key_name="$2"
+    awk -v key="$key_name" '
+      NR == 1 && /^---[[:space:]]*$/ { in_fm = 1; next }
+      in_fm && /^---[[:space:]]*$/ { exit }
+      in_fm && $0 ~ ("^" key ":[[:space:]]*") {
+        rest = $0
+        sub("^" key ":[[:space:]]*", "", rest)
+        gsub(/[\[\]]/, "", rest)
+        count = split(rest, values, ",")
+        for (i = 1; i <= count; i++) {
+          gsub(/^[[:space:]\"\x27]+|[[:space:]\"\x27]+$/, "", values[i])
+          if (values[i] != "") print values[i]
+        }
+        in_list = (rest == "")
+        next
+      }
+      in_fm && in_list && /^[[:space:]]+- / {
+        item = $0
+        sub(/^[[:space:]]+-[[:space:]]*/, "", item)
+        gsub(/^[[:space:]\"\x27]+|[[:space:]\"\x27]+$/, "", item)
+        if (item != "") print item
+        next
+      }
+      in_fm && in_list && /^[^[:space:]]/ { exit }
+    ' "$file_path" 2>/dev/null
+  }
+fi
+
+export VERIFICATION_FRESHNESS_REASON=
+_freshness_recorded_paths() {
+  local phase_dir="$1" artifact
+  for artifact in "$phase_dir"/*-PLAN.md "$phase_dir"/PLAN.md \
+    "$phase_dir"/*-SUMMARY.md "$phase_dir"/SUMMARY.md; do
+    [ -f "$artifact" ] || continue
+    summary_extract_frontmatter_array_items "$artifact" files_modified
+    summary_extract_frontmatter_array_items "$artifact" files_touched
+  done
+}
+
 _freshness_working_tree_dirty() {
-  git status --porcelain --untracked-files=normal -- . "${FRESHNESS_EXCLUDE_PATHSPEC[@]}" 2>/dev/null
+  local phase_dir="${1:-}"
+  local -a pathspec=()
+
+  if [ -n "$phase_dir" ]; then
+    mapfile -t pathspec < <(_freshness_recorded_paths "$phase_dir")
+  fi
+  [ "${#pathspec[@]}" -gt 0 ] || pathspec=(.)
+
+  git status --porcelain --untracked-files=normal -- "${pathspec[@]}" \
+    "${FRESHNESS_EXCLUDE_PATHSPEC[@]}" 2>/dev/null
 }
 
 _freshness_stale_by_commit() {
@@ -75,6 +125,7 @@ _freshness_stale_by_mtime() {
 
 verification_is_stale() {
   local verif_file="$1"
+  local phase_dir="${2:-}"
   local _dirty _vac
 
   VERIFICATION_FRESHNESS_REASON=""
@@ -83,7 +134,7 @@ verification_is_stale() {
     return 1
   fi
 
-  if ! _dirty=$(_freshness_working_tree_dirty); then
+  if ! _dirty=$(_freshness_working_tree_dirty "$phase_dir"); then
     VERIFICATION_FRESHNESS_REASON="git_status_failed"
     return 0
   fi
