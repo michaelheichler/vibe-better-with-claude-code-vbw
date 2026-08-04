@@ -1,0 +1,30 @@
+references/vibe-mode-execute.md
+  s_86d58b85ce2aee::t_1ada23cb2120d9 3
+tests/planning-git-callsites.bats
+  s_86d58b85ce2aee::t_2b064ad86ac6e2 28-33
+testing/verify-commands-contract/verification-guardrails.bash
+  s_86d58b85ce2aee::t_e294178f494f10 88-106
+commands/verify.md
+  s_86d58b85ce2aee::t_27d632ec8a5408 583
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "0c81dc7a8e09d4188cfcef3e48e0da65f87c223c",
+  "prompts": {},
+  "humans": {
+    "h_49622c3802c0ed": {
+      "author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  },
+  "sessions": {
+    "s_86d58b85ce2aee": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "07d7797e-6c7f-4c9c-bdd0-a2660d0d8697",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
