@@ -1,0 +1,19 @@
+scripts/lib/qa-result-gate-summary-deviations.sh
+  s_55c34ee548bef4::t_39cfb19ba93e93 219-227,229-231,235-236,239
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "e57be1503ad488bf5d119620541637a0afc34d83",
+  "prompts": {},
+  "sessions": {
+    "s_55c34ee548bef4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e2c40e1d-1763-4ad0-a1b3-bd1755008e2b",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
