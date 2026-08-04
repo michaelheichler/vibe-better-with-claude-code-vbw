@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 
-set -u
-
 vbw_hash_path() {
   local root="$1"
   if command -v md5sum &>/dev/null; then
