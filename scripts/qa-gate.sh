@@ -59,7 +59,7 @@ for phase_dir in "$PLANNING_DIR/phases"/*/; do
     if phase_execution_is_satisfied "$phase_dir" "$PLANS" "$COMPLETE_SUMMARIES"; then
       SUMMARIES="$PLANS"
     else
-      SUMMARIES=0
+      SUMMARIES="$COMPLETE_SUMMARIES"
     fi
   else
     SUMMARIES=$(count_complete_summaries "$phase_dir")

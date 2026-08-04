@@ -87,6 +87,18 @@ EOF
   [ -z "$output" ]
 }
 
+@test "unsatisfied partial phase preserves completed summaries in aggregate" {
+  make_phase 01-partial 01-01 complete
+  touch "$TEST_TEMP_DIR/.vbw-planning/phases/01-partial/01-02-PLAN.md"
+  make_phase 02-complete 02-01 complete
+  make_support_copy
+
+  run env VBW_PLANNING_DIR="$TEST_TEMP_DIR/.vbw-planning" bash "$TEST_TEMP_DIR/gate-scripts/qa-gate.sh"
+
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
 @test "unresolved partial phase does not count" {
   make_phase 01-partial 01-01 partial extra-plan
 
