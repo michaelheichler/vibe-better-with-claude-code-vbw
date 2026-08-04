@@ -1,0 +1,78 @@
+references/vibe-mode-execute.md
+  s_86d58b85ce2aee::t_7ab68c721c02e9 3
+testing/verify-shared-contracts.sh
+  s_86d58b85ce2aee::t_d83c45c636b2ec 132-133
+tests/planning-git-callsites.bats
+  s_86d58b85ce2aee::t_9bbd0e37a527ab 81
+  s_86d58b85ce2aee::t_4498a004f89cab 59
+testing/verify-commands-contract/verification-guardrails.bash
+  s_86d58b85ce2aee::t_32a0c95789fd65 88-102
+testing/verify-commands-contract/reference-contracts.bash
+  s_86d58b85ce2aee::t_e8351fa2d20c03 78
+tests/extract-verified-items.bats
+  s_86d58b85ce2aee::t_1d2fe37983471c 288
+  s_86d58b85ce2aee::t_e724f9aecb0d21 361-362
+  s_86d58b85ce2aee::t_43282c56f1d630 338-339
+  s_86d58b85ce2aee::t_b1a3859016cef3 57-96
+commands/discuss.md
+  s_86d58b85ce2aee::t_42f3ce0891b369 61
+commands/vibe.md
+  s_86d58b85ce2aee::t_2550e796b99e6d 86
+  s_86d58b85ce2aee::t_76fa75aeb16b91 61
+  s_86d58b85ce2aee::t_0c69681b4e47c4 16-32
+  s_86d58b85ce2aee::t_4029f838416db0 166-167
+  s_86d58b85ce2aee::t_9e30336cb7c652 103
+  s_86d58b85ce2aee::t_14d19977c31bfc 120
+  s_86d58b85ce2aee::t_0750c2c8e47942 127,131,135,139,143,147,151,155,159
+  s_86d58b85ce2aee::t_49089828e6f93b 165
+  s_86d58b85ce2aee::t_ed7be998dd50b1 175
+scripts/extract-verified-items.sh
+  s_86d58b85ce2aee::t_f07428c45bbfe2 6-12
+commands/verify.md
+  s_86d58b85ce2aee::t_010718afda9c09 516
+  s_86d58b85ce2aee::t_573195865680df 74
+  s_86d58b85ce2aee::t_8e968aa2b2aafe 573-578
+  s_86d58b85ce2aee::t_2c7c2d7d1a26a2 62,125
+  s_86d58b85ce2aee::t_a14c3398a7d0c9 344
+  s_86d58b85ce2aee::t_004a13405bd011 436
+  s_86d58b85ce2aee::t_ca199f88e6b367 512
+  s_86d58b85ce2aee::t_44bb9de44a7079 454
+  s_86d58b85ce2aee::t_8014e545e02e33 149
+  s_86d58b85ce2aee::t_35c2736842f0dc 452
+  s_86d58b85ce2aee::t_eaee8042b16213 537
+  s_86d58b85ce2aee::t_10904702d96859 569,571
+  s_86d58b85ce2aee::t_ccde3808fdfc5a 414
+  s_86d58b85ce2aee::t_dc06963db801a3 580-586
+  s_86d58b85ce2aee::t_219c15df8fdcfd 413
+  s_86d58b85ce2aee::t_fc112c9d81889b 412
+  s_86d58b85ce2aee::t_a625cda5cef334 496-500
+  s_86d58b85ce2aee::t_6a069ca1ad1243 579
+commands/qa.md
+  s_86d58b85ce2aee::t_37a31e873b9f9a 162-166
+  s_86d58b85ce2aee::t_dbf257214dc8c2 77
+  s_86d58b85ce2aee::t_85f5201d8bad89 395
+  s_86d58b85ce2aee::t_fabb38af95181d 6
+testing/verify-commands-contract/vibe-lifecycle.bash
+  s_86d58b85ce2aee::t_fdc1d05a388516 3-9
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "5480f0b0e679a79b7920df4294dd159e37ced687",
+  "prompts": {},
+  "humans": {
+    "h_49622c3802c0ed": {
+      "author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  },
+  "sessions": {
+    "s_86d58b85ce2aee": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "07d7797e-6c7f-4c9c-bdd0-a2660d0d8697",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
