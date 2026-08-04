@@ -21,8 +21,8 @@
 #   CLAUDE_CODE_EXECPATH    Claude Code binary (default: command -v claude)
 #
 # Results cached 1h at /tmp/vbw-models-<hash>. Failures are cached too. The
-# cache identity carries the binary mtime and size, so a re-patched binary
-# advertising a different catalog invalidates the cache on its next run.
+# cache identity carries binary and pricing-file mtimes and sizes, so changes
+# to either source invalidate the cache on its next run.
 # resolve-agent-model.sh mirrors this identity byte for byte.
 
 set -euo pipefail
@@ -47,16 +47,7 @@ fi
 CLAUDE_BIN="${CLAUDE_CODE_EXECPATH:-$(command -v claude || true)}"
 [ -f "$CLAUDE_BIN" ] || CLAUDE_BIN=""
 
-BIN_STAMP="0:0"
-if [ -n "$CLAUDE_BIN" ]; then
-  BIN_STAMP="$(stat -f '%m:%z' "$CLAUDE_BIN" 2>/dev/null || stat -c '%Y:%s' "$CLAUDE_BIN" 2>/dev/null || echo 0:0)"
-fi
-PRICING_STAMP="0:0"
-if [ -f "$PRICING_PATH" ]; then
-  PRICING_STAMP="$(stat -f '%m:%z' "$PRICING_PATH" 2>/dev/null || stat -c '%Y:%s' "$PRICING_PATH" 2>/dev/null || echo 0:0)"
-fi
-
-SRC="bin:${CLAUDE_BIN:-none}:${BIN_STAMP}:pricing:${PRICING_STAMP}"
+SRC="$(bash -c '. "$1"; vbw_model_cache_source "$2" "$3"' _ "$CACHE_KEY_LIB" "$CLAUDE_BIN" "$PRICING_PATH")"
 CACHE_SUFFIX="${LABELED:+-labeled}${ALIAS_MAP:+-aliasmap}"
 CACHE="/tmp/vbw-models-$(hash_path "$SRC")${CACHE_SUFFIX}"
 if [ -f "$CACHE" ] && [ -n "$(find "$CACHE" -mmin -60 2>/dev/null)" ]; then
@@ -89,14 +80,14 @@ extract_alias_map() {
 extract_pricing_aliases() {
   [ -f "$PRICING_PATH" ] || return 0
   if [ -n "$LABELED" ]; then
-    jq -r '.aliases // {} | to_entries[] | [.key, (if .key == "opus48" then "Claude Opus 4.8 (alias)" else (.key + " (alias)") end)] | @tsv' "$PRICING_PATH" 2>/dev/null || true
+    jq -r '.aliases // {} | to_entries[] | [.key, (.key + " -> " + .value)] | @tsv' "$PRICING_PATH" 2>/dev/null || true
   else
     jq -r '.aliases // {} | keys[]' "$PRICING_PATH" 2>/dev/null || true
   fi
 }
 
 TMP="$(mktemp "${CACHE}.XXXXXX")"
-trap 'rm -f "$TMP"' EXIT
+trap 'rm -f "$TMP" "${TMP}.ids" "${TMP}.labeled"' EXIT
 if [ -n "$CLAUDE_BIN" ]; then
   if [ -n "$ALIAS_MAP" ]; then
     extract_alias_map >> "$TMP"

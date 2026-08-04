@@ -12,6 +12,22 @@ teardown() {
   rm -f /tmp/vbw-model-* 2>/dev/null
 }
 
+make_resolver_fixture() {
+  local fixture="$TEST_TEMP_DIR/plugin"
+  mkdir -p "$fixture/scripts/lib" "$fixture/config"
+  cp "$SCRIPTS_DIR/resolve-agent-model.sh" "$fixture/scripts/resolve-agent-model.sh"
+  cp "$SCRIPTS_DIR/detect-models.sh" "$fixture/scripts/detect-models.sh"
+  cp "$SCRIPTS_DIR/lib/vbw-cache-key.sh" "$fixture/scripts/lib/vbw-cache-key.sh"
+  cp "$CONFIG_DIR/model-profiles.json" "$fixture/config/model-profiles.json"
+  cp "$CONFIG_DIR/model-pricing.json" "$fixture/config/model-pricing.json"
+  printf '%s\n' "$fixture"
+}
+
+run_fixture_resolver() {
+  local fixture="$1"
+  bash "$fixture/scripts/resolve-agent-model.sh" dev "$TEST_TEMP_DIR/.vbw-planning/config.json" "$fixture/config/model-profiles.json"
+}
+
 @test "resolves dev model from quality profile" {
   run bash "$SCRIPTS_DIR/resolve-agent-model.sh" dev "$TEST_TEMP_DIR/.vbw-planning/config.json" "$CONFIG_DIR/model-profiles.json"
   [ "$status" -eq 0 ]
@@ -71,11 +87,48 @@ teardown() {
 }
 
 @test "custom alias resolves without requiring catalog metadata" {
+  local fixture
+  fixture=$(make_resolver_fixture)
+  jq '.aliases = {fixture: "custom-model"} | .models = {}' "$fixture/config/model-pricing.json" > "$fixture/config/model-pricing.json.tmp"
+  mv "$fixture/config/model-pricing.json.tmp" "$fixture/config/model-pricing.json"
+  jq '.model_overrides.dev = "fixture"' "$TEST_TEMP_DIR/.vbw-planning/config.json" > "$TEST_TEMP_DIR/.vbw-planning/config.json.tmp"
+  mv "$TEST_TEMP_DIR/.vbw-planning/config.json.tmp" "$TEST_TEMP_DIR/.vbw-planning/config.json"
+  run run_fixture_resolver "$fixture"
+  [ "$status" -eq 0 ]
+  [ "$output" = "custom-model" ]
+}
+
+@test "missing pricing file leaves alias input unchanged" {
+  local fixture
+  fixture=$(make_resolver_fixture)
+  rm "$fixture/config/model-pricing.json"
   jq '.model_overrides.dev = "opus48"' "$TEST_TEMP_DIR/.vbw-planning/config.json" > "$TEST_TEMP_DIR/.vbw-planning/config.json.tmp"
   mv "$TEST_TEMP_DIR/.vbw-planning/config.json.tmp" "$TEST_TEMP_DIR/.vbw-planning/config.json"
-  run bash "$SCRIPTS_DIR/resolve-agent-model.sh" dev "$TEST_TEMP_DIR/.vbw-planning/config.json" "$CONFIG_DIR/model-profiles.json"
+  run run_fixture_resolver "$fixture"
+  [ "$status" -eq 0 ]
+  [ "$output" = "opus48" ]
+}
+
+@test "pricing changes invalidate resolver catalog cache" {
+  local fixture pricing fake_bin
+  fixture=$(make_resolver_fixture)
+  pricing="$fixture/config/model-pricing.json"
+  fake_bin="$TEST_TEMP_DIR/fake-claude"
+  printf 'opus:"claude-opus-5"\n' > "$fake_bin"
+  export CLAUDE_CODE_EXECPATH="$fake_bin"
+  jq '.model_overrides.dev = "opus48"' "$TEST_TEMP_DIR/.vbw-planning/config.json" > "$TEST_TEMP_DIR/.vbw-planning/config.json.tmp"
+  mv "$TEST_TEMP_DIR/.vbw-planning/config.json.tmp" "$TEST_TEMP_DIR/.vbw-planning/config.json"
+
+  run run_fixture_resolver "$fixture"
   [ "$status" -eq 0 ]
   [ "$output" = "claude-opus-4-8" ]
+
+  jq '.aliases.opus48 = "claude-opus-4-9"' "$pricing" > "$pricing.tmp"
+  mv "$pricing.tmp" "$pricing"
+  touch -t 202601010102 "$pricing"
+  run run_fixture_resolver "$fixture"
+  [ "$status" -eq 0 ]
+  [ "$output" = "claude-opus-4-9" ]
 }
 
 @test "rejects invalid agent name" {
@@ -105,8 +158,9 @@ teardown() {
   }
   CONFIG_HASH=$(_fingerprint "$TEST_TEMP_DIR/.vbw-planning/config.json")
   PROFILES_HASH=$(_fingerprint "$CONFIG_DIR/model-profiles.json")
+  PRICING_HASH=$(_fingerprint "$SCRIPTS_DIR/../config/model-pricing.json")
   PATH_HASH=$(vbw_hash_path "$TEST_TEMP_DIR/.vbw-planning/config.json|$CONFIG_DIR/model-profiles.json")
-  [ -f "/tmp/vbw-model-dev-${PATH_HASH}-${CONFIG_HASH}-${PROFILES_HASH}-none" ]
+  [ -f "/tmp/vbw-model-dev-${PATH_HASH}-${CONFIG_HASH}-${PROFILES_HASH}-none-${PRICING_HASH}" ]
 }
 
 @test "cache is isolated by config path even when mtimes match" {

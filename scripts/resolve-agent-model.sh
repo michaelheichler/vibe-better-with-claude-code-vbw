@@ -53,11 +53,8 @@ fi
 
 _MODELS_BIN="${CLAUDE_CODE_EXECPATH:-$(command -v claude || true)}"
 [ -f "$_MODELS_BIN" ] || _MODELS_BIN=""
-_MODELS_STAMP="0:0"
-if [ -n "$_MODELS_BIN" ]; then
-  _MODELS_STAMP="$(stat -f '%m:%z' "$_MODELS_BIN" 2>/dev/null || stat -c '%Y:%s' "$_MODELS_BIN" 2>/dev/null || echo 0:0)"
-fi
-_MODELS_CACHE="/tmp/vbw-models-$(hash_path "bin:${_MODELS_BIN:-none}:${_MODELS_STAMP}")"
+_MODELS_SOURCE="$(bash -c '. "$1"; vbw_model_cache_source "$2" "$3"' _ "$CACHE_KEY_LIB" "$_MODELS_BIN" "$PRICING_PATH")"
+_MODELS_CACHE="/tmp/vbw-models-$(hash_path "$_MODELS_SOURCE")"
 if [ -n "${VBW_MODEL_CATALOG_FILE:-}" ]; then
   if [ -f "$VBW_MODEL_CATALOG_FILE" ]; then
     MODELS_HASH=$(file_content_fingerprint "$VBW_MODEL_CATALOG_FILE")
@@ -72,8 +69,13 @@ fi
 
 CONFIG_HASH=$(file_content_fingerprint "$CONFIG_PATH")
 PROFILES_HASH=$(file_content_fingerprint "$PROFILES_PATH")
+if [ -f "$PRICING_PATH" ]; then
+  PRICING_HASH=$(file_content_fingerprint "$PRICING_PATH")
+else
+  PRICING_HASH="none"
+fi
 PATH_HASH=$(hash_path "${CONFIG_PATH}|${PROFILES_PATH}")
-CACHE_FILE="/tmp/vbw-model-${AGENT}-${PATH_HASH}-${CONFIG_HASH}-${PROFILES_HASH}-${MODELS_HASH}"
+CACHE_FILE="/tmp/vbw-model-${AGENT}-${PATH_HASH}-${CONFIG_HASH}-${PROFILES_HASH}-${MODELS_HASH}-${PRICING_HASH}"
 if [ -f "$CACHE_FILE" ]; then
   _cached=$(cat "$CACHE_FILE")
   if [[ "$_cached" =~ $MODEL_SHAPE ]]; then
