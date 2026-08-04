@@ -1,0 +1,19 @@
+scripts/bash-guard.sh
+  s_396441278312df::t_51c2e778110d5d 566
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "2548292fd1a0d972e58c6d250470beff21cdc61c",
+  "prompts": {},
+  "sessions": {
+    "s_396441278312df": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8b693812-fc94-4ea6-be47-0ddb22b766f3",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
