@@ -127,6 +127,20 @@ new_test_project() {
   [[ "$output" == *"filesystem mutation command"* ]]
 }
 
+@test "bash-guard: attached read-write redirection does not hide filesystem mutations" {
+  TEST_PROJECT=$(new_test_project qa-attached-read-write-redirect)
+  run_qa_bash_guard "$TEST_PROJECT" "<>/dev/null rm -rf build/"
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"filesystem mutation command"* ]]
+}
+
+@test "bash-guard: destructive SQL in a quoted CLI argument is executable evidence" {
+  TEST_PROJECT=$(new_test_project qa-quoted-sql)
+  run_qa_bash_guard "$TEST_PROJECT" "mysql appdb -e \"DROP TABLE users\""
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"destructive command detected"* ]]
+}
+
 @test "bash-guard: destructive text in git predicates is not executable evidence" {
   TEST_PROJECT=$(new_test_project qa-git-predicate)
   run_role_bash_guard dev "$TEST_PROJECT" "git log --grep='artisan migrate:fresh'"
