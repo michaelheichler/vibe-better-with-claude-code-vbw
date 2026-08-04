@@ -21,7 +21,12 @@ dm_cache_path() {
   if [ -n "$bin" ]; then
     stamp="$(stat -f '%m:%z' "$bin" 2>/dev/null || stat -c '%Y:%s' "$bin" 2>/dev/null || echo 0:0)"
   fi
-  DM_CACHE="/tmp/vbw-models-$(vbw_hash_path "bin:${bin:-none}:${stamp}")"
+  local pricing="$CONFIG_DIR/model-pricing.json"
+  local pricing_stamp="0:0"
+  if [ -f "$pricing" ]; then
+    pricing_stamp="$(stat -f '%m:%z' "$pricing" 2>/dev/null || stat -c '%Y:%s' "$pricing" 2>/dev/null || echo 0:0)"
+  fi
+  DM_CACHE="/tmp/vbw-models-$(vbw_hash_path "bin:${bin:-none}:${stamp}:pricing:${pricing_stamp}")"
   export DM_CACHE
 }
 
@@ -61,6 +66,7 @@ make_fake_binary() {
   grep -Fxq "claude-haiku-4-5" <<< "$output"
   grep -Fxq "sol" <<< "$output"
   grep -Fxq "kimi3" <<< "$output"
+  grep -Fxq "opus48" <<< "$output"
   ! grep -Fxq "claude-opus-4-1" <<< "$output"
   [ -f "$DM_CACHE" ]
 }
@@ -71,6 +77,7 @@ make_fake_binary() {
   [ "$status" -eq 0 ]
   grep -Fq "$(printf 'sol\tGPT-5.6 Sol')" <<< "$output"
   grep -Fq "$(printf 'claude-opus-5\tClaude (built-in)')" <<< "$output"
+  grep -Fq "$(printf 'opus48\tClaude Opus 4.8 (alias)')" <<< "$output"
 }
 
 @test "fresh cache served without probing" {

@@ -15,13 +15,13 @@ teardown() {
 @test "resolves dev model from quality profile" {
   run bash "$SCRIPTS_DIR/resolve-agent-model.sh" dev "$TEST_TEMP_DIR/.vbw-planning/config.json" "$CONFIG_DIR/model-profiles.json"
   [ "$status" -eq 0 ]
-  [ "$output" = "opus" ]
+  [ "$output" = "claude-opus-5" ]
 }
 
 @test "resolves scout model from quality profile" {
   run bash "$SCRIPTS_DIR/resolve-agent-model.sh" scout "$TEST_TEMP_DIR/.vbw-planning/config.json" "$CONFIG_DIR/model-profiles.json"
   [ "$status" -eq 0 ]
-  [ "$output" = "sonnet" ]
+  [ "$output" = "claude-sonnet-5" ]
 }
 
 @test "resolves dev model from balanced profile" {
@@ -29,7 +29,7 @@ teardown() {
   mv "$TEST_TEMP_DIR/.vbw-planning/config.json.tmp" "$TEST_TEMP_DIR/.vbw-planning/config.json"
   run bash "$SCRIPTS_DIR/resolve-agent-model.sh" dev "$TEST_TEMP_DIR/.vbw-planning/config.json" "$CONFIG_DIR/model-profiles.json"
   [ "$status" -eq 0 ]
-  [ "$output" = "sonnet" ]
+  [ "$output" = "claude-sonnet-5" ]
 }
 
 @test "respects per-agent override" {
@@ -38,7 +38,44 @@ teardown() {
 
   run bash "$SCRIPTS_DIR/resolve-agent-model.sh" dev "$TEST_TEMP_DIR/.vbw-planning/config.json" "$CONFIG_DIR/model-profiles.json"
   [ "$status" -eq 0 ]
-  [ "$output" = "opus" ]
+  [ "$output" = "claude-opus-5" ]
+}
+
+@test "resolves custom alias in a single-value override" {
+  jq '.model_overrides.dev = "opus48"' "$TEST_TEMP_DIR/.vbw-planning/config.json" > "$TEST_TEMP_DIR/.vbw-planning/config.json.tmp"
+  mv "$TEST_TEMP_DIR/.vbw-planning/config.json.tmp" "$TEST_TEMP_DIR/.vbw-planning/config.json"
+
+  run bash "$SCRIPTS_DIR/resolve-agent-model.sh" dev "$TEST_TEMP_DIR/.vbw-planning/config.json" "$CONFIG_DIR/model-profiles.json"
+  [ "$status" -eq 0 ]
+  [ "$output" = "claude-opus-4-8" ]
+}
+
+@test "resolves custom alias in a matrix value" {
+  jq '.model_matrix = {dev: {balanced: "opus48"}}' "$TEST_TEMP_DIR/.vbw-planning/config.json" > "$TEST_TEMP_DIR/.vbw-planning/config.json.tmp"
+  mv "$TEST_TEMP_DIR/.vbw-planning/config.json.tmp" "$TEST_TEMP_DIR/.vbw-planning/config.json"
+
+  run bash "$SCRIPTS_DIR/resolve-agent-model.sh" dev "$TEST_TEMP_DIR/.vbw-planning/config.json" "$CONFIG_DIR/model-profiles.json"
+  [ "$status" -eq 0 ]
+  [ "$output" = "claude-opus-4-8" ]
+}
+
+@test "custom alias is eligible in a preference array" {
+  printf 'sol\n' > "$TEST_TEMP_DIR/catalog.txt"
+  export VBW_MODEL_CATALOG_FILE="$TEST_TEMP_DIR/catalog.txt"
+  jq '.model_matrix = {dev: {balanced: ["opus48", "sol"]}}' "$TEST_TEMP_DIR/.vbw-planning/config.json" > "$TEST_TEMP_DIR/.vbw-planning/config.json.tmp"
+  mv "$TEST_TEMP_DIR/.vbw-planning/config.json.tmp" "$TEST_TEMP_DIR/.vbw-planning/config.json"
+
+  run bash "$SCRIPTS_DIR/resolve-agent-model.sh" dev "$TEST_TEMP_DIR/.vbw-planning/config.json" "$CONFIG_DIR/model-profiles.json"
+  [ "$status" -eq 0 ]
+  [ "$output" = "claude-opus-4-8" ]
+}
+
+@test "custom alias resolves without requiring catalog metadata" {
+  jq '.model_overrides.dev = "opus48"' "$TEST_TEMP_DIR/.vbw-planning/config.json" > "$TEST_TEMP_DIR/.vbw-planning/config.json.tmp"
+  mv "$TEST_TEMP_DIR/.vbw-planning/config.json.tmp" "$TEST_TEMP_DIR/.vbw-planning/config.json"
+  run bash "$SCRIPTS_DIR/resolve-agent-model.sh" dev "$TEST_TEMP_DIR/.vbw-planning/config.json" "$CONFIG_DIR/model-profiles.json"
+  [ "$status" -eq 0 ]
+  [ "$output" = "claude-opus-4-8" ]
 }
 
 @test "rejects invalid agent name" {
@@ -53,13 +90,10 @@ teardown() {
 
 @test "uses cache on second call" {
   export VBW_MODEL_CATALOG_FILE="$TEST_TEMP_DIR/no-catalog"
-  # First call populates cache
   run bash "$SCRIPTS_DIR/resolve-agent-model.sh" dev "$TEST_TEMP_DIR/.vbw-planning/config.json" "$CONFIG_DIR/model-profiles.json"
   [ "$status" -eq 0 ]
-  [ "$output" = "opus" ]
+  [ "$output" = "claude-opus-5" ]
 
-  # Verify cache file exists — use the same hash priority as the script:
-  # md5sum (Linux) → md5 (macOS) → cksum (fallback)
   _fingerprint() {
     if command -v md5sum >/dev/null 2>&1; then
       md5sum "$1" | awk '{print $1}' | cut -c1-8
@@ -87,11 +121,11 @@ teardown() {
 
   run bash "$SCRIPTS_DIR/resolve-agent-model.sh" dev "$TEST_TEMP_DIR/.vbw-planning/config.json" "$CONFIG_DIR/model-profiles.json"
   [ "$status" -eq 0 ]
-  [ "$output" = "opus" ]
+  [ "$output" = "claude-opus-5" ]
 
   run bash "$SCRIPTS_DIR/resolve-agent-model.sh" dev "$alt_dir/.vbw-planning/config.json" "$CONFIG_DIR/model-profiles.json"
   [ "$status" -eq 0 ]
-  [ "$output" = "sonnet" ]
+  [ "$output" = "claude-sonnet-5" ]
 }
 
 @test "cache invalidates for same-path config edits within the same second" {
@@ -99,7 +133,7 @@ teardown() {
 
   run bash "$SCRIPTS_DIR/resolve-agent-model.sh" dev "$TEST_TEMP_DIR/.vbw-planning/config.json" "$CONFIG_DIR/model-profiles.json"
   [ "$status" -eq 0 ]
-  [ "$output" = "opus" ]
+  [ "$output" = "claude-opus-5" ]
 
   jq '.model_profile = "balanced"' "$TEST_TEMP_DIR/.vbw-planning/config.json" > "$TEST_TEMP_DIR/.vbw-planning/config.json.tmp"
   mv "$TEST_TEMP_DIR/.vbw-planning/config.json.tmp" "$TEST_TEMP_DIR/.vbw-planning/config.json"
@@ -107,7 +141,7 @@ teardown() {
 
   run bash "$SCRIPTS_DIR/resolve-agent-model.sh" dev "$TEST_TEMP_DIR/.vbw-planning/config.json" "$CONFIG_DIR/model-profiles.json"
   [ "$status" -eq 0 ]
-  [ "$output" = "sonnet" ]
+  [ "$output" = "claude-sonnet-5" ]
 }
 
 @test "cache invalidates when profiles file changes within the same second" {
@@ -117,7 +151,7 @@ teardown() {
 
   run bash "$SCRIPTS_DIR/resolve-agent-model.sh" dev "$TEST_TEMP_DIR/.vbw-planning/config.json" "$profiles_copy"
   [ "$status" -eq 0 ]
-  [ "$output" = "opus" ]
+  [ "$output" = "claude-opus-5" ]
 
   jq '.quality.dev = "sonnet"' "$profiles_copy" > "$profiles_copy.tmp"
   mv "$profiles_copy.tmp" "$profiles_copy"
@@ -125,7 +159,7 @@ teardown() {
 
   run bash "$SCRIPTS_DIR/resolve-agent-model.sh" dev "$TEST_TEMP_DIR/.vbw-planning/config.json" "$profiles_copy"
   [ "$status" -eq 0 ]
-  [ "$output" = "sonnet" ]
+  [ "$output" = "claude-sonnet-5" ]
 }
 
 @test "matrix string value resolves by effort" {
@@ -152,7 +186,7 @@ teardown() {
   mv "$TEST_TEMP_DIR/.vbw-planning/config.json.tmp" "$TEST_TEMP_DIR/.vbw-planning/config.json"
   run bash "$SCRIPTS_DIR/resolve-agent-model.sh" dev "$TEST_TEMP_DIR/.vbw-planning/config.json" "$CONFIG_DIR/model-profiles.json"
   [ "$status" -eq 0 ]
-  [ "$output" = "opus" ]
+  [ "$output" = "claude-opus-5" ]
 }
 
 @test "preference array picks first entry present in catalog" {
