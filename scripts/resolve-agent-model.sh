@@ -144,7 +144,7 @@ pick_catalog_model() {
 }
 
 pick_model() {
-  local first="" count=0 c chosen="" catalog_model=""
+  local first="" count=0 c chosen=""
   local all=""
   while IFS= read -r c; do
     [ -z "$c" ] && continue
