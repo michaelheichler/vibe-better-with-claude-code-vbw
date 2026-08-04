@@ -1323,7 +1323,7 @@ EOF
 
   TEST_INPUT='{"tool_input":{"command":"mysql -e DROP TABLE users"}}'
 
-  run bash -c "echo '$TEST_INPUT' | bash '$GUARD' 2>/dev/null"
+  run bash -c "cd '$PROJECT_ROOT' && printf '%s\\n' '$TEST_INPUT' | env -u VBW_ALLOW_DESTRUCTIVE -u VBW_GUARD_LEVEL VBW_AGENT_ROLE=scout bash '$GUARD' 2>/dev/null"
 
   [ "$status" -eq 2 ]
 }
