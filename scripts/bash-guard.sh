@@ -6,13 +6,18 @@ INPUT=$(cat 2>/dev/null) || exit 0
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PLUGIN_ROOT="$(dirname "$SCRIPT_DIR")"
 
-. "$SCRIPT_DIR/lib/active-agent-state.sh"
-. "$SCRIPT_DIR/lib/orchestrator-identity.sh"
-. "$SCRIPT_DIR/lib/guard-enforcement.sh"
+[ -f "$SCRIPT_DIR/lib/active-agent-state.sh" ] || exit 2
+[ -f "$SCRIPT_DIR/lib/orchestrator-identity.sh" ] || exit 2
+[ -f "$SCRIPT_DIR/lib/guard-enforcement.sh" ] || exit 2
+. "$SCRIPT_DIR/lib/active-agent-state.sh" || exit 2
+. "$SCRIPT_DIR/lib/orchestrator-identity.sh" || exit 2
+. "$SCRIPT_DIR/lib/guard-enforcement.sh" || exit 2
 PROJECT_ROOT=$(vbw_guard_project_root "$PWD") || PROJECT_ROOT=""
 GUARD_LEVEL=$(vbw_guard_enforcement_level "$PROJECT_ROOT" "$INPUT")
+[ -n "$GUARD_LEVEL" ] || exit 2
 [ "$GUARD_LEVEL" = "off" ] && exit 0
 if ! command -v jq >/dev/null 2>&1; then
+  [ "$GUARD_LEVEL" = "enforce" ] || exit 0
   printf '%s\n' "Blocked: jq not available, cannot validate bash command" >&2
   exit 2
 fi
@@ -47,10 +52,10 @@ guard_log_event() {
 }
 
 guard_block() {
-  local message="$*"
+  local message="$1" matched="${2:-$1}"
   if [ "$GUARD_LEVEL" = "enforce" ]; then
     if declare -F log_block_event >/dev/null 2>&1; then
-      log_block_event "$message"
+      log_block_event "$matched"
     else
       guard_log_event "$message"
     fi
@@ -110,17 +115,16 @@ for PFILE in "$DEFAULT_PATTERNS" "$LOCAL_PATTERNS"; do
 done
 
 log_block_event() {
-  local matched="$1"
-  local preview matched_esc agent timestamp
+  local matched="$1" preview agent timestamp
 
   if [ -d "$PLANNING_DIR" ]; then
-    preview=$(echo "$COMMAND" | head -c 40)
+    preview=$(printf '%s' "$COMMAND" | head -c 40 | tr '\r\n' ' ')
+    matched=$(printf '%s' "$matched" | tr '\r\n' ' ')
     agent="${ACTIVE_AGENT_ROLE:-${VBW_ACTIVE_AGENT:-unknown}}"
     timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ" 2>/dev/null || date +"%s")
-    preview=$(echo "$preview" | sed 's/"/\\"/g')
-    matched_esc=$(echo "$matched" | sed 's/"/\\"/g')
-    printf '{"event":"bash_guard_block","command_preview":"%s","pattern_matched":"%s","agent":"%s","timestamp":"%s"}\n' \
-      "$preview" "$matched_esc" "$agent" "$timestamp" >> "$PLANNING_DIR/.event-log.jsonl" 2>/dev/null
+    jq -cn --arg preview "$preview" --arg matched "$matched" --arg agent "$agent" --arg timestamp "$timestamp" \
+      '{event:"bash_guard_block",command_preview:$preview,pattern_matched:$matched,agent:$agent,timestamp:$timestamp}' \
+      >> "$PLANNING_DIR/.event-log.jsonl" 2>/dev/null || true
   fi
 }
 
@@ -966,8 +970,7 @@ if command_matches_patterns "$COMMAND"; then
   MATCHED=$(command_pattern_match "$COMMAND")
   guard_block "Blocked: destructive command detected ($MATCHED)
 Hint: Use VBW_ALLOW_DESTRUCTIVE=1 to override, or run outside VBW.
-See: config/destructive-commands.txt for the full blocklist."
-  exit 2
+See: config/destructive-commands.txt for the full blocklist." "$MATCHED"
 fi
 
 exit 0

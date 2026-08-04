@@ -2,12 +2,12 @@
 set -u
 
 vbw_guard_execution_is_live() {
-  local project_root="${1:-}" planning_dir state_file status now mtime age marker_status marker_live
+  local project_root="${1:-}" planning_dir state_file exec_status now mtime age marker_status marker_live
   planning_dir="$project_root/.vbw-planning"
   state_file="$planning_dir/.execution-state.json"
   if [ -f "$state_file" ]; then
-    status=$(jq -r '.status // ""' "$state_file" 2>/dev/null) || status=""
-    if [ "$status" = "running" ]; then
+    exec_status=$(jq -r '.status // ""' "$state_file" 2>/dev/null) || exec_status=""
+    if [ "$exec_status" = "running" ]; then
       now=$(date +%s 2>/dev/null || echo 0)
       if [ "$(uname)" = "Darwin" ]; then
         mtime=$(stat -f %m "$state_file" 2>/dev/null || echo 0)

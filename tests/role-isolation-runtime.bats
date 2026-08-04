@@ -346,7 +346,7 @@ JSON
   [ "$status" -eq 0 ]
 }
 
-@test "file-guard: files_modified still blocks undeclared writes while execution-state is running" {
+@test "file-guard: files_modified directory scope allows sibling writes while execution-state is running" {
   cd "$TEST_TEMP_DIR"
   create_plan_with_files
   cat > "$TEST_TEMP_DIR/.vbw-planning/.execution-state.json" <<'JSON'
@@ -375,7 +375,7 @@ JSON
   [ "$status" -eq 0 ]
 }
 
-@test "file-guard: live delegated-workflow marker enforces files_modified" {
+@test "file-guard: live delegated-workflow marker uses directory scope" {
   cd "$TEST_TEMP_DIR"
   create_plan_with_files
   CLAUDE_SESSION_ID="session-marker" VBW_PLANNING_DIR="$TEST_TEMP_DIR/.vbw-planning" \

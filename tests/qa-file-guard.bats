@@ -149,6 +149,26 @@ teardown() {
   [ "$status" -eq 2 ]
 }
 
+@test "bare payload agent ids do not claim a VBW role" {
+  local input
+  input=$(jq -n '{session_id:"session-A",agent_id:"scout-01",tool_name:"Write",tool_input:{file_path:"src/file.js",content:"ok"}}')
+  run bash -c 'unset VBW_AGENT_ROLE VBW_ACTIVE_AGENT; printf "%s\n" "$1" | bash "$2"' _ \
+    "$input" "$SCRIPTS_DIR/file-guard.sh"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+@test "multiline destructive blocks keep event log valid JSONL" {
+  local input
+  make_live_execution
+  rm -f "$TEST_TEMP_DIR/.vbw-planning/.event-log.jsonl"
+  input=$(jq -n '{session_id:"session-A",agent_type:"vbw:vbw-dev",tool_input:{command:"php artisan migrate:fresh"}}')
+  run bash -c 'unset VBW_AGENT_ROLE VBW_ACTIVE_AGENT; printf "%s\n" "$1" | bash "$2"' _ \
+    "$input" "$SCRIPTS_DIR/bash-guard.sh"
+  [ "$status" -eq 2 ]
+  jq -s . "$TEST_TEMP_DIR/.vbw-planning/.event-log.jsonl" >/dev/null
+}
+
 @test "active plan scope expands declared files to their directory" {
   local input
   mkdir -p "$TEST_TEMP_DIR/.vbw-planning/phases/01-test"

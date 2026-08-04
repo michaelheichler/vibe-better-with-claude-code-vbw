@@ -5,18 +5,13 @@ INPUT=$(cat 2>/dev/null) || exit 0
 
 FILE_PATH=$(echo "$INPUT" | jq -r '.tool_input.file_path // ""' 2>/dev/null) || exit 0
 [ -z "$FILE_PATH" ] && exit 0
-case "$FILE_PATH" in *$'\n'*) exit 2 ;; esac
-
 _FG_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-if [ -f "$_FG_SCRIPT_DIR/lib/active-agent-state.sh" ]; then
-  . "$_FG_SCRIPT_DIR/lib/active-agent-state.sh"
-fi
-if [ -f "$_FG_SCRIPT_DIR/lib/orchestrator-identity.sh" ]; then
-  . "$_FG_SCRIPT_DIR/lib/orchestrator-identity.sh"
-fi
-if [ -f "$_FG_SCRIPT_DIR/lib/guard-enforcement.sh" ]; then
-  . "$_FG_SCRIPT_DIR/lib/guard-enforcement.sh"
-fi
+[ -f "$_FG_SCRIPT_DIR/lib/active-agent-state.sh" ] || exit 2
+[ -f "$_FG_SCRIPT_DIR/lib/orchestrator-identity.sh" ] || exit 2
+[ -f "$_FG_SCRIPT_DIR/lib/guard-enforcement.sh" ] || exit 2
+. "$_FG_SCRIPT_DIR/lib/active-agent-state.sh" || exit 2
+. "$_FG_SCRIPT_DIR/lib/orchestrator-identity.sh" || exit 2
+. "$_FG_SCRIPT_DIR/lib/guard-enforcement.sh" || exit 2
 if [ -f "$_FG_SCRIPT_DIR/lib/vbw-config-root.sh" ]; then
   if source "$_FG_SCRIPT_DIR/lib/vbw-config-root.sh" 2>/dev/null; then
     find_vbw_root >/dev/null 2>&1 || true
@@ -89,7 +84,9 @@ guard_block_always() {
 }
 
 GUARD_LEVEL=$(vbw_guard_enforcement_level "$PROJECT_ROOT" "$INPUT")
+[ -n "$GUARD_LEVEL" ] || exit 2
 [ "$GUARD_LEVEL" = "off" ] && exit 0
+case "$FILE_PATH" in *$'\n'*) exit 2 ;; esac
 
 normalize_agent_role() {
   command -v vbw_active_agent_normalize_role >/dev/null 2>&1 || return 1
@@ -147,9 +144,7 @@ if ACTIVE_AGENT_ROLE=$(detect_agent_role); then
 else
   _FG_ROLE_STATUS=$?
   ACTIVE_AGENT_ROLE=""
-  if [ "$_FG_ROLE_STATUS" -eq 2 ]; then
-    exit 2
-  fi
+  [ "$_FG_ROLE_STATUS" -eq 2 ] && exit "$_FG_ROLE_STATUS"
 fi
 
 _FG_NORMALIZED=$(echo "$FILE_PATH" | sed 's#/[^/]*/\.\./#/#g')
