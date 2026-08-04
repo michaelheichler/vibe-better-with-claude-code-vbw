@@ -1,80 +1,77 @@
 # AskUserQuestion Contract
 
-Source note: Stable VBW-facing contract distilled from Claude Code interactive prompt behavior plus the repo's current `references/execute-protocol.md` and `references/discussion-engine.md` anchor examples.
-Last reviewed: 2026-07-30
+Use this contract whenever an agent asks a user to choose a next step.
 
-## Structured choices
+## Write for quick decisions
 
-- Keep headers short. Prefer compact labels over sentence-length titles.
-- Use structured choices when the real decision is bounded.
-- Treat 2-4 options as the sweet spot for a single question.
-- Ask 1-4 questions per tool call.
-- When options exist, Claude Code still exposes an `Other` path. Treat it as the built-in escape hatch instead of pretending freeform input does not exist.
-- Mark the preferred option with `isRecommended` when one option is genuinely better.
-- Leave 3 to 4 blank lines before the tool call so the dialog does not cover the last line of prose.
-- When a modal choice depends on nearby explanatory context, include the minimal answer-critical context in the `question` itself, the modal may cover or displace preceding prose.
+### Use clear words
 
-### Tool schema and answer metadata
+- Use plain words. Explain technical terms before using them.
+- State one decision in each question.
+- Use a short header with a concrete label.
+- Write a short question. Put only answer-critical context in it.
 
-Beyond the core header, question, and options shape, the current AskUserQuestion schema exposes four fields. Distinguish request controls from returned answer metadata.
+### Make options scannable
 
-- `multiSelect`: a per-question request control that lets the user pick multiple options instead of the default single selection. It changes selection cardinality only, not the visible option count, so keep the 2-4 bounded-choice advice.
-- `preview`: a preview capability available for single-select questions only. Do not set it on a `multiSelect` question.
-- `annotations`: per-question notes or preview information returned alongside the answer. This is response context, not a replacement for the user-visible question text.
-- `metadata.source`: source or provenance metadata carried with the question and answer contract. It is metadata about the exchange, not user-choice content.
+- Use 2 to 4 options for a bounded choice.
+- Give each option a concrete label of 1 to 5 words.
+- Describe what each option means in one short sentence.
+- Mark one option as recommended only when there is a real reason.
 
-### Batch vs. sequence
+### Cut unnecessary text
 
-- Batch independent questions in a single AskUserQuestion call when answers do not depend on each other.
-- Sequence dependent questions across separate calls when answer N determines what to ask for N+1.
+- Do not hedge with words like "maybe", "just", or "probably".
+- Do not lecture, justify the workflow, or repeat context the user already gave.
+- Do not show a wall of text. Split context across turns when answers depend on earlier choices.
 
-## Intentional freeform
+These rules reduce reading load. They also make questions easier to scan and answer for users with different attention, memory, or processing needs.
 
-- Do not fake a bounded menu when the real choice space is high-cardinality or unbounded.
-- Use intentional freeform input when the user may need to name, number, search, or describe something outside a short fixed list.
-- If the user takes the `Other` path to explain their answer, treat that as real follow-up input rather than forcing them back into another pseudo-menu.
+## Choose the right interaction
 
-### Freeform handoff
+Use AskUserQuestion for a real, bounded decision. Use plain text when the user needs to name, search, number, or describe an open-ended answer.
 
-- When a user selects "Other" and signals freeform intent ("let me describe it", "I'll explain", "something else"), stop using AskUserQuestion. Ask follow-up as plain text at the normal prompt.
-- Wait for the freeform response. Resume AskUserQuestion only after processing it.
-- Same rule applies when you include a freeform-indicating option ("Let me explain") and the user selects it.
-- Users can also reference options by number from the Other path: `#2 but with pagination disabled`. Accept these hybrid responses without forcing a re-selection.
+Ask one question at a time when the next question depends on the answer. Batch independent questions in one call. Ask no more than 4 questions in a call.
 
-## Anti-patterns
+Claude Code provides an Other path for structured choices. Treat it as a valid freeform answer. If the user chooses Other to explain, ask for and process the explanation in plain text before presenting another menu. Accept hybrid answers such as `#2, without pagination`.
 
-- **Checklist walking** : marching through a predetermined question list regardless of what the user already said.
-- **Canned questions** : asking questions whose answers are already in context.
-- **Shallow acceptance** : taking vague answers ("something like X") without probing for specifics.
-- **Premature constraints** : narrowing options before the problem space is understood.
-- **Fake bounded menus** : presenting a fixed option list when the real choice space is unbounded or high-cardinality.
+## Tool shape
+
+For an interactive AskUserQuestion call, send `questions`. Each question has:
+
+- `header`: a short label, up to 12 characters.
+- `question`: the complete user-visible decision.
+- `options`: 2 to 4 choices. Each choice has `label` and `description`. `preview` is optional and belongs on an option when the host supports previews.
+- `multiSelect`: set this to `true` only when several options can all be correct.
+
+Do not use `answers`, `annotations`, or `metadata` to compose an interactive question. They are response or host-integration fields, not user-facing question content. Do not assume a `metadata.source` value or per-question `annotations` shape.
+
+Do not set a question-level `preview`. A preview is optional content on an option. Do not use previews for multi-select questions.
 
 ## Examples
 
-### Example: structured single-select
-
-Header: Confirm
-Question: Continue with phase 03 now?
-Options:
-- Execute phase 03 (Recommended : the plan is already complete)
-- Review plans first
-- Not now
-
-### Example: intentional freeform
-
-Prompt: Tell me which todo to act on. Use the todo number or describe the item in your own words.
-
-Why this stays freeform:
-- the list length is not bounded to 2-4 options
-- the correct answer may be a number, a phrase, or a new clarification
-- pretending this is a fixed menu creates fake structure and worse UX
-
-### Example: decision gate
+### Structured choice
 
 Header: Next step
-Question: Ready to proceed with implementation?
-Options:
-- Proceed (Recommended)
-- Keep exploring
 
-Why two options: Decision gates are binary commit/defer choices. Extra options add noise without value.
+Question: What should happen next?
+
+Options:
+- Plan phase 03. The scope is ready to turn into a plan. (Recommended)
+- Discuss phase 03. Explore open questions before planning.
+- Stop here. Keep the current work unchanged.
+
+### Open answer
+
+Prompt: Which todo should I act on? Give its number or describe it in your own words.
+
+This stays plain text because the possible answers are not a short fixed list.
+
+### Decision gate
+
+Header: Continue
+
+Question: Start implementation now?
+
+Options:
+- Start now. Begin the approved work. (Recommended)
+- Keep exploring. Resolve more questions first.
