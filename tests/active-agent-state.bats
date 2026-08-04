@@ -13,6 +13,23 @@ teardown() {
   teardown_temp_dir
 }
 
+@test "role normalization accepts QA Author roles and numeric suffixes only" {
+  run bash -c 'source "$1"; vbw_active_agent_normalize_role "$2"' _ \
+    "$SCRIPTS_DIR/lib/active-agent-state.sh" "vbw-qa-author"
+  [ "$status" -eq 0 ]
+  [ "$output" = "qa-author" ]
+
+  run bash -c 'source "$1"; vbw_active_agent_normalize_role "$2"' _ \
+    "$SCRIPTS_DIR/lib/active-agent-state.sh" "vbw-qa-author-2"
+  [ "$status" -eq 0 ]
+  [ "$output" = "qa-author" ]
+
+  run bash -c 'source "$1"; vbw_active_agent_normalize_role "$2"' _ \
+    "$SCRIPTS_DIR/lib/active-agent-state.sh" "vbw-qa-author-2x"
+  [ "$status" -eq 1 ]
+  [ -z "$output" ]
+}
+
 @test "current role rejects stale marker when session role count is zero" {
   local session_id="session-stale"
   mkdir -p "$PLANNING_DIR/.active-agents/$session_id"

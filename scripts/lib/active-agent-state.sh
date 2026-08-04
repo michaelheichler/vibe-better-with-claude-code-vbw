@@ -28,23 +28,30 @@ _vbw_active_agent_is_aggregate_source_id() {
 }
 vbw_active_agent_has_safe_session() { vbw_active_agent_session_id "${1:-}" >/dev/null 2>&1; }
 
+vbw_active_agent_normalize_strict_role() {
+  local lower="${1:-}" role suffix
+  for role in lead dev qa qa-author scout debugger architect docs; do
+    case "$lower" in
+      "vbw-$role") printf '%s' "$role"; return 0 ;;
+      "vbw-$role-"*)
+        suffix="${lower#vbw-$role-}"
+        case "$suffix" in ''|*[!0-9]*) continue ;; esac
+        printf '%s' "$role"
+        return 0
+        ;;
+    esac
+  done
+  return 1
+}
+
 vbw_active_agent_normalize_role() {
   local lower
   lower=$(printf '%s' "${1:-}" | tr '[:upper:]' '[:lower:]')
   lower="${lower#@}"
   lower="${lower#vbw:}"
   if [[ "$lower" == vbw-* ]]; then
-    case "$lower" in
-      vbw-lead|vbw-lead-[0-9]*) printf 'lead'; return 0 ;;
-      vbw-dev|vbw-dev-[0-9]*) printf 'dev'; return 0 ;;
-      vbw-qa|vbw-qa-[0-9]*) printf 'qa'; return 0 ;;
-      vbw-qa-author|vbw-qa-author-[0-9]*) printf 'qa-author'; return 0 ;;
-      vbw-scout|vbw-scout-[0-9]*) printf 'scout'; return 0 ;;
-      vbw-debugger|vbw-debugger-[0-9]*) printf 'debugger'; return 0 ;;
-      vbw-architect|vbw-architect-[0-9]*) printf 'architect'; return 0 ;;
-      vbw-docs|vbw-docs-[0-9]*) printf 'docs'; return 0 ;;
-      *) return 1 ;;
-    esac
+    vbw_active_agent_normalize_strict_role "$lower"
+    return
   fi
   case "$lower" in
     vbw-lead|vbw-lead-*|lead|lead-*|team-lead|team-lead-*) printf 'lead'; return 0 ;;
@@ -58,6 +65,7 @@ vbw_active_agent_normalize_role() {
   esac
   return 1
 }
+
 
 vbw_active_agent_session_dir() { printf '%s/.active-agents/%s\n' "$1" "$2"; }
 _vbw_active_agent_state_dir() {
