@@ -1,22 +1,7 @@
 #!/usr/bin/env bash
-# compile-research-context.sh — Discover and return relevant standalone research
-# for debug/fix sessions. Research injection is optional: if no match is found
-# or the research is too stale, outputs nothing and debug/fix proceed as today.
-#
-# Usage:
-#   compile-research-context.sh <planning-dir> [description]
-#   compile-research-context.sh <planning-dir> --file <path>
-#
-# Output:
-#   stdout: Research file content (with optional staleness warning), or empty
-#   stderr: Informational research-selection messages (for example selected
-#           research, staleness warnings, or stale/no-match skip messages)
-#
-# Exit: Always 0 (caller uses empty stdout to detect no-research)
 
 set -euo pipefail
 
-# ── Staleness thresholds (tunable) ───────────────────────
 STALE_WARN_THRESHOLD=10   # 1..WARN = inject with warning; >WARN = skip entirely
 
 PLANNING_DIR="${1:-}"
@@ -28,7 +13,6 @@ shift
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
-# ── Parse arguments ──────────────────────────────────────
 EXPLICIT_FILE=""
 DESCRIPTION=""
 
@@ -53,8 +37,6 @@ while [ $# -gt 0 ]; do
   esac
 done
 
-# ── Staleness check ─────────────────────────────────────
-# Returns: 0=fresh, 1=warn, 2=skip
 check_staleness() {
   local file="$1"
   local base_commit
@@ -73,16 +55,14 @@ check_staleness() {
   fi
 
   if [ "$base_commit" = "unknown" ]; then
-    echo "unknown" >&2  # Migrated file — original commit not tracked
+    echo "unknown" >&2  # Migrated file, original commit not tracked
     return 1  # Warn but still inject (migrated files should be usable)
   fi
 
-  # Verify the commit exists
   if ! git rev-parse --verify "$base_commit^{commit}" > /dev/null 2>&1; then
     return 2  # Invalid commit = treat as stale
   fi
 
-  # Count commits since base_commit, using the standard product-code pathspec
   local commit_count
   commit_count=$(git log --oneline "${base_commit}..HEAD" -- . ':!.vbw-planning' ':!CLAUDE.md' 2>/dev/null | wc -l | tr -d ' ')
 
@@ -97,12 +77,10 @@ check_staleness() {
   fi
 }
 
-# ── Emit research content ───────────────────────────────
 emit_research() {
   local file="$1"
   local staleness_status commit_count_str
 
-  # Capture stderr from staleness check (contains commit count)
   commit_count_str=$(check_staleness "$file" 2>&1; echo "EXIT:$?") || true
   staleness_status="${commit_count_str##*EXIT:}"
   commit_count_str="${commit_count_str%EXIT:*}"
@@ -110,12 +88,10 @@ emit_research() {
 
   case "$staleness_status" in
     0)
-      # Fresh — emit content as-is
       echo "[research] Using fresh research: $(basename "$file")" >&2
       cat "$file"
       ;;
     1)
-      # Warn — emit with staleness warning prepended
       local base_commit_short
       base_commit_short=$(awk '
         /^---$/ { if (!started) { started=1; in_fm=1; next } if (in_fm) exit }
@@ -127,7 +103,7 @@ emit_research() {
         }
       ' "$file" | head -c 8)
       if [ "$commit_count_str" = "unknown" ] || [ "$base_commit_short" = "unknown" ]; then
-        echo "⚠ Staleness unknown — this research was migrated without a base commit. Verify findings against current code."
+        echo "⚠ Staleness unknown, this research was migrated without a base commit. Verify findings against current code."
         echo "[research] Using research with staleness warning: $(basename "$file") (base_commit unknown; staleness not computed)" >&2
       else
         echo "⚠ ${commit_count_str} commits have landed since this research was created (${base_commit_short}..HEAD). Verify findings against current code."
@@ -137,46 +113,37 @@ emit_research() {
       cat "$file"
       ;;
     2|*)
-      # Too stale — skip
       echo "[research] Skipping stale research ($(basename "$file")): ${commit_count_str:-unknown} commits since base_commit" >&2
       ;;
   esac
 }
 
-# ── Explicit file override ──────────────────────────────
 if [ -n "$EXPLICIT_FILE" ]; then
   if [ ! -f "$EXPLICIT_FILE" ]; then
     echo "[research] Specified file not found: $EXPLICIT_FILE" >&2
     exit 0
   fi
-  # Explicit override bypasses staleness checks
   echo "[research] Using explicitly specified research: $(basename "$EXPLICIT_FILE")" >&2
   cat "$EXPLICIT_FILE"
   exit 0
 fi
 
-# ── Discovery ────────────────────────────────────────────
-# List completed research files
 RESEARCH_LIST=$(bash "$SCRIPT_DIR/research-session-state.sh" list "$PLANNING_DIR" --status complete 2>/dev/null || echo "")
 
 if [ -z "$RESEARCH_LIST" ]; then
   exit 0
 fi
 
-# Keyword matching against description (required for all file counts)
 if [ -z "$DESCRIPTION" ]; then
-  # No description to match against — output nothing (no recency fallback)
   exit 0
 fi
 
-# Extract significant words from description (3+ chars, lowercase)
 DESC_WORDS=$(printf '%s' "$DESCRIPTION" | tr '[:upper:]' '[:lower:]' | tr -cs 'a-z0-9' '\n' | awk 'length >= 3' | sort -u)
 
 if [ -z "$DESC_WORDS" ]; then
   exit 0
 fi
 
-# Score each file by keyword hits in title
 BEST_FILE=""
 BEST_SCORE=0
 
@@ -199,7 +166,6 @@ while IFS= read -r line; do
   fi
 done <<< "$RESEARCH_LIST"
 
-# Require 2+ keyword hits — no recency fallback
 if [ "$BEST_SCORE" -ge 2 ] && [ -n "$BEST_FILE" ] && [ -f "$BEST_FILE" ]; then
   emit_research "$BEST_FILE"
 fi

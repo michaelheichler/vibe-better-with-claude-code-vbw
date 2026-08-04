@@ -1,10 +1,4 @@
 #!/usr/bin/env bash
-# extract-verified-items.sh — Extract compact QA-verified items from VERIFICATION.md
-# Usage: extract-verified-items.sh <phase-dir>
-# Output: One line per verified item (check ID + short description), plus verdict.
-#         Empty output if no authoritative VERIFICATION.md exists.
-# Purpose: Feed into verify.md so the LLM knows what QA already confirmed
-#          and avoids generating redundant UAT checkpoints.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -32,24 +26,17 @@ phase_verif=$(bash "$SCRIPT_DIR/resolve-verification-path.sh" phase "$phase_dir"
 authoritative_verif=$(bash "$SCRIPT_DIR/resolve-verification-path.sh" authoritative "$phase_dir" 2>/dev/null || true)
 
 if [ -n "$authoritative_verif" ] && [ "$authoritative_verif" != "$phase_verif" ]; then
-  # Once remediation reaches stage=done, the authoritative QA view is the
-  # round-scoped artifact only. If that file is missing, fail closed and do
-  # not resurrect frozen phase-level verification files.
   append_verif_file "$authoritative_verif"
   if [[ ${#verif_files[@]} -eq 0 ]]; then
     exit 0
   fi
 else
-  # Find phase-level VERIFICATION.md files in the phase directory.
-  # Supports: NN-VERIFICATION.md, NN-VERIFICATION-waveN.md, and brownfield plain VERIFICATION.md.
   while IFS= read -r f; do
     append_verif_file "$f"
   done < <(ls "$phase_dir"/*-VERIFICATION*.md 2>/dev/null)
   append_verif_file "$phase_dir/VERIFICATION.md"
 
   if [ -n "$authoritative_verif" ] && [ -f "$authoritative_verif" ]; then
-    # Downstream UAT-facing consumers should see only the authoritative QA view,
-    # not a mix of superseded wave files or frozen historical failures.
     verif_files=()
   fi
   append_verif_file "$authoritative_verif"
@@ -62,7 +49,6 @@ fi
 echo "QA-VERIFIED ITEMS (do NOT generate UAT checkpoints for these):"
 
 for vf in "${verif_files[@]}"; do
-  # Try deterministic format first: parse YAML frontmatter
   result=""
   passed=""
   failed=""
@@ -93,18 +79,14 @@ for vf in "${verif_files[@]}"; do
     fi
   done < "$vf"
 
-  # Try deterministic table format: look for any known section heading with ID column
   deterministic=false
   if grep -qE '^## (Must-Have Checks|Artifact Checks|Key Link Checks|Anti-Pattern Scan|Convention Compliance|Requirement Mapping|Skill-Augmented Checks|Other Checks)' "$vf" 2>/dev/null; then
-    # Check if the table has the deterministic format (ID column)
     if grep -q '| # | ID |' "$vf" 2>/dev/null; then
       deterministic=true
     fi
   fi
 
   if [[ "$deterministic" == true ]]; then
-    # Parse deterministic table rows: | N | ID | Description | Status | Evidence |
-    # Extract from all check sections
     current_section=""
     while IFS= read -r line; do
       case "$line" in
@@ -118,16 +100,13 @@ for vf in "${verif_files[@]}"; do
         "## Other Checks"*) current_section="other" ;;
         "## Pre-existing"*|"## Summary"*) current_section="" ;;
         "| "*)
-          # Skip header and separator rows
           if [[ "$line" == *"---|"* ]] || [[ "$line" == *"| # |"* ]] || [[ "$line" == *"| ID |"* ]]; then
             continue
           fi
           if [[ -n "$current_section" ]]; then
-            # Handle escaped pipes (&#124;) by temporarily replacing them
             safe_line=$(echo "$line" | sed 's/\&#124;/__PIPE__/g')
             check_id=$(echo "$safe_line" | awk -F'|' '{gsub(/^ +| +$/, "", $3); print $3}')
             description=$(echo "$safe_line" | awk -F'|' '{gsub(/^ +| +$/, "", $4); print $4}' | sed 's/__PIPE__/|/g')
-            # Status column position: 5-col tables (6 pipes) → $5; 6-col tables (7 pipes) → per-section
             col_count=$(echo "$safe_line" | tr -cd '|' | wc -c | tr -d ' ')
             if [[ "$col_count" -eq 7 ]]; then
               case "$current_section" in
@@ -139,7 +118,6 @@ for vf in "${verif_files[@]}"; do
             else
               status=$(echo "$safe_line" | awk -F'|' '{gsub(/^ +| +$/, "", $5); print $5}')
             fi
-            # Strip markdown bold markers (**PASS** → PASS)
             status=$(echo "$status" | sed 's/\*\*//g')
             if [[ -n "$check_id" && -n "$status" ]]; then
               echo "  $status $check_id: $description"
@@ -149,17 +127,15 @@ for vf in "${verif_files[@]}"; do
       esac
     done < "$vf"
   else
-    # Brownfield fallback: try old ✓ ** / ⚠ ** patterns
     if grep -qE '^✓ \*\*|^⚠ \*\*' "$vf" 2>/dev/null; then
-      grep -E '^✓ \*\*' "$vf" 2>/dev/null | sed 's/\*\*//g; s/ — .*//' | while IFS= read -r line; do
+      grep -E '^✓ \*\*' "$vf" 2>/dev/null | sed 's/\*\*//g; s/ \xE2\x80\x94 .*//' | while IFS= read -r line; do
         echo "  $line"
       done || true
-      grep -E '^⚠ \*\*' "$vf" 2>/dev/null | sed 's/\*\*//g; s/ — .*//' | while IFS= read -r line; do
+      grep -E '^⚠ \*\*' "$vf" 2>/dev/null | sed 's/\*\*//g; s/ \xE2\x80\x94 .*//' | while IFS= read -r line; do
         echo "  $line"
       done || true
     fi
 
-    # Try old Total row pattern
     total_line=$(grep -E '^\| \*\*Total\*\*' "$vf" 2>/dev/null | head -1 || true)
     if [[ -n "$total_line" ]]; then
       old_passed=$(echo "$total_line" | sed 's/\*\*//g' | awk -F'|' '{print $3}' | tr -d ' ')
@@ -169,12 +145,10 @@ for vf in "${verif_files[@]}"; do
     fi
   fi
 
-  # Print summary from frontmatter (works for both formats)
   if [[ -n "$result" && -n "$total" ]]; then
     echo ""
     echo "  QA: $result (${passed:-0}/${total} passed${failed:+, ${failed} failed}${tier:+, tier: $tier})"
   else
-    # Last resort: grep for Verdict line
     verdict=$(grep -i 'Verdict' "$vf" 2>/dev/null | sed 's/^#* *//; s/\*\*//g' | head -1 || true)
     if [[ -n "$verdict" ]]; then
       echo ""

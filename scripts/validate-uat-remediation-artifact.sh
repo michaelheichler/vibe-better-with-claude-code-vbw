@@ -1,11 +1,4 @@
 #!/usr/bin/env bash
-# validate-uat-remediation-artifact.sh — deterministic gate for remediation artifacts.
-#
-# Usage:
-#   validate-uat-remediation-artifact.sh <research|plan|summary> <absolute-artifact-path>
-#
-# UAT and QA remediation orchestrators use this before advancing persisted state
-# so a sidechain/subagent artifact miss cannot be mistaken for a completed stage.
 
 set -euo pipefail
 
@@ -16,7 +9,6 @@ EXPECTED_ARTIFACT_ROUND=""
 REMEDIATION_KIND=""
 
 if [ -f "$SCRIPT_DIR/uat-utils.sh" ]; then
-  # shellcheck source=scripts/uat-utils.sh
   source "$SCRIPT_DIR/uat-utils.sh"
 fi
 
@@ -59,8 +51,11 @@ canonicalize_artifact_path() {
   local raw_path="$1" parent base parent_physical current link_target depth
 
   case "$raw_path" in
-    /*) ;;
-    *) return 1 ;;
+    /*)
+      ;;
+    *)
+      return 1
+      ;;
   esac
 
   parent=$(dirname "$raw_path")
@@ -76,8 +71,12 @@ canonicalize_artifact_path() {
     fi
     link_target=$(readlink "$current" 2>/dev/null) || return 1
     case "$link_target" in
-      /*) current="$link_target" ;;
-      *) current="$(dirname "$current")/$link_target" ;;
+      /*)
+        current="$link_target"
+        ;;
+      *)
+        current="$(dirname "$current")/$link_target"
+        ;;
     esac
     parent=$(dirname "$current")
     base=$(basename "$current")
@@ -285,8 +284,11 @@ validate_common_path() {
   local expected_suffix="$1" raw_artifact_path canonical_artifact_path
 
   case "$ARTIFACT_PATH" in
-    /*) ;;
-    *) emit_failure "artifact path must be absolute" ;;
+    /*)
+      ;;
+    *)
+      emit_failure "artifact path must be absolute"
+      ;;
   esac
 
   raw_artifact_path="$ARTIFACT_PATH"

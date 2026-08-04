@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# verify-hook-event-name.sh — Ensure all hook scripts include hookEventName in JSON output
+# verify-hook-event-name.sh, Ensure all hook scripts include hookEventName in JSON output
 #
 # Claude Code's hook schema validator requires hookEventName inside hookSpecificOutput.
 # This test checks that every script producing hookSpecificOutput also includes hookEventName.

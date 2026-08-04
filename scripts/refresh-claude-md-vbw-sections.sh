@@ -1,11 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# refresh-claude-md-vbw-sections.sh — Refresh VBW-owned CLAUDE.md sections
-# without rebuilding arbitrary user-authored content.
-#
-# Usage:
-#   refresh-claude-md-vbw-sections.sh CLAUDE.md
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 LIB="$SCRIPT_DIR/lib/claude-md-vbw-sections.sh"
@@ -15,8 +10,7 @@ if [ ! -f "$LIB" ]; then
   exit 1
 fi
 
-# shellcheck source=/dev/null
-source "$LIB"
+source "$SCRIPT_DIR/lib/claude-md-vbw-sections.sh"
 
 if [ "$#" -ne 1 ]; then
   echo "Usage: refresh-claude-md-vbw-sections.sh CLAUDE.md" >&2

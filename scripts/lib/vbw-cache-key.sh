@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# vbw-cache-key.sh — shared helpers for workspace-scoped /tmp cache paths.
 
 vbw_hash_path() {
   local root="$1"
@@ -17,4 +16,15 @@ vbw_cache_prefix() {
   local hash
   hash=$(vbw_hash_path "$root")
   printf '/tmp/vbw-%s-%s-%s' "${version:-0}" "$uid" "$hash"
+}
+
+vbw_model_cache_source() {
+  local bin="${1:-}" pricing="${2:-}" bin_stamp="0:0" pricing_stamp="0:0"
+  if [ -n "$bin" ] && [ -f "$bin" ]; then
+    bin_stamp="$(stat -f '%m:%z' "$bin" 2>/dev/null || stat -c '%Y:%s' "$bin" 2>/dev/null || echo 0:0)"
+  fi
+  if [ -f "$pricing" ]; then
+    pricing_stamp="$(stat -f '%m:%z' "$pricing" 2>/dev/null || stat -c '%Y:%s' "$pricing" 2>/dev/null || echo 0:0)"
+  fi
+  printf 'bin:%s:%s:pricing:%s' "${bin:-none}" "$bin_stamp" "$pricing_stamp"
 }

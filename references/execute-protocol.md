@@ -151,7 +151,7 @@ Branch each segment into exactly one runtime path and persist that segment's act
      ```bash
      bash "${VBW_PLUGIN_ROOT}/scripts/clean-stale-teams.sh" 2>/dev/null || true
      ```
-   - Set `TEAM_NAME` from the segment (`team_name`) or default to `"vbw-phase-{NN}"` for VBW's own bookkeeping. The platform's real team name is session-derived ("session-" + first 8 chars of the session id); `team_name` on `Agent` is accepted but ignored, so it is not a capability signal.
+   - Set `TEAM_NAME` from the segment (`team_name`) or default to `"vbw-phase-{NN}"` for VBW's own bookkeeping. The platform's real team name is session-derived ("session-" + first 8 chars of the session id). `team_name` on `Agent` is accepted but ignored, so it is not a capability signal.
    - Agent teams are experimental (CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1). The team forms when the first teammate is spawned via the Agent tool. There is no TeamCreate setup step.
    - Persist the actual runtime mode:
      ```bash
@@ -178,7 +178,7 @@ Branch each segment into exactly one runtime path and persist that segment's act
      ```bash
      bash "${VBW_PLUGIN_ROOT}/scripts/delegated-workflow.sh" set execute {segment_effort} subagent
      ```
-   - Do not form an agent team (do not spawn teammates); use plain sequential subagent Agent calls, continuing in explicit non-team mode.
+   - Do not form an agent team (do not spawn teammates). Use plain sequential subagent Agent calls, continuing in explicit non-team mode.
    - **Do NOT preserve “parallelism” by launching multiple background `Agent` spawns without `team_name`.**
 
 After each segment completes, verify each plan's SUMMARY.md through Step 3c and write the verified status (`complete`, `partial`, or `failed`) into `.execution-state.json`. Only `complete|partial` unlock dependents. Re-run the helper against the updated execution state until no pending plans remain.
@@ -266,7 +266,7 @@ If compilation fails, proceed without it: Dev reads files directly.
 - Truncation uses tail strategy (keep most recent context).
 
 **Pre-code validation gate (mandatory when plan requires it):**
-If a plan task contains validation requirements such as "MUST be done before any code changes", "Expected: ...", or "If absent, stop and re-analyze", the validation result is a hard gate:
+If a plan task contains validation requirements, the validation result is a hard gate. Examples include "MUST be done before any code changes", "Expected: ...", and "If absent, stop and re-analyze":
 
 1. **Execute the validation** using the tool appropriate to the data source:
    - **Public/anonymous endpoints** (docs pages, open APIs, status endpoints): WebFetch is acceptable.
@@ -274,14 +274,16 @@ If a plan task contains validation requirements such as "MUST be done before any
 2. **Evaluate the result:**
    - If the result matches the task's expected shape: gate passes, proceed with code changes.
    - If the result contradicts expectations (wrong values, missing fields, empty when non-empty expected): gate fails.
-3. **On gate failure:**
+
+**Failure handling:**
+1. **On gate failure:**
    - Run ONE broadened sanity-check query (remove filters, broaden search, confirm environment/account context).
    - If the contradiction remains: send `blocker_report` immediately. Do NOT proceed to the next task or begin code changes.
    - Empty filtered results (`[]`, no matches) are contradictory when the task expected specific data: do not treat empty as success unless the task explicitly defines empty as the expected outcome.
-4. **Operator fallback:** If automated respawn after a blocker is not possible, surface a message to the user: "Validation gate failed for task {N}. Restart `/vbw:vibe` from current plan state to retry."
+2. **Operator fallback:** If automated respawn after a blocker is not possible, surface a message to the user: "Validation gate failed for task {N}. Restart `/vbw:vibe` from current plan state to retry."
 
 
-**Model resolution:** Resolve models for Dev and QA agents:
+**Model resolution:** Resolve models for Dev and QA agents. The PreToolUse guard enforces the resolved model on `vbw:*` agent spawns and wins on conflicts. Keep the explicit `model:` parameter as redundancy:
 ```bash
 DEV_MODEL=$(bash "${VBW_PLUGIN_ROOT}/scripts/resolve-agent-model.sh" dev .vbw-planning/config.json "${VBW_PLUGIN_ROOT}/config/model-profiles.json")
 if [ $? -ne 0 ]; then echo "$DEV_MODEL" >&2; exit 1; fi
@@ -294,13 +296,31 @@ QA_MAX_TURNS=$(bash "${VBW_PLUGIN_ROOT}/scripts/resolve-agent-max-turns.sh" qa .
 if [ $? -ne 0 ]; then echo "$QA_MAX_TURNS" >&2; exit 1; fi
 ```
 
-**Skill activation for Dev/QA tasks:** Before composing task descriptions, evaluate installed skills visible in your system context: read each skill's description and select all materially helpful installed skills for the tasks being executed, including adjacent/supporting domain skills surfaced by the prompt, logs, error text, related files, or stack context: not just the single most direct skill. Every spawned prompt that performs this evaluation MUST begin with exactly one explicit outcome block: use `<skill_activation>` as the FIRST line when one or more installed skills are preselected at orchestration time, or `<skill_no_activation>` as the FIRST line when none are preselected. Silent omission of both blocks is invalid. After evaluating, state the skill outcome in your response (e.g., "Skills: activating {skill-name}" or "Skills: none preselected: {reason}") so the user has visibility before the agent is spawned. Example: if the prompt or error mentions SwiftData, include `swiftdata` alongside relevant test/build/debug skills. After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting: do not scan entire skill folders or read unrelated references. When preselected skills expose named local follow-up docs, resolve them with `extract-skill-follow-up-files.sh` and paste the emitted `<skill_follow_up_files>` block immediately after the follow-up-read sentence in the spawned payload.
+**Skill activation for Dev/QA tasks:** Before composing task descriptions, evaluate installed skills visible in your system context. Read each skill's description and select all materially helpful skills for the tasks, including adjacent support skills surfaced by the prompt, logs, errors, related files, or stack context, not just the single most direct skill.
+
+Every spawned prompt that performs this evaluation MUST begin with exactly one explicit outcome block. Use `<skill_activation>` as the FIRST line when skills are preselected at orchestration time. Use `<skill_no_activation>` as the FIRST line when none are preselected. Silent omission of both blocks is invalid.
+
+After evaluating, state the skill outcome in your response so the user has visibility before the agent is spawned. Example: `Skills: activating {skill-name}` or `Skills: none preselected: {reason}`. If the prompt or error mentions SwiftData, include `swiftdata` with relevant test, build, or debug skills.
+
+After calling `Skill(...)`, read any relevant files named by its instructions. Do not scan entire skill folders or read unrelated references. When preselected skills expose local follow-up docs, resolve them with `extract-skill-follow-up-files.sh` and paste the emitted `<skill_follow_up_files>` block immediately after the follow-up-read sentence in the spawned payload.
+
+**Spawn-shape rule (applies to both non-team and true-team spawns):** For every live teammate spawn call, check whether the live tool is `Agent` or `TaskCreate`.
+The rule is to never set Claude-side `isolation:"worktree"` or pass a `cwd` pointing into `.claude/worktrees/...` or `.vbw-worktrees/...`.
+`agent-spawn-guard.sh` validates these isolation/cwd fields before it branches on delegation mode. It rejects either field with a hard `cross-worktree spawn` error.
+
+Prepared VBW worktree targeting means the `Working directory:` and `Worktree targeting:` lines in the task description.
+The target comes from `.execution-state.json` `worktree_path` and `scripts/worktree-target.sh`.
+The spawn call does not carry that targeting. This means it is not an `isolation` or `cwd` field on the spawn call.
+Claude-side `isolation:"worktree"` can create unmanaged `.claude/worktrees/agent-*` sidechains with different tool/artifact assumptions.
+VBW's current isolation uses its own `.vbw-worktrees` git worktrees.
+
+In addition, non-team spawns must omit `team_name` and `run_in_background`. `name` is optional label-only metadata and must never be used for routing, lifecycle state, or team semantics.
+In true team mode, every spawn/TaskCreate after the marker is set must include the selected `TEAM_NAME` and teammate `name`.
 
 For each runnable plan in the current segment, create the teammate task using the live teammate spawn tool (for example `TaskCreate` or `Agent`). In non-team mode, spawn exactly one Dev and wait for its result before spawning the next runnable plan. In true team mode, every spawn/TaskCreate after the marker is set must include the selected `TEAM_NAME` and teammate `name`.
 
 Render the prompt prefix from `${VBW_PLUGIN_ROOT}/references/skill-activation-payload.md` with the local `skill_calls`, task-specific `no_skill_reason`, and optional helper-emitted `follow_up_files_block`. Prepend the rendered bytes to `description` so the rendered skill outcome tag is the first child-prompt line. Do not paste the template path, variables, the render instruction, or an unresolved `@` include into the child prompt.
 
-**Spawn-shape rule (applies to both non-team and true-team spawns):** On every live teammate spawn call, whether the live tool is `Agent` or `TaskCreate`, never set Claude-side `isolation:"worktree"` or pass a `cwd` pointing into `.claude/worktrees/...` or `.vbw-worktrees/...`. `agent-spawn-guard.sh` validates these isolation/cwd fields before it branches on delegation mode, so the rule is enforced for true-team spawns identically to non-team ones: passing them produces a hard `cross-worktree spawn` rejection in either mode. Prepared VBW worktree targeting means the `Working directory:` and `Worktree targeting:` lines in the task description, derived from `.execution-state.json` `worktree_path` and `scripts/worktree-target.sh`. it is not an `isolation` or `cwd` field on the spawn call. Claude-side `isolation:"worktree"` can create unmanaged `.claude/worktrees/agent-*` sidechains with different tool/artifact assumptions. VBW's current isolation uses its own `.vbw-worktrees` git worktrees. In addition, non-team spawns must omit `team_name` and `run_in_background`. `name` is optional label-only metadata and must never be used for routing, lifecycle state, or team semantics. In true team mode, every spawn/TaskCreate after the marker is set must include the selected `TEAM_NAME` and teammate `name`.
 ```yaml
 subject: "Execute {NN-MM}: {plan-title}"
 description: |
@@ -411,6 +431,8 @@ Hooks handle continuous verification: PostToolUse validates SUMMARY.md, TaskComp
 - `task_started`: when task execution begins: `log-event.sh task_started {phase} {plan} task_id={id}`
 - `artifact_written`: after writing/modifying a file: `log-event.sh artifact_written {phase} {plan} path={file} task_id={id}`
   - Also register in artifact registry: `bash "${VBW_PLUGIN_ROOT}/scripts/artifact-registry.sh" register {file} {event_id} {phase} {plan}`
+
+**Outcome events:**
 - `gate_passed` / `gate_failed`: already emitted by hard-gate.sh
 - `task_completed_candidate`: emitted by two-phase-complete.sh
 - `task_completed_confirmed`: emitted by two-phase-complete.sh after validation
@@ -639,7 +661,9 @@ Phase {NN}: {name} -- Built
 
 **"What happened" (NRW-02):** If config `plain_summary` is true (default), append 2-4 plain-English sentences between QA and Next Up. No jargon. Source from SUMMARY.md files + QA result. If false, skip.
 
-**Discovered Issues:** If any Dev or QA agent reported pre-existing failures, out-of-scope bugs, or issues unrelated to this phase's work, collect and de-duplicate them by test name and file (when the same test+file pair appears with different error messages, keep the first error message encountered), then list them in the summary output between "What happened" and Next Up. To keep context size manageable, cap the displayed list at 20 entries. if more exist, show the first 20 and append `... and {N} more`. Format each bullet as `⚠ testName (path/to/file): error message`:
+**Discovered Issues:** If any Dev or QA agent reported pre-existing failures, out-of-scope bugs, or issues unrelated to this phase's work, collect and de-duplicate them by test name and file. When the same test and file pair has different error messages, keep the first message encountered.
+
+List the issues in the summary output between "What happened" and Next Up. Cap the list at 20 entries to keep context size manageable. If more exist, show the first 20 and append `... and {N} more`. Format each bullet as `⚠ testName (path/to/file): error message`:
 ```text
   Discovered Issues:
     ⚠ {issue-1}

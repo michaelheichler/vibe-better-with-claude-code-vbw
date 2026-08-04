@@ -1,15 +1,5 @@
 #!/bin/bash
 set -u
-# PreCompact hook: Inject VBW-specific compaction priorities
-#
-# CC 2.1.47+ handles natively:
-#   - Plan mode preservation
-#   - Basic conversation flow retention
-#
-# VBW adds:
-#   - Agent-specific codebase re-read instructions
-#   - Execution state snapshots for crash recovery
-#   - Compaction markers for Dev re-read guards
 
 PLANNING_DIR="${VBW_PLANNING_DIR:-.vbw-planning}"
 
@@ -166,14 +156,12 @@ fi
 AGENT_INSTANCE_NAME=$(normalize_agent_instance "$INSTANCE_NAME_SOURCE")
 [ -z "$AGENT_INSTANCE_NAME" ] && AGENT_INSTANCE_NAME="$AGENT_ROLE"
 
-# VBW-specific compaction priorities per agent role
 case "$AGENT_ROLE" in
   scout)
     PRIORITIES="Preserve research findings, URLs, confidence assessments"
     ;;
   dev)
     PRIORITIES="Preserve commit hashes, file paths modified, deviation decisions, current task number. After compaction, if $PLANNING_DIR/codebase/META.md exists, re-read CONVENTIONS.md, PATTERNS.md, STRUCTURE.md, and DEPENDENCIES.md (whichever exist) from $PLANNING_DIR/codebase/"
-    # Inject worktree path if agent has a mapping
     WORKTREE_MAP_FILE=$(resolve_worktree_map_file) || WORKTREE_MAP_FILE=""
     if [ -n "$WORKTREE_MAP_FILE" ] && [ -f "$WORKTREE_MAP_FILE" ]; then
       WORKTREE_PATH=$(jq -r '.worktree_path // ""' "$WORKTREE_MAP_FILE" 2>/dev/null) || WORKTREE_PATH=""
@@ -201,45 +189,36 @@ case "$AGENT_ROLE" in
     ;;
 esac
 
-# Inject shutdown protocol reminder for team agents (survives compaction).
-# NOTE: Keep this reminder in sync with the Shutdown Handling section in agents/vbw-*.md.
 case "$AGENT_ROLE" in
   scout|dev|qa|lead|debugger|docs)
     PRIORITIES="$PRIORITIES. SHUTDOWN PROTOCOL: If you receive a message containing \"shutdown_request\", you MUST call the SendMessage tool with a JSON body: {\"type\": \"shutdown_response\", \"approved\": true, \"request_id\": \"<id from shutdown_request>\", \"final_status\": \"complete|idle|in_progress\"}. Use the final_status value that matches your current state. Plain text responses do NOT satisfy the shutdown protocol."
     ;;
 esac
 
-# Inject caveman language directive (survives compaction)
 _caveman_cfg="$PLANNING_DIR/config.json"
 if [ -f "$_caveman_cfg" ] && command -v jq &>/dev/null; then
   _caveman_style=$(jq -r '.caveman_style // "none"' "$_caveman_cfg" 2>/dev/null || echo "none")
   if [ "$_caveman_style" != "none" ] && [ "$_caveman_style" != "false" ]; then
     _caveman_level="$_caveman_style"
     if [ "$_caveman_level" = "auto" ]; then
-      # At compaction time, default auto to full since context is already high
       _caveman_level="full"
     fi
     PRIORITIES="$PRIORITIES. CAVEMAN MODE (${_caveman_level}): After compaction, respond using ${_caveman_level} caveman language per references/caveman-language.md."
   fi
 fi
 
-# Add compact trigger context
 if [ "$TRIGGER" = "manual" ]; then
   PRIORITIES="$PRIORITIES. User requested compaction."
 else
   PRIORITIES="$PRIORITIES. This is an automatic compaction at context limit."
 fi
 
-# Write compaction marker for Dev re-read guard (REQ-14)
 if [ -d "$PLANNING_DIR" ]; then
   date +%s > "$PLANNING_DIR/.compaction-marker" 2>/dev/null || true
 fi
 
-# Write per-agent compaction marker for stuck-compaction watchdog
-# The tmux-watchdog polls these files and kills agents stuck > 5 minutes
 if [ -d "$PLANNING_DIR" ]; then
   COMPACT_PID="$PPID"
-  # Walk parent chain to find a registered agent PID
   PANE_MAP="$PLANNING_DIR/.agent-panes"
   COMPACT_PANE_ID=""
   if [ -f "$PANE_MAP" ]; then
@@ -264,9 +243,6 @@ if [ -d "$PLANNING_DIR" ]; then
     > "$PLANNING_DIR/.compacting/${COMPACT_PID}.json" 2>/dev/null || true
 fi
 
-# --- Compaction loop breaker (infinite-loop prevention) ---
-# Increment a per-session counter. If it exceeds the threshold, inject a hard
-# stop directive so the agent terminates instead of looping forever.
 COMPACTION_LIMIT=10
 COMPACTION_COUNT_FILE="$PLANNING_DIR/.compaction-count"
 if [ -d "$PLANNING_DIR" ]; then
@@ -279,13 +255,12 @@ if [ -d "$PLANNING_DIR" ]; then
   echo "$NEW_COUNT" > "$COMPACTION_COUNT_FILE" 2>/dev/null || true
 
   if [ "$NEW_COUNT" -ge "$COMPACTION_LIMIT" ]; then
-    PRIORITIES="CRITICAL — COMPACTION LOOP DETECTED (${NEW_COUNT} compactions). You are in an infinite auto-compaction loop: your non-reducible context exceeds the compaction threshold, so every tool call triggers another compaction with zero forward progress. STOP ALL WORK IMMEDIATELY. Do NOT read any more files. Do NOT call any tools. Report to the user: 'VBW compaction loop detected after ${NEW_COUNT} cycles — session context is too large for the effective context window. Kill this session and retry with a smaller task scope or increase context window.' Then terminate."
+    PRIORITIES="CRITICAL, COMPACTION LOOP DETECTED (${NEW_COUNT} compactions). You are in an infinite auto-compaction loop: your non-reducible context exceeds the compaction threshold, so every tool call triggers another compaction with zero forward progress. STOP ALL WORK IMMEDIATELY. Do NOT read any more files. Do NOT call any tools. Report to the user: 'VBW compaction loop detected after ${NEW_COUNT} cycles, session context is too large for the effective context window. Kill this session and retry with a smaller task scope or increase context window.' Then terminate."
   elif [ "$NEW_COUNT" -ge 3 ]; then
-    PRIORITIES="WARNING: This session has compacted ${NEW_COUNT} times (limit: ${COMPACTION_LIMIT}). You may be approaching an infinite compaction loop. Minimize file reads — only read files essential to your current task. $PRIORITIES"
+    PRIORITIES="WARNING: This session has compacted ${NEW_COUNT} times (limit: ${COMPACTION_LIMIT}). You may be approaching an infinite compaction loop. Minimize file reads, only read files essential to your current task. $PRIORITIES"
   fi
 fi
 
-# --- Save agent state snapshot ---
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 if [ -f "$PLANNING_DIR/.execution-state.json" ] && [ -f "$SCRIPT_DIR/snapshot-resume.sh" ]; then
   SNAP_PHASE=$(jq -r '.phase // ""' "$PLANNING_DIR/.execution-state.json" 2>/dev/null)

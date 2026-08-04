@@ -1,31 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# rename-default-milestone.sh — Brownfield migration for milestones/default/
-#
-# Usage: rename-default-milestone.sh PLANNING_DIR
-#
-# If milestones/default/ exists, derives a meaningful slug from SHIPPED.md
-# content (phase names, "What Changed" summary, or phase directory names)
-# and renames it. Idempotent — exits 0 if no default/ exists.
-#
-# Exit codes: 0 on success (including no-op), 1 on failure
-
 PLANNING_DIR="${1:-}"
-
 if [[ -z "$PLANNING_DIR" ]]; then
   echo "Usage: rename-default-milestone.sh PLANNING_DIR" >&2
   exit 1
 fi
-
 DEFAULT_DIR="$PLANNING_DIR/milestones/default"
-
-# Idempotent: no default dir → nothing to do
 if [[ ! -d "$DEFAULT_DIR" ]]; then
   exit 0
 fi
-
-# --- Normalize text to kebab-case slug ---
 normalize_slug() {
   echo "$1" | tr '[:upper:]' '[:lower:]' | \
     sed 's/[^a-z0-9 -]//g' | \
@@ -34,19 +18,14 @@ normalize_slug() {
     sed 's/--*/-/g' | \
     sed 's/^-//;s/-$//'
 }
-
-# --- Derive slug from SHIPPED.md ---
 derive_slug() {
   local shipped="$DEFAULT_DIR/SHIPPED.md"
   local slug=""
-
   if [[ -f "$shipped" ]]; then
     local shipped_content
     shipped_content=$(cat "$shipped")
-    shipped_content="${shipped_content//—/-}"
-    shipped_content="${shipped_content//–/-}"
-
-    # Try 1: Use milestone name from title (e.g., "# SHIPPED: My Milestone")
+    shipped_content="${shipped_content//$'\xE2\x80\x94'/-}"
+    shipped_content="${shipped_content//$'\xE2\x80\x93'/-}"
     local title_name
     title_name=$(printf '%s\n' "$shipped_content" | awk '
       tolower($0) ~ /^#[[:space:]]*shipped:[[:space:]]*/ {
@@ -60,8 +39,6 @@ derive_slug() {
     if [[ -n "$title_name" && "$title_name_lc" != "default milestone" ]]; then
       slug=$(normalize_slug "$title_name")
     fi
-
-    # Try 2: Extract phase names from "## Phases" section
     if [[ -z "$slug" ]]; then
       local phases
       phases=$(printf '%s\n' "$shipped_content" | awk '
@@ -85,8 +62,6 @@ derive_slug() {
       fi
     fi
   fi
-
-  # Try 3: Derive from phase directory names
   if [[ -z "$slug" && -d "$DEFAULT_DIR/phases" ]]; then
     local phase_dirs
     phase_dirs=$(ls -1 "$DEFAULT_DIR/phases/" 2>/dev/null | head -2 | sed 's/^[0-9]*-//')
@@ -95,17 +70,11 @@ derive_slug() {
       slug=$(normalize_slug "$slug")
     fi
   fi
-
-  # Fallback: timestamp-based
   if [[ -z "$slug" ]]; then
     slug="milestone-$(date +%Y%m%d)"
   fi
-
-  # Truncate slug portion to 50 chars
   echo "$slug" | head -c 50 | sed 's/-$//'
 }
-
-# --- Determine milestone number prefix ---
 milestone_number() {
   local count=0
   if [[ -d "$PLANNING_DIR/milestones" ]]; then
@@ -118,19 +87,13 @@ milestone_number() {
   fi
   printf "%02d" $((count + 1))
 }
-
 slug_name=$(derive_slug)
 ms_num=$(milestone_number)
-
-# Guard against empty slug
 if [[ -z "$slug_name" ]]; then
   slug_name="milestone-$(date +%Y%m%d)"
 fi
-
 new_slug="${ms_num}-${slug_name}"
 new_dir="$PLANNING_DIR/milestones/$new_slug"
-
-# Guard against collision — loop with counter to guarantee unique name
 if [[ -d "$new_dir" ]]; then
   suffix=1
   while [[ -d "${new_dir}-${suffix}" ]]; do
@@ -142,7 +105,5 @@ if [[ -d "$new_dir" ]]; then
   done
   new_dir="${new_dir}-${suffix}"
 fi
-
 mv "$DEFAULT_DIR" "$new_dir"
-
 exit 0

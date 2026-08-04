@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# measure-shard-weights.sh — Measure per-file bats execution times for shard balancing.
+# measure-shard-weights.sh, Measure per-file bats execution times for shard balancing.
 #
 # Runs every bats file individually and writes testing/shard-weights.txt with
 # actual execution times (seconds). Used by run-bats-shard.sh for greedy

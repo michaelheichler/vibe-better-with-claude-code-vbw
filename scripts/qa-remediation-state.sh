@@ -1,28 +1,9 @@
 #!/usr/bin/env bash
-# qa-remediation-state.sh — Track QA remediation chain progress on disk.
-#
-# Persists the current stage of the plan → execute → verify chain so that
-# the orchestrator can resume correctly after compaction or session restart.
-#
-# Usage:
-#   qa-remediation-state.sh get         <phase-dir>   → prints current stage + metadata
-#   qa-remediation-state.sh advance     <phase-dir>   → advances to next stage
-#   qa-remediation-state.sh reset       <phase-dir>   → removes state file
-#   qa-remediation-state.sh init        <phase-dir>   → initializes for QA remediation
-#   qa-remediation-state.sh needs-round <phase-dir>   → starts a new remediation round
-#
-# Stages: plan → execute → verify → done
-#   (no research/discuss — VERIFICATION.md failures are the input)
-#
-# Remediation artifacts live in {phase-dir}/remediation/qa/round-{RR}/ with
-# R{RR}-PLAN.md, R{RR}-SUMMARY.md naming.
-# State file: {phase-dir}/remediation/qa/.qa-remediation-stage (key=value pairs).
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 if [ -f "$SCRIPT_DIR/lib/vbw-config-root.sh" ]; then
-  # shellcheck source=scripts/lib/vbw-config-root.sh
   source "$SCRIPT_DIR/lib/vbw-config-root.sh"
 fi
 if [ -f "$SCRIPT_DIR/lib/qa-result-gate-fail-classifications.sh" ]; then
@@ -41,7 +22,6 @@ fi
 reject_milestone_phase_dir() {
   local phase_dir="$1"
 
-  # Milestone path guard: refuse to operate on archived milestones.
   case "$phase_dir" in
     */.vbw-planning/milestones/*|.vbw-planning/milestones/*)
       echo "Error: refusing to operate on archived milestone path: $phase_dir" >&2
@@ -72,8 +52,6 @@ translate_claude_sidechain_phase_candidate() {
   local candidate="$1" sidechain_root="${VBW_CLAUDE_SIDECHAIN_ROOT:-}" host_root="${VBW_CLAUDE_SIDECHAIN_HOST_ROOT:-}"
   local rel_phase_path inferred_sidechain_root worktrees_dir claude_dir inferred_host_root
 
-  # Primary: env-var mapping populated by vbw-config-root.sh when the shell CWD is inside a
-  # Claude sidechain (e.g. .claude/worktrees/agent-*).
   if [ -n "$sidechain_root" ] && [ -n "$host_root" ] && [ -f "$host_root/.vbw-planning/config.json" ]; then
     case "$candidate" in
       "$sidechain_root"/.vbw-planning/phases/*)
@@ -84,10 +62,6 @@ translate_claude_sidechain_phase_candidate() {
     esac
   fi
 
-  # Structural fallback: caller is running from the host CWD but passed an absolute sidechain
-  # phase path directly (env vars not set because the hook fires only for sidechain CWD).
-  # Infer the host root by walking up from /.claude/worktrees/agent-{id}/... rather than
-  # relying on a greedy text replacement.
   case "$candidate" in
     */.claude/worktrees/agent-*/.vbw-planning/phases/*)
       inferred_sidechain_root="${candidate%%/.vbw-planning/phases/*}"
@@ -135,8 +109,12 @@ canonicalize_phase_dir() {
   fi
 
   case "$raw_phase_dir" in
-    /*) candidate="$raw_phase_dir" ;;
-    *)  candidate="${VBW_CONFIG_ROOT:-$(pwd -P)}/$raw_phase_dir" ;;
+    /*)
+      candidate="$raw_phase_dir"
+      ;;
+    *)
+      candidate="${VBW_CONFIG_ROOT:-$(pwd -P)}/$raw_phase_dir"
+      ;;
   esac
 
   candidate=$(canonicalize_existing_or_parent "$candidate")
@@ -171,7 +149,6 @@ PHASE_DIR=$(canonicalize_phase_dir "$PHASE_DIR")
 
 STATE_FILE="$PHASE_DIR/remediation/qa/.qa-remediation-stage"
 
-# QA remediation stages: plan → execute → verify → done
 STAGES=("plan" "execute" "verify" "done")
 
 count_pre_existing_issues_in_verification() {
@@ -446,14 +423,12 @@ next_stage() {
       found=true
     fi
   done
-  # At end of chain (done) — stay at done
   echo "done"
 }
 
 start_new_round() {
   local current_stage current_round next_round next_round_padded round_started_at_commit
   current_stage=$(get_stage)
-  # Only allow new round from verify or done — not from plan/execute
   case "$current_stage" in
     verify|done) ;;
     *)
@@ -462,7 +437,6 @@ start_new_round() {
       ;;
   esac
   current_round=$(get_round)
-  # Guard: ensure round is numeric
   if ! [[ "$current_round" =~ ^[0-9]+$ ]]; then
     echo "Error: corrupt round value in state file: $current_round" >&2
     exit 1
@@ -565,7 +539,6 @@ case "$CMD" in
     ;;
 
   init)
-    # Create remediation directory and first round dir
     round_started_at_commit=$(capture_round_started_at_commit)
     mkdir -p "$PHASE_DIR/remediation/qa/round-01"
     write_state "plan" "01" "$round_started_at_commit"
@@ -583,16 +556,12 @@ case "$CMD" in
     round=$(get_round)
     round_started_at_commit=$(get_round_started_at_commit)
 
-    # When advancing from verify, check result:
-    # - If verify → done, that means QA passed
-    # - The orchestrator reads VERIFICATION.md before calling advance
     write_state "$next" "$round" "$round_started_at_commit"
     echo "$next"
     emit_metadata
     ;;
 
   needs-round)
-    # Start a new remediation round (QA failed again)
     start_new_round
     ;;
 

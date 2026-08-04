@@ -1,10 +1,6 @@
 #!/usr/bin/env bash
-# help-output.sh — Generate formatted help output from command frontmatter
-# Zero tokens: runs as shell, output injected into help.md via bash substitution
-# Compatible with bash 3.2+ (macOS default)
 set -euo pipefail
 
-# shellcheck source=resolve-claude-dir.sh
 . "$(dirname "$0")/resolve-claude-dir.sh" 2>/dev/null || true
 
 PLUGIN_ROOT="${1:-${CLAUDE_PLUGIN_ROOT:-}}"
@@ -22,7 +18,6 @@ if [ ! -d "$COMMANDS_DIR" ]; then
   exit 1
 fi
 
-# Temp files for category grouping (bash 3.2 compatible, no associative arrays)
 TMP_DIR=$(mktemp -d)
 trap 'rm -rf "$TMP_DIR"' EXIT
 
@@ -62,7 +57,6 @@ for file in "$COMMANDS_DIR"/*.md; do
   [ -z "$name" ] && continue
   [ "$hidden" = "true" ] && continue
 
-  # Build display line: command padded to 42 chars + description
   if [ -n "$hint" ]; then
     entry="  /$name $hint"
   else
@@ -71,7 +65,6 @@ for file in "$COMMANDS_DIR"/*.md; do
   padded=$(printf "%-42s" "$entry")
   display_line="$padded $description"
 
-  # Append to category file (sorted later)
   case "$category" in
     lifecycle)   echo "$display_line" >> "$TMP_DIR/lifecycle" ;;
     monitoring)  echo "$display_line" >> "$TMP_DIR/monitoring" ;;
@@ -81,16 +74,14 @@ for file in "$COMMANDS_DIR"/*.md; do
   esac
 done
 
-# Version
 VERSION=""
 if [ -f "$PLUGIN_ROOT/VERSION" ]; then
   VERSION=$(cat "$PLUGIN_ROOT/VERSION")
 fi
 
-# Header
 echo "╔══════════════════════════════════════════════════════════════════════════╗"
 if [ -n "$VERSION" ]; then
-  header="VBW Help — v$VERSION"
+  header="VBW Help, v$VERSION"
 else
   header="VBW Help"
 fi
@@ -106,7 +97,7 @@ print_section() {
 
   [ -s "$file" ] || return 0
 
-  echo "  $title — $subtitle"
+  echo "  $title, $subtitle"
   echo "  ──────────────────────────────────────────────────────────────────────"
   sort < "$file"
   echo ""

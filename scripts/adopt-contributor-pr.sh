@@ -1,16 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# adopt-contributor-pr.sh — Fetch and check out a contributor's PR branch locally.
-# Handles both same-repo and fork PRs safely, avoids overwriting local branches.
-#
-# Usage: bash scripts/adopt-contributor-pr.sh <PR_NUM>
-# Output: key=value pairs on stdout (eval-safe):
-#   CHECKOUT_BRANCH, PUSH_REMOTE, IS_FORK, PR_BRANCH, PR_AUTHOR
-#   For fork PRs also: FORK_OWNER, FORK_REPO
-# Exit codes: 0 = success; non-zero = error.
-#   Validation failures from this script exit 1 (stderr has details).
-#   External command failures may exit with other non-zero statuses.
 
 PR_NUM="${1:?Usage: adopt-contributor-pr.sh <PR_NUM>}"
 
@@ -26,9 +16,8 @@ IS_FORK=$(printf '%s' "$PR_JSON" | jq -r '.isCrossRepository')
 CAN_MODIFY=$(printf '%s' "$PR_JSON" | jq -r '.maintainerCanModify')
 PR_AUTHOR=$(printf '%s' "$PR_JSON" | jq -r '.author.login')
 
-# Validation gates
 if [ "$PR_STATE" != "OPEN" ]; then
-    echo "Error: PR #$PR_NUM is $PR_STATE — cannot push fixes to a closed or merged PR." >&2
+    echo "Error: PR #$PR_NUM is $PR_STATE, cannot push fixes to a closed or merged PR." >&2
     exit 1
 fi
 
@@ -43,7 +32,6 @@ if [ "$IS_FORK" = "true" ]; then
     FORK_REPO=$(printf '%s' "$PR_JSON" | jq -r '.headRepository.owner.login + "/" + .headRepository.name')
     EXPECTED_URL="https://github.com/$FORK_REPO.git"
     EXISTING_URL=$(git remote get-url "$FORK_OWNER" 2>/dev/null || echo "")
-    # Normalize GitHub URLs: extract owner/repo to compare regardless of SSH/HTTPS/.git suffix
     normalize_github_url() {
         printf '%s' "$1" | sed -E 's#^(https://github\.com/|git@github\.com:|ssh://git@github\.com/|git://github\.com/)##; s#\.git$##'
     }
@@ -101,7 +89,6 @@ else
             CHECKOUT_BRANCH="$LOCAL_BRANCH"
         else
             CHECKOUT_BRANCH="$PR_BRANCH"
-            # Ensure upstream tracking even when local branch already matches remote SHA
             if ! git rev-parse --abbrev-ref "${CHECKOUT_BRANCH}@{u}" >/dev/null 2>&1; then
                 if ! git branch --set-upstream-to="origin/$PR_BRANCH" "$CHECKOUT_BRANCH" >/dev/null 2>&1; then
                     echo "Error: Failed to set upstream tracking for '$CHECKOUT_BRANCH' to 'origin/$PR_BRANCH'." >&2

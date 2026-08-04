@@ -37,7 +37,11 @@ case "$TARGET" in
   *)   BACKUP="${TARGET}.original";;
 esac
 if [ -e "$BACKUP" ]; then
-  _i=1; while [ -e "${BACKUP%.*}.${_i}.${BACKUP##*.}" ] 2>/dev/null; do _i=$((_i+1)); done
+  _i=1
+  while [ -e "${BACKUP%.*}.${_i}.${BACKUP##*.}" ] 2>/dev/null
+  do
+    _i=$((_i+1))
+  done
   case "$BACKUP" in *.*) BACKUP="${BACKUP%.*}.${_i}.${BACKUP##*.}";; *) BACKUP="${BACKUP}.${_i}";; esac
 fi
 cp "$TARGET" "$BACKUP"
@@ -55,7 +59,7 @@ echo "Backup: $BACKUP"
 - Connective fluff: "however", "furthermore", "additionally", "in addition"
 
 ### Preserve EXACTLY (never modify)
-- Code blocks (fenced ``` and indented) — copy byte-for-byte, including comments and spacing
+- Code blocks (fenced ``` and indented) , copy byte-for-byte, including comments and spacing
 - Inline code (`backtick content`)
 - URLs and links
 - File paths and commands
@@ -71,7 +75,7 @@ echo "Backup: $BACKUP"
 ### Compress
 - Short synonyms: "big" not "extensive", "fix" not "implement a solution for", "use" not "utilize"
 - Fragments OK: "Run tests before commit" not "You should always run tests before committing"
-- Drop "you should", "make sure to", "remember to" — state the action directly
+- Drop "you should", "make sure to", "remember to" , state the action directly
 - Merge redundant bullets that say the same thing differently
 - Keep one example where multiple show the same pattern
 

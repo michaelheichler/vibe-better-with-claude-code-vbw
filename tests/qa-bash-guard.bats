@@ -69,6 +69,115 @@ new_test_project() {
   [[ "$output" == *"shell file write/redirection"* ]]
 }
 
+@test "bash-guard: qa allows quoted or piped mutation words in data" {
+  TEST_PROJECT=$(new_test_project qa-mutation-evidence)
+
+  run_qa_bash_guard "$TEST_PROJECT" 'echo "JSON payload: mv file done"'
+  [ "$status" -eq 0 ]
+
+  run_qa_bash_guard "$TEST_PROJECT" "printf '%s\\n' 'JSON payload: mv file done' | cat"
+  [ "$status" -eq 0 ]
+}
+
+@test "bash-guard: qa allows file-descriptor redirects without writes" {
+  TEST_PROJECT=$(new_test_project qa-fd-redirect)
+
+  for command in "git status 2>/dev/null" "git status >/dev/null" "git status 2>&1"; do
+    run_qa_bash_guard "$TEST_PROJECT" "$command"
+    [ "$status" -eq 0 ]
+  done
+
+  run_qa_bash_guard "$TEST_PROJECT" "git status > out.txt"
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"shell file write/redirection"* ]]
+}
+
+@test "bash-guard: qa blocks bare filesystem mutation commands" {
+  TEST_PROJECT=$(new_test_project qa-mv-mutate)
+  run_qa_bash_guard "$TEST_PROJECT" "mv old.txt new.txt"
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"filesystem mutation command"* ]]
+}
+
+@test "bash-guard: quoted CLI arguments remain executable evidence" {
+  TEST_PROJECT=$(new_test_project qa-quoted-cli)
+  run_role_bash_guard dev "$TEST_PROJECT" "php artisan 'migrate:fresh'"
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"destructive command detected"* ]]
+}
+
+@test "bash-guard: long sudo options do not hide filesystem mutations" {
+  TEST_PROJECT=$(new_test_project qa-sudo-long)
+  run_qa_bash_guard "$TEST_PROJECT" "sudo --user bob rm file"
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"filesystem mutation command"* ]]
+}
+
+@test "bash-guard: leading redirection does not hide filesystem mutations" {
+  TEST_PROJECT=$(new_test_project qa-leading-redirect)
+  run_qa_bash_guard "$TEST_PROJECT" "< /dev/null rm file"
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"filesystem mutation command"* ]]
+}
+
+@test "bash-guard: read-write redirection does not hide filesystem mutations" {
+  TEST_PROJECT=$(new_test_project qa-read-write-redirect)
+  run_qa_bash_guard "$TEST_PROJECT" "<> /dev/null rm file"
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"filesystem mutation command"* ]]
+}
+
+@test "bash-guard: attached read-write redirection does not hide filesystem mutations" {
+  TEST_PROJECT=$(new_test_project qa-attached-read-write-redirect)
+  run_qa_bash_guard "$TEST_PROJECT" "<>/dev/null rm -rf build/"
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"filesystem mutation command"* ]]
+}
+
+@test "bash-guard: destructive SQL in a quoted CLI argument is executable evidence" {
+  TEST_PROJECT=$(new_test_project qa-quoted-sql)
+  run_qa_bash_guard "$TEST_PROJECT" "mysql appdb -e \"DROP TABLE users\""
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"destructive command detected"* ]]
+}
+
+@test "bash-guard: destructive text in git predicates is not executable evidence" {
+  TEST_PROJECT=$(new_test_project qa-git-predicate)
+  run_role_bash_guard dev "$TEST_PROJECT" "git log --grep='artisan migrate:fresh'"
+  [ "$status" -eq 0 ]
+}
+
+@test "bash-guard: git alias payloads remain executable evidence" {
+  TEST_PROJECT=$(new_test_project qa-git-alias-payload)
+  run_role_bash_guard dev "$TEST_PROJECT" "git -c alias.danger='!php artisan migrate:fresh' danger"
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"destructive command detected"* ]]
+}
+
+@test "bash-guard: wrapped git alias payloads remain executable evidence" {
+  TEST_PROJECT=$(new_test_project qa-sudo-git-alias-payload)
+  run_role_bash_guard dev "$TEST_PROJECT" "sudo git foo 'prisma migrate reset'"
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"destructive command detected"* ]]
+}
+
+@test "bash-guard: git executable paths preserve inspection classification" {
+  TEST_PROJECT=$(new_test_project qa-git-executable-path)
+
+  run_role_bash_guard dev "$TEST_PROJECT" "/usr/bin/git log --grep='artisan migrate:fresh'"
+  [ "$status" -eq 0 ]
+
+  run_role_bash_guard dev "$TEST_PROJECT" "sudo /usr/bin/git foo 'prisma migrate reset'"
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"destructive command detected"* ]]
+}
+
+@test "bash-guard: quoted destructive evidence does not trigger the pattern blocklist" {
+  TEST_PROJECT=$(new_test_project destructive-evidence)
+  run_role_bash_guard dev "$TEST_PROJECT" 'echo "artisan migrate:fresh output"'
+  [ "$status" -eq 0 ]
+}
+
 @test "bash-guard: qa blocks tee" {
   TEST_PROJECT=$(new_test_project qa-tee)
   run_qa_bash_guard "$TEST_PROJECT" "echo bad | tee out.txt"
@@ -300,13 +409,33 @@ EOF
   [ "$status" -eq 0 ]
 }
 
+@test "malformed bash guard input blocks during live execution" {
+  jq -n '{status:"running"}' > "$TEST_TEMP_DIR/.vbw-planning/.execution-state.json"
+  run bash -c 'unset VBW_AGENT_ROLE VBW_ACTIVE_AGENT; printf "%s" "not-json" | bash "$1"' _ \
+    "$SCRIPTS_DIR/bash-guard.sh"
+  [ "$status" -eq 2 ]
+}
+
+@test "advisory logging remains visible without jq" {
+  local fake_bin jq_bin input
+  fake_bin=$(mktemp -d)
+  jq_bin=$(command -v jq)
+  printf '#!/bin/sh\nexit 127\n' > "$fake_bin/jq"
+  chmod +x "$fake_bin/jq"
+  input=$(printf '%s' '{"tool_input":{"command":"rm -rf build/"}}')
+  run bash -c 'cd "$1"; unset VBW_AGENT_ROLE CLAUDE_SESSION_ID; VBW_ACTIVE_AGENT="$(printf "dev\t")"; export VBW_ACTIVE_AGENT; PATH="$2:/usr/bin:/bin"; printf "%s" "$3" | bash "$4"' _ \
+    "$TEST_TEMP_DIR" "$fake_bin" "$input" "$SCRIPTS_DIR/bash-guard.sh"
+  [ "$status" -eq 0 ]
+  [ "$("$jq_bin" -s length "$TEST_TEMP_DIR/.vbw-planning/.event-log.jsonl")" -ge 1 ]
+  rm -rf "$fake_bin"
+}
+
 @test "bash-guard classifies explicit Scout payload" {
   local field identity input
   rm -rf "$TEST_TEMP_DIR/.vbw-planning/.active-agents"
 
   for field in agent_type agent_id; do
     identity="vbw:vbw-scout"
-    [ "$field" = "agent_id" ] && identity="scout-01"
     input=$(jq -n --arg field "$field" --arg identity "$identity" \
       '{session_id:"session-A",tool_input:{command:"gh issue comment 1 --body blocked"}} + {($field):$identity}')
 

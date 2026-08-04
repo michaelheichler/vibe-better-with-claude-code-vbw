@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# verify-readme-config-reference.sh — Contract test for issue #513
+# verify-readme-config-reference.sh, Contract test for issue #513
 #
 # Validates that the README configuration reference stays in sync with
 # config/defaults.json and that linked detail sections cover the documented

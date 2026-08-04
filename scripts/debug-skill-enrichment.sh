@@ -1,22 +1,6 @@
 #!/usr/bin/env bash
 set -u
 
-# debug-skill-enrichment.sh — bounded sparse-context enrichment for /vbw:debug
-#
-# Reads a sparse bug/todo description and returns a tiny amount of extra signal:
-# - up to 3 likely files matched from concrete symbol/service/type/file cues
-# - up to 5 framework/domain markers found in those files
-#
-# This helper does NOT select skills. It only surfaces bounded evidence so the
-# orchestrator can make a better preselection decision without turning every
-# sparse todo into a broad repo scan.
-#
-# Usage:
-#   bash debug-skill-enrichment.sh "SplitTransferService reverse split bug"
-#   printf '%s' "SplitTransferService reverse split bug" | bash debug-skill-enrichment.sh
-#
-# Output JSON (always exits 0):
-#   {"status":"ok|no_signal|no_match|error","triggered":true|false,...}
 
 if ! command -v jq >/dev/null 2>&1; then
   printf '{"status":"error","triggered":false,"message":"jq unavailable"}\n'

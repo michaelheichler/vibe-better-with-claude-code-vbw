@@ -1,4 +1,4 @@
-# VBW vs GSD — Source-Code-Validated Comparison
+# VBW vs GSD, Source-Code-Validated Comparison
 
 **Date:** 2026-07-22
 **GSD version reviewed:** v1.20.5 (commit `131f24b`)
@@ -10,7 +10,7 @@
 
 ## Executive Summary
 
-VBW and GSD both solve the same core problem — replacing ad-hoc AI coding with structured, phased development workflows. Both are mature, thoughtfully designed systems with significant overlap in philosophy and capability. The key difference is enforcement mechanism: VBW enforces quality gates via platform hooks (bash scripts that return exit code 2 to block tool execution), while GSD enforces quality standards via instruction-level workflows (markdown directing agent behavior) combined with a comprehensive Node.js CLI for verification tooling and 3 advisory hooks.
+VBW and GSD both solve the same core problem, replacing ad-hoc AI coding with structured, phased development workflows. Both are mature, thoughtfully designed systems with significant overlap in philosophy and capability. The key difference is enforcement mechanism. VBW enforces quality gates via platform hooks (bash scripts that return exit code 2 to block tool execution). GSD enforces quality standards via instruction-level workflows (markdown directing agent behavior) combined with a comprehensive Node.js CLI for verification tooling and 3 advisory hooks.
 
 This document corrects factual inaccuracies in the earlier `vbw-vs-paul-vs-gsd-analysis.md`, which inherited unverified claims about GSD from PAUL's comparison document rather than examining GSD's source code directly.
 
@@ -24,7 +24,7 @@ The earlier analysis (`vbw-vs-paul-vs-gsd-analysis.md`) made several claims abou
 
 **Prior claim:** GSD optimizes for speed. PAUL optimizes for quality. VBW does both.
 
-**Source reality:** GSD's `README.md` describes itself as "a meta-prompting, context engineering and spec-driven development system." Its core value proposition is solving **context rot** — the problem where AI assistants lose coherent state across long development tasks. GSD's workflow includes mandatory discussion phases (`discuss-phase.md`, 18.6KB), research phases with parallel researcher agents (`gsd-phase-researcher`, `gsd-project-researcher`, `gsd-research-synthesizer`), plan verification with 8 dimensions (`gsd-plan-checker`, 24.2KB), and goal-backward verification (`gsd-verifier`, 16.9KB).
+**Source reality:** GSD's `README.md` describes itself as "a meta-prompting, context engineering and spec-driven development system." Its core value proposition is solving **context rot**, the problem where AI assistants lose coherent state across long development tasks. GSD's workflow includes mandatory discussion phases (`discuss-phase.md`, 18.6KB), research phases with parallel researcher agents (`gsd-phase-researcher`, `gsd-project-researcher`, `gsd-research-synthesizer`), plan verification with 8 dimensions (`gsd-plan-checker`, 24.2KB), and goal-backward verification (`gsd-verifier`, 16.9KB).
 
 The name "Get Shit Done" is branding, not an optimization target. GSD's planner explicitly targets ~50% context usage per plan to leave room for verification. The context monitor warns at 35%/25% remaining context.
 
@@ -34,9 +34,9 @@ The name "Get Shit Done" is branding, not an optimization target. GSD's planner 
 
 **Prior claim:** GSD's review is implicit. VBW enforces mandatory loop closure.
 
-**Source reality:** GSD's gsd-executor agent (`agents/gsd-executor.md`, 17.5KB) creates SUMMARY.md as part of its execution protocol — this is mandatory per the agent's instructions. The execute-phase workflow (`get-shit-done/workflows/execute-phase.md`, 16.7KB) spot-checks SUMMARY claims. The gsd-verifier creates VERIFICATION.md documenting goal achievement. `gsd-tools.cjs` provides `verify-summary`, `verify phase-completeness`, and `verify artifacts` commands.
+**Source reality:** GSD's gsd-executor agent (`agents/gsd-executor.md`, 17.5KB) creates SUMMARY.md as part of its execution protocol, this is mandatory per the agent's instructions. The execute-phase workflow (`get-shit-done/workflows/execute-phase.md`, 16.7KB) spot-checks SUMMARY claims. The gsd-verifier creates VERIFICATION.md documenting goal achievement. `gsd-tools.cjs` provides `verify-summary`, `verify phase-completeness`, and `verify artifacts` commands.
 
-**The real difference:** GSD enforces loop closure via agent instructions + CLI verification tools. VBW enforces it via agent instructions + platform hooks with exit code 2 (`hard-gate.sh`, `qa-gate.sh`, `archive-uat-guard.sh`). Both systems require SUMMARY.md — VBW blocks tool execution if it's missing, GSD relies on agents following their instructions.
+**The real difference:** GSD enforces loop closure via agent instructions + CLI verification tools. VBW enforces it via agent instructions + platform hooks with exit code 2 (`hard-gate.sh`, `qa-gate.sh`, `archive-uat-guard.sh`). Both systems require SUMMARY.md, VBW blocks tool execution if it's missing, GSD relies on agents following their instructions.
 
 **Corrected position:** Both enforce loop closure. VBW's enforcement is mechanically stronger (platform hooks that the model cannot bypass). GSD's enforcement is instruction-level but comprehensive (agent protocols + CLI verification suite).
 
@@ -73,13 +73,17 @@ The plan checker (`gsd-plan-checker`, 24.2KB) verifies plans across 8 dimensions
 
 **The real difference:** GSD requires explicit `/gsd:pause-work` to create a handoff file. VBW auto-persists state via `.execution-state.json` + `event-log.jsonl`, so `/vbw:resume` works from cold without prior `/vbw:pause`. VBW's crash recovery via event-sourced state reconstruction (`recover-state.sh`) is genuinely more robust.
 
-**Corrected position:** GSD's handoff is explicit (structured files), not implicit. VBW's advantage is auto-persistence and crash recovery — state survives without explicit pause.
+**Corrected position:** GSD's handoff is explicit (structured files), not implicit. VBW's advantage is auto-persistence and crash recovery, state survives without explicit pause.
 
 ### 6. "GSD scope control is guidance-only"
 
 **Prior claim:** GSD uses scope guidance. VBW enforces boundaries with hooks.
 
-**Source reality:** GSD's `discuss-phase.md` (18.6KB) includes a `<scope_guardrail>` section with explicit heuristics: "Does this clarify how we implement what's already in the phase, or does it add a new capability that could be its own phase?" It captures out-of-scope suggestions in a "Deferred Ideas" section. GSD's executor (`gsd-executor.md`) defines exactly 4 allowed deviation types: auto-fix bugs, auto-add missing critical functionality, auto-fix blocking issues, and ask about architectural changes. Everything else requires stopping.
+**Source reality:** GSD's `discuss-phase.md` (18.6KB) includes a `<scope_guardrail>` section with explicit heuristics.
+
+The heuristics ask whether a suggestion clarifies implementation for the current phase or adds a capability for another phase. The section captures out-of-scope suggestions in a "Deferred Ideas" section.
+
+GSD's executor (`gsd-executor.md`) defines exactly 4 allowed deviation types: auto-fix bugs, auto-add missing critical functionality, auto-fix blocking issues, and ask about architectural changes. All other changes require stopping.
 
 **The real difference:** GSD's scope enforcement is instruction-level (agent follows rules in markdown). VBW's scope enforcement is instruction-level + hook-level (`file-guard.sh` blocks writes to undeclared files, `lease-lock.sh` provides file-level locking, `bash-guard.sh` intercepts destructive commands).
 
@@ -97,9 +101,9 @@ The plan checker (`gsd-plan-checker`, 24.2KB) verifies plans across 8 dimensions
 | `gsd-statusline.js` | PostToolUse | Displays model, current task, directory, context usage bar. Writes bridge JSON for context monitor |
 | `gsd-check-update.js` | SessionStart | Background npm version check. Spawns detached child process |
 
-**The real difference:** GSD's 3 hooks are all **advisory** (informational/warning). VBW's 25 hooks include **blocking** hooks (exit code 2) that prevent tool execution. GSD has no PreToolUse hooks — no platform-level file access control, no destructive command interception, no security filtering.
+**The real difference:** GSD's 3 hooks are all **advisory** (informational/warning). VBW's 25 hooks include **blocking** hooks (exit code 2) that prevent tool execution. GSD has no PreToolUse hooks, no platform-level file access control, no destructive command interception, no security filtering.
 
-**Corrected position:** GSD has 3 hooks (advisory). VBW has 25 hooks (mix of advisory and blocking). Both use the platform hook system; VBW uses it for enforcement, GSD uses it for awareness.
+**Corrected position:** GSD has 3 hooks (advisory). VBW has 25 hooks (mix of advisory and blocking). Both use the platform hook system, VBW uses it for enforcement, GSD uses it for awareness.
 
 ### 8. "GSD has no formal QA"
 
@@ -111,7 +115,7 @@ The plan checker (`gsd-plan-checker`, 24.2KB) verifies plans across 8 dimensions
 - `gsd-tools.cjs` verification suite: `verify plan-structure`, `verify phase-completeness`, `verify references`, `verify commits`, `verify artifacts`, `verify key-links`
 - `gsd-plan-checker` agent (24.2KB): 8-dimension plan verification
 
-**The real difference:** GSD's QA is one tier (verifier agent + UAT), invoked per workflow. VBW has three tiers (Quick 5-10 checks, Standard 15-25, Deep 30+) with the tier selected based on effort profile. VBW's QA is a dedicated agent role (`vbw-qa`) with platform-denied Write/Edit tools; it persists VERIFICATION.md only through a deterministic writer script (`write-verification.sh`). GSD's verifier has full tool access.
+**The real difference:** GSD's QA is one tier (verifier agent + UAT), invoked per workflow. VBW has three tiers (Quick 5-10 checks, Standard 15-25, Deep 30+) with the tier selected based on effort profile. VBW's QA is a dedicated agent role (`vbw-qa`) with platform-denied Write/Edit tools, it persists VERIFICATION.md only through a deterministic writer script (`write-verification.sh`). GSD's verifier has full tool access.
 
 **Corrected position:** GSD has formal QA via its verifier agent and UAT workflow. VBW has tiered QA with platform-enforced agent permissions.
 
@@ -130,7 +134,7 @@ The plan checker (`gsd-plan-checker`, 24.2KB) verifies plans across 8 dimensions
 
 This produces 7 structured analysis documents consumed by downstream agents during planning and execution. The codebase mapper agent (`agents/gsd-codebase-mapper.md`, large file) includes detailed templates for each document type with prescriptive guidance.
 
-**Corrected position:** Both systems use 4 parallel agents for codebase mapping. GSD produces 7 output documents; VBW's scouts produce consolidated codebase maps. Comparable capability.
+**Corrected position:** Both systems use 4 parallel agents for codebase mapping. GSD produces 7 output documents, VBW's scouts produce consolidated codebase maps. Comparable capability.
 
 ---
 
@@ -193,7 +197,7 @@ Both systems implement the same lifecycle (question → plan → execute → ver
 | Agent accesses `.env` file | No interception | `security-filter.sh` PreToolUse hook → exit 2, read blocked |
 | Context running low | `gsd-context-monitor.js` warns at 35%/25% | No equivalent real-time hook (VBW uses token budgets per-role) |
 | Read-only agent tries to write | Agent instructions say read-only | Platform-enforced `disallowedTools` in agent YAML |
-| Context compacted | No hook | `compaction-instructions.sh` injects preservation priorities; `post-compact.sh` verifies critical context survived |
+| Context compacted | No hook | `compaction-instructions.sh` injects preservation priorities, `post-compact.sh` verifies critical context survived |
 
 ---
 
@@ -224,7 +228,7 @@ GSD produces PROJECT.md with a Requirements section (validated/active/out-of-sco
 | **Output** | Decisions captured in phase execution context | `CONTEXT.md` with decisions, Claude's discretion areas, deferred ideas |
 | **Discussion depth** | Auto-calibrating Builder/Architect modes | 4 questions per area then check, iterative deepening |
 
-Both systems handle phase discussion with comparable sophistication. GSD's discuss-phase.md (18.6KB) has detailed downstream awareness — it explicitly documents how CONTEXT.md feeds into the researcher and planner. VBW's discussion engine integrates into the execution pipeline differently.
+Both systems handle phase discussion with comparable sophistication. GSD's discuss-phase.md (18.6KB) has detailed downstream awareness, it explicitly documents how CONTEXT.md feeds into the researcher and planner. VBW's discussion engine integrates into the execution pipeline differently.
 
 ### Planning
 
@@ -237,7 +241,7 @@ Both systems handle phase discussion with comparable sophistication. GSD's discu
 | **Dependency handling** | Cross-phase deps in frontmatter | Wave assignment from dependency graph analysis |
 | **Quick tasks** | `/vbw:fix` (turbo mode, one commit) | `/gsd:quick` with optional `--full` mode (plan checking + verification) |
 
-GSD's plan checker is notably thorough — 8 verification dimensions with a revision loop (max 3 iterations between planner and checker). VBW's plan validation is part of the execute protocol instructions rather than a dedicated verification agent.
+GSD's plan checker is notably thorough, 8 verification dimensions with a revision loop (max 3 iterations between planner and checker). VBW's plan validation is part of the execute protocol instructions rather than a dedicated verification agent.
 
 GSD's Nyquist compliance check (ensuring plans don't exceed ~50% context) is a unique feature designed to prevent context overflow during execution.
 
@@ -273,7 +277,7 @@ This is more structured than a general "log deviations" instruction.
 | Feature | VBW | GSD |
 |---------|-----|-----|
 | **Automated QA** | 3-tier (Quick/Standard/Deep) via `vbw-qa` agent | Single-tier via `gsd-verifier` agent |
-| **QA agent permissions** | Write/Edit tools platform-denied; persists VERIFICATION.md via deterministic writer script | Full tool access (read+write) |
+| **QA agent permissions** | Write/Edit tools platform-denied, persists VERIFICATION.md via deterministic writer script | Full tool access (read+write) |
 | **Verification methodology** | Goal-backward | Goal-backward |
 | **Artifact verification** | SUMMARY.md + VERIFICATION.md | SUMMARY.md + VERIFICATION.md |
 | **Verification reference** | `verification-protocol.md` | `verification-patterns.md` (16.5KB, 4-level framework) |
@@ -281,9 +285,9 @@ This is more structured than a general "log deviations" instruction.
 | **Gap auto-closure** | UAT issues → discuss → plan → execute pipeline | UAT issues → parallel debug agents → auto-plan gaps |
 | **Hook enforcement** | `qa-gate.sh` (exit 2) + `hard-gate.sh` (exit 2) | None (instruction-level) |
 
-GSD's `verification-patterns.md` is particularly notable — it provides detailed bash patterns for stub detection, component verification, API route verification, database schema verification, and wiring verification across React/Next.js, Express, Prisma, and other stacks. This is practical, language-specific guidance that VBW's protocol doesn't include.
+GSD's `verification-patterns.md` is particularly notable, it provides detailed bash patterns for stub detection, component verification, API route verification, database schema verification, and wiring verification across React/Next.js, Express, Prisma, and other stacks. This is practical, language-specific guidance that VBW's protocol doesn't include.
 
-VBW's tiered QA with platform-enforced read-only agent permissions is genuinely unique. A QA agent with Write/Edit tools disallowed — restricted to persisting only through the deterministic `write-verification.sh` script — provides stronger verification independence.
+VBW's tiered QA with platform-enforced read-only agent permissions is genuinely unique. A QA agent with Write/Edit tools disallowed, restricted to persisting only through the deterministic `write-verification.sh` script, provides stronger verification independence.
 
 ### Session Continuity
 
@@ -330,7 +334,7 @@ Different approaches to interruptions: VBW renumbers directories, file prefixes,
 | Capability | Implementation | Why It Matters |
 |------------|---------------|----------------|
 | **Blocking platform hooks (exit 2)** | `hard-gate.sh`, `qa-gate.sh`, `file-guard.sh`, `bash-guard.sh`, `security-filter.sh`, `archive-uat-guard.sh` | Model cannot bypass these during compaction or context overflow |
-| **Platform-enforced agent permissions** | `disallowedTools` in agent YAML — Scout cannot write files; QA restricted to persistence via `write-verification.sh` | Verified tool restriction at the platform level, not instruction level |
+| **Platform-enforced agent permissions** | `disallowedTools` in agent YAML, Scout cannot write files, QA restricted to persistence via `write-verification.sh` | Verified tool restriction at the platform level, not instruction level |
 | **Worktree isolation** | `worktree-create.sh`, `worktree-target.sh`, `worktree-agent-map.sh` | Physical filesystem separation per plan when enabled, for both team and serialized execution |
 | **Lease locks** | `lease-lock.sh` | File-level exclusive locking during parallel execution |
 | **Contract system** | `generate-contract.sh`, `validate-contract.sh` with hash integrity | Tasks operate within declared boundaries, hash prevents tampering |
@@ -370,7 +374,7 @@ Different approaches to interruptions: VBW renumbers directories, file prefixes,
 
 ## Enforcement Comparison: The Core Difference
 
-This is the most important distinction between VBW and GSD. Both systems want the same outcomes — atomic commits, SUMMARY.md closure, verified artifacts, scoped file access. They differ in how they ensure those outcomes.
+This is the most important distinction between VBW and GSD. Both systems want the same outcomes, atomic commits, SUMMARY.md closure, verified artifacts, scoped file access. They differ in how they ensure those outcomes.
 
 ### GSD's Enforcement Model
 
@@ -387,7 +391,7 @@ This works well when the model follows instructions faithfully. The risk is that
 
 VBW layers **platform hook enforcement** on top of instruction-level rules:
 
-1. **Agent instructions** (markdown): Same as GSD — agents told what to do and not do
+1. **Agent instructions** (markdown): Same as GSD, agents told what to do and not do
 2. **Script verification** (~97 bash scripts): Equivalent to gsd-tools.cjs but distributed across separate scripts
 3. **Blocking hooks** (exit 2): `file-guard.sh`, `bash-guard.sh`, `security-filter.sh`, `qa-gate.sh`, `hard-gate.sh`, `archive-uat-guard.sh`
 4. **Platform tool permissions** (YAML): `disallowedTools` enforced by the platform itself
@@ -416,7 +420,7 @@ The blocking hooks (exit 2) are the key differentiator. These run as bash subpro
 | **Primary goal** | Structured AI development via context engineering | Structured AI development via phased workflows |
 | **Optimization target** | Token-to-value efficiency (Nyquist compliance, ~50% context budgets) | Token efficiency (86% overhead reduction vs stock, per-role budgets) |
 | **Loop closure** | Instruction-enforced + CLI verification | Instruction-enforced + hook-enforced (exit 2) |
-| **Parallel execution** | Wave-based (dependency graph → wave grouping) | Dependency-aware Agent Teams for fan-out; serialized Dev subagents for linear graphs; worktree isolation when enabled |
+| **Parallel execution** | Wave-based (dependency graph → wave grouping) | Dependency-aware Agent Teams for fan-out, serialized Dev subagents for linear graphs, worktree isolation when enabled |
 | **Decision flow** | State-detected single path (resume-project.md) | State-detected single path (phase-detect.sh) |
 | **Session continuity** | Explicit pause → `.continue-here.md` with 7 sections | Auto-persistent (`.execution-state.json` + `event-log.jsonl`) |
 | **Quality gates** | Goal-backward verification (verifier + plan checker) | Goal-backward verification (QA agent, tiered) + hook gates |
@@ -430,22 +434,22 @@ The blocking hooks (exit 2) are the key differentiator. These run as bash subpro
 
 ### Choose GSD When
 
-- **You use multiple AI coding tools** — GSD supports Claude Code, OpenCode, and Gemini CLI
-- **You prefer Node.js tooling** — `gsd-tools.cjs` is a single CLI tool vs VBW's ~97 bash scripts
-- **You want a YOLO mode** — GSD's auto mode chains the full pipeline unattended
-- **You trust instruction-level enforcement** — If you're comfortable with model compliance, GSD's advisory approach is lighter-weight
-- **You want detailed checkpoint types** — GSD's 3 formal checkpoint types with documented presentation formats are more precisely categorized
-- **You want language-specific verification** — GSD's `verification-patterns.md` has practical React/API/DB verification patterns
+- **You use multiple AI coding tools**, GSD supports Claude Code, OpenCode, and Gemini CLI
+- **You prefer Node.js tooling**, `gsd-tools.cjs` is a single CLI tool vs VBW's ~97 bash scripts
+- **You want a YOLO mode**, GSD's auto mode chains the full pipeline unattended
+- **You trust instruction-level enforcement**, If you're comfortable with model compliance, GSD's advisory approach is lighter-weight
+- **You want detailed checkpoint types**, GSD's 3 formal checkpoint types with documented presentation formats are more precisely categorized
+- **You want language-specific verification**, GSD's `verification-patterns.md` has practical React/API/DB verification patterns
 
 ### Choose VBW When
 
-- **You need platform-enforced quality gates** — VBW's blocking hooks prevent the model from bypassing rules
-- **You run long, complex sessions** — VBW's event-sourced state recovery and compaction hooks handle multi-hour sessions and crashes
-- **You want tiered QA** — VBW's Quick/Standard/Deep tiers let you right-size verification effort
-- **You want filesystem isolation** — VBW's worktree isolation provides physical separation per plan when enabled, not only for parallel/team execution
-- **You want fine-grained control** — 4 effort levels × 4 autonomy levels × bundled work profiles
-- **You want security enforcement** — `bash-guard.sh` (40+ patterns), `security-filter.sh` (.env, .pem, credentials), and `file-guard.sh` (undeclared file access)
-- **You use the Claude Code marketplace** — VBW distributes as a marketplace plugin with migration handling
+- **You need platform-enforced quality gates**, VBW's blocking hooks prevent the model from bypassing rules
+- **You run long, complex sessions**, VBW's event-sourced state recovery and compaction hooks handle multi-hour sessions and crashes
+- **You want tiered QA**, VBW's Quick/Standard/Deep tiers let you right-size verification effort
+- **You want filesystem isolation**, VBW's worktree isolation provides physical separation per plan when enabled, not only for parallel/team execution
+- **You want fine-grained control**, 4 effort levels × 4 autonomy levels × bundled work profiles
+- **You want security enforcement**, `bash-guard.sh` (40+ patterns), `security-filter.sh` (.env, .pem, credentials), and `file-guard.sh` (undeclared file access)
+- **You use the Claude Code marketplace**, VBW distributes as a marketplace plugin with migration handling
 
 ### Both Are Good Choices When
 
@@ -479,8 +483,8 @@ The blocking hooks (exit 2) are the key differentiator. These run as bash subpro
 ### What the Numbers Don't Tell You
 
 - More hooks ≠ better. VBW's hooks are valuable because specific hooks solve specific problems (file access control, destructive command prevention). Having 25 vs 3 matters only because of what those hooks DO.
-- More agents ≠ better. GSD's 11 agents decompose work more granularly; VBW's 7 agents cover the same lifecycle with broader role definitions.
-- More markdown ≠ better. GSD's ~350KB of agent/workflow content reflects a different design — detailed inline workflow definitions rather than protocol references.
+- More agents ≠ better. GSD's 11 agents decompose work more granularly, VBW's 7 agents cover the same lifecycle with broader role definitions.
+- More markdown ≠ better. GSD's ~350KB of agent/workflow content reflects a different design, detailed inline workflow definitions rather than protocol references.
 - Multi-platform support matters if you use multiple tools. If you only use Claude Code, VBW's deeper Claude Code integration is an advantage.
 
 ---

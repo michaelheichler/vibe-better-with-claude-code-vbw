@@ -1,25 +1,5 @@
 #!/bin/bash
 set -u
-# delegated-workflow.sh — Manage delegated workflow markers for delegated paths
-#
-# Sets/clears/checks .vbw-planning/.delegated-workflow.json so runtime guards
-# can enforce actual delegation semantics for execute/fix/debug flows.
-#
-# Usage:
-#   delegated-workflow.sh set <mode> [effort] [delegation_mode] [team_name]
-#   delegated-workflow.sh clear
-#   delegated-workflow.sh check
-#   delegated-workflow.sh status-json
-#
-# Actions:
-#   set   — Write marker with mode (execute|fix|debug), optional effort
-#           (default: balanced), optional delegation_mode
-#           (team|subagent|direct), and optional team_name
-#   clear — Remove marker file
-#   check — Exit 0 if active, 1 if not active
-#   status-json — Emit marker status JSON including live execute validation
-#
-# The marker file is transient (gitignored via planning-git.sh).
 
 PLANNING_DIR="${VBW_PLANNING_DIR:-.vbw-planning}"
 MARKER_FILE="$PLANNING_DIR/.delegated-workflow.json"
@@ -73,6 +53,12 @@ marker_age_seconds() {
   printf '%s\n' $((now - mtime))
 }
 
+is_stale_age() {
+  local age="$1"
+  [ -n "$age" ] && printf '%s' "$age" | grep -Eq '^[0-9]+$' \
+    && { [ "$age" -lt 0 ] || [ "$age" -ge "$STALE_SECS" ]; }
+}
+
 print_status_json() {
   local exists=false
   local active=false
@@ -119,7 +105,7 @@ print_status_json() {
         reason="inactive"
       elif [ "$mode" = "execute" ]; then
         if [ ! -f "$EXEC_STATE_FILE" ]; then
-          if [ -n "$marker_age_seconds_value" ] && printf '%s' "$marker_age_seconds_value" | grep -Eq '^[0-9]+$' && { [ "$marker_age_seconds_value" -lt 0 ] || [ "$marker_age_seconds_value" -ge "$STALE_SECS" ]; }; then
+          if is_stale_age "$marker_age_seconds_value"; then
             reason="stale_marker"
           else
             reason="missing_execution_state"
@@ -132,10 +118,10 @@ print_status_json() {
 
           if [ -z "$execution_age_seconds_value" ] || ! printf '%s' "$execution_age_seconds_value" | grep -Eq '^[0-9]+$'; then
             reason="unknown_execution_age"
-          elif [ "$execution_age_seconds_value" -lt 0 ] || [ "$execution_age_seconds_value" -ge "$STALE_SECS" ]; then
+          elif is_stale_age "$execution_age_seconds_value"; then
             reason="stale_execution_state"
           elif [ "$exec_status" != "running" ]; then
-            if [ -n "$marker_age_seconds_value" ] && printf '%s' "$marker_age_seconds_value" | grep -Eq '^[0-9]+$' && { [ "$marker_age_seconds_value" -lt 0 ] || [ "$marker_age_seconds_value" -ge "$STALE_SECS" ]; }; then
+            if is_stale_age "$marker_age_seconds_value"; then
               reason="stale_marker"
             else
               reason="execution_not_running"
@@ -145,7 +131,7 @@ print_status_json() {
           elif [ -z "$exec_correlation_id" ]; then
             reason="missing_execution_correlation_id"
           elif [ "$correlation_id" != "$exec_correlation_id" ]; then
-            if [ -n "$marker_age_seconds_value" ] && printf '%s' "$marker_age_seconds_value" | grep -Eq '^[0-9]+$' && { [ "$marker_age_seconds_value" -lt 0 ] || [ "$marker_age_seconds_value" -ge "$STALE_SECS" ]; }; then
+            if is_stale_age "$marker_age_seconds_value"; then
               reason="stale_marker"
             else
               reason="correlation_mismatch"
@@ -158,7 +144,7 @@ print_status_json() {
         fi
       elif [ -z "$marker_age_seconds_value" ] || ! printf '%s' "$marker_age_seconds_value" | grep -Eq '^[0-9]+$'; then
         reason="unknown_marker_age"
-      elif [ "$marker_age_seconds_value" -lt 0 ] || [ "$marker_age_seconds_value" -ge "$STALE_SECS" ]; then
+      elif is_stale_age "$marker_age_seconds_value"; then
         reason="stale_marker"
       else
         live=true
@@ -273,7 +259,6 @@ case "$ACTION" in
         exit 0
       fi
     else
-      # Fallback: file exists = active
       exit 0
     fi
     exit 1

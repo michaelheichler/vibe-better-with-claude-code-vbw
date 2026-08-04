@@ -11,8 +11,8 @@ Last reviewed: 2026-07-30
 - Ask 1-4 questions per tool call.
 - When options exist, Claude Code still exposes an `Other` path. Treat it as the built-in escape hatch instead of pretending freeform input does not exist.
 - Mark the preferred option with `isRecommended` when one option is genuinely better.
-- Leave 3–4 blank lines before the tool call so the dialog does not cover the last line of prose.
-- When a modal choice depends on nearby explanatory context, include the minimal answer-critical context in the `question` itself; the modal may cover or displace preceding prose.
+- Leave 3 to 4 blank lines before the tool call so the dialog does not cover the last line of prose.
+- When a modal choice depends on nearby explanatory context, include the minimal answer-critical context in the `question` itself, the modal may cover or displace preceding prose.
 
 ### Tool schema and answer metadata
 
@@ -43,11 +43,11 @@ Beyond the core header, question, and options shape, the current AskUserQuestion
 
 ## Anti-patterns
 
-- **Checklist walking** — marching through a predetermined question list regardless of what the user already said.
-- **Canned questions** — asking questions whose answers are already in context.
-- **Shallow acceptance** — taking vague answers ("something like X") without probing for specifics.
-- **Premature constraints** — narrowing options before the problem space is understood.
-- **Fake bounded menus** — presenting a fixed option list when the real choice space is unbounded or high-cardinality.
+- **Checklist walking** : marching through a predetermined question list regardless of what the user already said.
+- **Canned questions** : asking questions whose answers are already in context.
+- **Shallow acceptance** : taking vague answers ("something like X") without probing for specifics.
+- **Premature constraints** : narrowing options before the problem space is understood.
+- **Fake bounded menus** : presenting a fixed option list when the real choice space is unbounded or high-cardinality.
 
 ## Examples
 
@@ -56,7 +56,7 @@ Beyond the core header, question, and options shape, the current AskUserQuestion
 Header: Confirm
 Question: Continue with phase 03 now?
 Options:
-- Execute phase 03 (Recommended — the plan is already complete)
+- Execute phase 03 (Recommended : the plan is already complete)
 - Review plans first
 - Not now
 

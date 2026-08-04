@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# verify-claude-md-staleness.sh — Tests for CLAUDE.md VBW section staleness detection
+# verify-claude-md-staleness.sh, Tests for CLAUDE.md VBW section staleness detection
 #
 # Tests:
 #   1. No .vbw-planning → exit 0, not stale

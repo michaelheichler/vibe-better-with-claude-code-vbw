@@ -4,9 +4,8 @@ load test_helper
 
 setup() {
   setup_temp_dir
-  export ANTHROPIC_BASE_URL="http://detect-models-test.invalid"
   export CLAUDE_CODE_EXECPATH="$TEST_TEMP_DIR/no-such-binary"
-  unset ANTHROPIC_API_KEY ANTHROPIC_AUTH_TOKEN VBW_MODEL_CATALOG_FILE 2>/dev/null || true
+  unset VBW_MODEL_CATALOG_FILE 2>/dev/null || true
   dm_cache_path
 }
 
@@ -16,15 +15,12 @@ teardown() {
 }
 
 dm_cache_path() {
-  local auth=""
-  [ -n "${ANTHROPIC_API_KEY:-}${ANTHROPIC_AUTH_TOKEN:-}" ] && auth="$ANTHROPIC_BASE_URL"
   local bin="$CLAUDE_CODE_EXECPATH"
   [ -f "$bin" ] || bin=""
-  local stamp="0:0"
-  if [ -n "$bin" ]; then
-    stamp="$(stat -f '%m:%z' "$bin" 2>/dev/null || stat -c '%Y:%s' "$bin" 2>/dev/null || echo 0:0)"
-  fi
-  DM_CACHE="/tmp/vbw-models-$(vbw_hash_path "bin:${bin:-none}:${stamp}|${auth}")"
+  local pricing="$CONFIG_DIR/model-pricing.json"
+  local source
+  source=$(bash -c '. "$1"; vbw_model_cache_source "$2" "$3"' _ "$SCRIPTS_DIR/lib/vbw-cache-key.sh" "$bin" "$pricing")
+  DM_CACHE="/tmp/vbw-models-$(vbw_hash_path "$source")"
   export DM_CACHE
 }
 
@@ -39,30 +35,15 @@ make_fake_binary() {
   dm_cache_path
 }
 
-make_fake_curl() {
-  mkdir -p "$TEST_TEMP_DIR/bin"
-  if [ "$1" = "ok" ]; then
-    cat > "$TEST_TEMP_DIR/bin/curl" <<FAKE
-#!/usr/bin/env bash
-touch "$TEST_TEMP_DIR/curl-called"
-printf '{"data":[{"id":"sol"},{"id":"kimi3"},{"id":"claude-sonnet-5"}]}\n'
-FAKE
-  else
-    cat > "$TEST_TEMP_DIR/bin/curl" <<FAKE
-#!/usr/bin/env bash
-touch "$TEST_TEMP_DIR/curl-called"
-exit 7
-FAKE
-  fi
-  chmod +x "$TEST_TEMP_DIR/bin/curl"
-  export PATH="$TEST_TEMP_DIR/bin:$PATH"
-}
-
-@test "no auth and no binary: empty output, exit 0, no cache write" {
+@test "no binary: pricing aliases remain in plain and labeled catalogs" {
   run bash "$SCRIPTS_DIR/detect-models.sh"
   [ "$status" -eq 0 ]
-  [ -z "$output" ]
-  [ ! -f "$DM_CACHE" ]
+  grep -Fxq "opus48" <<< "$output"
+  [ -f "$DM_CACHE" ]
+
+  run bash "$SCRIPTS_DIR/detect-models.sh" --labeled
+  [ "$status" -eq 0 ]
+  grep -Fq "$(printf 'opus48\topus48 -> claude-opus-4-8')" <<< "$output"
 }
 
 @test "catalog file hook emits its lines without probing" {
@@ -83,6 +64,7 @@ FAKE
   grep -Fxq "claude-haiku-4-5" <<< "$output"
   grep -Fxq "sol" <<< "$output"
   grep -Fxq "kimi3" <<< "$output"
+  grep -Fxq "opus48" <<< "$output"
   ! grep -Fxq "claude-opus-4-1" <<< "$output"
   [ -f "$DM_CACHE" ]
 }
@@ -93,40 +75,7 @@ FAKE
   [ "$status" -eq 0 ]
   grep -Fq "$(printf 'sol\tGPT-5.6 Sol')" <<< "$output"
   grep -Fq "$(printf 'claude-opus-5\tClaude (built-in)')" <<< "$output"
-}
-
-@test "endpoint is skipped when the binary yields a catalog" {
-  make_fake_binary
-  export ANTHROPIC_API_KEY="test-key"
-  dm_cache_path
-  make_fake_curl ok
-  run bash "$SCRIPTS_DIR/detect-models.sh"
-  [ "$status" -eq 0 ]
-  grep -Fxq "claude-opus-5" <<< "$output"
-  grep -Fxq "kimi3" <<< "$output"
-  [ ! -f "$TEST_TEMP_DIR/curl-called" ]
-}
-
-@test "auth without binary: endpoint catalog alone" {
-  export ANTHROPIC_API_KEY="test-key"
-  dm_cache_path
-  make_fake_curl ok
-  run bash "$SCRIPTS_DIR/detect-models.sh"
-  [ "$status" -eq 0 ]
-  [ "${lines[0]}" = "claude-sonnet-5" ]
-  grep -Fxq "sol" <<< "$output"
-  [ -f "$TEST_TEMP_DIR/curl-called" ]
-}
-
-@test "failed endpoint fetch with no binary: empty output, exit 0, negative cache" {
-  export ANTHROPIC_API_KEY="test-key"
-  dm_cache_path
-  make_fake_curl fail
-  run bash "$SCRIPTS_DIR/detect-models.sh"
-  [ "$status" -eq 0 ]
-  [ -z "$output" ]
-  [ -f "$DM_CACHE" ]
-  [ ! -s "$DM_CACHE" ]
+  grep -Fq "$(printf 'opus48\topus48 -> claude-opus-4-8')" <<< "$output"
 }
 
 @test "fresh cache served without probing" {

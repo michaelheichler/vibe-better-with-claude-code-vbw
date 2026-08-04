@@ -1,12 +1,5 @@
 #!/bin/bash
 set -u
-# agent-spawn-guard.sh — PreToolUse guard for execute-mode agent spawn shapes
-#
-# Protects the execute workflow from faux-team launches where plain background
-# Agent spawns are used without real team semantics.
-#
-# Exit 2 = definitive invalid spawn shape
-# Exit 0 = allow / fail-open
 
 if ! command -v jq >/dev/null 2>&1; then
   exit 0
@@ -17,7 +10,6 @@ INPUT=$(cat 2>/dev/null) || exit 0
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 if [ -f "$SCRIPT_DIR/lib/active-agent-state.sh" ]; then
-  # shellcheck source=lib/active-agent-state.sh
   . "$SCRIPT_DIR/lib/active-agent-state.sh"
 fi
 
@@ -40,7 +32,6 @@ resolve_project_root() {
   fi
 
   if [ -f "$SCRIPT_DIR/lib/vbw-config-root.sh" ]; then
-    # shellcheck source=lib/vbw-config-root.sh
     if source "$SCRIPT_DIR/lib/vbw-config-root.sh" 2>/dev/null; then
       if find_vbw_root >/dev/null 2>&1 && [ -n "${VBW_CONFIG_ROOT:-}" ] && [ -n "${VBW_PLANNING_DIR:-}" ] && [ -d "$VBW_PLANNING_DIR" ]; then
         printf '%s\n' "$VBW_CONFIG_ROOT"
@@ -112,62 +103,118 @@ if [ "$EXEC_ACTIVE" = true ] && { [ "$MARKER_LIVE" != "true" ] || [ "$MODE" != "
   exit 2
 fi
 
-emit_strip_json() {
-  local stripped_input="$1" reason="$2"
-  # Build entire hook JSON via jq to guarantee valid output (reason is JSON-escaped)
+emit_updated_input() {
+  local updated_input="$1" reason="$2"
   local compact_input
-  compact_input=$(echo "$stripped_input" | jq -c '.' 2>/dev/null) || compact_input="$stripped_input"
+  compact_input=$(echo "$updated_input" | jq -c '.' 2>/dev/null) || compact_input="$updated_input"
   jq -n -c --arg reason "$reason" --argjson input "$compact_input" \
     '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow","permissionDecisionReason":$reason,"updatedInput":$input}}'
 }
 
+allow_with_strip() {
+  if [ -n "${STRIP_REASON:-}" ] && [ -n "${STRIPPED_INPUT:-}" ] && [ "${STRIPPED_INPUT:-}" != "null" ]; then
+    echo "${STRIP_WARN:-}" >&2
+    emit_updated_input "${STRIPPED_INPUT:-}" "${STRIP_REASON:-}"
+  fi
+  exit 0
+}
+
 if is_teammate_spawn_tool; then
-  # Non-team .tool_input.name is platform label metadata; VBW routing and
-  # lifecycle state must come from delegation markers and team_name only.
-  # Hard blocks first — VBW-internal invariants must reject before strip paths
   if requested_vbw_worktree_cwd; then
     echo "Blocked: teammate spawn requested a VBW worktree path as a spawn working directory. Omit cwd/working_dir/workingDirectory/workdir fields; VBW worktree targeting is task prompt/state metadata, not a spawn cwd." >&2
     exit 2
   fi
-  # Strip paths — record fields to strip but do NOT exit yet.
-  # Execute-mode checks below may still block this spawn.
   STRIP_REASON=""
   STRIP_WARN=""
   if requested_sidechain_cwd; then
     STRIPPED_INPUT=$(echo "$INPUT" | jq '.tool_input | del(.cwd, .working_dir, .workingDirectory, .workdir, .isolation)' 2>/dev/null)
-    STRIP_REASON="VBW stripped sidechain cwd fields — worktree targeting is task metadata, not spawn cwd"
+    STRIP_REASON="VBW stripped sidechain cwd fields, worktree targeting is task metadata, not spawn cwd"
     STRIP_WARN="VBW guard: stripped sidechain cwd fields (and isolation if present) from $TOOL_NAME spawn (models add these spontaneously; blocking causes infinite retry loops)"
   elif requested_worktree_isolation; then
     STRIPPED_INPUT=$(echo "$INPUT" | jq '.tool_input | del(.isolation)' 2>/dev/null)
-    STRIP_REASON="VBW stripped isolation:worktree — worktree isolation is not managed via spawn params"
+    STRIP_REASON="VBW stripped isolation:worktree, worktree isolation is not managed via spawn params"
     STRIP_WARN="VBW guard: stripped isolation:worktree from $TOOL_NAME spawn (models add this spontaneously; blocking causes infinite retry loops)"
+  fi
+
+  SUBAGENT_TYPE=$(echo "$INPUT" | jq -r '.tool_input.subagent_type // ""' 2>/dev/null) || exit 0
+  MODEL_ROLE=""
+  case "$SUBAGENT_TYPE" in
+    vbw:vbw-dev|vbw-dev) MODEL_ROLE="dev" ;;
+    vbw:vbw-qa|vbw-qa|vbw:vbw-qa-author|vbw-qa-author) MODEL_ROLE="qa" ;;
+    vbw:vbw-scout|vbw-scout) MODEL_ROLE="scout" ;;
+    vbw:vbw-lead|vbw-lead) MODEL_ROLE="lead" ;;
+    vbw:vbw-architect|vbw-architect) MODEL_ROLE="architect" ;;
+    vbw:vbw-debugger|vbw-debugger) MODEL_ROLE="debugger" ;;
+    vbw:vbw-docs|vbw-docs) MODEL_ROLE="docs" ;;
+  esac
+
+  if [ -n "$MODEL_ROLE" ]; then
+    if RESOLVED_MODEL=$(bash "$SCRIPT_DIR/resolve-agent-model.sh" "$MODEL_ROLE" "$PROJECT_ROOT/.vbw-planning/config.json" "$SCRIPT_DIR/../config/model-profiles.json" 2>/dev/null) && [ -n "$RESOLVED_MODEL" ]; then
+      SPAWN_ALIAS=$(bash "$SCRIPT_DIR/detect-models.sh" --alias-map 2>/dev/null | awk -F'\t' -v id="$RESOLVED_MODEL" '$1 == id { print $2; exit }')
+      [ -n "$SPAWN_ALIAS" ] && RESOLVED_MODEL="$SPAWN_ALIAS"
+      MODEL_CHANGED=true
+      if echo "$INPUT" | jq -e --arg model "$RESOLVED_MODEL" '(.tool_input.model? // null) == $model' >/dev/null 2>&1; then
+        MODEL_CHANGED=false
+      fi
+      if [ "$MODEL_CHANGED" = true ]; then
+        if [ -n "${STRIPPED_INPUT:-}" ] && [ "${STRIPPED_INPUT:-}" != "null" ]; then
+          STRIPPED_INPUT=$(echo "$STRIPPED_INPUT" | jq --arg model "$RESOLVED_MODEL" '.model = $model' 2>/dev/null) || exit 0
+          STRIP_REASON="${STRIP_REASON:+$STRIP_REASON; }enforced resolved model for $SUBAGENT_TYPE"
+        else
+          STRIPPED_INPUT=$(echo "$INPUT" | jq --arg model "$RESOLVED_MODEL" '.tool_input | .model = $model' 2>/dev/null) || exit 0
+          STRIP_REASON="enforced resolved model for $SUBAGENT_TYPE"
+        fi
+      fi
+
+      REASONING_PROFILES_PATH="$SCRIPT_DIR/../config/reasoning-profiles.json"
+      if [ -f "$REASONING_PROFILES_PATH" ]; then
+        if RESOLVED_REASONING=$(bash "$SCRIPT_DIR/resolve-agent-reasoning.sh" "$MODEL_ROLE" "$PROJECT_ROOT/.vbw-planning/config.json" "$REASONING_PROFILES_PATH" "$RESOLVED_MODEL" "$SCRIPT_DIR/../config/model-pricing.json" 2>/dev/null); then
+          CURRENT_INPUT="${STRIPPED_INPUT:-}"
+          if [ -z "$CURRENT_INPUT" ] || [ "$CURRENT_INPUT" = "null" ]; then
+            CURRENT_INPUT=$(echo "$INPUT" | jq '.tool_input' 2>/dev/null) || exit 0
+          fi
+          CURRENT_EFFORT=$(echo "$CURRENT_INPUT" | jq -r '.effort // empty' 2>/dev/null) || CURRENT_EFFORT=""
+          CURRENT_EFFORT_PRESENT=false
+          if echo "$CURRENT_INPUT" | jq -e 'has("effort")' >/dev/null 2>&1; then
+            CURRENT_EFFORT_PRESENT=true
+          fi
+
+          if [ -n "$RESOLVED_REASONING" ]; then
+            if [ "$CURRENT_EFFORT" != "$RESOLVED_REASONING" ]; then
+              if [ -n "${STRIPPED_INPUT:-}" ] && [ "${STRIPPED_INPUT:-}" != "null" ]; then
+                STRIPPED_INPUT=$(echo "$STRIPPED_INPUT" | jq --arg effort "$RESOLVED_REASONING" '.effort = $effort' 2>/dev/null) || exit 0
+              else
+                STRIPPED_INPUT=$(echo "$INPUT" | jq --arg effort "$RESOLVED_REASONING" '.tool_input | .effort = $effort' 2>/dev/null) || exit 0
+              fi
+              STRIP_REASON="${STRIP_REASON:+$STRIP_REASON; }enforced resolved reasoning for $SUBAGENT_TYPE"
+            fi
+          elif [ "$CURRENT_EFFORT_PRESENT" = true ]; then
+            if [ -n "${STRIPPED_INPUT:-}" ] && [ "${STRIPPED_INPUT:-}" != "null" ]; then
+              STRIPPED_INPUT=$(echo "$STRIPPED_INPUT" | jq 'del(.effort)' 2>/dev/null) || exit 0
+            else
+              STRIPPED_INPUT=$(echo "$INPUT" | jq '.tool_input | del(.effort)' 2>/dev/null) || exit 0
+            fi
+            STRIP_REASON="${STRIP_REASON:+$STRIP_REASON; }removed unsupported reasoning for $SUBAGENT_TYPE"
+          fi
+        fi
+      fi
+    else
+      echo "VBW guard: could not resolve model for $SUBAGENT_TYPE, passing spawn through unchanged" >&2
+      STRIPPED_INPUT=""
+      STRIP_REASON=""
+      STRIP_WARN=""
+    fi
   fi
 fi
 
 [ "$MARKER_LIVE" = "true" ] || {
-  # No marker — if stripping was needed, emit now and exit
-  if [ -n "$STRIP_REASON" ] && [ -n "$STRIPPED_INPUT" ] && [ "$STRIPPED_INPUT" != "null" ]; then
-    echo "$STRIP_WARN" >&2
-    emit_strip_json "$STRIPPED_INPUT" "$STRIP_REASON"
-    exit 0
-  fi
-  exit 0
+  allow_with_strip
 }
 [ "$MODE" = "execute" ] || {
-  if [ -n "$STRIP_REASON" ] && [ -n "$STRIPPED_INPUT" ] && [ "$STRIPPED_INPUT" != "null" ]; then
-    echo "$STRIP_WARN" >&2
-    emit_strip_json "$STRIPPED_INPUT" "$STRIP_REASON"
-    exit 0
-  fi
-  exit 0
+  allow_with_strip
 }
 [ -n "$DELEGATION_MODE" ] || {
-  if [ -n "$STRIP_REASON" ] && [ -n "$STRIPPED_INPUT" ] && [ "$STRIPPED_INPUT" != "null" ]; then
-    echo "$STRIP_WARN" >&2
-    emit_strip_json "$STRIPPED_INPUT" "$STRIP_REASON"
-    exit 0
-  fi
-  exit 0
+  allow_with_strip
 }
 
 case "$DELEGATION_MODE" in
@@ -191,11 +238,15 @@ case "$DELEGATION_MODE" in
       exit 2
     fi
     if [ "$TOOL_NAME" = "TaskCreate" ]; then
+      if ! SPAWN_SESSION_ID=$(vbw_active_agent_session_id "$INPUT" 2>/dev/null); then
+        echo "Blocked: execute delegation mode '$DELEGATION_MODE' must serialize non-team TaskCreate spawns. Wait for the current teammate to finish before starting another." >&2
+        exit 2
+      fi
       ACTIVE_COUNT=0
       if command -v vbw_active_agent_current_count >/dev/null 2>&1; then
         ACTIVE_COUNT=$(vbw_active_agent_current_count "$PROJECT_ROOT/.vbw-planning" "$INPUT")
-      elif [ -f "$PROJECT_ROOT/.vbw-planning/.active-agent-count" ]; then
-        ACTIVE_COUNT=$(cat "$PROJECT_ROOT/.vbw-planning/.active-agent-count" 2>/dev/null | tr -d '[:space:]')
+      elif [ -f "$PROJECT_ROOT/.vbw-planning/.active-agents/$SPAWN_SESSION_ID/active-agent-count" ]; then
+        ACTIVE_COUNT=$(cat "$PROJECT_ROOT/.vbw-planning/.active-agents/$SPAWN_SESSION_ID/active-agent-count" 2>/dev/null | tr -d '[:space:]')
       fi
       if ! printf '%s' "$ACTIVE_COUNT" | grep -Eq '^[0-9]+$'; then
         ACTIVE_COUNT=0
@@ -212,11 +263,6 @@ case "$DELEGATION_MODE" in
     ;;
 esac
 
-# If strip was deferred and we made it past all blocks, emit now
-if [ -n "$STRIP_REASON" ] && [ -n "$STRIPPED_INPUT" ] && [ "$STRIPPED_INPUT" != "null" ]; then
-  echo "$STRIP_WARN" >&2
-  emit_strip_json "$STRIPPED_INPUT" "$STRIP_REASON"
-  exit 0
-fi
+allow_with_strip
 
 exit 0

@@ -1,18 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# mark-milestone-remediated.sh — acknowledge unresolved archived milestone UAT
-#
-# Usage:
-#   mark-milestone-remediated.sh PLANNING_DIR PHASE_DIRS_PIPE
-#
-# Inputs:
-#   PLANNING_DIR      Root planning dir (typically .vbw-planning)
-#   PHASE_DIRS_PIPE   Pipe-separated milestone phase dirs from phase-detect output
-#
-# Output (stdout):
-#   marked_count=<N>
-#   skipped_count=<N>
 
 PLANNING_DIR="${1:-}"
 PHASE_DIRS_PIPE="${2:-}"
@@ -38,7 +26,6 @@ for raw_dir in "${PHASE_DIRS[@]}"; do
     continue
   fi
 
-  # Safety: only allow archived milestone phase paths under the planning dir.
   case "$dir" in
     "$PLANNING_DIR"/milestones/*/phases/*)
       ;;

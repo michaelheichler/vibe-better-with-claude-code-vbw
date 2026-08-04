@@ -14,7 +14,7 @@ Authoritative spec for VBW's verification pipeline. QA agent persists results to
 - QA still writes `VERIFICATION.md` first. Only **after** `write-verification.sh` succeeds should the orchestrator sync `pre_existing_issues` from that artifact into the registry.
 - Phase-level `VERIFICATION.md` merges new known issues into the registry without clearing execution-time issues.
 - Round-scoped remediation verification (`R{RR}-VERIFICATION.md`) is authoritative for unresolved known issues and may prune or clear the registry.
-- Known issues do **not** directly change QA PASS/FAIL/PARTIAL verdict semantics; they change lifecycle routing through `qa-result-gate.sh`.
+- Known issues do **not** directly change QA PASS/FAIL/PARTIAL verdict semantics, they change lifecycle routing through `qa-result-gate.sh`.
 - UAT must not proceed while unresolved entries remain in `{phase-dir}/known-issues.json`.
 
 ## 2. Three-Tier Verification (VRFY-01)
@@ -95,14 +95,14 @@ Categories: naming patterns, file placement, import ordering, export patterns.
 
 Severities: FAIL = must fix before ship. WARN = review, may be intentional.
 
-Notes: placeholder detection excludes template files; filler detection applies to agent/ref/command files only; secret detection uses pattern matching (known prefixes + common patterns).
+Notes: placeholder detection excludes template files, filler detection applies to agent/ref/command files only, secret detection uses pattern matching (known prefixes + common patterns).
 
 ## 7. Requirement Mapping (VRFY-08)
 
 Deep tier only. Traces requirement IDs to implementing artifacts.
 
 1. **Extract** requirement IDs from phase section of ROADMAP.md
-2. **Trace** each ID to PLAN.md files (must_haves, task descriptions, success criteria) and SUMMARY.md files. Prefer `ac_results` frontmatter when present; fall back to prose sections (What Was Built, Files Modified) for pre-existing summaries.
+2. **Trace** each ID to PLAN.md files (must_haves, task descriptions, success criteria) and SUMMARY.md files. Prefer `ac_results` frontmatter when present, fall back to prose sections (What Was Built, Files Modified) for pre-existing summaries.
 3. **Classify:** Mapped (plan+summary) = OK. Planned only (plan, no summary) = WARN. Unmapped (neither) = FAIL
 
 Scope: current phase only. Cross-phase requirements noted but not flagged.
@@ -124,7 +124,7 @@ Protocol instructions in agent definitions (not JS hooks or event handlers).
 - **VRFY-04 Post-Commit (Dev):** Verify commit format `{type}({scope}): {description}`. Check only task-related files staged. Self-check protocol.
 - **VRFY-05 OnStop (Execute):** Verify SUMMARY.md exists with required frontmatter (`phase`, `plan`, `status`, `completed`, `pre_existing_issues`) and sections (What Was Built, Files Modified, Deviations). If PLAN has `must_haves`, verify `ac_results` with valid verdicts (`pass`/`fail`/`partial`). Report issues.
 
-**Caveman review format (conditional):** If `caveman_review` is `true` in config, format verification findings using the review format in `references/caveman-review.md`. Use `L<line>:` prefixes and severity indicators. Standard frontmatter and pass/fail verdicts are unaffected — caveman format applies only to finding descriptions and comments.
+**Caveman review format (conditional):** If `caveman_review` is `true` in config, format verification findings using the review format in `references/caveman-review.md`. Use `L<line>:` prefixes and severity indicators. Standard frontmatter and pass/fail verdicts are unaffected : caveman format applies only to finding descriptions and comments.
 
 ## 9. Output Format
 

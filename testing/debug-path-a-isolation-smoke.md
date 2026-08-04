@@ -2,7 +2,7 @@
 
 Manual smoke runbook for verifying that `/vbw:debug` Path A keeps hypothesis investigators report-only until teardown, then hands implementation to one fresh post-synthesis `vbw:vbw-debugger` only when the synthesized result is `needs_change`.
 
-Use this when you need reviewer-verifiable evidence for debug-investigator isolation. This is intentionally a manual smoke, not CI automation — it exercises live Claude behavior against a consumer repo.
+Use this when you need reviewer-verifiable evidence for debug-investigator isolation. This is intentionally a manual smoke, not CI automation. It exercises live Claude behavior against a consumer repo.
 
 ## Provenance rules
 
@@ -37,8 +37,8 @@ Use this when you need reviewer-verifiable evidence for debug-investigator isola
 
 For the isolation proof, distinguish:
 
-- **source-tree changes** — the user-facing repo files under investigation
-- **debug-session bookkeeping** — expected state under `.vbw-planning/debugging/`
+- **source-tree changes**: the user-facing repo files under investigation
+- **debug-session bookkeeping**: expected state under `.vbw-planning/debugging/`
 
 When checking whether investigators stayed report-only, inspect source-tree changes directly and call out any expected `.vbw-planning/debugging/` noise separately.
 
@@ -124,7 +124,7 @@ Run from the **consumer smoke worktree** with the candidate plugin checkout pass
 
 ```bash
 printf '%s\n' \
-  'Smoke test of /vbw:debug Path A orchestration. Follow the competing-hypotheses team workflow end-to-end for this run. Do not collapse to direct verification even if the first local check is conclusive. Stop after the debug investigation result; do not continue into QA or UAT.' \
+  'Smoke test of /vbw:debug Path A orchestration. Follow the competing-hypotheses team workflow end-to-end for this run. Do not collapse to direct verification even if the first local check is conclusive. Stop after the debug investigation result. Do not continue into QA or UAT.' \
   '/vbw:debug The previous report said smoke/vbw-debug-path-a/already_fixed/check.sh still fails, but the expected current behavior is that `bash smoke/vbw-debug-path-a/already_fixed/check.sh` exits 0 and prints `status: pass`. Confirm whether any code change is still required. --competing' \
   | ccr code -p --verbose --output-format stream-json --include-partial-messages --dangerously-skip-permissions \
       --plugin-dir /absolute/path/to/vbw-candidate-worktree

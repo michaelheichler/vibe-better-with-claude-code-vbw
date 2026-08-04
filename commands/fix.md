@@ -46,7 +46,7 @@ Config: Pre-injected by SessionStart hook.
     bash "{plugin-root}/scripts/todo-lifecycle.sh" detail-warning {hash}
     ```
     In all cases, continue without detail.
-    **Post-parse validation:** If the fix description is empty or whitespace-only after stripping flags and ref, check whether a ref was found AND its detail loaded successfully (status `"ok"`). If yes, proceed — the detail provides the fix context. If no ref was found, or the ref detail failed to load, STOP: `"Usage: /vbw:fix \"description of what to fix\""`.
+    **Post-parse validation:** If the fix description is empty or whitespace-only after stripping flags and ref, check whether a ref was found AND its detail loaded successfully (status `"ok"`). If yes, proceed, the detail provides the fix context. If no ref was found, or the ref detail failed to load, STOP: `"Usage: /vbw:fix \"description of what to fix\""`.
 
 3. **State:** Use `.vbw-planning/STATE.md`.
 
@@ -55,11 +55,11 @@ Config: Pre-injected by SessionStart hook.
   bash "{plugin-root}/scripts/delegated-workflow.sh" set fix turbo
     ```
 
-   - **Immediate todo pickup (numeric selections only):** If `TODO_SELECTED=true`, claim the todo now — after fix has passed its own parse/guard steps, and before Dev is spawned. Pipe `TODO_SELECTED_JSON` into:
+   - **Immediate todo pickup (numeric selections only):** If `TODO_SELECTED=true`, claim the todo now, after fix has passed its own parse/guard steps, and before Dev is spawned. Pipe `TODO_SELECTED_JSON` into:
      ```bash
     bash "{plugin-root}/scripts/todo-lifecycle.sh" pickup /vbw:fix {DETAIL_STATUS} {cleanup_policy}
      ```
-    Use `safe` for `{cleanup_policy}` when `DETAIL_STATUS=ok`; otherwise use `keep`. If the helper returns `status="error"`, STOP with its `message` value. If it returns `status="partial"`, continue but surface its `warning` value in the final result so cleanup state is explicit. This pickup path only applies to true numeric todo selections — never to manual text or manual `(ref:HASH)` inputs.
+    Use `safe` for `{cleanup_policy}` when `DETAIL_STATUS=ok`, otherwise use `keep`. If the helper returns `status="error"`, STOP with its `message` value. If it returns `status="partial"`, continue but surface its `warning` value in the final result so cleanup state is explicit. This pickup path only applies to true numeric todo selections, never to manual text or manual `(ref:HASH)` inputs.
 
 5. **Spawn Dev:** Resolve model first:
     ```bash
@@ -73,7 +73,7 @@ Config: Pre-injected by SessionStart hook.
   DEV_REASONING="$RESOLVED_REASONING"
     ```
 
-    Before composing the Dev task description, evaluate installed skills visible in your system context — read each skill's description and select all materially helpful installed skills for this fix, including adjacent/supporting domain skills surfaced by the prompt, logs, error text, related files, or stack context — not just the single most direct skill. The spawned prompt MUST begin with exactly one explicit skill outcome block: use `<skill_activation>{For each selected skill: "Call Skill({skill-name})"}</skill_activation>` when one or more installed skills are preselected at orchestration time, or `<skill_no_activation>Evaluated installed skills for this task. No skills were preselected at orchestration time. Reason: {brief task-specific reason}.</skill_no_activation>` when none are preselected. Silent omission of both blocks is invalid. After evaluating, state the skill outcome in your response (e.g., "Skills: activating {skill-name}" or "Skills: none preselected — {reason}") so the user has visibility before the agent is spawned. Example: if the prompt or error mentions SwiftData, include `swiftdata` alongside relevant test/build/debug skills. After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting. Do not scan entire skill folders or read unrelated references.
+    Before composing the Dev task description, evaluate installed skills visible in your system context, read each skill's description and select all materially helpful installed skills for this fix, including adjacent/supporting domain skills surfaced by the prompt, logs, error text, related files, or stack context, not just the single most direct skill. The spawned prompt MUST begin with exactly one explicit skill outcome block: use `<skill_activation>{For each selected skill: "Call Skill({skill-name})"}</skill_activation>` when one or more installed skills are preselected at orchestration time, or `<skill_no_activation>Evaluated installed skills for this task. No skills were preselected at orchestration time. Reason: {brief task-specific reason}.</skill_no_activation>` when none are preselected. Silent omission of both blocks is invalid. After evaluating, state the skill outcome in your response (e.g., "Skills: activating {skill-name}" or "Skills: none preselected, {reason}") so the user has visibility before the agent is spawned. Example: if the prompt or error mentions SwiftData, include `swiftdata` alongside relevant test/build/debug skills. After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting. Do not scan entire skill folders or read unrelated references.
 
     If one or more skills were preselected, run `bash "{plugin-root}/scripts/extract-skill-follow-up-files.sh" "{all preselected skill names from the activation block}" 2>/dev/null || true` before spawning the Dev. If the helper prints a `<skill_follow_up_files>` block, paste it immediately after the follow-up-read sentence in the spawned payload. Otherwise omit that block.
 
@@ -81,7 +81,7 @@ Config: Pre-injected by SessionStart hook.
     ```bash
     RESEARCH_CONTEXT=$(bash "{plugin-root}/scripts/compile-research-context.sh" .vbw-planning "{fix description from Step 1}" 2>/dev/null || echo "")
     ```
-    Replace `{fix description from Step 1}` with the actual parsed fix description. If `RESEARCH_CONTEXT` is non-empty, include it in the Dev task prompt below. If empty, omit the `<standalone_research_context>` block entirely — the fix workflow proceeds as today.
+    Replace `{fix description from Step 1}` with the actual parsed fix description. If `RESEARCH_CONTEXT` is non-empty, include it in the Dev task prompt below. If empty, omit the `<standalone_research_context>` block entirely, the fix workflow proceeds as today.
 
     Spawn vbw-dev as subagent via Task tool with `subagent_type: "vbw:vbw-dev"` and `model: "${DEV_MODEL}"`.
 
@@ -93,9 +93,9 @@ Config: Pre-injected by SessionStart hook.
 
     ```text
     Quick fix (Turbo mode). Effort: low.
-    Standalone research context (include ONLY if RESEARCH_CONTEXT was non-empty — omit this entire block otherwise):
+    Standalone research context (include ONLY if RESEARCH_CONTEXT was non-empty, omit this entire block otherwise):
     <standalone_research_context>
-    Prior research findings from /vbw:research. Advisory — verify all claims against the current codebase before relying on them.
+    Prior research findings from /vbw:research. Advisory, verify all claims against the current codebase before relying on them.
     {RESEARCH_CONTEXT}
     </standalone_research_context>
     Task: {fix description}.
@@ -123,13 +123,13 @@ Config: Pre-injected by SessionStart hook.
       Files: {changed files}
     ```
 
-    Run `bash "{plugin-root}/scripts/write-fix-marker.sh" .vbw-planning 2>/dev/null || true` silently — this persists fix context for inline QA/UAT.
+    Run `bash "{plugin-root}/scripts/write-fix-marker.sh" .vbw-planning 2>/dev/null || true` silently, this persists fix context for inline QA/UAT.
     Run `bash "{plugin-root}/scripts/suggest-next.sh" fix` and display.
 
     Committed, with discovered issues (Dev reported pre-existing failures):
 
     De-duplicate by test name and file (keep first error message when the same
-    test+file pair has different messages). Cap the list at 20 entries; if more
+    test+file pair has different messages). Cap the list at 20 entries, if more
     exist, show the first 20 and append `... and {N} more`.
 
     ```text
@@ -146,8 +146,8 @@ Config: Pre-injected by SessionStart hook.
     This is **display-only**. Do NOT edit STATE.md, do NOT add todos, do NOT
     invoke /vbw:todo, and do NOT enter an interactive loop. The user decides
     whether to track these. If no discovered issues: omit the section entirely.
-    After displaying discovered issues, **STOP. Do not take further action** on discovered issues (no auto-fix, no auto-track, no investigation)—just display them.
-    Run `bash "{plugin-root}/scripts/write-fix-marker.sh" .vbw-planning 2>/dev/null || true` silently — this persists fix context for inline QA/UAT.
+    After displaying discovered issues, **STOP. Do not take further action** on discovered issues (no auto-fix, no auto-track, no investigation),just display them.
+    Run `bash "{plugin-root}/scripts/write-fix-marker.sh" .vbw-planning 2>/dev/null || true` silently, this persists fix context for inline QA/UAT.
     Run `bash "{plugin-root}/scripts/suggest-next.sh" fix` and display.
 
     Dev stopped:

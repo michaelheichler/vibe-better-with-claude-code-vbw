@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# verify-uat-remediation-orchestration.sh — Contract checks for UAT remediation orchestration.
+# verify-uat-remediation-orchestration.sh, Contract checks for UAT remediation orchestration.
 #
 # These checks protect the host-root artifact path contract used when Scout,
 # Lead, and Dev agents run from Claude sidechain CWDs.

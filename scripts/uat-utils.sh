@@ -1,42 +1,10 @@
 #!/usr/bin/env bash
-# uat-utils.sh — Shared UAT helper functions for phase-detect, suggest-next,
-# and prepare-reverification. Source this file; do not execute directly.
-#
-# Functions:
-#   normalize_uat_status <value>  — Map LLM-generated UAT status synonyms to
-#                                   canonical values (complete, issues_found, etc.).
-#   extract_status_value <file>   — Extract status value from YAML frontmatter
-#                                   with body-level fallback for brownfield files.
-#                                   Applies normalize_uat_status automatically.
-#   uat_file_status_class <file>  — Classify a UAT file as complete,
-#                                   issues_found, active, or none.
-#   current_uat_status_class <dir> — Classify the active UAT for a phase dir.
-#   current_uat_blocks_phase_completion <dir>
-#                                — True when the active UAT prevents phase
-#                                  completion/archive.
-#   latest_non_source_uat <dir>   — Find the latest canonical UAT file in a phase
-#                                   directory, excluding SOURCE-UAT.md copies.
-#   current_uat <dir>             — Find the active UAT file (round-dir first,
-#                                   then phase-root fallback).
-#   count_uat_rounds <dir> <num>  — Count existing {num}-UAT-round-*.md files
-#                                   in a phase directory. Returns max round number.
 
-# Guard: prevent accidental direct execution
 if [ "${BASH_SOURCE[0]}" = "$0" ]; then
   echo "Error: uat-utils.sh must be sourced, not executed directly" >&2
   exit 1
 fi
 
-# normalize_uat_status — Map LLM-generated UAT status synonyms to canonical values.
-#
-# The UAT template defines: in_progress, complete, issues_found.
-# LLMs sometimes write semantically equivalent but non-canonical values
-# (e.g., "all_pass", "passed", "verified"). Without normalization, downstream
-# consumers (phase-detect, prepare-reverification, state-updater) fail to
-# recognize these as terminal statuses, causing mis-routing.
-#
-# Canonical terminal statuses: complete, issues_found
-# Canonical non-terminal: in_progress, pending
 normalize_uat_status() {
   local raw="${1:-}"
   case "$raw" in
@@ -46,18 +14,6 @@ normalize_uat_status() {
   esac
 }
 
-# extract_status_value — Extract 'status:' value from a markdown file.
-#
-# Priority: YAML frontmatter (between --- delimiters at file start).
-# Fallback: first unindented 'status:' line in the body. The body fallback
-# requires the line to start at column 0 (no leading whitespace) to avoid
-# matching indented prose, markdown list items, or table rows that happen
-# to contain 'status:'.
-#
-# UAT files: the extracted value is passed through normalize_uat_status() to
-# map LLM synonyms (all_pass, passed, verified, failed, etc.) to canonical
-# values. SUMMARY files use their own extraction path in summary-utils.sh
-# which never calls normalize_uat_status(), so these mappings are UAT-only.
 _uat_ascii_lower() {
   local input="${1:-}"
   local output=""
@@ -169,9 +125,6 @@ _extract_uat_status_value() {
   local file="$1"
   local line line_num=0 result
 
-  # Try frontmatter first. A blank frontmatter status key is authoritative;
-  # callers that need class semantics use uat_file_has_frontmatter_status_key()
-  # to classify that artifact as active instead of falling through to body prose.
   while IFS= read -r line || [ -n "$line" ]; do
     line_num=$((line_num + 1))
     line="${line%$'\r'}"
@@ -186,9 +139,6 @@ _extract_uat_status_value() {
     fi
   done < "$file"
 
-  # Fallback: scan body for unindented status: line (brownfield/manual UATs).
-  # Only accept known status values to avoid matching prose like
-  # "Status: The system works".
   while IFS= read -r line || [ -n "$line" ]; do
     line="${line%$'\r'}"
     case "$line" in
@@ -210,18 +160,6 @@ extract_status_value() {
   printf '%s' "$result"
 }
 
-# uat_status_class — Classify a normalized or raw UAT status value.
-#
-# Completion/archive is allowed only for explicit passing terminal statuses.
-# `issues_found` is a terminal UAT result that requires remediation.
-# Empty raw input maps to `none`; callers deciding phase completion/archive from
-# an artifact must use uat_file_status_class(), current_uat_status_class(), or
-# current_uat_blocks_phase_completion() instead. Those file-aware helpers treat
-# remediation round UAT files and artifacts with a blank frontmatter `status:`
-# key as `active`, while preserving legacy `none` for phase-root files with no
-# authoritative status key.
-# Unrecognized and non-terminal raw statuses mean active verification is still
-# authoritative and must block phase completion when used by file-aware callers.
 uat_status_class() {
   local status
   status=$(normalize_uat_status "${1:-}")
@@ -241,11 +179,6 @@ uat_status_class() {
   esac
 }
 
-# uat_file_status_value — Extract and normalize UAT status directly.
-#
-# This intentionally does not call extract_status_value(), because some callers
-# validate behavior when that legacy function is degraded or locally overridden.
-# The classification contract must remain tied to the artifact content itself.
 uat_file_status_value() {
   local file="$1" result
   [ -f "$file" ] || return 1
@@ -286,14 +219,6 @@ uat_file_is_remediation_round_uat() {
   esac
 }
 
-# uat_file_status_class — Classify a concrete UAT artifact.
-#
-# Existing remediation round UAT artifacts are authoritative blockers even when
-# their status is missing or blank, so they classify as `active`. A blank
-# frontmatter `status:` key is also an explicit active blocker. Brownfield
-# phase-root UAT files with no authoritative status key remain `none`, preserving
-# degraded legacy behavior where ignored prose/body status mentions do not block
-# completion by themselves.
 uat_file_status_class() {
   local file="$1" status
   [ -f "$file" ] || { printf '%s\n' "none"; return 0; }
@@ -314,12 +239,6 @@ uat_status_class_blocks_completion() {
   esac
 }
 
-# latest_non_source_uat — Find the latest [0-9]*-UAT.md file in a directory,
-# excluding SOURCE-UAT.md files (verbatim copies from milestone remediation).
-#
-# Compares numeric prefixes to handle both zero-padded (01, 02) and unpadded
-# (1, 2, 10) numbering correctly. Returns empty string (and exit 0) if no
-# matching file exists.
 latest_non_source_uat() {
   local dir="$1"
   local latest=""
@@ -333,7 +252,6 @@ latest_non_source_uat() {
   for f in "${dir}"[0-9]*-UAT.md; do
     [ -f "$f" ] || continue
     case "$f" in *SOURCE-UAT.md) continue ;; esac
-    # Extract numeric prefix from basename (e.g., "01" from "01-UAT.md")
     local bname num
     bname=$(basename "$f")
     num=$(echo "$bname" | sed 's/^\([0-9]*\).*/\1/' | sed 's/^0*//')
@@ -350,11 +268,6 @@ latest_non_source_uat() {
   return 0
 }
 
-# count_uat_rounds — Count remediation rounds in both flat and round-dir layouts.
-#
-# Flat layout: scans for {phase_num}-UAT-round-*.md files at phase root.
-# Round-dir layout: scans for remediation/uat/round-*/R*-UAT.md files.
-# Returns the maximum round number found across both locations (0 if none).
 count_uat_rounds() {
   local dir="$1"
   local phase_num="$2"
@@ -365,7 +278,6 @@ count_uat_rounds() {
     *) dir="$dir/" ;;
   esac
 
-  # Flat layout: {phase_num}-UAT-round-{NN}.md
   for rf in "${dir}${phase_num}"-UAT-round-*.md; do
     [ -f "$rf" ] || continue
     local round_num
@@ -377,7 +289,6 @@ count_uat_rounds() {
     fi
   done
 
-  # Round-dir layout: remediation/uat/round-{NN}/R{NN}-UAT.md
   for rf in "${dir}"remediation/uat/round-*/R*-UAT.md; do
     [ -f "$rf" ] || continue
     local rr_num
@@ -392,7 +303,6 @@ count_uat_rounds() {
   printf '%d' "$max_round"
 }
 
-# uat_phase_num_for_dir — Extract the numeric phase prefix from a phase dir.
 uat_phase_num_for_dir() {
   local phase_dir="$1" phase_basename phase_num
 
@@ -401,11 +311,6 @@ uat_phase_num_for_dir() {
   printf '%s' "$phase_num"
 }
 
-# uat_infer_legacy_current_round — Infer current legacy remediation round.
-#
-# Legacy single-word or phase-root state predates explicit round-dir metadata.
-# When archived UAT rounds exist, the current working round is the next round;
-# otherwise it is round 01.
 uat_infer_legacy_current_round() {
   local phase_dir="$1" phase_num archived_rounds current_round
 
@@ -425,11 +330,6 @@ uat_infer_legacy_current_round() {
   echo "01"
 }
 
-# uat_resolve_legacy_round — Resolve stored legacy metadata to current round.
-#
-# Stored rounds greater than 1 are explicit and win. Missing, invalid, or stale
-# round-01 metadata is inferred from archived UAT artifacts for brownfield
-# compatibility.
 uat_resolve_legacy_round() {
   local phase_dir="$1" stored_round="${2:-}" stored_num
 
@@ -444,9 +344,6 @@ uat_resolve_legacy_round() {
   uat_infer_legacy_current_round "$phase_dir"
 }
 
-# extract_round_issue_ids — Extract test IDs that had "Result: issue" in a
-# UAT round file. Prints one ID per line. Works on both archived round files
-# (flat layout) and round-dir UAT files (R{RR}-UAT.md).
 extract_round_issue_ids() {
   local file="$1"
   [ -f "$file" ] || return 0
@@ -482,14 +379,6 @@ extract_round_issue_ids() {
   ' "$file"
 }
 
-# current_uat — Find the active UAT file, checking round-dir layout first.
-#
-# If the phase has a round-dir remediation layout with an R{RR}-UAT.md in the
-# current round directory, returns that path. Otherwise falls back to
-# latest_non_source_uat() (phase-root UAT).
-#
-# Same contract as latest_non_source_uat: returns a filepath string if found,
-# empty string if not, exit 0 always.
 current_uat() {
   local dir="$1"
 
@@ -498,7 +387,6 @@ current_uat() {
     *) dir="$dir/" ;;
   esac
 
-  # Check remediation state (new location first, then brownfield legacy paths)
   local state_file=""
   if [ -f "${dir}remediation/uat/.uat-remediation-stage" ]; then
     state_file="${dir}remediation/uat/.uat-remediation-stage"
@@ -524,8 +412,6 @@ current_uat() {
         printf '%s\n' "$round_uat"
         return 0
       fi
-      # Current round's UAT doesn't exist yet (start of new round).
-      # Scan all round dirs for the latest existing R{NN}-UAT.md.
       local _prev_best="" _prev_best_num=-1
       for _ruat in "${dir}"remediation/uat/round-*/R*-UAT.md; do
         [ -f "$_ruat" ] || continue
@@ -568,7 +454,6 @@ current_uat() {
     fi
   fi
 
-  # Fall back to phase-root UAT
   latest_non_source_uat "${dir%/}"
 }
 

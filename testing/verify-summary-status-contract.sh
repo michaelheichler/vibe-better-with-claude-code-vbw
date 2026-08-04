@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# verify-summary-status-contract.sh — Tests for SUMMARY.md status contract and helpers
+# verify-summary-status-contract.sh, Tests for SUMMARY.md status contract and helpers
 #
 # Verifies:
 # - Status enum validation (is_valid_summary_status)
@@ -439,7 +439,7 @@ fi
 echo ""
 echo "--- Double-source guard ---"
 
-# Source the lib again — should be a no-op (guard prevents re-init)
+# Source the lib again, should be a no-op (guard prevents re-init)
 source "$LIB"
 if is_valid_summary_status "complete"; then
   pass "Double-source: functions still work after re-sourcing"

@@ -1,10 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# verify-qa-active-removal.sh — Focused QA verifier for ACTIVE-removal milestone refactor.
-#
-# Usage: bash scripts/verify-qa-active-removal.sh
-# Exit: 0 if all checks pass, 1 if any check fails.
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 

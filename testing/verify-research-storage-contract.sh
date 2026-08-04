@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# verify-research-storage-contract.sh — Contract tests for research storage feature.
+# verify-research-storage-contract.sh, Contract tests for research storage feature.
 # Validates structural invariants: script existence, template fields, command references.
 
 set -euo pipefail

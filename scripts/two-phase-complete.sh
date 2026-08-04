@@ -1,15 +1,7 @@
 #!/usr/bin/env bash
 set -u
 
-# two-phase-complete.sh <task_id> <phase> <plan> <contract_path> [evidence...]
-# V2 two-phase completion protocol:
-#   1. Emit task_completed_candidate with evidence
-#   2. Validate must_haves + verification_checks from contract
-#   3. Emit task_completed_confirmed on pass, task_completion_rejected on fail
-# Output: JSON {result: "confirmed"|"rejected", checks_passed: N, checks_total: N, errors: [...]}
-# Exit: 0 on confirmed, 2 on rejected, 0 when flag off
 
-# shellcheck disable=SC2034 # PLANNING_DIR used by convention across VBW scripts
 PLANNING_DIR="${VBW_PLANNING_DIR:-.vbw-planning}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
@@ -24,7 +16,6 @@ PLAN="$3"
 CONTRACT_PATH="$4"
 shift 4
 
-# Check two_phase_completion flag — if disabled, skip
 CONFIG_PATH="$PLANNING_DIR/config.json"
 if [ -f "$CONFIG_PATH" ] && command -v jq &>/dev/null; then
   TWO_PHASE=$(jq -r 'if .two_phase_completion != null then .two_phase_completion elif .v2_two_phase_completion != null then .v2_two_phase_completion else true end' "$CONFIG_PATH" 2>/dev/null || echo "true")
@@ -34,7 +25,6 @@ if [ -f "$CONFIG_PATH" ] && command -v jq &>/dev/null; then
   fi
 fi
 
-# Collect evidence from remaining args; extract files_modified if present
 EVIDENCE=""
 FILES_MODIFIED=""
 for arg in "$@"; do
@@ -50,13 +40,11 @@ for arg in "$@"; do
   fi
 done
 
-# Phase 1: Emit task_completed_candidate
 if [ -f "${SCRIPT_DIR}/log-event.sh" ]; then
   bash "${SCRIPT_DIR}/log-event.sh" "task_completed_candidate" "$PHASE" "$PLAN" \
     "task_id=${TASK_ID}" "evidence=${EVIDENCE:-none}" 2>/dev/null || true
 fi
 
-# Phase 2: Validate must_haves + verification_checks from contract
 ERRORS="[]"
 CHECKS_PASSED=0
 CHECKS_TOTAL=0
@@ -69,7 +57,6 @@ if [ ! -f "$CONTRACT_PATH" ]; then
   add_error "contract file not found: ${CONTRACT_PATH}"
   CHECKS_TOTAL=1
 else
-  # Check must_haves: require non-empty evidence (REQ-03)
   MUST_HAVES=$(jq -r '.must_haves // [] | .[]' "$CONTRACT_PATH" 2>/dev/null) || MUST_HAVES=""
   if [ -n "$MUST_HAVES" ]; then
     while IFS= read -r mh; do
@@ -83,7 +70,6 @@ else
     done <<< "$MUST_HAVES"
   fi
 
-  # Validate files_modified against allowed_paths (REQ-03)
   if [ -n "$FILES_MODIFIED" ]; then
     ALLOWED_PATHS=$(jq -r '.allowed_paths // [] | .[]' "$CONTRACT_PATH" 2>/dev/null) || ALLOWED_PATHS=""
     if [ -n "$ALLOWED_PATHS" ]; then
@@ -107,7 +93,6 @@ else
     fi
   fi
 
-  # Run verification_checks: each is a shell command that must exit 0
   VERIFICATION_CHECKS=$(jq -r '.verification_checks // [] | .[]' "$CONTRACT_PATH" 2>/dev/null) || VERIFICATION_CHECKS=""
   if [ -n "$VERIFICATION_CHECKS" ]; then
     while IFS= read -r check; do
@@ -122,11 +107,9 @@ else
   fi
 fi
 
-# Phase 3: Emit result
 ERROR_COUNT=$(echo "$ERRORS" | jq 'length' 2>/dev/null || echo "0")
 
 if [ "$ERROR_COUNT" -eq 0 ] || [ "$ERROR_COUNT" = "0" ]; then
-  # Emit task_completed_confirmed
   if [ -f "${SCRIPT_DIR}/log-event.sh" ]; then
     bash "${SCRIPT_DIR}/log-event.sh" "task_completed_confirmed" "$PHASE" "$PLAN" \
       "task_id=${TASK_ID}" "checks_passed=${CHECKS_PASSED}" "checks_total=${CHECKS_TOTAL}" 2>/dev/null || true
@@ -136,7 +119,6 @@ if [ "$ERROR_COUNT" -eq 0 ] || [ "$ERROR_COUNT" = "0" ]; then
     '{result: "confirmed", checks_passed: $passed, checks_total: $total, errors: []}'
   exit 0
 else
-  # Emit task_completion_rejected
   if [ -f "${SCRIPT_DIR}/log-event.sh" ]; then
     bash "${SCRIPT_DIR}/log-event.sh" "task_completion_rejected" "$PHASE" "$PLAN" \
       "task_id=${TASK_ID}" "checks_passed=${CHECKS_PASSED}" "checks_total=${CHECKS_TOTAL}" \

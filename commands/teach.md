@@ -87,7 +87,7 @@ Stored in `.vbw-planning/conventions.json`:
 **R1.** If no `.vbw-planning/codebase/`: `⚠ No codebase map found. Run /vbw:map first.`
 
 **R2. Extract conventions from map:** Read PATTERNS.md, ARCHITECTURE.md, STACK.md, CONCERNS.md. Rules:
-- Be specific, not generic ("Components use PascalCase" good; "Code should be clean" bad)
+- Be specific, not generic ("Components use PascalCase" good, "Code should be clean" bad)
 - Only extract patterns actually present in codebase
 - Confidence from language: "consistently/always/all" → high, "most/commonly" → medium, "some/mixed" → low
 - Skip low-confidence unless only pattern for that category
@@ -103,4 +103,4 @@ Conventions are injected from `.vbw-planning/conventions.json` by `scripts/compi
 
 ## Output Format
 
-Follow @${CLAUDE_PLUGIN_ROOT}/references/vbw-brand-essentials.md — single-line box, ✓ success, ⚠ conflicts/warnings, ○ skipped/info, no ANSI.
+Follow @${CLAUDE_PLUGIN_ROOT}/references/vbw-brand-essentials.md, single-line box, ✓ success, ⚠ conflicts/warnings, ○ skipped/info, no ANSI.

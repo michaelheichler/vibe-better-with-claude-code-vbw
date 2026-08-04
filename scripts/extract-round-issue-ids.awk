@@ -1,7 +1,3 @@
-# extract-round-issue-ids.awk — Print one issue/test ID per failing UAT entry.
-#
-# Output format:
-#   ID
 
 function tolower_str(s,    i, c, out, upper, lower, pos) {
   upper = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"

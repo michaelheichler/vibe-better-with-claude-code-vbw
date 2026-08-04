@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# verify-qa-persistence-contract.sh — Tests for issue #202 fix
+# verify-qa-persistence-contract.sh, Tests for issue #202 fix
 #
 # Verifies that:
 # - QA agent does NOT contain heredoc escape hatch for VERIFICATION.md
@@ -154,7 +154,7 @@ else
 fi
 
 # 15. Execute post-build QA QA task descriptions use VBW_PLUGIN_ROOT (not CLAUDE_PLUGIN_ROOT)
-#     CLAUDE_PLUGIN_ROOT is only set for --plugin-dir installs; VBW_PLUGIN_ROOT is the
+#     CLAUDE_PLUGIN_ROOT is only set for --plugin-dir installs. VBW_PLUGIN_ROOT is the
 #     resolved variable from the 6-step cascade at the top of execute-post-build-qa.md.
 if grep -q 'Plugin root: \${CLAUDE_PLUGIN_ROOT}' "$EXEC_PROTO"; then
   fail "15: execute-post-build-qa.md QA task descriptions use CLAUDE_PLUGIN_ROOT instead of VBW_PLUGIN_ROOT"
@@ -178,7 +178,7 @@ fi
 # ── Finding-regression checks (QA round 4) ───────────────────────────
 
 # 16. Execute post-build QA QA task descriptions use ${VBW_PLUGIN_ROOT} consistently
-#     (same pattern as all other script invocations — orchestrator resolves at top of file)
+#     (same pattern as all other script invocations, orchestrator resolves at top of file)
 PLUGIN_ROOT_COUNT=$(grep -c 'Plugin root: \${VBW_PLUGIN_ROOT}' "$EXEC_PROTO" || true)
 if [ "$PLUGIN_ROOT_COUNT" -ge 2 ]; then
   pass "16: execute-post-build-qa.md QA task descriptions use \${VBW_PLUGIN_ROOT} consistently ($PLUGIN_ROOT_COUNT occurrences)"
@@ -232,7 +232,7 @@ fi
 if grep -q 'track-known-issues\.sh.*promote-todos' "$QA_CMD"; then
   pass "22: commands/qa.md calls promote-todos for known-issues lifecycle"
 else
-  fail "22: commands/qa.md missing promote-todos call — known issues won't auto-promote to STATE.md"
+  fail "22: commands/qa.md missing promote-todos call, known issues won't auto-promote to STATE.md"
 fi
 
 # ── Summary ──────────────────────────────────────────────────────────

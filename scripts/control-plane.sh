@@ -1,19 +1,11 @@
 #!/usr/bin/env bash
 set -u
 
-# control-plane.sh <action> <phase> <plan> <task> [options...]
-# Lightweight dispatcher that orchestrates enforcement scripts into a sequenced flow.
-# Actions: pre-task, post-task, compile, full
-# Sequences: contract -> lease -> gate -> context (in that order)
-# No-op (exit 0) when all relevant feature flags are OFF.
-# Delegates to existing scripts — does not reimplement their logic.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# shellcheck source=scripts/lib/vbw-target-root.sh
 . "${SCRIPT_DIR}/lib/vbw-target-root.sh"
 
-# --- Usage ---
 usage() {
   cat <<EOF
 Usage: control-plane.sh <action> <phase> <plan> <task> [options...]
@@ -34,7 +26,6 @@ EOF
   exit 0
 }
 
-# --- Argument parsing ---
 if [ $# -lt 1 ]; then
   usage
 fi
@@ -64,7 +55,6 @@ for arg in "$@"; do
   esac
 done
 
-# Canonicalize relative paths so they survive cwd changes in run_child_in_target_context
 if [ -n "$PLAN_PATH" ] && [ -e "$PLAN_PATH" ]; then
   PLAN_PATH=$(cd "$(dirname "$PLAN_PATH")" && printf '%s/%s\n' "$(pwd -P)" "$(basename "$PLAN_PATH")")
 fi
@@ -106,7 +96,6 @@ fi
 
 CONFIG_PATH="${PLANNING_DIR}/config.json"
 
-# --- Config / flag resolution ---
 CONTEXT_COMPILER=false
 TOKEN_BUDGETS=true
 
@@ -115,32 +104,24 @@ if [ -f "$CONFIG_PATH" ] && command -v jq &>/dev/null; then
   TOKEN_BUDGETS=$(jq -r 'if .token_budgets != null then .token_budgets elif .v2_token_budgets != null then .v2_token_budgets else true end' "$CONFIG_PATH" 2>/dev/null || echo "true")
 fi
 
-# --- No-op check (REQ-C1) ---
-# If all flags relevant to the chosen action are false, exit 0 immediately.
-# Note: v2_hard_contracts, v2_hard_gates are now always-on (graduated)
-# Token budgets and context compiler are config-gated.
 check_noop() {
   case "$ACTION" in
     pre-task)
-      # Contract and gates are always-on — pre-task is never a noop
       return 1
       ;;
     post-task)
-      # Gates are always-on
       return 1
       ;;
     compile)
       [ "$CONTEXT_COMPILER" != "true" ] && [ "$TOKEN_BUDGETS" != "true" ] && return 0
       ;;
     full)
-      # Contract is always-on — full is never a noop
       return 1
       ;;
   esac
   return 1
 }
 
-# --- Result tracking ---
 STEPS_JSON="[]"
 
 record_step() {
@@ -151,7 +132,6 @@ record_step() {
 
 emit_result() {
   local exit_code="${1:-0}"
-  # Include context_path and contract_path in output when available
   if [ -n "$CONTEXT_PATH_OUT" ] || [ -n "$CONTRACT_PATH_OUT" ]; then
     local ctx_json="${CONTEXT_PATH_OUT:-null}"
     local ctr_json="${CONTRACT_PATH_OUT:-null}"
@@ -193,11 +173,9 @@ run_child_in_target_context() {
   fi
 }
 
-# --- Step functions ---
 CONTRACT_PATH_OUT=""
 
 step_contract() {
-  # v2_hard_contracts is now always enabled (graduated)
   if [ -z "$PLAN_PATH" ] || [ ! -f "$PLAN_PATH" ]; then
     record_step "contract" "skip" "no plan file"
     return 0
@@ -223,7 +201,6 @@ step_lease_acquire() {
   local result
   if [ -n "$CLAIMED_FILES" ]; then
     while IFS= read -r claimed_file; do
-      # Trim leading/trailing whitespace to avoid spurious mismatches in lease-lock.sh
       claimed_file="${claimed_file#"${claimed_file%%[![:space:]]*}"}"
       claimed_file="${claimed_file%"${claimed_file##*[![:space:]]}"}"
       [ -n "$claimed_file" ] || continue
@@ -246,7 +223,6 @@ step_lease_acquire() {
   fi
 
   if [ "$result" = "conflict_blocked" ]; then
-    # Retry once after 2s delay (per plan: auto-repair on lease conflict)
     sleep 2
     if [ "${#files_args[@]}" -gt 0 ]; then
       result=$(run_child_in_target_context "lease-lock.sh" acquire "$tid" --ttl=300 "${files_args[@]}" 2>/dev/null) || result="error"
@@ -265,10 +241,8 @@ step_lease_acquire() {
 
 step_gate() {
   local gate_type="$1"
-  # v2_hard_gates is now always enabled (graduated)
   local contract="${CONTRACT_PATH_OUT:-}"
   if [ -z "$contract" ]; then
-    # Try to find contract from phase/plan
     contract="${PLANNING_DIR}/.contracts/${PHASE}-${PLAN}.json"
   fi
   local result
@@ -277,7 +251,6 @@ step_gate() {
   gate_result=$(echo "$result" | jq -r '.result // "unknown"' 2>/dev/null) || gate_result="unknown"
 
   if [ "$gate_result" = "fail" ]; then
-    # Attempt auto-repair
     local repair_result
     repair_result=$(run_child_in_target_context "auto-repair.sh" "$gate_type" "$PHASE" "$PLAN" "$TASK" "$contract" 2>/dev/null) || true
     local repaired
@@ -327,12 +300,10 @@ step_context() {
 }
 
 step_token_budget() {
-  # token_budgets flag controls budget enforcement
   if [ "$TOKEN_BUDGETS" != "true" ]; then
     record_step "token_budget" "skip" "token_budgets=false"
     return 0
   fi
-  # token-budget.sh will pass through if no budget definitions exist
   if [ -z "$CONTEXT_PATH_OUT" ] || [ ! -f "$CONTEXT_PATH_OUT" ]; then
     record_step "token_budget" "skip" "no context file"
     return 0
@@ -358,13 +329,11 @@ step_token_budget() {
   return 0
 }
 
-# --- No-op early exit ---
 if check_noop; then
   record_step "noop" "skip" "all flags OFF for ${ACTION}"
   emit_result 0
 fi
 
-# --- Action dispatch ---
 case "$ACTION" in
   pre-task)
     step_contract

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# verify-no-inline-exec-spans.sh — Contract test for issue #157
+# verify-no-inline-exec-spans.sh, Contract test for issue #157
 #
 # CC template processor executes standalone one-line `!` directives and
 # fenced `!` blocks, but it does NOT execute `!` spans when they are
@@ -107,7 +107,7 @@ for file in "${TRACKED_MARKDOWN_FILES[@]}"; do
   if [ -n "$inline_hits" ]; then
     hit_count=$(printf '%s\n' "$inline_hits" | wc -l | tr -d ' ')
     if is_known_unfixed "$base"; then
-      warn "$dir_label/$base: $hit_count embedded \`!\` span(s) — known unfixed (#157)"
+      warn "$dir_label/$base: $hit_count embedded \`!\` span(s), known unfixed (#157)"
     else
       fail "$dir_label/$base: $hit_count embedded \`!\` span(s) found (unsupported inline/path/prose syntax in Claude Code)"
       printf '%s\n' "$inline_hits" | head -5 | sed 's/^/     /'

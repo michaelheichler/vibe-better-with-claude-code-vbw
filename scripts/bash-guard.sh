@@ -1,51 +1,75 @@
 #!/bin/bash
 set -u
-# Parse failures block because unvalidated commands cannot be trusted.
-
-if ! command -v jq >/dev/null 2>&1; then
-  echo "Blocked: jq not available, cannot validate bash command" >&2
-  exit 2
-fi
-
-INPUT=$(cat 2>/dev/null) || exit 2
-[ -z "$INPUT" ] && exit 2
-
-COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command // ""' 2>/dev/null) || exit 2
-[ -z "$COMMAND" ] && exit 0  # No command = nothing to check
-
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PLUGIN_ROOT="$(dirname "$SCRIPT_DIR")"
 
-if [ -z "${VBW_PLANNING_DIR:-}" ] && [ -f "$SCRIPT_DIR/lib/vbw-config-root.sh" ]; then
-  if source "$SCRIPT_DIR/lib/vbw-config-root.sh" 2>/dev/null; then
-    find_vbw_root "$SCRIPT_DIR" >/dev/null 2>&1 || true
+[ -f "$SCRIPT_DIR/lib/active-agent-state.sh" ] || { printf 'Blocked: VBW guard library missing (%s)\n' "$SCRIPT_DIR/lib/active-agent-state.sh" >&2; exit 2; }
+[ -f "$SCRIPT_DIR/lib/orchestrator-identity.sh" ] || { printf 'Blocked: VBW guard library missing (%s)\n' "$SCRIPT_DIR/lib/orchestrator-identity.sh" >&2; exit 2; }
+[ -f "$SCRIPT_DIR/lib/guard-enforcement.sh" ] || { printf 'Blocked: VBW guard library missing (%s)\n' "$SCRIPT_DIR/lib/guard-enforcement.sh" >&2; exit 2; }
+. "$SCRIPT_DIR/lib/active-agent-state.sh" || { printf 'Blocked: VBW guard library failed to load (%s)\n' "$SCRIPT_DIR/lib/active-agent-state.sh" >&2; exit 2; }
+. "$SCRIPT_DIR/lib/orchestrator-identity.sh" || { printf 'Blocked: VBW guard library failed to load (%s)\n' "$SCRIPT_DIR/lib/orchestrator-identity.sh" >&2; exit 2; }
+. "$SCRIPT_DIR/lib/guard-enforcement.sh" || { printf 'Blocked: VBW guard library failed to load (%s)\n' "$SCRIPT_DIR/lib/guard-enforcement.sh" >&2; exit 2; }
+PROJECT_ROOT=$(vbw_guard_project_root "$PWD") || PROJECT_ROOT=""
+GUARD_LEVEL=$(vbw_guard_enforcement_level "$PROJECT_ROOT" "")
+[ "$GUARD_LEVEL" = "off" ] && exit 0
+PLANNING_DIR="$PROJECT_ROOT/.vbw-planning"
+
+guard_log_event() {
+  local message="$1" level="${GUARD_LEVEL:-enforce}" agent="${ACTIVE_AGENT_ROLE:-${VBW_ACTIVE_AGENT:-unknown}}"
+  if command -v jq >/dev/null 2>&1 && jq -cn --arg message "$message" --arg level "$level" --arg agent "$agent" \
+    '{event:"guard_block",level:$level,message:$message,agent:$agent}' \
+    >> "$PLANNING_DIR/.event-log.jsonl" 2>/dev/null; then
+    return 0
   fi
+  message=$(printf '%s' "$message" | tr '\r\n' ' ' | sed 's/\\/\\\\/g; s/"/\\"/g' | tr -d '[:cntrl:]')
+  agent=$(printf '%s' "$agent" | tr '\r\n' ' ' | sed 's/\\/\\\\/g; s/"/\\"/g' | tr -d '[:cntrl:]')
+  printf '{"event":"guard_block","level":"%s","message":"%s","agent":"%s"}\n' \
+    "$level" "$message" "$agent" >> "$PLANNING_DIR/.event-log.jsonl" 2>/dev/null || true
+}
+
+guard_block() {
+  local message="$1" matched="${2:-$1}"
+  if [ "$GUARD_LEVEL" = "enforce" ]; then
+    if declare -F log_block_event >/dev/null 2>&1; then
+      log_block_event "$matched"
+    else
+      guard_log_event "$message"
+    fi
+    printf '%s\n' "$message" >&2
+    exit 2
+  fi
+  guard_log_event "$message"
+  exit 0
+}
+
+if ! INPUT=$(cat 2>/dev/null); then
+  guard_block "Blocked: unable to read bash guard input"
+fi
+[ -n "$INPUT" ] || guard_block "Blocked: empty bash guard input"
+GUARD_LEVEL=$(vbw_guard_enforcement_level "$PROJECT_ROOT" "$INPUT")
+[ "$GUARD_LEVEL" = "off" ] && exit 0
+if ! command -v jq >/dev/null 2>&1; then
+  [ "$GUARD_LEVEL" = "enforce" ] || { guard_log_event "Blocked: jq not available, cannot validate bash command"; exit 0; }
+  printf '%s\n' "Blocked: jq not available, cannot validate bash command" >&2
+  exit 2
 fi
 
-PLANNING_DIR="${VBW_PLANNING_DIR:-.vbw-planning}"
+if ! COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command // ""' 2>/dev/null); then
+  [ "$GUARD_LEVEL" = "enforce" ] || { guard_log_event "Blocked: invalid bash command payload"; exit 0; }
+  exit 2
+fi
+[ -z "$COMMAND" ] && exit 0
+
+# Parse failures block because unvalidated commands cannot be trusted.
+
 DEFAULT_PATTERNS="$PLUGIN_ROOT/config/destructive-commands.txt"
 LOCAL_PATTERNS="$PLANNING_DIR/destructive-commands.local.txt"
 if [ -f "$SCRIPT_DIR/lib/active-agent-state.sh" ]; then
   . "$SCRIPT_DIR/lib/active-agent-state.sh"
 fi
-
-normalize_agent_role() {
-  local lower
-  lower=$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')
-  lower="${lower#@}"
-  lower="${lower#vbw:}"
-
-  case "$lower" in
-    vbw-scout|vbw-scout-[0-9]*|scout|scout-[0-9]*|team-scout|team-scout-[0-9]*) printf 'scout' ;;
-    vbw-lead|vbw-lead-[0-9]*|lead|lead-[0-9]*|team-lead|team-lead-[0-9]*) printf 'lead' ;;
-    vbw-dev|vbw-dev-[0-9]*|dev|dev-[0-9]*|team-dev|team-dev-[0-9]*) printf 'dev' ;;
-    vbw-qa|vbw-qa-[0-9]*|qa|qa-[0-9]*|team-qa|team-qa-[0-9]*) printf 'qa' ;;
-    vbw-debugger|vbw-debugger-[0-9]*|debugger|debugger-[0-9]*|team-debugger|team-debugger-[0-9]*) printf 'debugger' ;;
-    vbw-architect|vbw-architect-[0-9]*|architect|architect-[0-9]*|team-architect|team-architect-[0-9]*) printf 'architect' ;;
-    vbw-docs|vbw-docs-[0-9]*|docs|docs-[0-9]*|team-docs|team-docs-[0-9]*) printf 'docs' ;;
-    *) return 1 ;;
-  esac
-}
+if [ -f "$SCRIPT_DIR/lib/orchestrator-identity.sh" ]; then
+  . "$SCRIPT_DIR/lib/orchestrator-identity.sh"
+fi
 
 _BG_PAYLOAD_AGENT_TYPE=$(printf '%s' "$INPUT" | jq -r '.agent_type // ""' 2>/dev/null) || _BG_PAYLOAD_AGENT_TYPE=""
 _BG_PAYLOAD_AGENT_ID=$(printf '%s' "$INPUT" | jq -r '.agent_id // ""' 2>/dev/null) || _BG_PAYLOAD_AGENT_ID=""
@@ -58,31 +82,37 @@ detect_agent_role() {
   local candidate role
   for candidate in "${VBW_AGENT_ROLE:-}" "${VBW_ACTIVE_AGENT:-}"; do
     [ -z "$candidate" ] && continue
-    role=$(normalize_agent_role "$candidate") || continue
+    role=$(vbw_active_agent_normalize_role "$candidate") || continue
     printf '%s' "$role"
     return 0
   done
   for candidate in "$_BG_PAYLOAD_AGENT_TYPE" "$_BG_PAYLOAD_AGENT_ID"; do
     [ -z "$candidate" ] && continue
-    role=$(normalize_agent_role "$candidate") || continue
+    role=$(vbw_active_agent_normalize_payload_role "$candidate") || continue
     printf '%s' "$role"
     return 0
   done
-  [ "$_BG_PAYLOAD_HAS_AGENT" = true ] || return 1
-  command -v vbw_active_agent_current_scout >/dev/null 2>&1 \
-    && vbw_active_agent_current_scout "$PLANNING_DIR" "$INPUT" \
-    && { printf 'scout'; return 0; }
-  command -v vbw_active_agent_current_qa >/dev/null 2>&1 \
-    && vbw_active_agent_current_qa "$PLANNING_DIR" "$INPUT" \
-    && { printf 'qa'; return 0; }
-  return 1
+  if [ "$_BG_PAYLOAD_HAS_AGENT" != true ]; then
+    _BG_SESSION_ID=$(vbw_active_agent_session_id "$INPUT" 2>/dev/null) || _BG_SESSION_ID="${CLAUDE_SESSION_ID:-}"
+    if vbw_orchestrator_instance_id "$_BG_SESSION_ID" >/dev/null 2>&1; then
+      printf 'orchestrator'
+      return 0
+    fi
+    return 1
+  fi
+  guard_block "Blocked: unrecognized agent evidence (agent_type=$_BG_PAYLOAD_AGENT_TYPE, agent_id=$_BG_PAYLOAD_AGENT_ID); role cannot be confirmed."
+  return 2
 }
 
 ACTIVE_AGENT_ROLE=""
 if ACTIVE_AGENT_ROLE=$(detect_agent_role); then
   :
 else
+  _BG_ROLE_STATUS=$?
   ACTIVE_AGENT_ROLE=""
+  if [ "$_BG_ROLE_STATUS" -eq 2 ]; then
+    exit 2
+  fi
 fi
 
 PATTERNS=""
@@ -95,17 +125,16 @@ for PFILE in "$DEFAULT_PATTERNS" "$LOCAL_PATTERNS"; do
 done
 
 log_block_event() {
-  local matched="$1"
-  local preview matched_esc agent timestamp
+  local matched="$1" preview agent timestamp
 
   if [ -d "$PLANNING_DIR" ]; then
-    preview=$(echo "$COMMAND" | head -c 40)
+    preview=$(printf '%s' "$COMMAND" | head -c 40 | tr '\r\n' ' ')
+    matched=$(printf '%s' "$matched" | tr '\r\n' ' ')
     agent="${ACTIVE_AGENT_ROLE:-${VBW_ACTIVE_AGENT:-unknown}}"
     timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ" 2>/dev/null || date +"%s")
-    preview=$(echo "$preview" | sed 's/"/\\"/g')
-    matched_esc=$(echo "$matched" | sed 's/"/\\"/g')
-    printf '{"event":"bash_guard_block","command_preview":"%s","pattern_matched":"%s","agent":"%s","timestamp":"%s"}\n' \
-      "$preview" "$matched_esc" "$agent" "$timestamp" >> "$PLANNING_DIR/.event-log.jsonl" 2>/dev/null
+    jq -cn --arg preview "$preview" --arg matched "$matched" --arg agent "$agent" --arg timestamp "$timestamp" \
+      '{event:"bash_guard_block",command_preview:$preview,pattern_matched:$matched,agent:$agent,timestamp:$timestamp}' \
+      >> "$PLANNING_DIR/.event-log.jsonl" 2>/dev/null || true
   fi
 }
 
@@ -119,14 +148,13 @@ block_readonly_agent_command() {
     *) role_label="Agent" ;;
   esac
 
-  echo "Blocked: $role_label Bash is read-only ($reason)" >&2
-  log_block_event "${ACTIVE_AGENT_ROLE:-unknown}:$reason"
-  exit 2
+  guard_block "Blocked: $role_label Bash is read-only ($reason)"
 }
 
 has_shell_file_write_redirection() {
   local command="$1"
-  local index=0 length character next_character in_single=0 in_double=0 escaped=0
+  local index=0 length character next_character target_start target_end redirect_target target_quote
+  local in_single=0 in_double=0 escaped=0
 
   length=${#command}
   while [ "$index" -lt "$length" ]; do
@@ -165,7 +193,59 @@ has_shell_file_write_redirection() {
         escaped=1
         ;;
       ">")
-        return 0
+        target_start=$((index + 1))
+        [ "${command:$target_start:1}" = ">" ] && target_start=$((target_start + 1))
+        while [ "$target_start" -lt "$length" ] && [[ "${command:$target_start:1}" = [[:space:]] ]]; do
+          target_start=$((target_start + 1))
+        done
+
+        target_quote="${command:$target_start:1}"
+        case "$target_quote" in
+          "'"|'"')
+            target_end=$((target_start + 1))
+            while [ "$target_end" -lt "$length" ] && [ "${command:$target_end:1}" != "$target_quote" ]; do
+              target_end=$((target_end + 1))
+            done
+            redirect_target="${command:$((target_start + 1)):$((target_end - target_start - 1))}"
+            [ "$redirect_target" = "/dev/null" ] || return 0
+            index=$((target_end + 1))
+            continue
+            ;;
+        esac
+
+        if [ "$target_quote" = "&" ]; then
+          target_end=$((target_start + 1))
+          if [ "${command:$target_end:1}" = "-" ]; then
+            target_end=$((target_end + 1))
+          else
+            while [ "$target_end" -lt "$length" ] && [[ "${command:$target_end:1}" = [0-9] ]]; do
+              target_end=$((target_end + 1))
+            done
+          fi
+          redirect_target="${command:$target_start:$((target_end - target_start))}"
+          case "$redirect_target" in
+            '&'-|'&'[0-9]*)
+              ;;
+            *)
+              return 0
+              ;;
+          esac
+        else
+          target_end=$target_start
+          while [ "$target_end" -lt "$length" ]; do
+            next_character="${command:$target_end:1}"
+            case "$next_character" in
+              [[:space:]]|";"|"|"|"&"|"<"|">")
+                break
+                ;;
+            esac
+            target_end=$((target_end + 1))
+          done
+          redirect_target="${command:$target_start:$((target_end - target_start))}"
+          [ "$redirect_target" = "/dev/null" ] || return 0
+        fi
+        index=$target_end
+        continue
         ;;
       "<")
         next_character="${command:$((index + 1)):1}"
@@ -424,6 +504,154 @@ shell_visible_tokens() {
   fi
 }
 
+command_segments_without_quoted_text() {
+  local command="$1"
+  local masked
+
+  masked=$(command_without_quoted_text "$command")
+  printf '%s' "$masked" | tr ';|&' '\n'
+}
+
+segment_command_token() {
+  local segment="$1"
+  local token wrapper="" skip_next=0
+
+  while IFS= read -r token; do
+    [ -n "$token" ] || continue
+    if [ "$skip_next" -eq 1 ]; then
+      skip_next=0
+      continue
+    fi
+    case "$token" in
+      '>'|'>>'|'<'|'<<'|'<<<'|'<>'|'>|')
+        skip_next=1
+        continue
+        ;;
+      '<>'*|'<<<'*|'<<'*|'>>'*|'>'*|'<'*)
+        continue
+        ;;
+      [0-9]*'>'*|[0-9]*'<'*|[[:alnum:]_]*=*)
+        continue
+        ;;
+    esac
+    case "$wrapper" in
+      sudo)
+        case "$token" in
+          -u|-g|-h|-p|-r|-t|-C|-D|-R|-T|--user|--group|--host|--prompt|--role|--type|--close-from|--chdir|--chroot|--command-timeout)
+            skip_next=1
+            continue
+            ;;
+          -*) continue ;;
+          *) wrapper="" ;;
+        esac
+        ;;
+      env)
+        case "$token" in
+          -*) continue ;;
+          *=*) continue ;;
+          *) wrapper="" ;;
+        esac
+        ;;
+      command|exec)
+        case "$token" in
+          -*) continue ;;
+          *) wrapper="" ;;
+        esac
+        ;;
+      nice)
+        case "$token" in
+          -n) skip_next=1; continue ;;
+          -*) continue ;;
+          *) wrapper="" ;;
+        esac
+        ;;
+    esac
+    if [ -z "$wrapper" ]; then
+      case "$token" in
+        sudo|env|command|exec|nice) wrapper="$token"; continue ;;
+      esac
+      printf '%s' "${token##*/}"
+      return 0
+    fi
+  done <<< "$(shell_visible_tokens "$segment")"
+
+  return 1
+}
+
+command_has_quoted_executable_payload() {
+  local command="$1"
+  local segment command_token visible match
+
+  [ -n "$PATTERNS" ] || return 1
+  printf '%s' "$command" | grep -qE "['\"]" || return 1
+  while IFS= read -r segment; do
+    command_token=$(segment_command_token "$segment") || continue
+    is_shell_interpreter_token "$command_token" && continue
+    case "$command_token" in
+      echo|printf|print|cat|grep|egrep|fgrep|awk|sed|jq)
+        continue
+        ;;
+      git)
+        scout_git_segments_are_readonly "$segment" && continue
+        ;;
+    esac
+    visible=$(shell_visible_tokens "$segment" | tr '\n' ' ')
+    match=$(printf '%s\n' "$visible" | grep -ioE "$PATTERNS" | head -1) || true
+    [ -n "$match" ] || continue
+    printf '%s\n' "$match"
+    return 0
+  done < <(printf '%s\n' "$command" | tr ';|&' '\n')
+  return 1
+}
+
+
+command_has_filesystem_mutation() {
+  local command="$1"
+  local segment command_token
+
+  while IFS= read -r segment; do
+    command_token=$(segment_command_token "$segment") || continue
+    case "$command_token" in
+      rm|mv|cp|mkdir|rmdir|touch|chmod|chown|ln|install|truncate)
+        return 0
+        ;;
+    esac
+  done <<< "$(command_segments_without_quoted_text "$command")"
+
+  return 1
+}
+
+command_matches_patterns() {
+  local command="$1"
+  local segment COMMAND
+
+  command_has_quoted_executable_payload "$command" >/dev/null && return 0
+  while IFS= read -r segment; do
+    COMMAND="$segment"
+    if echo "$COMMAND" | grep -iqE "$PATTERNS"; then
+      return 0
+    fi
+  done <<< "$(command_segments_without_quoted_text "$command")"
+
+  return 1
+}
+
+command_pattern_match() {
+  local command="$1"
+  local segment
+
+  command_has_quoted_executable_payload "$command" && return 0
+  while IFS= read -r segment; do
+    if printf '%s\n' "$segment" | grep -iqE "$PATTERNS"; then
+      printf '%s\n' "$segment" | grep -ioE "$PATTERNS" | head -1
+      return 0
+    fi
+  done <<< "$(command_segments_without_quoted_text "$command")"
+
+  return 1
+}
+
+
 token_has_shell_c_option() {
   case "$1" in
     -c|--command|--command=*)
@@ -507,14 +735,23 @@ gh_api_uses_explicit_get() {
 
 scout_git_segments_are_readonly() {
   local command="$1"
-  local segment segments
+  local segment segments token git_segment found_git
 
   segments=$(printf '%s' "$command" | tr ';|&' '\n')
   while IFS= read -r segment; do
-    if echo "$segment" | grep -qE '^[[:space:]]*git[[:space:]]+'; then
-      if ! echo "$segment" | grep -qE '^[[:space:]]*git([[:space:]]+(-C|-c|--git-dir|--work-tree|--namespace)(=|[[:space:]]+)[^[:space:]]+|[[:space:]]+(--no-pager|--bare|--literal-pathspecs|--[[:alnum:]-]+(=[^[:space:]]+)?))*[[:space:]]+(status|log|show|diff|ls-files|grep|rev-parse|cat-file|ls-tree|blame|describe)([[:space:]]|$)'; then
-        return 1
+    [ "$(segment_command_token "$segment")" = git ] || continue
+    git_segment=""
+    found_git=0
+    while IFS= read -r token; do
+      if [ "$found_git" -eq 1 ]; then
+        git_segment="$git_segment $token"
+      elif [ "${token##*/}" = git ]; then
+        git_segment=git
+        found_git=1
       fi
+    done <<< "$(shell_visible_tokens "$segment")"
+    if ! echo "$git_segment" | grep -qE '^git([[:space:]]+(-C|-c|--git-dir|--work-tree|--namespace)(=|[[:space:]]+)[^[:space:]]+|[[:space:]]+(--no-pager|--bare|--literal-pathspecs|--[[:alnum:]-]+(=[^[:space:]]+)?))*[[:space:]]+(status|log|show|diff|ls-files|grep|rev-parse|cat-file|ls-tree|blame|describe)([[:space:]]|$)'; then
+      return 1
     fi
   done <<< "$segments"
 
@@ -630,8 +867,8 @@ check_readonly_agent_command() {
   local command="$1"
   local matched=""
 
-  if [ -n "$PATTERNS" ] && echo "$command" | grep -iqE "$PATTERNS"; then
-    matched=$(echo "$command" | grep -ioE "$PATTERNS" | head -1)
+  if [ -n "$PATTERNS" ] && command_matches_patterns "$command"; then
+    matched=$(command_pattern_match "$command")
     block_readonly_agent_command "destructive command detected: $matched"
   fi
 
@@ -663,7 +900,7 @@ check_readonly_agent_command() {
     block_readonly_agent_command "package or dependency mutation command"
   fi
 
-  if echo "$command" | grep -iqE '(^|[[:space:];|&])(rm|mv|cp|mkdir|rmdir|touch|chmod|chown|ln|install|truncate)([[:space:]]|$)'; then
+  if command_has_filesystem_mutation "$command"; then
     block_readonly_agent_command "filesystem mutation command"
   fi
 
@@ -739,14 +976,11 @@ fi
 
 [ -z "$PATTERNS" ] && exit 0
 
-if echo "$COMMAND" | grep -iqE "$PATTERNS"; then
-  MATCHED=$(echo "$COMMAND" | grep -ioE "$PATTERNS" | head -1)
-  echo "Blocked: destructive command detected ($MATCHED)" >&2
-  echo "Hint: Use VBW_ALLOW_DESTRUCTIVE=1 to override, or run outside VBW." >&2
-  echo "See: config/destructive-commands.txt for the full blocklist." >&2
-  log_block_event "$MATCHED"
-
-  exit 2
+if command_matches_patterns "$COMMAND"; then
+  MATCHED=$(command_pattern_match "$COMMAND")
+  guard_block "Blocked: destructive command detected ($MATCHED)
+Hint: Use VBW_ALLOW_DESTRUCTIVE=1 to override, or run outside VBW.
+See: config/destructive-commands.txt for the full blocklist." "$MATCHED"
 fi
 
 exit 0

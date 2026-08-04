@@ -1,12 +1,4 @@
 #!/bin/bash
-# summary-utils.sh -- shared helpers for status-aware SUMMARY.md checking
-# Source this from scripts that need status-based completion detection.
-# Core status/counting helpers are portable bash (3.2+) and avoid external
-# process dependencies on the status-counting hot path. This keeps summary
-# counting stable under heavily parallel BATS runs where frequent fork/exec can
-# intermittently fail. Deviation extraction helpers intentionally use awk for
-# deterministic parsing, and source-plan candidate helpers use find plus
-# sort/sort -V for deterministic scanning.
 
 trim_summary_value() {
   local value="$1"
@@ -62,10 +54,6 @@ extract_summary_status() {
   return 0
 }
 
-# is_summary_complete FILE_PATH
-# Returns 0 if SUMMARY exists and has terminal-complete status, 1 otherwise.
-# "complete" and "completed" are both accepted as terminal-complete.
-# "partial" and "failed" are terminal but NOT complete.
 is_summary_complete() {
   local f="$1"
   local status
@@ -77,8 +65,6 @@ is_summary_complete() {
   esac
 }
 
-# is_summary_terminal FILE_PATH
-# Returns 0 if SUMMARY exists and has any terminal status (complete|completed|partial|failed).
 is_summary_terminal() {
   local f="$1"
   local status
@@ -90,10 +76,6 @@ is_summary_terminal() {
   esac
 }
 
-# is_valid_summary_status STATUS
-# Returns 0 only for canonical runtime SUMMARY statuses.
-# Brownfield "completed" is accepted by file-level helpers above, but runtime
-# execution state should canonicalize it to "complete" before validation.
 is_valid_summary_status() {
   local status
   status=$(trim_summary_value "${1:-}")
@@ -103,8 +85,6 @@ is_valid_summary_status() {
   esac
 }
 
-# is_execution_progress_status STATUS
-# Returns 0 for statuses that satisfy Execute dependency progression.
 is_execution_progress_status() {
   local status
   status=$(trim_summary_value "${1:-}")
@@ -114,8 +94,6 @@ is_execution_progress_status() {
   esac
 }
 
-# count_complete_summaries DIR
-# Returns count of SUMMARY.md files with terminal-complete status in DIR.
 count_complete_summaries() {
   local dir="$1"
   local count=0
@@ -129,10 +107,6 @@ count_complete_summaries() {
   echo "$count"
 }
 
-# count_done_summaries DIR
-# Returns count of SUMMARY.md files considered "done" for Execute/statusline
-# reconciliation: complete, completed, or partial. Runtime execution state
-# preserves partial as partial; it is progression-satisfied but not strict-complete.
 count_done_summaries() {
   local dir="$1"
   local count=0
@@ -145,8 +119,6 @@ count_done_summaries() {
   echo "$count"
 }
 
-# count_terminal_summaries DIR
-# Returns count of SUMMARY.md files with any terminal status in DIR.
 count_terminal_summaries() {
   local dir="$1"
   local count=0
@@ -283,10 +255,6 @@ normalize_summary_deviation_item() {
   '
 }
 
-# extract_summary_deviations FILE_PATH
-# Emits one normalized non-placeholder deviation per line, merging YAML
-# frontmatter and body sections in stable order. Frontmatter no longer masks
-# body deviations; duplicates across both sources are emitted once.
 extract_summary_deviations() {
   local file_path="${1:-}"
   [ -f "$file_path" ] || return 0

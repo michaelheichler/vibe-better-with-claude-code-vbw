@@ -1,9 +1,4 @@
 #!/usr/bin/env bash
-# write-verification.sh — Convert qa_verdict JSON to deterministic VERIFICATION.md
-# Usage: echo '{"payload":{...}}' | write-verification.sh <output-path>
-# Input: qa_verdict JSON on stdin (full envelope or just payload)
-# Output: Writes VERIFICATION.md to $1
-# Exit 1 on invalid JSON or missing required fields
 set -euo pipefail
 
 output_path="${1:-}"
@@ -12,26 +7,21 @@ if [[ -z "$output_path" ]]; then
   exit 1
 fi
 
-# Check jq availability
 if ! command -v jq &>/dev/null; then
   echo "Error: jq is required but not found in PATH" >&2
   exit 1
 fi
 
-# Read stdin
 json=$(cat)
 
-# Validate JSON
 if ! echo "$json" | jq empty 2>/dev/null; then
   echo "Error: invalid JSON on stdin" >&2
   exit 1
 fi
 
-# Extract payload — support both full envelope and bare payload
 payload=$(echo "$json" | jq -r 'if .payload then .payload else . end')
 phase_envelope=$(echo "$json" | jq -r '.phase // empty')
 
-# Validate required fields
 tier=$(echo "$payload" | jq -r '.tier // empty')
 result=$(echo "$payload" | jq -r '.result // empty')
 checks_passed=$(echo "$payload" | jq -r '.checks.passed // empty')
@@ -43,7 +33,6 @@ if [[ -z "$tier" || -z "$result" ]]; then
   exit 1
 fi
 
-# Validate result is one of the allowed values
 case "$result" in
   PASS|FAIL|PARTIAL) ;;
   *)
@@ -57,12 +46,10 @@ if [[ -z "$checks_passed" || -z "$checks_total" ]]; then
   exit 1
 fi
 
-# Default failed to 0 if not present
 if [[ -z "$checks_failed" ]]; then
   checks_failed=0
 fi
 
-# Phase from envelope or payload
 phase=$(echo "$payload" | jq -r '.phase // empty')
 if [[ -z "$phase" && -n "$phase_envelope" ]]; then
   phase="$phase_envelope"
@@ -73,11 +60,8 @@ fi
 
 date_val=$(date -u +%Y-%m-%d)
 
-# Capture current product-code commit for staleness detection
-# Excludes .vbw-planning/ and CLAUDE.md so planning commits don't invalidate QA
 verified_at_commit=$(git log -1 --format='%H' -- . ':!.vbw-planning' ':!CLAUDE.md' 2>/dev/null || echo "")
 
-# Check if checks_detail exists and is a valid array
 has_checks_detail="false"
 detail_type=$(echo "$payload" | jq -r '.checks_detail | type // "null"' 2>/dev/null)
 if [[ "$detail_type" == "array" ]]; then
@@ -90,13 +74,11 @@ elif [[ "$detail_type" != "null" && "$detail_type" != "" ]]; then
   exit 1
 fi
 
-# Require checks_detail for PASS/PARTIAL results — without detail, the claim is unvalidatable
 if [[ "$has_checks_detail" == "false" && ("$result" == "PASS" || "$result" == "PARTIAL") ]]; then
   echo "Error: checks_detail is required when result is PASS or PARTIAL (cannot validate without detail)" >&2
   exit 1
 fi
 
-# Validate checks_detail entries have required fields
 if [[ "$has_checks_detail" == "true" ]]; then
   invalid_entries=$(echo "$payload" | jq '[.checks_detail[] | select(
     (.id | type != "string") or
@@ -108,7 +90,6 @@ if [[ "$has_checks_detail" == "true" ]]; then
     echo "Error: checks_detail entries must have id and status fields (status must be PASS|FAIL|WARN)" >&2
     exit 1
   fi
-  # Normalize trimmed id/status and empty-string fields so // "-" catches null/empty
   payload=$(echo "$payload" | jq '
     .checks_detail |= [.[]
       | (if (.id | type) == "string" then .id |= gsub("^\\s+|\\s+$"; "") else . end)
@@ -119,7 +100,6 @@ if [[ "$has_checks_detail" == "true" ]]; then
     ]
   ')
 
-    # Enforce counter/detail consistency when detail rows are present
     detail_passed=$(echo "$payload" | jq -r '[.checks_detail[] | select(.status == "PASS")] | length')
     detail_failed=$(echo "$payload" | jq -r '[.checks_detail[] | select(.status == "FAIL")] | length')
     detail_total=$(echo "$payload" | jq -r '.checks_detail | length')
@@ -128,15 +108,12 @@ if [[ "$has_checks_detail" == "true" ]]; then
       exit 1
     fi
 
-    # Enforce result/status integrity: FAIL checks preclude PASS result
     if [[ "$detail_failed" -gt 0 && "$result" == "PASS" ]]; then
       echo "Warning: result auto-corrected from PASS to PARTIAL (${detail_failed} FAIL check(s) found in checks_detail)" >&2
       result="PARTIAL"
     fi
 fi
 
-# Plans_verified validation — enforce plan coverage when PLAN.md files exist
-# Derive phase dir from output path to count plans
 phase_dir=$(dirname "$output_path")
 plan_files=()
 while IFS= read -r pf; do
@@ -180,7 +157,6 @@ plan_id_matches_file() {
   fi
 }
 
-# Extract plans_verified from payload (deduplicated)
 has_plans_verified="false"
 plans_verified_type=$(echo "$payload" | jq -r '.plans_verified | type // "null"' 2>/dev/null)
 if [[ "$plans_verified_type" == "array" ]]; then
@@ -191,7 +167,6 @@ if [[ "$plans_verified_type" == "array" ]]; then
 fi
 
 if [[ "$plan_count" -gt 0 ]]; then
-  # Plans exist — enforce plans_verified completeness
   if [[ "$has_plans_verified" != "true" ]]; then
     echo "Error: plans_verified is required when PLAN.md files exist (found ${plan_count} plans). QA must list every verified plan ID." >&2
     exit 1
@@ -210,7 +185,6 @@ if [[ "$plan_count" -gt 0 ]]; then
     exit 1
   fi
 
-  # Validate each plans_verified ID matches an actual PLAN.md file (using deduplicated list)
   while IFS= read -r plan_id; do
     matched_plan="false"
     plan_id_trimmed=$(echo "$plan_id" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
@@ -227,7 +201,6 @@ if [[ "$plan_count" -gt 0 ]]; then
     fi
   done < <(echo "$payload" | jq -r '[.plans_verified | unique | .[]] | .[]')
 
-  # Cross-reference: every plan_id in plans_verified must have at least 1 check with matching plan_ref
   if [[ "$has_checks_detail" == "true" ]]; then
     while IFS= read -r plan_id; do
       plan_id_trimmed=$(echo "$plan_id" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
@@ -242,11 +215,9 @@ if [[ "$plan_count" -gt 0 ]]; then
   fi
 fi
 
-# Write to temp file first, then move atomically to prevent partial writes
 tmp_output=$(mktemp "${output_path}.tmp.XXXXXX")
 trap 'rm -f "$tmp_output"' EXIT
 
-# Write frontmatter
 {
   echo "---"
   echo "phase: $phase"
@@ -271,12 +242,9 @@ trap 'rm -f "$tmp_output"' EXIT
 } > "$tmp_output"
 
 if [[ "$has_checks_detail" == "true" ]]; then
-  # Deterministic output from checks_detail
 
-  # Known categories in canonical order (Bash 3.2 compatible — no associative arrays)
   KNOWN_CATEGORIES="must_have artifact key_link anti_pattern convention requirement skill_augmented"
 
-  # Helper: get heading and column name for a known category
   category_heading() {
     case "$1" in
       must_have)    echo "Must-Have Checks" ;;
@@ -300,12 +268,10 @@ if [[ "$has_checks_detail" == "true" ]]; then
     esac
   }
 
-  # Helper: escape pipe characters and newlines for markdown table cells
   escape_pipes() {
     printf '%s' "$1" | tr '\r\n' '  ' | sed 's/|/\&#124;/g'
   }
 
-  # Helper: emit a table for a given category
   emit_section() {
     local category="$1"
     local heading="$2"
@@ -323,7 +289,6 @@ if [[ "$has_checks_detail" == "true" ]]; then
     echo "## $heading"
     echo ""
 
-    # Detect category-specific fields for rich 6-column layout
     local use_rich="false"
     case "$category" in
       artifact)
@@ -337,7 +302,6 @@ if [[ "$has_checks_detail" == "true" ]]; then
     esac
 
     if [[ "$use_rich" == "true" ]]; then
-      # Category-specific 6-column layout
       case "$category" in
         artifact)
           echo "| # | ID | Artifact | Exists | Contains | Status |"
@@ -386,7 +350,6 @@ if [[ "$has_checks_detail" == "true" ]]; then
         esac
       done < <(echo "$items" | jq -c '.[]')
     else
-      # Uniform 5-column layout (must_have, anti_pattern, or fallback)
       echo "| # | ID | $col_name | Status | Evidence |"
       echo "|---|-----|$(printf '%0.s-' $(seq 1 ${#col_name}))--|--------|----------|"
       local i=0
@@ -404,12 +367,10 @@ if [[ "$has_checks_detail" == "true" ]]; then
     echo ""
   }
 
-  # Emit known sections in canonical order
   for cat in $KNOWN_CATEGORIES; do
     emit_section "$cat" "$(category_heading "$cat")" "$(category_col "$cat")" >> "$tmp_output"
   done
 
-  # Emit unknown-category items under "Other Checks" catch-all
   unknown_items=$(echo "$payload" | jq -c --arg known "$KNOWN_CATEGORIES" \
     '[.checks_detail[] | select(.category as $c | ($known | split(" ") | index($c)) == null)]')
   unknown_count=$(echo "$unknown_items" | jq 'length')
@@ -432,7 +393,6 @@ if [[ "$has_checks_detail" == "true" ]]; then
     } >> "$tmp_output"
   fi
 
-  # Pre-existing issues
   pre_existing=$(echo "$payload" | jq -c '.pre_existing_issues // []')
   pre_count=$(echo "$pre_existing" | jq 'length')
   if [[ "$pre_count" -gt 0 ]]; then
@@ -451,7 +411,6 @@ if [[ "$has_checks_detail" == "true" ]]; then
     } >> "$tmp_output"
   fi
 
-  # Summary
   {
     echo "## Summary"
     echo ""
@@ -459,7 +418,6 @@ if [[ "$has_checks_detail" == "true" ]]; then
     echo "**Result:** $result"
     echo "**Passed:** ${checks_passed}/${checks_total}"
 
-    # Failed list from checks_detail
     failed_list=$(echo "$payload" | jq -r '[.checks_detail[] | select(.status == "FAIL") | .id] | join(", ")')
     if [[ -n "$failed_list" ]]; then
       echo "**Failed:** $failed_list"
@@ -468,17 +426,14 @@ if [[ "$has_checks_detail" == "true" ]]; then
     fi
   } >> "$tmp_output"
 
-  # Atomic move
   mv "$tmp_output" "$output_path"
 
 else
-  # Fallback: no checks_detail — use body field if present
   body=$(echo "$payload" | jq -r '.body // empty')
 
   if [[ -n "$body" ]]; then
     echo "$body" >> "$tmp_output"
   else
-    # Minimal summary from structured fields only
     {
       echo "## Summary"
       echo ""
@@ -495,6 +450,5 @@ else
     } >> "$tmp_output"
   fi
 
-  # Atomic move
   mv "$tmp_output" "$output_path"
 fi

@@ -1,14 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# debug-start-selected-todo.sh — deterministic /vbw:debug numbered-todo startup.
-#
-# Usage:
-#   debug-start-selected-todo.sh <planning-dir> <N> [--competing|--parallel|--serial]
-#
-# Resolves a numbered todo from the persisted unfiltered /vbw:list-todos snapshot,
-# loads optional detail, creates or identifies the debug session, performs pickup,
-# and returns one compact JSON payload for commands/debug.md to consume.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ARCHIVED_STATE_MESSAGE="This todo came from archived milestone state. Restore the writable root STATE.md first by restarting so session-start.sh can run migration, or run 'bash scripts/migrate-orphaned-state.sh .vbw-planning'."
@@ -77,8 +69,11 @@ normalize_planning_dir() {
   fi
 
   case "$input_dir" in
-    /*) ;;
-    *) input_dir="$PWD/$input_dir" ;;
+    /*)
+      ;;
+    *)
+      input_dir="$PWD/$input_dir"
+      ;;
   esac
 
   parent_dir=$(dirname "$input_dir")
@@ -332,7 +327,7 @@ while [ $# -gt 0 ]; do
 done
 
 if ! [[ "$SELECTION" =~ ^[0-9]+$ ]]; then
-  json_error "usage" "Invalid todo selection — choose a numbered todo from /vbw:list-todos."
+  json_error "usage" "Invalid todo selection, choose a numbered todo from /vbw:list-todos."
   exit 0
 fi
 
@@ -436,7 +431,6 @@ else
   }
 fi
 
-# shellcheck disable=SC1090
 if ! eval "$SESSION_OUTPUT"; then
   json_error "session_start_failed" "Debug session helper returned unparseable metadata."
   exit 0

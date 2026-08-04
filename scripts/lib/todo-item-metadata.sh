@@ -1,8 +1,5 @@
 #!/usr/bin/env bash
 
-# todo-item-metadata.sh — shared todo parsing / identity helpers for list and lifecycle flows.
-#
-# Callers must set DETAILS_PATH before using ref-aware helpers.
 
 : "${DETAILS_PATH:=}"
 : "${DETAILS_CACHE_JSON:=}"

@@ -1,16 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# verify-debug-session-contract.sh — Structural checks for the debug session lifecycle
-#
-# Validates:
-# - DEBUG-SESSION.md template has required sections
-# - debug-session-state.sh implements all documented commands
-# - write-debug-session.sh implements all modes
-# - compile-debug-session-context.sh implements all modes
-# - debug.md has debug_session_routing section
-# - qa.md has debug_session_qa section (hidden protocol file)
-# - verify.md has debug_session_uat section (hidden protocol file)
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 
@@ -56,7 +46,6 @@ first_matching_line_number() {
   ' <<< "$text"
 }
 
-# — Template checks —
 
 TEMPLATE="$ROOT/templates/DEBUG-SESSION.md"
 
@@ -82,7 +71,6 @@ for field in session_id title status created updated qa_round qa_last_result uat
   fi
 done
 
-# — State machine script checks —
 
 STATE_SCRIPT="$ROOT/scripts/debug-session-state.sh"
 
@@ -155,7 +143,6 @@ else
   fail "debug-session-state.sh legacy migration missing completed no-verification normalization"
 fi
 
-# — Writer script checks —
 
 WRITER="$ROOT/scripts/write-debug-session.sh"
 
@@ -180,7 +167,6 @@ else
   fail "write-debug-session.sh investigation mode should not mutate QA/UAT result fields"
 fi
 
-# — Context compiler checks —
 
 COMPILER="$ROOT/scripts/compile-debug-session-context.sh"
 
@@ -204,7 +190,7 @@ for mode in qa uat; do
   fi
 done
 
-if grep -Fq 'skipped — no fix required' "$COMPILER" 2>/dev/null; then
+if grep -Fq 'skipped \xE2\x80\x94 no fix required' "$COMPILER" 2>/dev/null; then
   pass "context compiler has friendly label for skipped no-fix-required results"
 else
   fail "context compiler missing friendly label for skipped no-fix-required results"
@@ -218,7 +204,6 @@ else
   fail "context compiler still interpolates raw QA/UAT result labels in one or more summary sites"
 fi
 
-# — Command integration checks —
 
 DEBUG_CMD="$ROOT/commands/debug.md"
 DEBUG_PATH_A_BLOCK="$(sed -n '/^[[:space:]]*\*\*Path A:/,/^[[:space:]]*\*\*Path B:/p' "$DEBUG_CMD" 2>/dev/null || true)"
@@ -284,8 +269,8 @@ fi
 
 if contains_literal "$DEBUG_PATH_B_BLOCK" '<accepted_exception_debug_semantics>' \
   && contains_literal "$DEBUG_PATH_B_BLOCK" 'immediately after the Path B payload prefix' \
-  && contains_literal "$DEBUG_PATH_B_BLOCK" 'accepted-process-exception/backlog metadata alone is not enough for `already_fixed`' \
-  && contains_literal "$DEBUG_PATH_B_BLOCK" 'fresh current evidence that the current branch already contains a real fix' \
+  && contains_literal "$DEBUG_PATH_B_BLOCK" 'Accepted-process-exception/backlog metadata alone is not enough for `already_fixed`' \
+  && contains_literal "$DEBUG_PATH_B_BLOCK" 'Fresh current evidence that the current branch already contains a real fix is required before using `already_fixed`' \
   && contains_literal "$DEBUG_PATH_B_BLOCK" 'Paste only the inner contents of the shared accepted-exception debug semantics block from Step 1 here' \
   && contains_literal "$DEBUG_PATH_B_BLOCK" 'do not include the outer <accepted_exception_debug_semantics> tags here'; then
   pass "debug.md Path B injects accepted-exception semantics and fresh-evidence already_fixed rule"
@@ -430,7 +415,7 @@ else
   fail "debug.md complete-session stop message still uses freeform-only guidance"
 fi
 
-if grep -Fq 'Use `session_status` for lifecycle checks after `eval`; do not rely on a bare `status` variable.' "$DEBUG_CMD" 2>/dev/null; then
+if grep -Fq 'Use `session_status` for lifecycle checks after `eval`, do not rely on a bare `status` variable.' "$DEBUG_CMD" 2>/dev/null; then
   pass "debug.md names the safe debug-session helper contract explicitly"
 else
   fail "debug.md missing explicit session_status helper contract"
@@ -478,15 +463,15 @@ else
   fail "debug.md completion paths missing ordered planning boundary commit after set-status complete"
 fi
 
-if grep -Fq "already_fixed = 'Already fixed before this investigation — no new fix commit was required." "$DEBUG_CMD" 2>/dev/null \
-  && grep -Fq 'already_fixed = "Already fixed on the current branch — no new fix commit was required;' "$DEBUG_CMD" 2>/dev/null; then
+if grep -Fq "already_fixed = 'Already fixed before this investigation, no new fix commit was required." "$DEBUG_CMD" 2>/dev/null \
+  && grep -Fq "already_fixed = \"Already fixed on the current branch, no new fix commit was required. this completion path may still create a planning-artifact commit when planning_tracking=commit" "$DEBUG_CMD" 2>/dev/null; then
   pass "debug.md already_fixed wording distinguishes fix commits from planning-artifact commits"
 else
   fail "debug.md already_fixed wording still blurs fix commits and planning-artifact commits"
 fi
 
-if grep -Fq "already_fixed = 'Already fixed before this investigation — no new commit created.'" "$DEBUG_CMD" 2>/dev/null \
-  || grep -Fq 'already_fixed = "Already fixed on the current branch — no new commit created"' "$DEBUG_CMD" 2>/dev/null; then
+if grep -Fq "already_fixed = 'Already fixed before this investigation, no new commit created.'" "$DEBUG_CMD" 2>/dev/null \
+  || grep -Fq "already_fixed = \"Already fixed on the current branch, no new commit created\"" "$DEBUG_CMD" 2>/dev/null; then
   fail "debug.md still contains stale already_fixed wording that claims no commit was created"
 else
   pass "debug.md removes stale already_fixed no-new-commit wording"
@@ -529,7 +514,6 @@ else
   fail "verify.md debug-session override missing explicit session_status helper contract"
 fi
 
-# — Agent integration checks —
 
 DEBUGGER_AGENT="$ROOT/agents/vbw-debugger.md"
 if grep -q "Standalone Debug Session" "$DEBUGGER_AGENT" 2>/dev/null; then
@@ -583,7 +567,6 @@ else
   fail "vbw-qa.md missing debug session QA section"
 fi
 
-# — Guard ordering checks (R2-01, R2-02) —
 
 if grep -q "Debug session override" "$QA_CMD" 2>/dev/null; then
   pass "qa.md has debug session override in Guard"
@@ -597,7 +580,6 @@ else
   fail "verify.md missing debug session override in Guard"
 fi
 
-# — UAT template completeness (R2-03) —
 
 if grep -q '"result"' "$VERIFY_CMD" 2>/dev/null && grep -q 'pass|issues_found' "$VERIFY_CMD" 2>/dev/null; then
   pass "verify.md UAT template includes result field"
@@ -605,7 +587,6 @@ else
   fail "verify.md UAT template missing result field"
 fi
 
-# — Agent status alignment (R2-04) —
 
 if grep -q 'qa_pending' "$DEBUGGER_AGENT" 2>/dev/null && ! grep -q 'fix_applied' "$DEBUGGER_AGENT" 2>/dev/null; then
   pass "vbw-debugger.md uses qa_pending (not fix_applied) for post-fix status"
@@ -613,7 +594,6 @@ else
   fail "vbw-debugger.md should use qa_pending for post-fix status, not fix_applied"
 fi
 
-# — Template remediation history section (CM1-02) —
 
 TEMPLATE="$ROOT/templates/DEBUG-SESSION.md"
 if grep -q '## Remediation History' "$TEMPLATE" 2>/dev/null; then
@@ -622,7 +602,6 @@ else
   fail "DEBUG-SESSION.md template missing Remediation History section"
 fi
 
-# — Guard phase_count condition (CM1-01) —
 
 if grep -q 'phase_count=0' "$QA_CMD" 2>/dev/null || grep -q 'phase_count' "$QA_CMD" 2>/dev/null; then
   pass "qa.md debug session guard checks phase_count"
@@ -636,7 +615,6 @@ else
   fail "verify.md debug session guard does not check phase_count"
 fi
 
-# — Writer handles skip and user_response (CM1-03) —
 
 if grep -q 'skip' "$WRITER" 2>/dev/null && grep -q 'user_response' "$WRITER" 2>/dev/null; then
   pass "write-debug-session.sh handles skip result and user_response"
@@ -644,7 +622,6 @@ else
   fail "write-debug-session.sh missing skip or user_response handling"
 fi
 
-# — Lifecycle integration test exists (CM1-04) —
 
 if [ -f "$ROOT/tests/debug-session-lifecycle.bats" ]; then
   pass "debug-session-lifecycle.bats end-to-end test exists"
@@ -652,7 +629,6 @@ else
   fail "debug-session-lifecycle.bats missing"
 fi
 
-# — suggest-next.sh qa path handles standalone debug sessions (CM2-01) —
 
 if grep -q 'phase_count.*0.*debugging' "$ROOT/scripts/suggest-next.sh" 2>/dev/null || \
    grep -q '_qa_debug_handled' "$ROOT/scripts/suggest-next.sh" 2>/dev/null; then
@@ -661,7 +637,6 @@ else
   fail "suggest-next.sh qa branch missing standalone debug-session detection"
 fi
 
-# — qa.md routing decision supports --session flag alongside phase_count (CM2-02, CM3-01) —
 
 if grep -q 'phase_count=0.*--session' "$ROOT/commands/qa.md" 2>/dev/null; then
   pass "qa.md debug-session routing decision supports --session flag"
@@ -669,7 +644,6 @@ else
   fail "qa.md debug-session routing decision missing --session flag support"
 fi
 
-# — verify.md routing decision supports --session flag alongside phase_count (CM2-02, CM3-01) —
 
 if grep -q 'phase_count=0.*--session' "$ROOT/commands/verify.md" 2>/dev/null; then
   pass "verify.md debug-session routing decision supports --session flag"
@@ -677,7 +651,6 @@ else
   fail "verify.md debug-session routing decision missing --session flag support"
 fi
 
-# — suggest-next-debug-session.bats covers qa context (CM2-03) —
 
 if grep -q 'suggest-next qa.*pass.*debug session' "$ROOT/tests/suggest-next-debug-session.bats" 2>/dev/null; then
   pass "suggest-next-debug-session.bats covers qa pass with debug session"
@@ -685,7 +658,6 @@ else
   fail "suggest-next-debug-session.bats missing qa pass with debug session test"
 fi
 
-# — Guard sections support --session escape hatch (CM3-01) —
 
 if grep -q '\-\-session' "$ROOT/commands/qa.md" 2>/dev/null; then
   pass "qa.md guard mentions --session flag"
@@ -699,7 +671,6 @@ else
   fail "verify.md guard missing --session flag"
 fi
 
-# — suggest-next.sh routes debug sessions to /vbw:debug --resume (CM3-01) —
 
 if grep -q 'vbw:debug --resume' "$ROOT/scripts/suggest-next.sh" 2>/dev/null; then
   pass "suggest-next.sh routes debug sessions to /vbw:debug --resume"
@@ -707,7 +678,6 @@ else
   fail "suggest-next.sh missing /vbw:debug --resume routing for debug sessions"
 fi
 
-# — suggest-next.sh qa/verify debug handlers guard on phase_count=0 (CM7-01) —
 
 if grep -q 'phase_count.*0.*debugging' "$ROOT/scripts/suggest-next.sh" 2>/dev/null; then
   pass "suggest-next.sh qa/verify debug handlers guard on phase_count=0"
@@ -715,7 +685,6 @@ else
   fail "suggest-next.sh qa/verify debug handlers not guarded by phase_count=0"
 fi
 
-# — Frontmatter-scoped field updates via awk (CM3-02, Copilot-C1-02/03) —
 
 if ! grep -q "sed -i ''" "$ROOT/scripts/debug-session-state.sh" 2>/dev/null; then
   pass "debug-session-state.sh uses portable sed (no BSD-only -i '')"
@@ -741,7 +710,6 @@ else
   fail "write-debug-session.sh missing awk-based frontmatter scoping"
 fi
 
-# — Command inline QA/UAT lifecycle (CM4-01, CM4-02) —
 
 if grep -q 'debug_inline_qa' "$ROOT/commands/debug.md" 2>/dev/null; then
   pass "debug.md has inline QA section (debug_inline_qa)"
@@ -843,7 +811,6 @@ else
   fail "debug.md resume routing for uat_pending missing inline UAT entry"
 fi
 
-# — QA agent persistence contract separates phase-scoped from debug-session (CM5-01) —
 
 if grep -q 'Phase-Scoped QA' "$ROOT/agents/vbw-qa.md" 2>/dev/null; then
   pass "vbw-qa.md persistence section scoped to phase QA"
@@ -858,7 +825,6 @@ else
   fail "vbw-qa.md missing debug-session QA exception from write-verification.sh"
 fi
 
-# — Resume-context handoff injects FAILURE_CONTEXT into debugger prompt (CM6-01) —
 
 if grep -q 'FAILURE_CONTEXT.*compile-debug-session-context' "$ROOT/commands/debug.md" 2>/dev/null; then
   pass "debug.md resume captures FAILURE_CONTEXT from compile-debug-session-context.sh"
@@ -878,7 +844,6 @@ else
   fail "debug.md resume missing UAT failure context injection"
 fi
 
-# — Resume paths pass correct mode to compile-debug-session-context.sh (CM8-01) —
 
 if grep -q 'compile-debug-session-context\.sh.*qa' "$ROOT/commands/debug.md" 2>/dev/null; then
   pass "debug.md qa_failed resume passes 'qa' mode to compile-debug-session-context.sh"
@@ -892,7 +857,6 @@ else
   fail "debug.md uat_failed resume missing 'uat' mode argument"
 fi
 
-# — Active/completed directory layout (issue #386) —
 
 if grep -q 'ACTIVE_DIR=' "$STATE_SCRIPT" 2>/dev/null; then
   pass "debug-session-state.sh defines ACTIVE_DIR"
@@ -912,7 +876,6 @@ else
   fail "debug-session-state.sh missing migrate_legacy_session function"
 fi
 
-# Verify the set-status branch specifically handles complete → move to COMPLETED_DIR
 _set_status_block="$(awk '/set-status\)/,/;;/' "$STATE_SCRIPT" 2>/dev/null || true)"
 if matches_ere "$_set_status_block" '"\$STATUS" = "complete"' && \
    matches_ere "$_set_status_block" 'safe_move_session.*\$COMPLETED_DIR'; then
@@ -921,7 +884,6 @@ else
   fail "debug-session-state.sh set-status branch does not move complete sessions to COMPLETED_DIR"
 fi
 
-# list command should output both location fields for dual-directory listings
 _list_block="$(awk '/list\)/,/;;/' "$STATE_SCRIPT" 2>/dev/null || true)"
 if contains_literal "$_list_block" '|active' && \
    contains_literal "$_list_block" '|completed'; then
@@ -930,7 +892,6 @@ else
   fail "debug-session-state.sh list missing location field in output (must include both |active and |completed)"
 fi
 
-# safe_move_session helper with destination-exists guard
 if grep -q 'safe_move_session()' "$STATE_SCRIPT" 2>/dev/null && \
    contains_literal "$(awk '/safe_move_session\(\)/,/^}/' "$STATE_SCRIPT" 2>/dev/null || true)" 'return 1'; then
   pass "debug-session-state.sh has safe_move_session helper with collision guard"
@@ -938,7 +899,6 @@ else
   fail "debug-session-state.sh missing safe_move_session helper or collision guard"
 fi
 
-# — Summary —
 
 echo ""
 echo "=== Debug Session Contract: $PASS passed, $FAIL failed ==="

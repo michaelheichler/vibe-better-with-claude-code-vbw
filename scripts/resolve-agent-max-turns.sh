@@ -1,17 +1,4 @@
 #!/usr/bin/env bash
-# resolve-agent-max-turns.sh - Turn budget resolution for VBW agents
-#
-# Usage:
-#   resolve-agent-max-turns.sh <agent-name> <config-path> [effort]
-#
-# agent-name: lead|dev|qa|scout|debugger|architect
-# config-path: path to .vbw-planning/config.json (optional/fail-open)
-# effort: thorough|balanced|fast|turbo (also accepts high|medium|low)
-#
-# Returns:
-#   stdout = positive integer  => pass maxTurns to Task tool
-#   stdout = empty string      => omit maxTurns from Task tool (unlimited)
-# Exit 0 on success, exit 1 on invalid agent/usage
 
 set -euo pipefail
 
@@ -82,7 +69,6 @@ normalize_effort() {
 }
 
 multiplier_for_effort() {
-  # Output: "numerator denominator"
   case "$1" in
     thorough) echo "3 2" ;; # 1.5x
     balanced) echo "1 1" ;; # 1.0x
@@ -123,10 +109,6 @@ if [ -f "$CONFIG_PATH" ] && jq empty "$CONFIG_PATH" >/dev/null 2>&1; then
   CONFIG_VALID=1
 fi
 
-# Resolve effort with robust fallbacks:
-# 1) explicit argument (if valid)
-# 2) config.effort (if available + valid)
-# 3) balanced
 EFFORT=""
 if EFFORT=$(normalize_effort "$EFFORT_INPUT" 2>/dev/null); then
   :
@@ -160,9 +142,7 @@ if [ "$CONFIG_VALID" -eq 1 ]; then
     end
   ' "$CONFIG_PATH" 2>/dev/null || echo "null")
 
-  # Object mode: per-effort values (no multiplier applied)
   if [ "$CONFIGURED_TYPE" = "object" ]; then
-    # Use has() checks instead of // chains because jq's // treats false as falsy
     RAW_VALUE=$(jq -r --arg agent "$AGENT" --arg effort "$EFFORT" --arg legacy "$LEGACY_EFFORT" '
       (.agent_max_turns[$agent] // .max_turns[$agent] // {}) as $obj |
       if ($obj | has($effort)) then ($obj[$effort] | tostring)
@@ -173,10 +153,8 @@ if [ "$CONFIG_VALID" -eq 1 ]; then
       end
     ' "$CONFIG_PATH" 2>/dev/null || echo "")
 
-    # Only process if jq returned a real value (not empty from `empty`)
     if [ -n "$RAW_VALUE" ]; then
       if EXPLICIT_VALUE=$(normalize_turn_value "$RAW_VALUE" 2>/dev/null); then
-        # normalize succeeded: positive int or empty (unlimited)
         echo "$EXPLICIT_VALUE"
         exit 0
       fi
@@ -197,8 +175,6 @@ fi
 BASE=""
 if [ -n "$RAW_BASE" ]; then
   if BASE=$(normalize_turn_value "$RAW_BASE" 2>/dev/null); then
-    # normalize succeeded — BASE is empty (unlimited) or positive int
-    # RAW_BASE was non-empty but normalized to empty => explicit unlimited
     if [ -z "$BASE" ]; then
       echo ""
       exit 0

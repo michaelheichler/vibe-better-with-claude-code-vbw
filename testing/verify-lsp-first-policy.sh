@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# verify-lsp-first-policy.sh — Verify all LSP-capable agents follow the repo-wide LSP-first policy
+# verify-lsp-first-policy.sh, Verify all LSP-capable agents follow the repo-wide LSP-first policy
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 
@@ -69,7 +69,7 @@ for agent in "${LSP_AGENTS[@]}"; do
   if head -10 "$AGENT_FILE" | grep -q "LSP"; then
     pass "${SHORT_NAME}: LSP in tools list"
   elif head -10 "$AGENT_FILE" | grep -q "^disallowedTools:"; then
-    # Agent uses disallowedTools denylist — LSP is inherited from parent unless explicitly denied
+    # Agent uses disallowedTools denylist, LSP is inherited from parent unless explicitly denied
     if head -10 "$AGENT_FILE" | grep "^disallowedTools:" | grep -q "LSP"; then
       fail "${SHORT_NAME}: LSP is in disallowedTools (should be inherited)"
     else

@@ -1,10 +1,5 @@
 #!/usr/bin/env bash
 
-# Extract YAML-frontmatter array items from either block-list form:
-#   key:
-#     - value
-# or flow-style form:
-#   key: ["value", 'other value']
 extract_frontmatter_array_items() {
   local file_path="${1:-}"
   local key_name="${2:-}"
@@ -219,7 +214,6 @@ path_is_process_exception_evidence_artifact() {
 
 path_is_qa_remediation_round_artifact() {
   local path="${1:-}"
-  # Match remediation/qa/round-NN/RNN-{PLAN,SUMMARY}.md with digits-only round IDs
   if [[ "$path" =~ (^|/)remediation/qa/round-([0-9]+)/R([0-9]+)-(PLAN|SUMMARY)\.md$ ]]; then
     [ "${BASH_REMATCH[2]}" = "${BASH_REMATCH[3]}" ]
     return
@@ -249,8 +243,12 @@ resolve_existing_path_target() {
     target="$(readlink "$path_dir/$path_base" 2>/dev/null || true)"
     [ -n "$target" ] || return 1
     case "$target" in
-      /*) path="$target" ;;
-      *) path="$path_dir/$target" ;;
+      /*)
+        path="$target"
+        ;;
+      *)
+        path="$path_dir/$target"
+        ;;
     esac
     hop=$((hop + 1))
   done
@@ -366,7 +364,6 @@ resolve_original_plan_artifact_path() {
 
   [ "$candidate_dir" = "$phase_dir_abs" ] || return 1
 
-  # Exclude remediation round plans (digits-only round IDs like R01, R100)
   if [[ "$candidate_base" =~ ^R[0-9]+(-.*)?-PLAN\.md$ ]]; then
     return 1
   fi
@@ -520,6 +517,37 @@ paths_include_code_fix_evidence() {
   return 1
 }
 
+paths_include_documentation_fix_evidence() {
+  local phase_dir="${1:-}"
+  local required_paths="${2:-}"
+  local changed_paths=""
+  local required_path=""
+  local changed_path=""
+  local canonical_required=""
+  local canonical_changed=""
+  local found=false
+
+  changed_paths=$(cat)
+  while IFS= read -r required_path; do
+    required_path=$(normalize_recorded_path "$required_path")
+    [ -n "$required_path" ] || return 1
+    canonical_required=$(canonicalize_phase_path "$required_path" "$phase_dir")
+    path_is_documentation_artifact "$canonical_required" || return 1
+    found=false
+    while IFS= read -r changed_path; do
+      changed_path=$(normalize_recorded_path "$changed_path")
+      [ -n "$changed_path" ] || continue
+      canonical_changed=$(canonicalize_phase_path "$changed_path" "$phase_dir")
+      if [ "$canonical_required" = "$canonical_changed" ]; then
+        found=true
+        break
+      fi
+    done <<< "$changed_paths"
+    [ "$found" = true ] || return 1
+  done <<< "$required_paths"
+  [ -n "$required_paths" ]
+}
+
 paths_include_process_exception_evidence() {
   local phase_dir="${1:-}"
   while IFS= read -r path; do
@@ -576,8 +604,6 @@ resolve_corroborated_recorded_paths() {
       printf '%s\n' "$path"
       continue
     fi
-    # Fallback: gitignored metadata artifacts present on disk (e.g.,
-    # .vbw-planning/ paths when planning_tracking=ignore).
     if [ -n "$ignored_worktree_paths" ] \
       && path_is_metadata_artifact "$path" \
       && path_is_allowed_worktree_evidence_artifact "$phase_dir" "$path" \
@@ -661,16 +687,10 @@ git_current_worktree_paths() {
   git -C "$repo_root" ls-files --others --exclude-standard 2>/dev/null || true
 }
 
-# Return gitignored files that exist on disk and are metadata artifacts.
-# Used as a third evidence source when planning_tracking=ignore puts
-# .vbw-planning/ in .gitignore — the normal diff/worktree sets exclude
-# these paths, but they are valid evidence for plan-amendment rounds.
 git_ignored_metadata_worktree_paths() {
   local repo_root="${1:-}"
   local path
   [ -n "$repo_root" ] || return 0
-  # Use pathspec to limit git's scan to metadata prefixes only, avoiding
-  # enumeration of large ignored trees like node_modules/.
   while IFS= read -r path; do
     [ -n "$path" ] || continue
     if path_is_metadata_artifact "$path"; then

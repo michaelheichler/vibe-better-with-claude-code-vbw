@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# verify-plan-filename-convention.sh — Tests for deterministic plan filename enforcement (#151)
+# verify-plan-filename-convention.sh tests deterministic plan filename enforcement (#151)
 
 SCRIPT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 PASS=0
@@ -52,7 +52,7 @@ OUTPUT=$(echo '{"tool_input":{"file_path":".vbw-planning/phases/01-setup/PLAN-01
 if [ "$RC" -eq 2 ] && grep -q "wrong naming convention" <<<"$OUTPUT"; then
   pass "blocks PLAN-01.md (type-first)"
 else
-  fail "blocks PLAN-01.md — got rc=$RC, output: $OUTPUT"
+  fail "blocks PLAN-01.md, got rc=$RC, output: $OUTPUT"
 fi
 
 # Test 2: file-guard blocks type-first SUMMARY name
@@ -60,7 +60,7 @@ OUTPUT=$(echo '{"tool_input":{"file_path":".vbw-planning/phases/01-setup/SUMMARY
 if [ "$RC" -eq 2 ] && grep -q "wrong naming convention" <<<"$OUTPUT"; then
   pass "blocks SUMMARY-01.md (type-first)"
 else
-  fail "blocks SUMMARY-01.md — got rc=$RC, output: $OUTPUT"
+  fail "blocks SUMMARY-01.md, got rc=$RC, output: $OUTPUT"
 fi
 
 # Test 3: file-guard blocks type-first CONTEXT name
@@ -68,7 +68,7 @@ OUTPUT=$(echo '{"tool_input":{"file_path":".vbw-planning/phases/01-setup/CONTEXT
 if [ "$RC" -eq 2 ] && grep -q "wrong naming convention" <<<"$OUTPUT"; then
   pass "blocks CONTEXT-01.md (type-first)"
 else
-  fail "blocks CONTEXT-01.md — got rc=$RC, output: $OUTPUT"
+  fail "blocks CONTEXT-01.md, got rc=$RC, output: $OUTPUT"
 fi
 
 # Test 4: file-guard allows number-first PLAN name
@@ -76,7 +76,7 @@ OUTPUT=$(echo '{"tool_input":{"file_path":".vbw-planning/phases/01-setup/01-PLAN
 if [ "$RC" -eq 0 ]; then
   pass "allows 01-PLAN.md (number-first)"
 else
-  fail "allows 01-PLAN.md — got rc=$RC, output: $OUTPUT"
+  fail "allows 01-PLAN.md, got rc=$RC, output: $OUTPUT"
 fi
 
 # Test 5: file-guard allows number-first SUMMARY name
@@ -84,7 +84,7 @@ OUTPUT=$(echo '{"tool_input":{"file_path":".vbw-planning/phases/01-setup/01-SUMM
 if [ "$RC" -eq 0 ]; then
   pass "allows 01-SUMMARY.md (number-first)"
 else
-  fail "allows 01-SUMMARY.md — got rc=$RC, output: $OUTPUT"
+  fail "allows 01-SUMMARY.md, got rc=$RC, output: $OUTPUT"
 fi
 
 # --- normalize-plan-filenames tests ---
@@ -102,7 +102,7 @@ OUTPUT=$(bash "$NORM_SCRIPT" "$TDIR" 2>&1) && RC=$? || RC=$?
 if [ "$RC" -eq 0 ] && [ -f "$TDIR/01-PLAN.md" ] && [ -f "$TDIR/02-PLAN.md" ] && [ -f "$TDIR/01-SUMMARY.md" ]; then
   pass "renames PLAN-01.md → 01-PLAN.md, PLAN-02.md → 02-PLAN.md, PLAN-01-SUMMARY.md → 01-SUMMARY.md"
 else
-  fail "rename — rc=$RC, files: $(ls "$TDIR"), output: $OUTPUT"
+  fail "rename, rc=$RC, files: $(ls "$TDIR"), output: $OUTPUT"
 fi
 
 # Test 7: renames SUMMARY-NN.md
@@ -113,7 +113,7 @@ OUTPUT=$(bash "$NORM_SCRIPT" "$TDIR" 2>&1) && RC=$? || RC=$?
 if [ "$RC" -eq 0 ] && [ -f "$TDIR/03-SUMMARY.md" ]; then
   pass "renames SUMMARY-03.md → 03-SUMMARY.md"
 else
-  fail "SUMMARY rename — rc=$RC, files: $(ls "$TDIR"), output: $OUTPUT"
+  fail "SUMMARY rename, rc=$RC, files: $(ls "$TDIR"), output: $OUTPUT"
 fi
 
 # Test 8: renames CONTEXT-NN.md
@@ -124,7 +124,7 @@ OUTPUT=$(bash "$NORM_SCRIPT" "$TDIR" 2>&1) && RC=$? || RC=$?
 if [ "$RC" -eq 0 ] && [ -f "$TDIR/01-CONTEXT.md" ]; then
   pass "renames CONTEXT-01.md → 01-CONTEXT.md"
 else
-  fail "CONTEXT rename — rc=$RC, files: $(ls "$TDIR"), output: $OUTPUT"
+  fail "CONTEXT rename, rc=$RC, files: $(ls "$TDIR"), output: $OUTPUT"
 fi
 
 # Test 9: idempotent on correct names
@@ -136,7 +136,7 @@ OUTPUT=$(bash "$NORM_SCRIPT" "$TDIR" 2>&1) && RC=$? || RC=$?
 if [ "$RC" -eq 0 ] && [ -f "$TDIR/01-PLAN.md" ] && [ -f "$TDIR/01-SUMMARY.md" ] && [ -z "$OUTPUT" ]; then
   pass "idempotent on correct names (no output, no renames)"
 else
-  fail "idempotent — rc=$RC, output: '$OUTPUT'"
+  fail "idempotent, rc=$RC, output: '$OUTPUT'"
 fi
 
 # Test 10: handles collision (both PLAN-01.md and 01-PLAN.md exist)
@@ -149,7 +149,7 @@ CONTENT=$(cat "$TDIR/01-PLAN.md")
 if [ "$RC" -eq 0 ] && [ "$CONTENT" = "correct" ] && grep -q "skipped" <<<"$OUTPUT"; then
   pass "collision: skips PLAN-01.md when 01-PLAN.md exists"
 else
-  fail "collision — rc=$RC, content: $CONTENT, output: $OUTPUT"
+  fail "collision, rc=$RC, content: $CONTENT, output: $OUTPUT"
 fi
 
 # Test 10a: QA remediation round PLAN-R01.md normalizes to R01-PLAN.md
@@ -160,7 +160,7 @@ OUTPUT=$(bash "$NORM_SCRIPT" "$TDIR" 2>&1) && RC=$? || RC=$?
 if [ "$RC" -eq 0 ] && [ -f "$TDIR/R01-PLAN.md" ] && [ ! -f "$TDIR/PLAN-R01.md" ]; then
   pass "renames QA round PLAN-R01.md → R01-PLAN.md"
 else
-  fail "QA PLAN-R01 rename — rc=$RC, files: $(ls "$TDIR"), output: $OUTPUT"
+  fail "QA PLAN-R01 rename, rc=$RC, files: $(ls "$TDIR"), output: $OUTPUT"
 fi
 
 # Test 10b: QA remediation round PLAN-01.md normalizes to R01-PLAN.md, not 01-PLAN.md
@@ -171,7 +171,7 @@ OUTPUT=$(bash "$NORM_SCRIPT" "$TDIR" 2>&1) && RC=$? || RC=$?
 if [ "$RC" -eq 0 ] && [ -f "$TDIR/R01-PLAN.md" ] && [ ! -f "$TDIR/01-PLAN.md" ] && [ ! -f "$TDIR/PLAN-01.md" ]; then
   pass "renames QA round PLAN-01.md → R01-PLAN.md"
 else
-  fail "QA PLAN-01 rename — rc=$RC, files: $(ls "$TDIR"), output: $OUTPUT"
+  fail "QA PLAN-01 rename, rc=$RC, files: $(ls "$TDIR"), output: $OUTPUT"
 fi
 
 # Test 10b2: QA remediation round mixed-case extension normalizes to R01-PLAN.md
@@ -182,7 +182,7 @@ OUTPUT=$(bash "$NORM_SCRIPT" "$TDIR" 2>&1) && RC=$? || RC=$?
 if [ "$RC" -eq 0 ] && [ -f "$TDIR/R01-PLAN.md" ] && [ ! -f "$TDIR/PLAN-R01.mD" ] && grep -q "PLAN-R01.mD -> R01-PLAN.md" <<<"$OUTPUT"; then
   pass "renames QA round PLAN-R01.mD → R01-PLAN.md"
 else
-  fail "QA PLAN-R01.mD rename — rc=$RC, files: $(ls "$TDIR"), output: $OUTPUT"
+  fail "QA PLAN-R01.mD rename, rc=$RC, files: $(ls "$TDIR"), output: $OUTPUT"
 fi
 
 # Test 10c: UAT remediation round PLAN-01.md normalizes to R01-PLAN.md
@@ -193,7 +193,7 @@ OUTPUT=$(bash "$NORM_SCRIPT" "$TDIR" 2>&1) && RC=$? || RC=$?
 if [ "$RC" -eq 0 ] && [ -f "$TDIR/R01-PLAN.md" ] && [ ! -f "$TDIR/01-PLAN.md" ] && [ ! -f "$TDIR/PLAN-01.md" ]; then
   pass "renames UAT round PLAN-01.md → R01-PLAN.md"
 else
-  fail "UAT PLAN-01 rename — rc=$RC, files: $(ls "$TDIR"), output: $OUTPUT"
+  fail "UAT PLAN-01 rename, rc=$RC, files: $(ls "$TDIR"), output: $OUTPUT"
 fi
 
 # Test 10c2: legacy remediation round PLAN-01.md normalizes to R01-PLAN.md
@@ -204,7 +204,7 @@ OUTPUT=$(bash "$NORM_SCRIPT" "$TDIR" 2>&1) && RC=$? || RC=$?
 if [ "$RC" -eq 0 ] && [ -f "$TDIR/R01-PLAN.md" ] && [ ! -f "$TDIR/01-PLAN.md" ] && [ ! -f "$TDIR/PLAN-01.md" ]; then
   pass "renames legacy round PLAN-01.md → R01-PLAN.md"
 else
-  fail "legacy PLAN-01 rename — rc=$RC, files: $(ls "$TDIR"), output: $OUTPUT"
+  fail "legacy PLAN-01 rename, rc=$RC, files: $(ls "$TDIR"), output: $OUTPUT"
 fi
 
 # Test 10c3: legacy remediation round PLAN-R01.md normalizes to R01-PLAN.md
@@ -215,7 +215,7 @@ OUTPUT=$(bash "$NORM_SCRIPT" "$TDIR" 2>&1) && RC=$? || RC=$?
 if [ "$RC" -eq 0 ] && [ -f "$TDIR/R01-PLAN.md" ] && [ ! -f "$TDIR/PLAN-R01.md" ] && [ ! -f "$TDIR/01-PLAN.md" ]; then
   pass "renames legacy round PLAN-R01.md → R01-PLAN.md"
 else
-  fail "legacy PLAN-R01 rename — rc=$RC, files: $(ls "$TDIR"), output: $OUTPUT"
+  fail "legacy PLAN-R01 rename, rc=$RC, files: $(ls "$TDIR"), output: $OUTPUT"
 fi
 
 # Test 10d: round-dir collision replaces stale canonical R01-PLAN.md with fresh misnamed plan
@@ -249,7 +249,7 @@ CONTENT=$(cat "$TDIR/R01-PLAN.md")
 if [ "$RC" -eq 0 ] && grep -q "Valid remediation plan" <<<"$CONTENT" && [ ! -f "$TDIR/PLAN-01.md" ] && [ ! -f "$TDIR/01-PLAN.md" ] && grep -q "replaced existing target" <<<"$OUTPUT"; then
   pass "round collision: replaces stale R01-PLAN.md with fresh PLAN-01.md"
 else
-  fail "round collision — rc=$RC, content: $CONTENT, files: $(ls "$TDIR"), output: $OUTPUT"
+  fail "round collision, rc=$RC, content: $CONTENT, files: $(ls "$TDIR"), output: $OUTPUT"
 fi
 
 # Test 10d2: round-dir conflicting misnamed candidates fail closed instead of picking one
@@ -262,7 +262,7 @@ OUTPUT=$(bash "$NORM_SCRIPT" "$TDIR" 2>&1) && RC=$? || RC=$?
 if [ "$RC" -eq 0 ] && [ ! -f "$TDIR/R01-PLAN.md" ] && [ -f "$TDIR/R01-PLAN.md.conflict" ] && [ -f "$TDIR/PLAN-01.md" ] && [ -f "$TDIR/PLAN-R01.md" ] && grep -q "multiple non-identical remediation round plan candidates" <<<"$OUTPUT"; then
   pass "round conflict: fails closed when PLAN-01.md and PLAN-R01.md differ"
 else
-  fail "round conflict — rc=$RC, files: $(ls "$TDIR"), output: $OUTPUT"
+  fail "round conflict, rc=$RC, files: $(ls "$TDIR"), output: $OUTPUT"
 fi
 
 # Test 10d3: round-dir stale misnamed candidate does not clobber newer canonical plan
@@ -277,7 +277,7 @@ CONTENT=$(cat "$TDIR/R01-PLAN.md")
 if [ "$RC" -eq 0 ] && [ "$CONTENT" = "canonical" ] && [ ! -f "$TDIR/PLAN-01.md" ] && [ -f "$TDIR/PLAN-01.md.stale" ] && grep -q "existing R01-PLAN.md is newer" <<<"$OUTPUT"; then
   pass "round stale candidate: preserves newer canonical R01-PLAN.md"
 else
-  fail "round stale candidate — rc=$RC, content: $CONTENT, files: $(ls "$TDIR"), output: $OUTPUT"
+  fail "round stale candidate, rc=$RC, content: $CONTENT, files: $(ls "$TDIR"), output: $OUTPUT"
 fi
 
 # Test 10d3b: opening-only frontmatter delimiter is structurally invalid
@@ -306,7 +306,7 @@ OUTPUT=$(bash "$NORM_SCRIPT" "$TDIR" 2>&1) && RC=$? || RC=$?
 if [ "$RC" -eq 0 ] && [ ! -f "$TDIR/R01-PLAN.md" ] && [ -f "$TDIR/PLAN-01.md.invalid" ] && grep -q "candidate is structurally invalid" <<<"$OUTPUT"; then
   pass "round invalid candidate: rejects opening-only frontmatter delimiter"
 else
-  fail "round invalid candidate — rc=$RC, files: $(ls "$TDIR"), output: $OUTPUT"
+  fail "round invalid candidate, rc=$RC, files: $(ls "$TDIR"), output: $OUTPUT"
 fi
 
 # Test 10d4: round-dir source round token must match containing round directory
@@ -317,7 +317,7 @@ OUTPUT=$(bash "$NORM_SCRIPT" "$TDIR" 2>&1) && RC=$? || RC=$?
 if [ "$RC" -eq 0 ] && [ -f "$TDIR/PLAN-R02.md" ] && [ ! -f "$TDIR/R01-PLAN.md" ] && grep -q "round token does not match" <<<"$OUTPUT"; then
   pass "round token mismatch: skips PLAN-R02.md in round-01"
 else
-  fail "round token mismatch — rc=$RC, files: $(ls "$TDIR"), output: $OUTPUT"
+  fail "round token mismatch, rc=$RC, files: $(ls "$TDIR"), output: $OUTPUT"
 fi
 
 # Test 10d5: bare numeric source round token must also match containing round directory
@@ -328,7 +328,7 @@ OUTPUT=$(bash "$NORM_SCRIPT" "$TDIR" 2>&1) && RC=$? || RC=$?
 if [ "$RC" -eq 0 ] && [ -f "$TDIR/PLAN-02.md" ] && [ ! -f "$TDIR/R01-PLAN.md" ] && grep -q "round token does not match" <<<"$OUTPUT"; then
   pass "round token mismatch: skips PLAN-02.md in round-01"
 else
-  fail "round token numeric mismatch — rc=$RC, files: $(ls "$TDIR"), output: $OUTPUT"
+  fail "round token numeric mismatch, rc=$RC, files: $(ls "$TDIR"), output: $OUTPUT"
 fi
 
 # Test 10d6: equal-mtime canonical/misnamed conflict fails closed
@@ -341,7 +341,7 @@ OUTPUT=$(bash "$NORM_SCRIPT" "$TDIR" 2>&1) && RC=$? || RC=$?
 if [ "$RC" -eq 0 ] && [ ! -f "$TDIR/R01-PLAN.md" ] && [ -f "$TDIR/R01-PLAN.md.conflict" ] && [ -f "$TDIR/PLAN-01.md" ] && grep -q "same mtime but different contents" <<<"$OUTPUT"; then
   pass "round mtime tie: fails closed when canonical and PLAN-01.md differ"
 else
-  fail "round mtime tie — rc=$RC, files: $(ls "$TDIR"), output: $OUTPUT"
+  fail "round mtime tie, rc=$RC, files: $(ls "$TDIR"), output: $OUTPUT"
 fi
 
 # Test 10d7: paired equal-mtime misnamed candidates cannot replace different canonical plan
@@ -355,7 +355,7 @@ OUTPUT=$(bash "$NORM_SCRIPT" "$TDIR" 2>&1) && RC=$? || RC=$?
 if [ "$RC" -eq 0 ] && [ ! -f "$TDIR/R01-PLAN.md" ] && [ -f "$TDIR/R01-PLAN.md.conflict" ] && [ -f "$TDIR/PLAN-01.md" ] && [ -f "$TDIR/PLAN-R01.md" ] && grep -q "same mtime but different contents" <<<"$OUTPUT"; then
   pass "round mtime tie: fails closed when paired candidates differ from canonical"
 else
-  fail "paired round mtime tie — rc=$RC, files: $(ls "$TDIR"), output: $OUTPUT"
+  fail "paired round mtime tie, rc=$RC, files: $(ls "$TDIR"), output: $OUTPUT"
 fi
 
 # Test 10e: phase directories still normalize PLAN-01.md to 01-PLAN.md
@@ -366,7 +366,7 @@ OUTPUT=$(bash "$NORM_SCRIPT" "$TDIR" 2>&1) && RC=$? || RC=$?
 if [ "$RC" -eq 0 ] && [ -f "$TDIR/01-PLAN.md" ] && [ ! -f "$TDIR/R01-PLAN.md" ]; then
   pass "phase dir still renames PLAN-01.md → 01-PLAN.md"
 else
-  fail "phase regression rename — rc=$RC, files: $(ls "$TDIR"), output: $OUTPUT"
+  fail "phase regression rename, rc=$RC, files: $(ls "$TDIR"), output: $OUTPUT"
 fi
 
 # Test 11: empty/missing dir exits 0
@@ -374,7 +374,7 @@ OUTPUT=$(bash "$NORM_SCRIPT" "$TMPDIR_TEST/nonexistent" 2>&1) && RC=$? || RC=$?
 if [ "$RC" -eq 0 ]; then
   pass "exits 0 for nonexistent directory"
 else
-  fail "nonexistent dir — got rc=$RC"
+  fail "nonexistent dir, got rc=$RC"
 fi
 
 # --- phase-detect misnamed_plans diagnostic ---
@@ -393,7 +393,7 @@ OUTPUT=$(cd "$TDIR" && bash "$SCRIPT_DIR/scripts/phase-detect.sh" 2>/dev/null) &
 if grep -q "misnamed_plans=true" <<<"$OUTPUT"; then
   pass "phase-detect reports misnamed_plans=true"
 else
-  fail "phase-detect misnamed — output missing misnamed_plans=true"
+  fail "phase-detect misnamed, output missing misnamed_plans=true"
 fi
 
 # Test 13: clean names report false
@@ -408,7 +408,7 @@ OUTPUT=$(cd "$TDIR" && bash "$SCRIPT_DIR/scripts/phase-detect.sh" 2>/dev/null) &
 if grep -q "misnamed_plans=false" <<<"$OUTPUT"; then
   pass "phase-detect reports misnamed_plans=false for clean names"
 else
-  fail "phase-detect clean — output missing misnamed_plans=false"
+  fail "phase-detect clean, output missing misnamed_plans=false"
 fi
 
 # --- Uppercase extension (.MD) tests ---
@@ -420,7 +420,7 @@ OUTPUT=$(echo '{"tool_input":{"file_path":".vbw-planning/phases/01-setup/PLAN-01
 if [ "$RC" -eq 2 ] && grep -q "wrong naming convention" <<<"$OUTPUT"; then
   pass "blocks PLAN-01.MD (uppercase extension)"
 else
-  fail "blocks PLAN-01.MD — got rc=$RC, output: $OUTPUT"
+  fail "blocks PLAN-01.MD, got rc=$RC, output: $OUTPUT"
 fi
 
 # Test 15: file-guard blocks mixed-case SUMMARY-01.Md
@@ -428,7 +428,7 @@ OUTPUT=$(echo '{"tool_input":{"file_path":".vbw-planning/phases/01-setup/SUMMARY
 if [ "$RC" -eq 2 ] && grep -q "wrong naming convention" <<<"$OUTPUT"; then
   pass "blocks SUMMARY-01.Md (mixed-case extension)"
 else
-  fail "blocks SUMMARY-01.Md — got rc=$RC, output: $OUTPUT"
+  fail "blocks SUMMARY-01.Md, got rc=$RC, output: $OUTPUT"
 fi
 
 # Test 16: normalize handles uppercase PLAN-01.MD (normalizes extension to lowercase)
@@ -439,7 +439,7 @@ OUTPUT=$(bash "$NORM_SCRIPT" "$TDIR" 2>&1) && RC=$? || RC=$?
 if [ "$RC" -eq 0 ] && [ -f "$TDIR/01-PLAN.md" ]; then
   pass "renames PLAN-01.MD → 01-PLAN.md (normalizes extension to lowercase)"
 else
-  fail "uppercase rename — rc=$RC, files: $(ls "$TDIR"), output: $OUTPUT"
+  fail "uppercase rename, rc=$RC, files: $(ls "$TDIR"), output: $OUTPUT"
 fi
 
 # Test 17: phase-detect catches uppercase PLAN-01.MD
@@ -454,7 +454,7 @@ OUTPUT=$(cd "$TDIR" && bash "$SCRIPT_DIR/scripts/phase-detect.sh" 2>/dev/null) &
 if grep -q "misnamed_plans=true" <<<"$OUTPUT"; then
   pass "phase-detect catches uppercase PLAN-01.MD"
 else
-  fail "phase-detect uppercase — output missing misnamed_plans=true"
+  fail "phase-detect uppercase, output missing misnamed_plans=true"
 fi
 
 # --- PLAN-NN-CONTEXT compound form test ---
@@ -469,7 +469,7 @@ OUTPUT=$(bash "$NORM_SCRIPT" "$TDIR" 2>&1) && RC=$? || RC=$?
 if [ "$RC" -eq 0 ] && [ -f "$TDIR/01-CONTEXT.md" ] && [ ! -f "$TDIR/01-PLAN.md" ]; then
   pass "renames PLAN-01-CONTEXT.md → 01-CONTEXT.md (not 01-PLAN.md)"
 else
-  fail "PLAN-NN-CONTEXT compound — rc=$RC, files: $(ls "$TDIR"), output: $OUTPUT"
+  fail "PLAN-NN-CONTEXT compound, rc=$RC, files: $(ls "$TDIR"), output: $OUTPUT"
 fi
 
 # Test 19: normalize handles PLAN-02-SUMMARY.md alongside PLAN-02-CONTEXT.md
@@ -481,7 +481,7 @@ OUTPUT=$(bash "$NORM_SCRIPT" "$TDIR" 2>&1) && RC=$? || RC=$?
 if [ "$RC" -eq 0 ] && [ -f "$TDIR/02-SUMMARY.md" ] && [ -f "$TDIR/02-CONTEXT.md" ] && [ ! -f "$TDIR/02-PLAN.md" ]; then
   pass "renames both PLAN-02-SUMMARY.md and PLAN-02-CONTEXT.md correctly"
 else
-  fail "compound pair — rc=$RC, files: $(ls "$TDIR"), output: $OUTPUT"
+  fail "compound pair, rc=$RC, files: $(ls "$TDIR"), output: $OUTPUT"
 fi
 
 # --- file-guard precision tests ---
@@ -493,7 +493,7 @@ OUTPUT=$(echo '{"tool_input":{"file_path":".vbw-planning/phases/01-setup/plan-01
 if [ "$RC" -eq 0 ]; then
   pass "allows plan-01-review.md (not a type-first pattern)"
 else
-  fail "plan-01-review.md — got rc=$RC, output: $OUTPUT"
+  fail "plan-01-review.md, got rc=$RC, output: $OUTPUT"
 fi
 
 # Test 21: file-guard allows summary-1custom.md (digits followed by letters)
@@ -501,7 +501,7 @@ OUTPUT=$(echo '{"tool_input":{"file_path":".vbw-planning/phases/01-setup/summary
 if [ "$RC" -eq 0 ]; then
   pass "allows summary-1custom.md (not a strict type-first pattern)"
 else
-  fail "summary-1custom.md — got rc=$RC, output: $OUTPUT"
+  fail "summary-1custom.md, got rc=$RC, output: $OUTPUT"
 fi
 
 # Test 22: file-guard still blocks PLAN-01-SUMMARY.md (compound type-first)
@@ -509,7 +509,7 @@ OUTPUT=$(echo '{"tool_input":{"file_path":".vbw-planning/phases/01-setup/PLAN-01
 if [ "$RC" -eq 2 ] && grep -q "wrong naming convention" <<<"$OUTPUT"; then
   pass "blocks PLAN-01-SUMMARY.md (compound type-first)"
 else
-  fail "PLAN-01-SUMMARY.md — got rc=$RC, output: $OUTPUT"
+  fail "PLAN-01-SUMMARY.md, got rc=$RC, output: $OUTPUT"
 fi
 
 # Test 23: file-guard still blocks PLAN-01-CONTEXT.md (compound type-first)
@@ -517,7 +517,7 @@ OUTPUT=$(echo '{"tool_input":{"file_path":".vbw-planning/phases/01-setup/PLAN-01
 if [ "$RC" -eq 2 ] && grep -q "wrong naming convention" <<<"$OUTPUT"; then
   pass "blocks PLAN-01-CONTEXT.md (compound type-first)"
 else
-  fail "PLAN-01-CONTEXT.md — got rc=$RC, output: $OUTPUT"
+  fail "PLAN-01-CONTEXT.md, got rc=$RC, output: $OUTPUT"
 fi
 
 # --- Edge-case tests (unknown compounds, symlinks, many digits) ---
@@ -532,7 +532,7 @@ OUTPUT=$(bash "$NORM_SCRIPT" "$TDIR" 2>&1) && RC=$? || RC=$?
 if [ "$RC" -eq 0 ] && [ -f "$TDIR/PLAN-01-RESEARCH.md" ] && [ ! -f "$TDIR/01-PLAN.md" ]; then
   pass "skips unknown compound PLAN-01-RESEARCH.md (no rename)"
 else
-  fail "unknown compound — rc=$RC, files: $(ls "$TDIR"), output: $OUTPUT"
+  fail "unknown compound, rc=$RC, files: $(ls "$TDIR"), output: $OUTPUT"
 fi
 
 # Test 25: normalize skips unknown compound SUMMARY-01-extra.md
@@ -543,7 +543,7 @@ OUTPUT=$(bash "$NORM_SCRIPT" "$TDIR" 2>&1) && RC=$? || RC=$?
 if [ "$RC" -eq 0 ] && [ -f "$TDIR/SUMMARY-01-extra.md" ] && [ ! -f "$TDIR/01-SUMMARY.md" ]; then
   pass "skips unknown compound SUMMARY-01-extra.md (no rename)"
 else
-  fail "SUMMARY compound — rc=$RC, files: $(ls "$TDIR"), output: $OUTPUT"
+  fail "SUMMARY compound, rc=$RC, files: $(ls "$TDIR"), output: $OUTPUT"
 fi
 
 # Test 26: normalize handles many-digit PLAN-0000001.md → 01-PLAN.md
@@ -554,7 +554,7 @@ OUTPUT=$(bash "$NORM_SCRIPT" "$TDIR" 2>&1) && RC=$? || RC=$?
 if [ "$RC" -eq 0 ] && [ -f "$TDIR/01-PLAN.md" ]; then
   pass "normalizes PLAN-0000001.md → 01-PLAN.md (many leading zeros)"
 else
-  fail "many zeros — rc=$RC, files: $(ls "$TDIR"), output: $OUTPUT"
+  fail "many zeros, rc=$RC, files: $(ls "$TDIR"), output: $OUTPUT"
 fi
 
 # Test 27: normalize skips symlinks
@@ -566,7 +566,7 @@ OUTPUT=$(bash "$NORM_SCRIPT" "$TDIR" 2>&1) && RC=$? || RC=$?
 if [ "$RC" -eq 0 ] && [ -L "$TDIR/PLAN-01.md" ] && [ ! -f "$TDIR/01-PLAN.md" ]; then
   pass "skips symlink PLAN-01.md (no rename)"
 else
-  fail "symlink — rc=$RC, files: $(ls "$TDIR"), output: $OUTPUT"
+  fail "symlink, rc=$RC, files: $(ls "$TDIR"), output: $OUTPUT"
 fi
 
 # Test 28: phase-detect ignores PLAN-01-RESEARCH.md (not a misnamed plan)
@@ -582,7 +582,7 @@ MISNAMED=$(grep misnamed <<<"$OUTPUT" || true)
 if grep -q "misnamed_plans=false" <<<"$OUTPUT"; then
   pass "phase-detect ignores PLAN-01-RESEARCH.md (not a known misname pattern)"
 else
-  fail "phase-detect compound — output missing misnamed_plans=false, got: $MISNAMED"
+  fail "phase-detect compound, output missing misnamed_plans=false, got: $MISNAMED"
 fi
 
 # --- Type-aware error messages, path normalization, placeholder guard ---
@@ -594,7 +594,7 @@ OUTPUT=$(echo '{"tool_input":{"file_path":".vbw-planning/phases/01-setup/SUMMARY
 if [ "$RC" -eq 2 ] && grep -q "SUMMARY artifact" <<<"$OUTPUT" && grep -q "{NN}-SUMMARY.md" <<<"$OUTPUT"; then
   pass "error references SUMMARY type for SUMMARY-01.md"
 else
-  fail "type-aware SUMMARY — got rc=$RC, output: $OUTPUT"
+  fail "type-aware SUMMARY, got rc=$RC, output: $OUTPUT"
 fi
 
 # Test 30: file-guard error message references CONTEXT for CONTEXT-02.md
@@ -602,7 +602,7 @@ OUTPUT=$(echo '{"tool_input":{"file_path":".vbw-planning/phases/02-impl/CONTEXT-
 if [ "$RC" -eq 2 ] && grep -q "CONTEXT artifact" <<<"$OUTPUT" && grep -q "{NN}-CONTEXT.md" <<<"$OUTPUT"; then
   pass "error references CONTEXT type for CONTEXT-02.md"
 else
-  fail "type-aware CONTEXT — got rc=$RC, output: $OUTPUT"
+  fail "type-aware CONTEXT, got rc=$RC, output: $OUTPUT"
 fi
 
 # Test 31: file-guard error message references PLAN for plain PLAN-01.md
@@ -610,7 +610,7 @@ OUTPUT=$(echo '{"tool_input":{"file_path":".vbw-planning/phases/01-setup/PLAN-01
 if [ "$RC" -eq 2 ] && grep -q "PLAN artifact" <<<"$OUTPUT" && grep -q "{NN}-PLAN.md" <<<"$OUTPUT"; then
   pass "error references PLAN type for PLAN-01.md"
 else
-  fail "type-aware PLAN — got rc=$RC, output: $OUTPUT"
+  fail "type-aware PLAN, got rc=$RC, output: $OUTPUT"
 fi
 
 # Test 32: file-guard blocks .. traversal path (e.g., phases/01-setup/../01-setup/PLAN-01.md)
@@ -618,7 +618,7 @@ OUTPUT=$(echo '{"tool_input":{"file_path":".vbw-planning/phases/01-setup/../01-s
 if [ "$RC" -eq 2 ] && grep -q "wrong naming convention" <<<"$OUTPUT"; then
   pass "blocks PLAN-01.md via .. traversal path"
 else
-  fail ".. traversal — got rc=$RC, output: $OUTPUT"
+  fail ".. traversal, got rc=$RC, output: $OUTPUT"
 fi
 
 # --- Lowercase normalization tests (Finding 1 regression) ---
@@ -633,7 +633,7 @@ OUTPUT=$(bash "$NORM_SCRIPT" "$TDIR" 2>&1) && RC=$? || RC=$?
 if [ "$RC" -eq 0 ] && [ -f "$TDIR/01-PLAN.md" ] && [ ! -f "$TDIR/plan-01.md" ]; then
   pass "renames lowercase plan-01.md → 01-PLAN.md"
 else
-  fail "lowercase plan — rc=$RC, files: $(ls "$TDIR"), output: $OUTPUT"
+  fail "lowercase plan, rc=$RC, files: $(ls "$TDIR"), output: $OUTPUT"
 fi
 
 # Test 35: normalize renames lowercase summary-02.md → 02-SUMMARY.md
@@ -644,7 +644,7 @@ OUTPUT=$(bash "$NORM_SCRIPT" "$TDIR" 2>&1) && RC=$? || RC=$?
 if [ "$RC" -eq 0 ] && [ -f "$TDIR/02-SUMMARY.md" ] && [ ! -f "$TDIR/summary-02.md" ]; then
   pass "renames lowercase summary-02.md → 02-SUMMARY.md"
 else
-  fail "lowercase summary — rc=$RC, files: $(ls "$TDIR"), output: $OUTPUT"
+  fail "lowercase summary, rc=$RC, files: $(ls "$TDIR"), output: $OUTPUT"
 fi
 
 # Test 36: normalize renames lowercase context-03.md → 03-CONTEXT.md
@@ -655,7 +655,7 @@ OUTPUT=$(bash "$NORM_SCRIPT" "$TDIR" 2>&1) && RC=$? || RC=$?
 if [ "$RC" -eq 0 ] && [ -f "$TDIR/03-CONTEXT.md" ] && [ ! -f "$TDIR/context-03.md" ]; then
   pass "renames lowercase context-03.md → 03-CONTEXT.md"
 else
-  fail "lowercase context — rc=$RC, files: $(ls "$TDIR"), output: $OUTPUT"
+  fail "lowercase context, rc=$RC, files: $(ls "$TDIR"), output: $OUTPUT"
 fi
 
 # Test 37: normalize renames mixed-case Plan-01.md → 01-PLAN.md
@@ -666,7 +666,7 @@ OUTPUT=$(bash "$NORM_SCRIPT" "$TDIR" 2>&1) && RC=$? || RC=$?
 if [ "$RC" -eq 0 ] && [ -f "$TDIR/01-PLAN.md" ] && [ ! -f "$TDIR/Plan-01.md" ]; then
   pass "renames mixed-case Plan-01.md → 01-PLAN.md"
 else
-  fail "mixed-case Plan — rc=$RC, files: $(ls "$TDIR"), output: $OUTPUT"
+  fail "mixed-case Plan, rc=$RC, files: $(ls "$TDIR"), output: $OUTPUT"
 fi
 
 # --- 3+ digit phase-detect tests (Finding 2 regression) ---
@@ -686,7 +686,7 @@ MISNAMED=$(grep misnamed <<<"$OUTPUT" || true)
 if grep -q "misnamed_plans=true" <<<"$OUTPUT"; then
   pass "phase-detect catches PLAN-100.md (3 digits)"
 else
-  fail "phase-detect 3-digit — output missing misnamed_plans=true, got: $MISNAMED"
+  fail "phase-detect 3-digit, output missing misnamed_plans=true, got: $MISNAMED"
 fi
 
 # Test 39: phase-detect catches PLAN-1000.md (4 digits)
@@ -702,7 +702,7 @@ MISNAMED=$(grep misnamed <<<"$OUTPUT" || true)
 if grep -q "misnamed_plans=true" <<<"$OUTPUT"; then
   pass "phase-detect catches PLAN-1000.md (4 digits)"
 else
-  fail "phase-detect 4-digit — output missing misnamed_plans=true, got: $MISNAMED"
+  fail "phase-detect 4-digit, output missing misnamed_plans=true, got: $MISNAMED"
 fi
 
 # Test 40: phase-detect still ignores PLAN-100-RESEARCH.md (unknown compound, 3 digits)
@@ -718,7 +718,7 @@ MISNAMED=$(grep misnamed <<<"$OUTPUT" || true)
 if grep -q "misnamed_plans=false" <<<"$OUTPUT"; then
   pass "phase-detect ignores PLAN-100-RESEARCH.md (unknown compound, 3 digits)"
 else
-  fail "phase-detect 3-digit compound — output missing misnamed_plans=false, got: $MISNAMED"
+  fail "phase-detect 3-digit compound, output missing misnamed_plans=false, got: $MISNAMED"
 fi
 
 # --- End-to-end: phase-detect → normalize → phase-detect loop ---
@@ -743,7 +743,7 @@ AFTER=$(grep misnamed <<<"$OUTPUT_AFTER" || true)
 if grep -q "misnamed_plans=true" <<<"$OUTPUT_BEFORE" && grep -q "misnamed_plans=false" <<<"$OUTPUT_AFTER"; then
   pass "end-to-end: misnamed_plans true → normalize → false"
 else
-  fail "end-to-end — before: $BEFORE, after: $AFTER"
+  fail "end-to-end, before: $BEFORE, after: $AFTER"
 fi
 
 # Test 42: end-to-end with lowercase misnamed files
@@ -763,7 +763,7 @@ AFTER=$(grep misnamed <<<"$OUTPUT_AFTER" || true)
 if grep -q "misnamed_plans=true" <<<"$OUTPUT_BEFORE" && grep -q "misnamed_plans=false" <<<"$OUTPUT_AFTER"; then
   pass "end-to-end: lowercase misnamed → normalize → clean"
 else
-  fail "end-to-end lowercase — before: $BEFORE, after: $AFTER"
+  fail "end-to-end lowercase, before: $BEFORE, after: $AFTER"
 fi
 
 # --- Command-level normalization guard contract tests ---
@@ -825,7 +825,7 @@ else
 fi
 
 # Test 49: verify.md has post-normalization verify context regeneration
-# Avoid pipe into grep -qi under pipefail — GNU grep on Linux exits non-zero on
+# Avoid pipe into grep -qi under pipefail. GNU grep on Linux exits non-zero on
 # SIGPIPE when the downstream reader closes early, causing false failures.
 CTX_LINES=$(grep -B5 -A5 'compile-verify-context' "$SCRIPT_DIR/commands/verify.md" 2>/dev/null || true)
 if [ -n "$CTX_LINES" ] && grep -qi 'normalization\|stale' <<< "$CTX_LINES"; then
@@ -919,7 +919,7 @@ MISNAMED_AFTER=$(grep '^misnamed_plans=' <<<"$OUTPUT_AFTER" | cut -d= -f2)
 if [ "$PLANS_AFTER" = "2" ] && [ "$SUMMARIES_AFTER" = "1" ] && [ "$MISNAMED_AFTER" = "false" ]; then
   pass "phase-detect counts preserved after normalization (plans=$PLANS_AFTER, summaries=$SUMMARIES_AFTER)"
 else
-  fail "phase-detect counts wrong after normalization — plans=$PLANS_AFTER (want 2), summaries=$SUMMARIES_AFTER (want 1), misnamed=$MISNAMED_AFTER (want false)"
+  fail "phase-detect counts wrong after normalization, plans=$PLANS_AFTER (want 2), summaries=$SUMMARIES_AFTER (want 1), misnamed=$MISNAMED_AFTER (want false)"
 fi
 
 # Test 57: phase-detect next_phase_state transitions correctly after normalization
@@ -942,7 +942,7 @@ STATE_A=$(grep '^next_phase_state=' <<<"$OUTPUT_AFTER" | cut -d= -f2)
 if [ "$MISNAMED_B" = "true" ] && [ "$MISNAMED_A" = "false" ]; then
   pass "normalization clears misnamed_plans flag across phases"
 else
-  fail "misnamed_plans flag not cleared — before=$MISNAMED_B, after=$MISNAMED_A, state=$STATE_A"
+  fail "misnamed_plans flag not cleared, before=$MISNAMED_B, after=$MISNAMED_A, state=$STATE_A"
 fi
 
 echo ""

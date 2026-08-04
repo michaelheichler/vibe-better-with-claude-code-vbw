@@ -59,7 +59,7 @@ _refresh_phase_detect() {
   printf '%s' "$PD" > "$P"
   return 0
 }
-if ! _refresh_phase_detect; then
+if ! _refresh_phase_detect. then
   PD="phase_detect_error=true"
   printf '%s\n' "$PD" > "$P"
 fi
@@ -71,7 +71,7 @@ else
 fi`
 ```
 
-!`L="/tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}"; i=0; while [ ! -L "$L" ] && [ $i -lt 20 ]; do sleep 0.1; i=$((i+1)); done; bash "$L/scripts/suggest-compact.sh" verify 2>/dev/null || true`
+!`L="/tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}"; i=0; while [ ! -L "$L" ] && [ $i -lt 20 ]; do sleep 0.1; i=$((i+1)); done. bash "$L/scripts/suggest-compact.sh" verify 2>/dev/null || true`
 
 Pre-computed verify context (PLAN/SUMMARY aggregation):
 ```
@@ -122,7 +122,7 @@ _refresh_phase_detect() {
   printf '%s' "$PD" > "$P"
   return 0
 }
-if ! _refresh_phase_detect; then
+if ! _refresh_phase_detect. then
   PD="phase_detect_error=true"
   printf '%s\n' "$PD" > "$P"
 fi
@@ -146,7 +146,7 @@ fi`
 
 QA verification summary (pre-extracted from VERIFICATION.md):
 ```
-!`SESSION_KEY="${CLAUDE_SESSION_ID:-default}"; L="/tmp/.vbw-plugin-root-link-${SESSION_KEY}"; if [ -L "$L" ] && [ -f "$L/scripts/extract-verified-items.sh" ]; then for d in .vbw-planning/phases/*/; do bash "$L/scripts/extract-verified-items.sh" "$d" 2>/dev/null; done; fi`
+!`SESSION_KEY="${CLAUDE_SESSION_ID:-default}"; L="/tmp/.vbw-plugin-root-link-${SESSION_KEY}"; if [ -L "$L" ] && [ -f "$L/scripts/extract-verified-items.sh" ]; then for d in .vbw-planning/phases/*/; do bash "$L/scripts/extract-verified-items.sh" "$d" 2>/dev/null. done. fi`
 ```
 
 ## Guard
@@ -156,9 +156,9 @@ QA verification summary (pre-extracted from VERIFICATION.md):
   ```bash
   eval "$(bash "{plugin-root}/scripts/debug-session-state.sh" get-or-latest .vbw-planning 2>/dev/null)" 2>/dev/null || true
   ```
-  The helper exports `active_session`, `session_id`, `session_file`, and `session_status`; use `session_status` for lifecycle checks after `eval`.
+  The helper exports `active_session`, `session_id`, `session_file`, and `session_status`, use `session_status` for lifecycle checks after `eval`.
   If `active_session != none` AND exported `session_status` is `uat_pending` or `uat_failed` AND (`phase_count=0` OR `$ARGUMENTS` contains `--session`) → skip ALL remaining guards and jump directly to `<debug_session_uat>` below.
-  If phases exist (`phase_count > 0`) AND `$ARGUMENTS` does NOT contain `--session`, skip this override — standard phase UAT takes priority.
+  If phases exist (`phase_count > 0`) AND `$ARGUMENTS` does NOT contain `--session`, skip this override, standard phase UAT takes priority.
 - **Phase-detect error guard (NON-NEGOTIABLE):** If Phase state (from Context above) contains `phase_detect_error=true`, display: "⚠ Phase detection failed. Run `bash \"{plugin-root}/scripts/phase-detect.sh\"` manually to debug." STOP. Do NOT fall back to phase-dir scanning or ad-hoc `VERIFICATION.md` checks when phase-detect failed.
 - **Verify-context error guard (NON-NEGOTIABLE):** Apply this guard only after Step 2 resolves and compiles the final target. If the active verify context contains `verify_context_error=true` or `verify_context=unavailable`, display: "⚠ Verify context compilation failed. Run `bash "{plugin-root}/scripts/compile-verify-context.sh" .vbw-planning/phases/{NN}-{slug}` manually to debug." STOP. Do NOT improvise by reading individual PLAN/SUMMARY files.
 - **Brownfield normalization:** If Phase state (from Context above) contains `misnamed_plans=true`, normalize all phase directories before proceeding:
@@ -177,9 +177,9 @@ QA verification summary (pre-extracted from VERIFICATION.md):
   ```
   Use the refreshed phase-detect output for all subsequent guard checks and target resolution. Record that normalization ran so Step 2 refreshes UAT resume metadata after compiling the final target.
 - **Auto-detect phase** (no explicit number): Phase detection is pre-computed in Context above (or refreshed by normalization above). Use `next_phase` and `next_phase_slug` for the target phase.
-  - If `next_phase_state=needs_reverification`: use `next_phase` directly — this is the phase that just completed remediation and needs re-verification.
-  - If `next_phase_state=needs_verification`: use `next_phase` directly — this is either the first fully-built phase that needs UAT verification (auto_uat routing) or an active current-round UAT that should resume Verify mode.
-  - If `first_unverified_phase` is set: use that phase directly — this is the first fully-built phase without a terminal UAT.
+  - If `next_phase_state=needs_reverification`: use `next_phase` directly, this is the phase that just completed remediation and needs re-verification.
+  - If `next_phase_state=needs_verification`: use `next_phase` directly, this is either the first fully-built phase that needs UAT verification (auto_uat routing) or an active current-round UAT that should resume Verify mode.
+  - If `first_unverified_phase` is set: use that phase directly, this is the first fully-built phase without a terminal UAT.
   - Fallback: scan phase dirs for first with `*-SUMMARY.md` but no canonical `*-UAT.md` (exclude `*-SOURCE-UAT.md` copies).
   - Found: announce "Auto-detected Phase {NN} ({slug})". All verified: STOP "All phases have UAT results. Specify: `/vbw:verify {NN}`"
 - No SUMMARY.md in target phase dir: STOP "Phase {NN} has no completed plans. Run /vbw:vibe first."
@@ -230,7 +230,7 @@ QA verification summary (pre-extracted from VERIFICATION.md):
     - `REMEDIATION_REQUIRED`: STOP "Phase {NN} QA gate still requires remediation (including unresolved tracked known issues, if any). Run `/vbw:vibe` to continue QA remediation before UAT."
     - `QA_RERUN_REQUIRED` or empty output: STOP "Phase {NN} QA verification is not authoritative yet. Run `/vbw:qa {NN}` or `/vbw:vibe` to re-run QA before UAT, or use `/vbw:verify --skip-qa` to bypass."
   - If VERIFICATION.md exists, read its frontmatter `result:` field:
-    - `PASS`: before proceeding, run the same stale-QA checks as phase-detect for this target phase: (1) if product-code working tree is dirty (`git status --porcelain --untracked-files=normal -- . ':!.vbw-planning' ':!CLAUDE.md'` non-empty) → STOP and rerun QA via `/vbw:vibe`; (2) if `verified_at_commit` exists and differs from current product-code `git log -1 --format='%H' -- . ':!.vbw-planning' ':!CLAUDE.md'` → STOP and rerun QA; (3) if `verified_at_commit` is absent (brownfield file), compare VERIFICATION.md mtime to the latest product-code commit timestamp and STOP if the commit is newer. Only proceed to UAT when the PASS is both gate-authoritative and fresh for the target phase.
+    - `PASS`: before proceeding, run the same stale-QA checks as phase-detect for this target phase: (1) if product-code working tree is dirty (`git status --porcelain --untracked-files=normal -- . ':!.vbw-planning' ':!CLAUDE.md'` non-empty) → STOP and rerun QA via `/vbw:vibe`, (2) if `verified_at_commit` exists and differs from current product-code `git log -1 --format='%H' -- . ':!.vbw-planning' ':!CLAUDE.md'` → STOP and rerun QA, (3) if `verified_at_commit` is absent (brownfield file), compare VERIFICATION.md mtime to the latest product-code commit timestamp and STOP if the commit is newer. Only proceed to UAT when the PASS is both gate-authoritative and fresh for the target phase.
     - `FAIL` or `PARTIAL`: STOP "Phase {NN} QA result is {result}. Run `/vbw:vibe` to continue QA remediation, or use `/vbw:verify --skip-qa` to bypass."
   - If `--skip-qa` flag is present: bypass QA execution and PASS freshness checks only. This does **not** bypass unresolved phase known issues. Before entering UAT, run:
     ```bash
@@ -245,7 +245,7 @@ QA verification summary (pre-extracted from VERIFICATION.md):
     _gate_routing=$(printf '%s\n' "$_gate_output" | awk -F= '/^qa_gate_routing=/{print $2; exit}')
     _gate_all_addressed=$(printf '%s\n' "$_gate_output" | awk -F= '/^qa_gate_known_issues_all_addressed=/{print $2; exit}')
     ```
-    If `_gate_all_addressed=true` and `_gate_routing=PROCEED_TO_UAT`, the known issues were resolved or accepted as non-blocking — proceed to UAT. Otherwise STOP: "Phase {NN} still has unresolved tracked known issues. Run `/vbw:vibe` to continue QA remediation before UAT."
+    If `_gate_all_addressed=true` and `_gate_routing=PROCEED_TO_UAT`, the known issues were resolved or accepted as non-blocking, proceed to UAT. Otherwise STOP: "Phase {NN} still has unresolved tracked known issues. Run `/vbw:vibe` to continue QA remediation before UAT."
 
 ## Debug Session Routing
 
@@ -256,11 +256,11 @@ QA verification summary (pre-extracted from VERIFICATION.md):
 eval "$(bash "{plugin-root}/scripts/debug-session-state.sh" get-or-latest .vbw-planning)"
 ```
 
-The helper exports `active_session`, `session_id`, `session_file`, and `session_status`; use `session_status` for routing after `eval`.
+The helper exports `active_session`, `session_id`, `session_file`, and `session_status`, use `session_status` for routing after `eval`.
 
 **Routing decision:**
 - If `$ARGUMENTS` contains an explicit phase number AND no `--session` flag → skip debug-session routing, use standard phase UAT flow below.
-- If `active_session != none` AND exported `session_status` is `uat_pending` or `uat_failed` AND (`phase_count=0` OR `$ARGUMENTS` contains `--session`) → enter debug-session UAT mode (below). If `phase_count > 0` and no `--session` flag, skip debug-session routing — standard phase UAT takes priority.
+- If `active_session != none` AND exported `session_status` is `uat_pending` or `uat_failed` AND (`phase_count=0` OR `$ARGUMENTS` contains `--session`) → enter debug-session UAT mode (below). If `phase_count > 0` and no `--session` flag, skip debug-session routing, standard phase UAT takes priority.
 - Otherwise → skip debug-session routing, continue to standard phase UAT Steps.
 
 **Debug-session UAT mode:**
@@ -277,8 +277,8 @@ When routed here, skip the standard phase-resolution Steps entirely. Instead:
    ```
 
 3. Generate 1-3 UAT checkpoints from the session context. These must require HUMAN judgment:
-   - Reproduce the original bug — is it fixed?
-   - Check related workflows — any regressions visible?
+   - Reproduce the original bug, is it fixed?
+   - Check related workflows, any regressions visible?
    - Verify the fix from the user's perspective
 
 4. Present checkpoints one at a time using the same CHECKPOINT + AskUserQuestion pattern from Step 5 below. Apply the same response mapping rules (Step 6) and issue handling (Step 7).
@@ -390,11 +390,11 @@ When routed here, skip the standard phase-resolution Steps entirely. Instead:
 ### 3. Check for existing UAT session (resume support)
 
 - Use `UAT_RESUME` selected for the active target phase in Step 2:
-  - `uat_resume=none`: no existing UAT session — proceed to Step 4 (generate tests)
-  - `uat_resume=all_done uat_completed=N uat_total=N`: all tests already have results — display the summary, STOP
-  - `uat_resume=<test-id> uat_completed=N uat_total=N`: resume at `<test-id>` only when `<test-id>` is a valid checkpoint ID (`P...`, `PR...`, or `D...`). Display: `Resuming UAT session -- {completed}/{total} tests done`. Use the following `uat_resume_*` lines as the authoritative prompt context for the first resumed checkpoint: normal product checkpoints use `uat_resume_scenario` + `uat_resume_expected`; summary-deviation checkpoints use `uat_resume_deviation`, `uat_resume_source_plan`, `uat_resume_source_summary`, and `uat_resume_deviation_signature`.
+  - `uat_resume=none`: no existing UAT session, proceed to Step 4 (generate tests)
+  - `uat_resume=all_done uat_completed=N uat_total=N`: all tests already have results, display the summary, STOP
+  - `uat_resume=<test-id> uat_completed=N uat_total=N`: resume at `<test-id>` only when `<test-id>` is a valid checkpoint ID (`P...`, `PR...`, or `D...`). Display: `Resuming UAT session -- {completed}/{total} tests done`. Use the following `uat_resume_*` lines as the authoritative prompt context for the first resumed checkpoint: normal product checkpoints use `uat_resume_scenario` + `uat_resume_expected`, summary-deviation checkpoints use `uat_resume_deviation`, `uat_resume_source_plan`, `uat_resume_source_summary`, and `uat_resume_deviation_signature`.
 - Treat `uat_resume=unavailable`, `uat_resume=error`, and `uat_resume=pending_archive` as compact wrapper sentinels, not checkpoint IDs.
-- Do NOT scan-parse the UAT file to find the resume point — the pre-computed metadata already identifies it. If the required `uat_resume_*` fields for the active checkpoint type are absent or incomplete, read the UAT.md once as a recoverable legacy/malformed-artifact fallback, then jump to the CHECKPOINT loop at the resume point.
+- Do NOT scan-parse the UAT file to find the resume point, the pre-computed metadata already identifies it. If the required `uat_resume_*` fields for the active checkpoint type are absent or incomplete, read the UAT.md once as a recoverable legacy/malformed-artifact fallback, then jump to the CHECKPOINT loop at the resume point.
 
 ### 4. Generate test scenarios from the active verify context
 
@@ -418,19 +418,19 @@ When routed here, skip the standard phase-resolution Steps entirely. Instead:
   - `**Source Summary:** {source_path}`
   - `**Deviation:** {text}`
 - Write `**Expected:** Human confirms whether this documented deviation is acceptable for this phase.`
-- Initial frontmatter `total_tests` includes these `D{NN}` review checkpoints plus generated plan checkpoints. Initial `issues` remains `0`; unresolved review checkpoints are counted as incomplete until the human answers.
+- Initial frontmatter `total_tests` includes these `D{NN}` review checkpoints plus generated plan checkpoints. Initial `issues` remains `0`, unresolved review checkpoints are counted as incomplete until the human answers.
 - If there are no `SUMMARY_DEVIATION:` records, do not create any prefilled deviation checkpoints.
 
 For each plan in `VERIFY_CONTEXT`:
 - Use the pre-computed `what_was_built`, `files_modified`, and `must_haves` data. Do NOT read SUMMARY.md or PLAN.md files.
-- Generate 1-3 test scenarios that require HUMAN judgment — things only a person can verify
+- Generate 1-3 test scenarios that require HUMAN judgment, things only a person can verify
 - Minimum 1 test per plan, even for pure refactors (use "verify nothing broke" regression test)
 - Full-scope test IDs follow the format: `P{plan}-T{NN}` (e.g., P01-T1, P01-T2, P02-T1). Re-verification test IDs follow the format `PR{RR}-T{NN}`.
 
 **UAT tests must be things only a human can judge.** Good examples:
-- Open the app and navigate to screen X — does it display Y correctly?
-- Perform user workflow A → B → C — does the result look right?
-- Check that the UI reflects the change — is the label/value/layout correct?
+- Open the app and navigate to screen X, does it display Y correctly?
+- Perform user workflow A → B → C, does the result look right?
+- Check that the UI reflects the change, is the label/value/layout correct?
 
 **NEVER generate tests that ask the user to run automated checks.** These belong in the QA phase, not UAT:
 - ✗ Run a test suite or individual test (xcodebuild test, pytest, bats, jest, etc.)
@@ -448,13 +448,13 @@ If a plan only contains backend/test/script changes with no user-facing behavior
 - Subjective quality ("Does the chart render clearly at different screen sizes?")
 
 **What does NOT belong in UAT (the agent or QA already handles these):**
-- Running test suites — QA runs these during execution. Do NOT ask the user to run tests.
+- Running test suites, QA runs these during execution. Do NOT ask the user to run tests.
 - Checking command output, exit codes, or build success
 - Grepping files for expected content
 - Verifying file existence or structure
 - Any check that can be performed programmatically via Bash, Grep, or Glob
 
-**Skill-aware exclusion:** If any active skill, tool, or MCP server gives the model UI automation capabilities (e.g., describe-UI, tap/click simulation, accessibility inspection, screenshot capture, DOM querying), then UI interactions that can be verified programmatically via those capabilities also belong in QA, not UAT. Only include scenarios that require true human judgment — subjective quality, visual design assessment, domain-specific data correctness, or hardware-dependent behavior that available tooling cannot automate.
+**Skill-aware exclusion:** If any active skill, tool, or MCP server gives the model UI automation capabilities (e.g., describe-UI, tap/click simulation, accessibility inspection, screenshot capture, DOM querying), then UI interactions that can be verified programmatically via those capabilities also belong in QA, not UAT. Only include scenarios that require true human judgment, subjective quality, visual design assessment, domain-specific data correctness, or hardware-dependent behavior that available tooling cannot automate.
 
 If a plan's work is purely internal (refactor, test infrastructure, script changes) with no user-facing behavior, generate a single lightweight checkpoint asking the user to confirm the app still works as expected from their perspective, rather than asking them to run automated checks.
 
@@ -462,13 +462,13 @@ Write the initial UAT file at `{phase-dir}/{uat_path}` (using the pre-computed `
 - Populate YAML frontmatter: phase, plan_count, status=in_progress, started=today, total_tests
 - Write prefilled `D{NN}` summary-deviation review entries first, then generated plan checkpoint entries. All entries start with Result fields empty (no placeholder values).
 
-**Result field values (NON-NEGOTIABLE):** The `**Result:**` field in each test entry MUST be exactly one of three lowercase values: `pass`, `skip`, or `issue`. Never write `FAIL`, `PARTIAL`, `PASS`, `PASSED`, or any other value — downstream scripts depend on this exact vocabulary to extract issues and compute status.
+**Result field values (NON-NEGOTIABLE):** The `**Result:**` field in each test entry MUST be exactly one of three lowercase values: `pass`, `skip`, or `issue`. Never write `FAIL`, `PARTIAL`, `PASS`, `PASSED`, or any other value, downstream scripts depend on this exact vocabulary to extract issues and compute status.
 
-### 5. CHECKPOINT loop (one test at a time — conversational, blocking)
+### 5. CHECKPOINT loop (one test at a time, conversational, blocking)
 
 **This is a conversational loop. Present ONE test, then STOP and wait for the user to respond. Do NOT present multiple tests at once. Do NOT skip ahead. Do NOT end the session after presenting a test.**
 
-> **CRITICAL BOUNDARY:** The UAT interviewer MUST NOT investigate, debug, or implement fixes during the UAT session — regardless of user tone, urgency, or explicit requests to fix issues. The interviewer's ONLY job is to record responses and advance to the next checkpoint. All user frustration, bug descriptions, and fix requests are recorded as issue text in the UAT report. Fixes happen in the remediation phase AFTER the UAT session is complete. If the user explicitly asks you to stop the UAT and fix something, respond: "Issue recorded. Let's finish the remaining checkpoints first — remediation will address this immediately after."
+> **CRITICAL BOUNDARY:** The UAT interviewer MUST NOT investigate, debug, or implement fixes during the UAT session, regardless of user tone, urgency, or explicit requests to fix issues. The interviewer's ONLY job is to record responses and advance to the next checkpoint. All user frustration, bug descriptions, and fix requests are recorded as issue text in the UAT report. Fixes happen in the remediation phase AFTER the UAT session is complete. If the user explicitly asks you to stop the UAT and fix something, respond: "Issue recorded. Let's finish the remaining checkpoints first, remediation will address this immediately after."
 
 Follow @${CLAUDE_PLUGIN_ROOT}/references/vbw-brand-essentials.md for all output formatting (symbols, bars, AskUserQuestion spacing).
 
@@ -476,7 +476,7 @@ For the FIRST test without a result, display a CHECKPOINT followed by AskUserQue
 
 ```text
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  CHECKPOINT {NN}/{total} — {plan-id}: {plan-title}
+  CHECKPOINT {NN}/{total}, {plan-id}: {plan-title}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 {scenario description}
@@ -492,7 +492,7 @@ options:
   - label: "Pass"
     description: "Behavior matches expected result"
   - label: "Skip"
-    description: "Cannot test right now — skip this checkpoint"
+    description: "Cannot test right now, skip this checkpoint"
 ```
 
 The tool automatically provides a freeform "Other" option for the user to describe issues.
@@ -508,7 +508,7 @@ The tool automatically provides a freeform "Other" option for the user to descri
 - This stays within the AskUserQuestion four-option limit. Normal product checkpoints keep only the `Pass` and `Skip` visible labels.
 - freeform/Other → record the text as a real UAT issue if it describes why the deviation is unacceptable or exposes a product defect, except for the summary-deviation todo-intent path in Step 6.
 
-**AskUserQuestion is a tool call (NON-NEGOTIABLE):** You MUST invoke AskUserQuestion via the tool_use mechanism — never emit the question parameters as text, JSON, or any other inline format in your response body. If AskUserQuestion appears in your text output instead of as a tool call, the checkpoint will not be presented to the user and the session will end prematurely.
+**AskUserQuestion is a tool call (NON-NEGOTIABLE):** You MUST invoke AskUserQuestion via the tool_use mechanism, never emit the question parameters as text, JSON, or any other inline format in your response body. If AskUserQuestion appears in your text output instead of as a tool call, the checkpoint will not be presented to the user and the session will end prematurely.
 
 **STOP HERE.** Wait for the AskUserQuestion response. Do NOT continue to the next test, do NOT skip to Step 6, and do NOT end the turn. The tool call blocks until the user responds.
 
@@ -518,9 +518,9 @@ The tool automatically provides a freeform "Other" option for the user to descri
 
 Map the AskUserQuestion response:
 
-**"Pass" selected:** Record as passed. For a prefilled summary-deviation `D{NN}` checkpoint, also write `**Disposition:** accepted-process-exception` and preserve the deviation metadata fields. Do not add a todo for plain `Pass`; it means the deviation is accepted as non-blocking without follow-up tracking. **However**, if the user's response also mentions a separate bug/issue (e.g., "Pass, but I noticed X is broken"), record the test as passed AND capture the separate observation as a discovered issue (see Step 7a).
+**"Pass" selected:** Record as passed. For a prefilled summary-deviation `D{NN}` checkpoint, also write `**Disposition:** accepted-process-exception` and preserve the deviation metadata fields. Do not add a todo for plain `Pass`, it means the deviation is accepted as non-blocking without follow-up tracking. **However**, if the user's response also mentions a separate bug/issue (e.g., "Pass, but I noticed X is broken"), record the test as passed AND capture the separate observation as a discovered issue (see Step 7a).
 
-**"Track Todo" selected:** Valid only for a prefilled summary-deviation `D{NN}` checkpoint. Record `**Result:** pass`, write `**Disposition:** accepted-process-exception`, preserve all deviation identity metadata, and mark this checkpoint as accepted-and-tracked for Step 8. Do not introduce a fourth `Result` value. The todo ref comes only from `track-uat-deviations.sh todo-from-uat` after the UAT result is written; never invent it in prose.
+**"Track Todo" selected:** Valid only for a prefilled summary-deviation `D{NN}` checkpoint. Record `**Result:** pass`, write `**Disposition:** accepted-process-exception`, preserve all deviation identity metadata, and mark this checkpoint as accepted-and-tracked for Step 8. Do not introduce a fourth `Result` value. The todo ref comes only from `track-uat-deviations.sh todo-from-uat` after the UAT result is written. never invent it in prose.
 
 **"Skip" selected:** Record as skipped. For a prefilled summary-deviation `D{NN}` checkpoint, write `**Disposition:** skipped-by-user` and do not add it to the accepted-deviation registry. **However**, if the user selected "Skip" but also typed additional text describing a bug/issue (e.g., the response body contains "but the sidebar is broken" alongside the Skip selection), record the test as skipped AND capture the additional text as a discovered issue (see Step 7a). The additional text is the response content beyond the option selection itself.
 
@@ -533,17 +533,17 @@ Map the AskUserQuestion response:
 - Treat em/en dashes as dash separators.
 - Canonicalize common contraction forms before intent matching: `can't`/`cant` → `cannot`, `don't`/`dont` → `do not`, and `won't`/`wont` → `will not`.
 
-**Word-boundary rule:** Match intent keywords as whole words only — a keyword matches when it is surrounded by whitespace, punctuation, or string boundaries (equivalent to regex `\b`). Examples: "pass" matches in "pass, but..." and "Pass." but NOT in "passport"; "works" matches in "it works" but NOT in "worksmanship"; "good" matches in "looks good" but NOT in "goodness".
+**Word-boundary rule:** Match intent keywords as whole words only, a keyword matches when it is surrounded by whitespace, punctuation, or string boundaries (equivalent to regex `\b`). Examples: "pass" matches in "pass, but..." and "Pass." but NOT in "passport", "works" matches in "it works" but NOT in "worksmanship", "good" matches in "looks good" but NOT in "goodness".
 
 **Idiomatic-positive exceptions:** These should count as pass-intent (not issues): `not bad`, `can't complain`, `cant complain`, `cannot complain`.
 
-**Uncertainty exclusion (NON-NEGOTIABLE):** Hedging/uncertainty phrases are NOT pass-intent — they indicate the user is unsure and needs investigation, not rubber-stamping. If the response contains any of these phrases WITHOUT a clear pass-intent keyword (pass, passed, looks good, works, correct, confirmed, yes, good, fine, ok, okay), fall through to "anything else" → issue. Uncertainty phrases: `I think`, `I think so`, `I guess`, `maybe`, `not sure`, `possibly`, `I believe so`, `probably`, `hard to tell`, `I suppose`. Examples: "I think so? ORCX still shows cost basis" → issue (no pass keyword, uncertainty + observation); "pass, I think it works" → passed (explicit pass keyword present). When uncertainty is present, the agent MUST investigate before recording — never assume the user means pass.
+**Uncertainty exclusion (NON-NEGOTIABLE):** Hedging/uncertainty phrases are NOT pass-intent, they indicate the user is unsure and needs investigation, not rubber-stamping. If the response contains any of these phrases WITHOUT a clear pass-intent keyword (pass, passed, looks good, works, correct, confirmed, yes, good, fine, ok, okay), fall through to "anything else" → issue. Uncertainty phrases: `I think`, `I think so`, `I guess`, `maybe`, `not sure`, `possibly`, `I believe so`, `probably`, `hard to tell`, `I suppose`. Examples: "I think so? ORCX still shows cost basis" → issue (no pass keyword, uncertainty + observation), "pass, I think it works" → passed (explicit pass keyword present). When uncertainty is present, the agent MUST investigate before recording, never assume the user means pass.
 
-**Negation guard (expanded scope):** Before classifying as pass-intent, detect negation in the same clause even when not immediately adjacent. If a negation term appears up to a few words before pass-intent (or in patterns like "I don't think it works"), treat as issue (Step 6), unless the text matches an idiomatic-positive exception above. Negation terms: not, don't, doesn't, didn't, isn't, wasn't, no, never, neither, nor, hardly, barely, cannot, can't, won't, wouldn't, shouldn't. Examples: "not good, still broken" → issue; "I don't think it works" → issue; "it works" → pass.
+**Negation guard (expanded scope):** Before classifying as pass-intent, detect negation in the same clause even when not immediately adjacent. If a negation term appears up to a few words before pass-intent (or in patterns like "I don't think it works"), treat as issue (Step 6), unless the text matches an idiomatic-positive exception above. Negation terms: not, don't, doesn't, didn't, isn't, wasn't, no, never, neither, nor, hardly, barely, cannot, can't, won't, wouldn't, shouldn't. Examples: "not good, still broken" → issue, "I don't think it works" → issue, "it works" → pass.
 
-**Summary-deviation todo intent:** Before generic skip/pass matching, apply this shortcut only for a prefilled summary-deviation `D{NN}` checkpoint. Use marker-first ordering after normalization and contraction canonicalization: if the text contains explicit rejection/blocking/acceptance-refusal markers (`unacceptable`, `reject`, `blocking`, `blocker`, `do not continue`, `cannot continue`, `will not continue`, `do not proceed`, `cannot proceed`, `not ok`, `not okay`, `cannot accept`, `do not accept`, `will not accept`, `unable to accept`, `refuse to accept`, or `not acceptable`), record `**Result:** issue` with `**Disposition:** rejected-by-user` even when todo words are also present. Treat `not ok` and `not okay` as equivalent rejection markers because `ok` and `okay` are equivalent pass-intent words elsewhere. Examples: `can't continue, track this` canonicalizes to `cannot continue, track this`; `not ok, track this` remains rejected; `can't accept this, track this` and `can’t accept this, track this` canonicalize to `cannot accept this, track this`; and `not acceptable, add to todo` remains a rejected UAT issue. Only when no rejection/blocking/acceptance-refusal marker is present should high-confidence follow-up intent (`/vbw:todo`, `todo`, `to-do`, `add to todo`, `add to to-do`, `track this`, `track it`, `backlog`, or `follow up later`) record `**Result:** pass`, `**Disposition:** accepted-process-exception`, preserve deviation metadata, and mark the checkpoint as accepted-and-tracked for Step 8.
+**Summary-deviation todo intent:** Before generic skip/pass matching, apply this shortcut only for a prefilled summary-deviation `D{NN}` checkpoint. Use marker-first ordering after normalization and contraction canonicalization: if the text contains explicit rejection/blocking/acceptance-refusal markers (`unacceptable`, `reject`, `blocking`, `blocker`, `do not continue`, `cannot continue`, `will not continue`, `do not proceed`, `cannot proceed`, `not ok`, `not okay`, `cannot accept`, `do not accept`, `will not accept`, `unable to accept`, `refuse to accept`, or `not acceptable`), record `**Result:** issue` with `**Disposition:** rejected-by-user` even when todo words are also present. Treat `not ok` and `not okay` as equivalent rejection markers because `ok` and `okay` are equivalent pass-intent words elsewhere. Examples: `can't continue, track this` canonicalizes to `cannot continue, track this`, `not ok, track this` remains rejected, `can't accept this, track this` and `can’t accept this, track this` canonicalize to `cannot accept this, track this`, and `not acceptable, add to todo` remains a rejected UAT issue. Only when no rejection/blocking/acceptance-refusal marker is present should high-confidence follow-up intent (`/vbw:todo`, `todo`, `to-do`, `add to todo`, `add to to-do`, `track this`, `track it`, `backlog`, or `follow up later`) record `**Result:** pass`, `**Disposition:** accepted-process-exception`, preserve deviation metadata, and mark the checkpoint as accepted-and-tracked for Step 8.
 
-**Observation extraction guard:** Only create a discovered issue when text after a separator includes a defect/issue signal (e.g., broken, bug, error, wrong, missing, not working, fails, crash, exception, regression, problem, still). The word "still" is a defect signal because in UAT context it means an expected fix was not applied (e.g., "X still shows Y" = the behavior persists unchanged = issue). **Exception:** "still" followed by a positive word (works, working, fine, good, correct, properly, functioning, responsive, loads, launches, runs, ok, okay, passes, functions, operates, running) is temporal (meaning "continues to work"), NOT a defect signal — do NOT create a discovered issue. Examples: "pass, it still works fine" → pass (no discovered issue); "pass, but it still shows the old value" → pass + discovered issue. If trailing text is neutral/positive only (e.g., "pass: looks great"), do NOT create a discovered issue.
+**Observation extraction guard:** Only create a discovered issue when text after a separator includes a defect/issue signal (e.g., broken, bug, error, wrong, missing, not working, fails, crash, exception, regression, problem, still). The word "still" is a defect signal because in UAT context it means an expected fix was not applied (e.g., "X still shows Y" = the behavior persists unchanged = issue). **Exception:** "still" followed by a positive word (works, working, fine, good, correct, properly, functioning, responsive, loads, launches, runs, ok, okay, passes, functions, operates, running) is temporal (meaning "continues to work"), NOT a defect signal, do NOT create a discovered issue. Examples: "pass, it still works fine" → pass (no discovered issue), "pass, but it still shows the old value" → pass + discovered issue. If trailing text is neutral/positive only (e.g., "pass: looks great"), do NOT create a discovered issue.
 
 **Dual-intent tie-break (pass + skip in one response):**
 - If the response explicitly defers the **current checkpoint** (e.g., "skip this checkpoint", "skip for now", "can't test right now"), classify checkpoint outcome as **skip**.
@@ -554,7 +554,7 @@ Evaluate in this order:
 - **Skip-intent only:** If skip-intent is present but no issue observation in post-separator text → record as skipped.
 - **Pass-intent with issue observation:** If the text contains pass-intent as whole words/phrases (pass, passed, looks good, works, correct, confirmed, yes, good, fine, ok, okay, not bad, can't complain, cant complain, cannot complain), is not negated by the expanded negation guard, and has post-separator issue text, then: record the test as **passed** AND capture the post-separator observation text as a discovered issue (Step 7a). Example: "pass, but I noticed the stats section still shows for positions with no covered calls" → passed + discovered issue.
 - **Pass-intent only:** Pass-intent present, not negated, and no issue observation in post-separator text → record as passed.
-- **Anything else:** classify the response as an issue. Use the issue capture rules in Step 7 to synthesize the persisted `Description`; do not treat the raw response text as the final artifact text.
+- **Anything else:** classify the response as an issue. Use the issue capture rules in Step 7 to synthesize the persisted `Description`, do not treat the raw response text as the final artifact text.
 
 For a prefilled summary-deviation `D{NN}` checkpoint, "anything else" means the user rejected or challenged the deviation. Record it as `**Result:** issue`, synthesize the issue `Description` from the user's challenge plus the deviation metadata, infer severity as usual, and write `**Disposition:** rejected-by-user`.
 
@@ -571,7 +571,7 @@ Create a synthesized, remediation-ready issue description. Infer severity from k
 - If an image/attachment is not visible or not interpretable, do not persist `image attached`, `(Image attached)`, `screenshot attached`, `attachment attached`, or similar placeholders as evidence. Record the limitation only if it matters to remediation.
 - Never persist raw screenshots, raw attachment blobs, or base64 data in the UAT artifact.
 - Do not invent facts that are not present in the checkpoint, user response, or visible attachment/image evidence.
-- Preserve the human-only UAT boundary: synthesize the issue text only from current UAT evidence; do not debug, inspect project files, run commands, or implement fixes during UAT capture.
+- Preserve the human-only UAT boundary: synthesize the issue text only from current UAT evidence. do not debug, inspect project files, run commands, or implement fixes during UAT capture.
 
 </issue_capture_rules>
 
@@ -581,7 +581,7 @@ Create a synthesized, remediation-ready issue description. Infer severity from k
 Raw response: "LCID still wrong after resync (Image attached)"
 Checkpoint expectation: "After resync, the wheel preview should only show the LCID wheel history for sell-to-open puts, the 100-share assignment, and the active sell-to-open call."
 Visible attachment evidence: "Screenshot shows LCID still missing or incorrect after resync, and the wheel preview realized value appears to include non-wheel LCID stock trades."
-Expected persisted `Description`: "LCID remains missing or incorrect after resync; the wheel preview realized value appears to include non-wheel LCID stock trades instead of only the intended wheel history: sell-to-open puts, the 100-share assignment, and the active sell-to-open call."
+Expected persisted `Description`: "LCID remains missing or incorrect after resync. the wheel preview realized value appears to include non-wheel LCID stock trades instead of only the intended wheel history: sell-to-open puts, the 100-share assignment, and the active sell-to-open call."
 </example>
 
 <example>
@@ -611,13 +611,13 @@ Issue recorded (severity: {level}). Final next-step routing shown at UAT summary
 
 When a user passes or skips a test but also mentions a separate bug, issue, or observation unrelated to the test's expected behavior, capture it as a **discovered issue**.
 
-Assign a discovered-issue ID: `D{NN}` (D01, D02, ...) — sequential across the UAT session. Before appending any discovered issue, scan the current UAT file at `{phase-dir}/{uat_path}` in both initial and resumed sessions for existing `D[0-9]+` headings. Include prefilled summary-deviation review entries and discovered issues already appended earlier in the same session; those IDs are reserved. Allocate the next zero-padded `D{NN}` from highest existing + 1, or `D01` when none exist. Example: if prefilled `D01` and `D02` already exist, the next discovered issue is `D03`. Never renumber existing `D{NN}` entries.
+Assign a discovered-issue ID: `D{NN}` (D01, D02, ...), sequential across the UAT session. Before appending any discovered issue, scan the current UAT file at `{phase-dir}/{uat_path}` in both initial and resumed sessions for existing `D[0-9]+` headings. Include prefilled summary-deviation review entries and discovered issues already appended earlier in the same session. those IDs are reserved. Allocate the next zero-padded `D{NN}` from highest existing + 1, or `D01` when none exist. Example: if prefilled `D01` and `D02` already exist, the next discovered issue is `D03`. Never renumber existing `D{NN}` entries.
 
 Infer severity using the same keyword table from Step 7. Infer category from context:
 - If the user identifies a specific view/screen/component: use that as the description prefix
 - If vague: use the checkpoint context and user observation to synthesize a concise remediation-ready description instead of persisting filler or transient attachment placeholders
 
-The captured observation is source material for Step 7 issue capture rules; the persisted `Description` is synthesized, not copied verbatim.
+The captured observation is source material for Step 7 issue capture rules. the persisted `Description` is synthesized, not copied verbatim.
 
 Append a new test entry to the UAT.md `## Tests` section:
 
@@ -626,7 +626,7 @@ Append a new test entry to the UAT.md `## Tests` section:
 
 - **Plan:** (discovered during {test-id})
 - **Scenario:** User observation during UAT
-- **Expected:** (not applicable — discovered issue)
+- **Expected:** (not applicable, discovered issue)
 - **Result:** issue
 - **Issue:**
   - Description: {synthesized remediation-ready description}
@@ -651,7 +651,7 @@ Discovered issue D{NN} recorded (severity: {level}).
   ```
   - If `TODO_STATUS=added` and `TODO_REF` is non-empty, write or update the checkpoint line to `**Tracking:** accepted deviation added to todos (ref:{TODO_REF})`.
   - If `TODO_STATUS=already_tracked` and `TODO_REF` is non-empty, write or update the checkpoint line to `**Tracking:** accepted deviation already tracked in todos (ref:{TODO_REF})`.
-  - If `TODO_STATUS` is `no_state_file`, `missing_metadata`, `not_accepted`, empty, or any other value, keep `**Result:** pass` and write `**Tracking:** accepted deviation todo tracking unavailable ({TODO_STATUS:-helper_failed})`. The human acceptance controls whether the deviation blocks the phase; helper failure only affects follow-up tracking.
+  - If `TODO_STATUS` is `no_state_file`, `missing_metadata`, `not_accepted`, empty, or any other value, keep `**Result:** pass` and write `**Tracking:** accepted deviation todo tracking unavailable ({TODO_STATUS:-helper_failed})`. The human acceptance controls whether the deviation blocks the phase. helper failure only affects follow-up tracking.
   - Never invent a todo ref. Only use `TODO_REF` emitted by the helper.
 - When the response accepts a prefilled summary-deviation checkpoint (`D{NN}` with `**Deviation Signature:** ...` and `**Disposition:** accepted-process-exception`), run the accepted-deviation registry helper after any todo tracking update:
   ```bash
@@ -663,11 +663,11 @@ Discovered issue D{NN} recorded (severity: {level}).
 
 ### 9. Session complete
 
-- **Finalize UAT status (script-based — NON-NEGOTIABLE):** Run the finalize script to deterministically compute and update frontmatter status, counts, and completed date:
+- **Finalize UAT status (script-based, NON-NEGOTIABLE):** Run the finalize script to deterministically compute and update frontmatter status, counts, and completed date:
   ```bash
   bash "{plugin-root}/scripts/finalize-uat-status.sh" "{phase-dir}/{uat_path}"
   ```
-  If the script fails or reports unrecognized `**Result:**` values, STOP and surface the error. Do NOT patch the UAT frontmatter manually. The script reads all `**Result:**` lines, counts pass/skip/issue, and updates the YAML frontmatter (`status`, `completed`, `passed`, `skipped`, `issues`, `total_tests`). Its output (`status={status} passed={N} ...`) provides the values for the summary display below. Do NOT manually update frontmatter fields — the script is the source of truth.
+  If the script fails or reports unrecognized `**Result:**` values, STOP and surface the error. Do NOT patch the UAT frontmatter manually. The script reads all `**Result:**` lines, counts pass/skip/issue, and updates the YAML frontmatter (`status`, `completed`, `passed`, `skipped`, `issues`, `total_tests`). Its output (`status={status} passed={N} ...`) provides the values for the summary display below. Do NOT manually update frontmatter fields, the script is the source of truth.
 - **Accepted deviation registry sync:** After finalization, run:
   ```bash
   bash "{plugin-root}/scripts/track-uat-deviations.sh" record-from-uat "{phase-dir}" "{phase-dir}/{uat_path}"
@@ -677,7 +677,7 @@ Discovered issue D{NN} recorded (severity: {level}).
 
 ```text
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  Phase {NN}: {name} — UAT Complete
+  Phase {NN}: {name}, UAT Complete
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   Result:   {✓ PASS | ✗ ISSUES FOUND}
@@ -696,8 +696,8 @@ Discovered issue D{NN} recorded (severity: {level}).
 ```
 These are already recorded in the UAT.md and will flow into remediation alongside test failures. If no discovered issues: omit the section.
 
-**Remediation lifecycle advance (ONLY when `verify_scope=remediation` — skip entirely for first-time UAT):**
-First, verify that UAT remediation state actually exists before running any lifecycle commands. If no state file exists (neither new-format nor legacy location), this is a first-time UAT — do NOT call `needs-round` or any remediation state command:
+**Remediation lifecycle advance (ONLY when `verify_scope=remediation`, skip entirely for first-time UAT):**
+First, verify that UAT remediation state actually exists before running any lifecycle commands. If no state file exists (neither new-format nor legacy location), this is a first-time UAT, do NOT call `needs-round` or any remediation state command:
 ```bash
 _uat_state_file="{phase-dir}/remediation/uat/.uat-remediation-stage"
 _uat_legacy_remed_file="{phase-dir}/remediation/.uat-remediation-stage"
@@ -705,13 +705,13 @@ _uat_legacy_file="{phase-dir}/.uat-remediation-stage"
 _uat_state_exists=false
 { [ -f "$_uat_state_file" ] || [ -f "$_uat_legacy_remed_file" ] || [ -f "$_uat_legacy_file" ]; } && _uat_state_exists=true
 ```
-**If `_uat_state_exists=false`:** Skip this entire block — this is a first-time UAT, not a re-verification after remediation.
+**If `_uat_state_exists=false`:** Skip this entire block, this is a first-time UAT, not a re-verification after remediation.
 **If `_uat_state_exists=true` AND `verify_scope=remediation`:**
 - If `status=issues_found`: Handle based on calling context:
 
-  **Orchestrated mode** (called from vibe.md — you are executing inside vibe.md's Verify mode): Do NOT call `needs-round`. The caller will advance state after checking the round cap. Emit this signal for the calling orchestrator: `remediation_continue=true issues={N}` (where `{N}` is the issue count from finalization above).
+  **Orchestrated mode** (called from vibe.md, you are executing inside vibe.md's Verify mode): Do NOT call `needs-round`. The caller will advance state after checking the round cap. Emit this signal for the calling orchestrator: `remediation_continue=true issues={N}` (where `{N}` is the issue count from finalization above).
 
-  **Standalone mode** (running via `/vbw:verify` directly — not called from vibe.md): Check the shared UAT remediation round-cap contract before mutating state:
+  **Standalone mode** (running via `/vbw:verify` directly, not called from vibe.md): Check the shared UAT remediation round-cap contract before mutating state:
   ```bash
   _current_round=$(bash "{plugin-root}/scripts/uat-remediation-state.sh" current-round "{phase-dir}")
   _cap_decision=$(bash "{plugin-root}/scripts/resolve-uat-remediation-round-limit.sh" --next-round-decision .vbw-planning/config.json "${_current_round}" 2>/dev/null)
@@ -719,7 +719,7 @@ _uat_state_exists=false
   _max_rounds=$(printf '%s\n' "$_cap_decision" | awk -F= '/^max_rounds=/{print $2; exit}')
   _cap_reached=$(printf '%s\n' "$_cap_decision" | awk -F= '/^cap_reached=/{print $2; exit}')
   ```
-  - If `_cap_reached` is empty or `_cap_decision` is empty: the round-cap helper failed or returned malformed output. Display: "⚠ Could not determine UAT remediation round cap. Run `/vbw:verify` to retry." STOP. Do NOT call `needs-round` — no state mutation on error paths.
+  - If `_cap_reached` is empty or `_cap_decision` is empty: the round-cap helper failed or returned malformed output. Display: "⚠ Could not determine UAT remediation round cap. Run `/vbw:verify` to retry." STOP. Do NOT call `needs-round`, no state mutation on error paths.
   - If `_cap_reached=true`, display:
     ```text
     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -728,15 +728,15 @@ _uat_state_exists=false
       in config.json.
     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     ```
-    STOP — do not call `needs-round`.
+    STOP, do not call `needs-round`.
   - Otherwise call:
     ```bash
     bash "{plugin-root}/scripts/uat-remediation-state.sh" needs-round "{phase-dir}"
     ```
-    This increments the round counter, creates the next round directory, and resets stage to `research`. Do NOT emit the `remediation_continue` signal — standalone verify has no caller to receive it.
-- If `status=complete`: Remediation verified successfully. Mark remediation as verified (do NOT delete the state file — `current_uat()` needs it to locate the round-dir UAT):
+    This increments the round counter, creates the next round directory, and resets stage to `research`. Do NOT emit the `remediation_continue` signal, standalone verify has no caller to receive it.
+- If `status=complete`: Remediation verified successfully. Mark remediation as verified (do NOT delete the state file, `current_uat()` needs it to locate the round-dir UAT):
   ```bash
-  # Mark remediation as verified — preserves round/layout so current_uat() can still find the active round-scoped UAT
+  # Mark remediation as verified, preserves round/layout so current_uat() can still find the active round-scoped UAT
   _state_file="{phase-dir}/remediation/uat/.uat-remediation-stage"
   _legacy_remed_file="{phase-dir}/remediation/.uat-remediation-stage"
   _legacy_phase_file="{phase-dir}/.uat-remediation-stage"

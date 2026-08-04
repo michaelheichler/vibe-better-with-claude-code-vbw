@@ -1,4 +1,4 @@
-# Phase {phase_number}: {phase_name} — Context
+# Phase {phase_number}: {phase_name} : Context
 
 ## User Vision
 
@@ -29,5 +29,5 @@
   Assumptions mode: ### [Gray Area] with decision bullets PLUS:
     **Evidence:** [file paths + code patterns supporting the assumption]
     **Confidence:** High|Medium|Low
-    **Correction:** [user correction — omit if confirmed as-is]
+    **Correction:** [user correction : omit if confirmed as-is]
 -->

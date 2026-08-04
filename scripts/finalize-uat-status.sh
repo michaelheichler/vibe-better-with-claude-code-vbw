@@ -1,23 +1,4 @@
 #!/usr/bin/env bash
-# finalize-uat-status.sh — Deterministically update UAT file frontmatter status and counts.
-# Usage: finalize-uat-status.sh <uat-file-path>
-#
-# Reads all **Result:** lines, counts pass/skip/issue, and updates the YAML
-# frontmatter fields: status, completed, passed, skipped, issues, total_tests.
-#
-# Result classification (case-insensitive):
-#   pass/passed             → passed
-#   skip/skipped            → skipped
-#   issue/fail/failed/partial → issue
-#   empty                   → incomplete (keeps status=in_progress)
-#   missing Result line     → malformed UAT block (fail closed)
-#
-# Status determination:
-#   Any result is issue/fail/partial → status=issues_found
-#   All results are pass/skip       → status=complete
-#   Any result is empty              → status=in_progress
-#
-# Output: status={status} passed={N} skipped={N} issues={N} total={N}
 
 set -euo pipefail
 
@@ -29,9 +10,6 @@ if [ ! -f "$UAT_FILE" ]; then
   exit 1
 fi
 
-# The rewrite below only operates inside an existing YAML frontmatter block.
-# Fail closed before parsing/reporting status so callers are not told a
-# frontmatter-less UAT was finalized when no file mutation can occur.
 if ! awk '
   NR == 1 {
     if ($0 !~ /^---[[:space:]]*$/) exit 1
@@ -45,9 +23,6 @@ if ! awk '
   exit 1
 fi
 
-# Parse all **Result:** values from test entries.
-# Returns one token per line: pass, skip, issue, empty, __missing__, or
-# __unknown__:<raw>.
 RESULTS=$(awk '
   /^### (P[0-9]+(-T[0-9]+)?|PR[0-9]+-T[0-9]+|D[0-9]+)(:|[[:space:]])/ {
     if (in_test && saw_result == 0) print "__missing__"
@@ -60,10 +35,8 @@ RESULTS=$(awk '
     val = $0
     sub(/^- \*\*Result:\*\*[[:space:]]*/, "", val)
     gsub(/[[:space:]]+$/, "", val)
-    # Strip common decorators (checkmarks, emoji, bullets)
     gsub(/^[^a-zA-Z{]+/, "", val)
     gsub(/[^a-zA-Z}]+$/, "", val)
-    # Normalize to lowercase using portable character mapping (locale-safe)
     upper = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
     lower = "abcdefghijklmnopqrstuvwxyz"
     lval = ""
@@ -97,7 +70,6 @@ RESULTS=$(awk '
   }
 ' "$UAT_FILE")
 
-# Count results
 PASSED=0
 SKIPPED=0
 ISSUES=0
@@ -134,8 +106,6 @@ if [ "$UNKNOWN" -gt 0 ] || [ "$MISSING" -gt 0 ]; then
   exit 1
 fi
 
-# Determine status
-# TOTAL=0 means no test entries found — file is incomplete/malformed
 if [ "$TOTAL" -eq 0 ] || [ "$EMPTY" -gt 0 ]; then
   STATUS="in_progress"
 elif [ "$ISSUES" -gt 0 ]; then
@@ -144,15 +114,12 @@ else
   STATUS="complete"
 fi
 
-# Only set completed date for terminal statuses
 if [ "$STATUS" = "in_progress" ]; then
   TODAY=""
 else
   TODAY=$(date +%Y-%m-%d)
 fi
 
-# Update frontmatter in-place using awk
-# Preserves all other frontmatter fields, only updates the target fields
 awk -v status="$STATUS" -v completed="$TODAY" -v passed="$PASSED" \
     -v skipped="$SKIPPED" -v issues="$ISSUES" -v total="$TOTAL" '
   BEGIN {
@@ -162,9 +129,6 @@ awk -v status="$STATUS" -v completed="$TODAY" -v passed="$PASSED" \
   }
   NR == 1 && /^---[[:space:]]*$/ { in_fm = 1; print; next }
   in_fm && /^---[[:space:]]*$/ {
-    # Inject canonical UAT status/count fields if missing. A successful
-    # finalizer rewrite must leave downstream readers with a complete schema,
-    # even for brownfield UAT files that omitted count keys.
     if (!saw_status) {
       printf "status: %s\n", status
     }

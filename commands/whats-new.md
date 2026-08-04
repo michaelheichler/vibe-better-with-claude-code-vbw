@@ -32,4 +32,4 @@ Store the plugin root path output above as `{plugin-root}` for use in file looku
 
 ## Output Format
 
-Follow @${CLAUDE_PLUGIN_ROOT}/references/vbw-brand-essentials.md — double-line box, ✓ up-to-date, Next Up, no ANSI.
+Follow @${CLAUDE_PLUGIN_ROOT}/references/vbw-brand-essentials.md , double-line box, ✓ up-to-date, Next Up, no ANSI.

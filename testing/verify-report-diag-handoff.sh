@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# verify-report-diag-handoff.sh — Verify the temp-file diagnostic handoff
+# verify-report-diag-handoff.sh, Verify the temp-file diagnostic handoff
 # pattern in commands/report.md.
 #
 # Guards against structural drift in the DIAG_FILE temp-file flow introduced
@@ -46,7 +46,7 @@ echo "--- Step 1: diagnostic persistence ---"
 if grep -qF 'tee "$DIAG_FILE"' <<< "$step1_block"; then
   pass "step 1: contains tee \"\$DIAG_FILE\" for diagnostic persistence"
 else
-  fail "step 1: missing tee \"\$DIAG_FILE\" in step 1 code block — diagnostics must be persisted to temp file"
+  fail "step 1: missing tee \"\$DIAG_FILE\" in step 1 code block, diagnostics must be persisted to temp file"
 fi
 
 # --- Check 2: Method 1 appends diagnostic content from temp file ---
@@ -120,7 +120,7 @@ method2_section=$(printf '%s\n' "$report_body" | awk '
 if grep -qF 'cat "$DIAG_FILE"' <<< "$method2_section"; then
   pass "method 2: references cat \"\$DIAG_FILE\" for reading diagnostics"
 else
-  fail "method 2: missing cat \"\$DIAG_FILE\" — must read diagnostics from temp file"
+  fail "method 2: missing cat \"\$DIAG_FILE\", must read diagnostics from temp file"
 fi
 
 # Extract Method 4 section (from "Method 4" to end of body)
@@ -132,7 +132,7 @@ method4_section=$(printf '%s\n' "$report_body" | awk '
 if grep -qF 'cat "$DIAG_FILE"' <<< "$method4_section"; then
   pass "method 4: references cat \"\$DIAG_FILE\" for reading diagnostics"
 else
-  fail "method 4: missing cat \"\$DIAG_FILE\" — must read diagnostics from temp file"
+  fail "method 4: missing cat \"\$DIAG_FILE\", must read diagnostics from temp file"
 fi
 
 # --- Check 5: DIAG_FILE path uses CLAUDE_SESSION_ID:-default ---

@@ -189,7 +189,7 @@ Runtime state lives in `.vbw-planning/` (created per-project by `/vbw:init`): `S
 ### Model routing
 `scripts/resolve-agent-model.sh` resolves each agent's model with precedence: `model_overrides.<agent>` > `model_matrix.<agent>.<effort>` > `model_profile` preset from `config/model-profiles.json`.
 - Override and matrix values may be a single model id or a preference array (first entry present in the detected catalog wins, or the first entry is trusted when no catalog exists).
-- `scripts/detect-models.sh` treats the Claude Code binary's embedded model table as the sole primary source (credential-free, works offline), falling back to `${ANTHROPIC_BASE_URL}/v1/models` only as a last resort when the binary yields nothing and `ANTHROPIC_API_KEY`/`ANTHROPIC_AUTH_TOKEN` exists. Cache is 1h, keyed on binary path/mtime/size, so a re-patched binary is picked up immediately.
+- `scripts/detect-models.sh` treats the Claude Code binary's embedded model table as the sole source (credential-free, works offline). An empty catalog is valid, and callers fall back to their configured model preference. Cache is 1h, keyed on binary path/mtime/size, so a re-patched binary is picked up immediately.
 - A `--labeled` mode emits `id` TAB `description` for proposal flows.
 - `/vbw:init` Step 1.8 writes the user-confirmed `model_matrix` + `model_catalog` into `.vbw-planning/config.json`, applying the role guidance in `references/model-profiles.md` (see "Choosing models per role").
 - The resolved model string is passed as an explicit `model:` parameter to Task tool invocations (session `/model` does not propagate to subagents).
@@ -257,16 +257,17 @@ Bootstrap & release:
 
 ## Git Workflow
 
-Direct push access to `swt-labs/vibe-better-with-claude-code-vbw`. Single `origin` remote.
+All pushes and PRs go to the `michaelheichler/vibe-better-with-claude-code-vbw` fork (remote `mine`). NEVER push to the `swt-labs` `origin` remote. It is a fetch-only upstream reference.
 
-- **`origin`**: fetch and push target for all branches.
-- **`dev` branch**: permanent local integration branch for combined testing before PRs. Tracks `origin/dev`. Never delete this branch.
+- **`mine`**: push and PR target for all branches (`michaelheichler` fork).
+- **`origin`**: `swt-labs` upstream, fetch only. Never push here.
+- **`dev` branch**: permanent local integration branch for combined testing before PRs. Never delete this branch.
 
 ### Branch Cleanup
 
 - **`fetch.prune`** is enabled. Stale remote tracking refs are removed on every fetch.
 - **`git merged`** and **`git cleanup`** are personal git aliases some contributors configure locally. Neither ships as a repo default or is provisioned by any script in `scripts/`, so treat any reference to them below as describing the intended behavior of an alias you set up yourself, not an out-of-the-box command.
-- **`git merged`** (as commonly configured): finds local branches fully merged into `origin/main` and removes them locally. Also prunes worktrees in `../<repo-name>-worktrees/` whose branches have been merged or whose PRs have been merged/closed. Safe to run anytime, skips `main` and `dev`.
+- **`git merged`** (as commonly configured): finds local branches fully merged into `mine/main` and removes them locally. Also prunes worktrees in `../<repo-name>-worktrees/` whose branches have been merged or whose PRs have been merged/closed. Safe to run anytime, skips `main` and `dev`.
 - **`git cleanup`** (as commonly configured): fetches, prunes, and deletes local branches whose remote tracking branch is gone.
 - After a PR is merged, use whatever branch/worktree cleanup approach you have configured (or `git worktree remove` / `git worktree prune` and `git branch -d` manually) to clean up local branches and their worktrees.
 
@@ -283,7 +284,7 @@ The issue-fix workflow uses git worktrees for parallel-safe issue work.
 
 - `main` requires PRs to merge.
 - Do not commit directly to `main`.
-- After creating a feature branch from `origin/main`, set its upstream to `origin/<branch>` on first push.
+- After creating a feature branch from `main`, set its upstream to `mine/<branch>` on first push.
 
 ## Version Management
 
@@ -307,7 +308,7 @@ This repo can be run locally via `claude-code-router` (CCR) with a toggle betwee
 ## Contributing
 
 See `CONTRIBUTING.md` for full guidelines. Key points:
-- Push branches to `origin`. PRs target `main`.
+- Push branches to `mine` (the `michaelheichler` fork). PRs target `main` on the fork. Never push to `origin` (`swt-labs`).
 - Load locally with `claude --plugin-dir .` or `claude --plugin-dir /absolute/path/to/vibe-better-with-claude-code-vbw`.
 - Run `bash scripts/install-hooks.sh` for the pre-push hook.
 - Good candidates: bug fixes in hooks/scripts, new commands fitting the lifecycle model, stack-to-skill mappings, template improvements.
@@ -330,11 +331,11 @@ When asked to fix a bug or implement an issue-driven change:
 - **Feature requests** (`.github/ISSUE_TEMPLATE/feature_request.md`): must describe the problem, proposed solution, and alternatives considered.
 
 <!-- gitnexus:start -->
-# GitNexus: Code Intelligence
+# GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **vibe-better-with-claude-code-vbw** (2180 symbols, 2171 relationships, 0 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **vibe-better-with-claude-code-vbw** (2196 symbols, 2187 relationships, 0 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
-> Index stale? Run `node .gitnexus/run.cjs analyze` from the project root, it auto-selects an available runner. No `.gitnexus/run.cjs` yet? `npx gitnexus analyze` (npm 11 crash, run `npm i -g gitnexus`, see #1939).
+> Index stale? Run `node .gitnexus/run.cjs analyze` from the project root — it auto-selects an available runner. No `.gitnexus/run.cjs` yet? `npx gitnexus analyze` (npm 11 crash → `npm i -g gitnexus`; #1939).
 
 ## Always Do
 
@@ -342,14 +343,14 @@ This project is indexed by GitNexus as **vibe-better-with-claude-code-vbw** (218
 - **MUST run `detect_changes()` before committing** to verify your changes only affect expected symbols and execution flows. For regression review, compare against the default branch: `detect_changes({scope: "compare", base_ref: "main"})`.
 - **MUST warn the user** if impact analysis returns HIGH or CRITICAL risk before proceeding with edits.
 - When exploring unfamiliar code, use `query({search_query: "concept"})` to find execution flows instead of grepping. It returns process-grouped results ranked by relevance.
-- When you need full context on a specific symbol, callers, callees, which execution flows it participates in, use `context({name: "symbolName"})`.
-- For security review, `explain({target: "fileOrSymbol"})` lists taint findings (source-to-sink flows, needs `analyze --pdg`).
+- When you need full context on a specific symbol — callers, callees, which execution flows it participates in — use `context({name: "symbolName"})`.
+- For security review, `explain({target: "fileOrSymbol"})` lists taint findings (source→sink flows; needs `analyze --pdg`).
 
 ## Never Do
 
 - NEVER edit a function, class, or method without first running `impact` on it.
 - NEVER ignore HIGH or CRITICAL risk warnings from impact analysis.
-- NEVER rename symbols with find-and-replace, use `rename` which understands the call graph.
+- NEVER rename symbols with find-and-replace — use `rename` which understands the call graph.
 - NEVER commit changes without running `detect_changes()` to check affected scope.
 
 ## Resources

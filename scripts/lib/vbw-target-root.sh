@@ -1,9 +1,5 @@
 #!/usr/bin/env bash
 
-# vbw-target-root.sh — Shared target root resolution for context scripts.
-#
-# These helpers let scripts that accept explicit planning/phase/plan paths resolve
-# the intended workspace root and git root without depending on the caller's cwd.
 
 vbw_candidate_dir_for_path() {
   local candidate="$1"
@@ -144,7 +140,6 @@ vbw_resolve_target_git_root() {
   return 1
 }
 
-## vbw_is_safe_relative_path — reject absolute paths and .. traversal
 vbw_is_safe_relative_path() {
   local path="${1:-}"
   case "$path" in
@@ -161,7 +156,6 @@ vbw_resolve_repo_path() {
     return 0
   fi
 
-  # Reject absolute paths and directory traversal
   if ! vbw_is_safe_relative_path "$path"; then
     return 1
   fi

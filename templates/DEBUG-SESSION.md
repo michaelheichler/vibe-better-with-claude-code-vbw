@@ -31,7 +31,7 @@ uat_last_result: pending
 
 ### Detail Context
 
-{Persisted todo detail context when available. Omit invented content; use `No persisted detail context.` when no detail was loaded.}
+{Persisted todo detail context when available. Omit invented content, use `No persisted detail context.` when no detail was loaded.}
 
 ## Investigation
 

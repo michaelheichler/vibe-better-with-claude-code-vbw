@@ -1,11 +1,11 @@
-# {project_name} — Milestone Context
+# {project_name} : Milestone Context
 
 Gathered: {date}
 Calibration: {builder | architect}
 
 ## Scope Boundary
 
-{What this milestone delivers — the user's scope description from Scope mode}
+{What this milestone delivers : the user's scope description from Scope mode}
 
 ## Decomposition Decisions
 
@@ -24,7 +24,7 @@ Calibration: {builder | architect}
 
 ## Key Decisions
 
-{Project-level decisions surfaced during scoping — tech choices, architecture patterns, constraints that transcend this milestone. These are also written to STATE.md Key Decisions table.}
+{Project-level decisions surfaced during scoping : tech choices, architecture patterns, constraints that transcend this milestone. These are also written to STATE.md Key Decisions table.}
 
 ## Deferred Ideas
 

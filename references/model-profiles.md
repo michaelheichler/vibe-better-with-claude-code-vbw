@@ -262,7 +262,7 @@ Reasoning (`scripts/resolve-agent-reasoning.sh`):
 3. `model_profile` preset from `reasoning-profiles.json`
 4. Reconciliation against the resolved model's accepted set
 
-`model_catalog_extra` (array, default `[]`) lists trusted model ids the user knows are good even though detection did not advertise them, such as an unlisted model behind a gateway. Preference-array resolution treats these as available alongside the detected catalog. They are consulted only when a detected catalog exists. An empty or unreadable catalog still trusts the first array entry as written.
+`model_catalog_extra` (array, default `[]`) lists trusted model ids the user knows are good even though detection did not advertise them, such as an unlisted model behind a gateway. Preference-array resolution treats these as available alongside the detected catalog. They are consulted only when a detected catalog exists. An empty or unreadable catalog still trusts the first array entry as written. Custom aliases in `config/model-pricing.json` are resolved to their canonical model ids before catalog matching.
 
 ## Implementation notes
 

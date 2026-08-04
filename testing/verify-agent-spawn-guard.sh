@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# verify-agent-spawn-guard.sh — Behavior checks for execute-time spawn semantics
+# verify-agent-spawn-guard.sh, Behavior checks for execute-time spawn semantics
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 GUARD="$ROOT/scripts/agent-spawn-guard.sh"
@@ -101,6 +101,7 @@ run_guard() {
     --arg spawn_cwd "$spawn_cwd" \
     --arg spawn_cwd_field "$spawn_cwd_field" \
     '{
+      session_id: "session-A",
       tool_name: $tool_name,
       tool_input: {
         team_name: $team_name,
@@ -113,8 +114,11 @@ run_guard() {
 
   if [ -n "$active_count" ]; then
     printf '%s\n' "$active_count" > "$project_dir/.vbw-planning/.active-agent-count"
+    mkdir -p "$project_dir/.vbw-planning/.active-agents/session-A"
+    printf '%s\n' "$active_count" > "$project_dir/.vbw-planning/.active-agents/session-A/active-agent-count"
   else
     rm -f "$project_dir/.vbw-planning/.active-agent-count" 2>/dev/null || true
+    rm -f "$project_dir/.vbw-planning/.active-agents/session-A/active-agent-count" 2>/dev/null || true
   fi
 
   (cd "$working_dir" && unset CLAUDE_SESSION_ID; VBW_PLANNING_DIR="$project_dir/.vbw-planning" bash "$GUARD" <<< "$input") 2>&1
@@ -143,6 +147,7 @@ run_guard_without_exported_root() {
     --arg spawn_cwd "$spawn_cwd" \
     --arg spawn_cwd_field "$spawn_cwd_field" \
     '{
+      session_id: "session-A",
       tool_name: $tool_name,
       tool_input: {
         team_name: $team_name,
@@ -155,8 +160,11 @@ run_guard_without_exported_root() {
 
   if [ -n "$active_count" ]; then
     printf '%s\n' "$active_count" > "$project_dir/.vbw-planning/.active-agent-count"
+    mkdir -p "$project_dir/.vbw-planning/.active-agents/session-A"
+    printf '%s\n' "$active_count" > "$project_dir/.vbw-planning/.active-agents/session-A/active-agent-count"
   else
     rm -f "$project_dir/.vbw-planning/.active-agent-count" 2>/dev/null || true
+    rm -f "$project_dir/.vbw-planning/.active-agents/session-A/active-agent-count" 2>/dev/null || true
   fi
 
   (cd "$working_dir" && unset VBW_CONFIG_ROOT VBW_PLANNING_DIR CLAUDE_SESSION_ID; bash "$GUARD" <<< "$input") 2>&1
@@ -705,16 +713,16 @@ test_non_team_mode_blocks_overlapping_taskcreate() {
   else
     fail "Execute subagent mode should block overlapping TaskCreate (rc=$rc, output=$output)"
   fi
-  cleanup
-}
-test_non_team_mode_blocks_overlapping_taskcreate
 
+}
+
+test_non_team_mode_blocks_overlapping_taskcreate
 test_non_team_mode_uses_current_session_active_count() {
   setup_project
   write_execution_state "corr-123"
   write_marker execute subagent "" "corr-123"
 
-  printf '%s\n' '{"session_id":"session-A","agent_type":"vbw-dev","pid":"30303"}' | \
+  printf '{"session_id":"session-A","agent_type":"vbw-dev","pid":"%s"}\n' "$$" | \
     VBW_PLANNING_DIR="$PROJECT/.vbw-planning" bash "$ROOT/scripts/agent-start.sh"
 
   local output rc

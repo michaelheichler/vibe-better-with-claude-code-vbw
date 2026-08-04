@@ -1,8 +1,4 @@
 #!/bin/bash
-# hook-output-guard.sh — shared allowlist for hookSpecificOutput stdout.
-#
-# Hook lifecycle events without a verified JSON stdout contract should communicate
-# through logs or state files instead of hookSpecificOutput.
 
 should_emit_hook_output() {
   local event_name="${1:-}"

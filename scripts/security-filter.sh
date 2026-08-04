@@ -1,10 +1,6 @@
 #!/bin/bash
 set -u
-# PreToolUse hook: Block access to sensitive files
-# Exit 2 = block tool call, Exit 0 = allow
-# Fail-CLOSED: exit 2 on any parse error (never allow unvalidated input through)
 
-# Verify jq is available
 if ! command -v jq >/dev/null 2>&1; then
   echo "Blocked: jq not available, cannot validate file path" >&2
   exit 2
@@ -15,7 +11,6 @@ INPUT=$(cat 2>/dev/null) || exit 2
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 if [ -f "$SCRIPT_DIR/lib/active-agent-state.sh" ]; then
-  # shellcheck source=lib/active-agent-state.sh
   . "$SCRIPT_DIR/lib/active-agent-state.sh"
 fi
 
@@ -25,19 +20,11 @@ if [ -z "$FILE_PATH" ]; then
   exit 2
 fi
 
-# Sensitive file patterns
-# Directory patterns use (^|/) anchoring so they match only as path components,
-# not as substrings of unrelated directory names (e.g. "corvex-build/" != "build/").
 if echo "$FILE_PATH" | grep -qE '\.env$|\.env\.|\.pem$|\.key$|\.cert$|\.p12$|\.pfx$|credentials\.json$|secrets\.json$|service-account.*\.json$|(^|/)node_modules/|(^|/)\.git/|(^|/)dist/|(^|/)build/'; then
   echo "Blocked: sensitive file ($FILE_PATH)" >&2
   exit 2
 fi
 
-# Block GSD's .planning/ directory when VBW is actively running.
-# Only enforce when VBW markers are present (session or agent), so GSD can
-# still write to its own directory when VBW is not the active caller.
-# Stale marker protection: ignore markers older than 24h to avoid false positives
-# from crashed sessions that didn't clean up.
 is_marker_fresh() {
   local marker="$1"
   [ ! -f "$marker" ] && return 1
@@ -73,19 +60,11 @@ if echo "$FILE_PATH" | grep -qF '.planning/' && ! echo "$FILE_PATH" | grep -qF '
   elif ! command -v vbw_active_agent_current_marker_fresh >/dev/null 2>&1 && is_marker_fresh "$GSD_ROOT/.vbw-planning/.active-agent"; then
     _SF_ACTIVE_AGENT_FRESH=true
   fi
-  # .vbw-session is intentionally project-global: it protects GSD/VBW
-  # co-installation follow-up turns, not active-agent role identity.
   if [ "$_SF_ACTIVE_AGENT_FRESH" = true ] || is_marker_fresh "$GSD_ROOT/.vbw-planning/.vbw-session"; then
     echo "Blocked: .planning/ is managed by GSD, not VBW ($FILE_PATH)" >&2
     exit 2
   fi
 fi
 
-# .vbw-planning/ is VBW's own directory — never block VBW from its own state.
-# Previous marker-based isolation (.gsd-isolation + .active-agent + .vbw-session)
-# caused false blocks: orchestrator after team deletion, agents before markers set,
-# Read calls before prompt-preflight runs. GSD isolation is enforced by CLAUDE.md
-# instructions + the .planning/ block above (which prevents VBW from touching GSD).
-# Removed: self-blocking of .vbw-planning/ (v1.21.13).
 
 exit 0

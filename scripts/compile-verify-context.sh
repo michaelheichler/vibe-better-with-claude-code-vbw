@@ -1,33 +1,4 @@
 #!/usr/bin/env bash
-# compile-verify-context.sh — Pre-compute PLAN/SUMMARY data for verify.md.
-# Usage: compile-verify-context.sh [--remediation-only] [--remediation-kind {qa|uat}] <phase-dir>
-#
-# Outputs compact structured blocks per plan so the LLM doesn't need to
-# read individual PLAN.md and SUMMARY.md files during verification.
-#
-# Options:
-#   --remediation-only  Only emit plans from the latest completed remediation
-#                       round (R*-PLAN.md with matching R*-SUMMARY.md).
-#                       Falls back to full scope if no completed round found.
-#   --remediation-kind  Filter remediation scan to only the specified kind
-#                       (qa or uat). Prevents wrong-kind matches when both
-#                       remediation dirs exist. Only meaningful with
-#                       --remediation-only.
-#
-# For each plan, emits:
-#   verify_scope=full|remediation [round=RR]
-#   === PLAN <plan-id>: <title> ===
-#   must_haves: <item1>; <item2>; ...
-#   what_was_built: <first 5 lines of "What Was Built" section>
-#   files_modified: <file1>, <file2>, ...
-#   status: <complete|partial|failed|no_summary>
-#
-# Remediation awareness: when .uat-remediation-stage indicates a round-dir
-# layout and stage=done/verify, scopes to the current round's R{RR}-PLAN.md
-# and R{RR}-SUMMARY.md instead of phase-root plans. Also emits prior UAT
-# issues so the verifier knows what was supposed to be fixed.
-#
-# If no PLAN files exist, outputs: verify_context=empty
 
 set -euo pipefail
 
@@ -125,10 +96,8 @@ frontmatter_key_present() {
 
 _CVC_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 if [ -f "$_CVC_SCRIPT_DIR/summary-utils.sh" ]; then
-  # shellcheck source=summary-utils.sh
   . "$_CVC_SCRIPT_DIR/summary-utils.sh"
 else
-  # Fallback: treat all summaries as terminal when helpers unavailable
   is_summary_terminal() { [ -f "$1" ]; }
 fi
 
@@ -174,9 +143,7 @@ if [ ! -d "$PHASE_DIR" ]; then
   exit 0
 fi
 
-# Find plan files based on scope mode
 if [ "$REMEDIATION_ONLY" = true ]; then
-  # Find the latest completed round (has both R{RR}-PLAN.md and R{RR}-SUMMARY.md)
   LATEST_ROUND=""
   REMED_DIR=""
   REMED_KIND=""
@@ -219,9 +186,6 @@ if [ "$REMEDIATION_ONLY" = true ]; then
         ;;
     esac
   fi
-  # Historical fallback order for explicit --remediation-only callers when no
-  # active state picked a scope: UAT rounds first, then QA rounds.
-  # Respect --remediation-kind filter when set.
   if [ "$_active_remediation" = false ]; then
     if [ "$REMEDIATION_KIND" = "uat" ]; then
       _cvc_candidates+=("$PHASE_DIR/remediation/uat")
@@ -245,15 +209,10 @@ if [ "$REMEDIATION_ONLY" = true ]; then
         REMED_KIND="qa"
         break
       fi
-      # Active QA remediation should not be hijacked by a stale higher round.
       REMEDIATION_ONLY=false
       break
     fi
     if [ "$_candidate" = "$PHASE_DIR/remediation/uat" ] && [ "$_cvc_preferred_kind" = "uat" ] && [ -n "$_cvc_preferred_round" ]; then
-      # Active UAT re-verification must stay on the current remediation round,
-      # even if an earlier round is the latest one with a terminal summary.
-      # Falling back to a stale completed round risks overwriting prior-round
-      # UAT evidence and mis-scoping the re-verification session.
       LATEST_ROUND="$_cvc_preferred_round"
       REMED_DIR="$_candidate"
       REMED_KIND="uat"
@@ -285,9 +244,6 @@ if [ "$REMEDIATION_ONLY" = true ]; then
     fi
   done
 
-  # Legacy fallback: check old remediation/round-* layout if no new-style round dir found.
-  # Legacy round dirs represent historical UAT remediation only; an explicit
-  # QA filter must not cross over into that legacy UAT chain.
   if [ -z "$LATEST_ROUND" ] && [ -d "$PHASE_DIR/remediation" ] && [ "$REMEDIATION_KIND" != "qa" ]; then
     REMED_DIR="$PHASE_DIR/remediation"
     REMED_KIND="legacy"
@@ -311,8 +267,6 @@ if [ "$REMEDIATION_ONLY" = true ]; then
     rr=$(printf '%02d' "$((10#$LATEST_ROUND))")
     ALL_PLAN_FILES=$(find "$REMED_DIR/round-$rr" -maxdepth 1 \( -name "R${rr}-PLAN.md" -o -name "R${rr}-*-PLAN.md" \) 2>/dev/null | sort)
     SCOPE_HEADER="verify_scope=remediation round=$rr"
-    # UAT remediation rounds write round-scoped UAT artifacts; QA remediation
-    # rounds still hand off to the canonical phase-level UAT path.
     case "$REMED_KIND" in
       qa)
         UAT_PATH=$(bash "${_CVC_SCRIPT_DIR}/resolve-artifact-path.sh" uat "$PHASE_DIR")
@@ -322,21 +276,17 @@ if [ "$REMEDIATION_ONLY" = true ]; then
         ;;
     esac
   else
-    # Fallback: no completed round found — use full scope
     REMEDIATION_ONLY=false
   fi
 fi
 
 if [ "$REMEDIATION_ONLY" = false ]; then
-  # Full scope: all phase-root plans + all round-dir plans
   PLAN_FILES=$(find "$PHASE_DIR" -maxdepth 1 ! -name '.*' \( -name '[0-9]*-PLAN.md' -o -name 'PLAN.md' \) 2>/dev/null | sort)
   ROUND_PLAN_FILES=$(find "$PHASE_DIR" -path '*/remediation/uat/round-*/R*-PLAN.md' 2>/dev/null | sort)
-  # Legacy fallback: check old remediation/round-* layout for brownfield compat
   if [ -z "$ROUND_PLAN_FILES" ]; then
     ROUND_PLAN_FILES=$(find "$PHASE_DIR" -path '*/remediation/round-*/R*-PLAN.md' 2>/dev/null | sort)
   fi
 
-  # QA remediation plans live in remediation/qa/round-*/R*-PLAN.md
   QA_ROUND_PLAN_FILES=$(find "$PHASE_DIR" -path '*/remediation/qa/round-*/R*-PLAN.md' 2>/dev/null | sort)
 
   ALL_PLAN_FILES="$PLAN_FILES"
@@ -350,7 +300,6 @@ if [ "$REMEDIATION_ONLY" = false ]; then
     fi
   done
   SCOPE_HEADER="verify_scope=full"
-  # Resolve UAT path via canonical resolver
   UAT_PATH=$(bash "${_CVC_SCRIPT_DIR}/resolve-artifact-path.sh" uat "$PHASE_DIR")
 fi
 
@@ -359,7 +308,6 @@ if [ -z "$ALL_PLAN_FILES" ]; then
   exit 0
 fi
 
-# Emit scope header and UAT path after confirming plans exist
 echo "$SCOPE_HEADER"
 echo "uat_path=$UAT_PATH"
 
@@ -375,8 +323,6 @@ while IFS= read -r plan_file; do
   [ -f "$plan_file" ] || continue
   PLAN_COUNT=$((PLAN_COUNT + 1))
 
-  # Extract plan number and title from frontmatter
-  # Try plan: first, fall back to round: (prefixed with R) for remediation plans
   PLAN_ID=$(awk '/^---$/{n++; next} n==1 && /^plan:/{v=$2; gsub(/^["'"'"']|["'"'"']$/, "", v); print v; exit}' "$plan_file" 2>/dev/null) || PLAN_ID=""
   if [ -z "$PLAN_ID" ]; then
     case "$(basename "$plan_file")" in
@@ -388,7 +334,6 @@ while IFS= read -r plan_file; do
   fi
   TITLE=$(awk '/^---$/{n++; next} n==1 && /^title:/{sub(/^title: */, ""); gsub(/^["'"'"']|["'"'"']$/, ""); print; exit}' "$plan_file" 2>/dev/null) || TITLE=""
 
-  # Extract must_haves from frontmatter (reuse pattern from generate-contract.sh)
   MUST_HAVES=$(awk '
     BEGIN { in_front=0; in_mh=0; in_sub=0 }
     /^---$/ { if (in_front==0) { in_front=1; next } else { exit } }
@@ -400,9 +345,7 @@ while IFS= read -r plan_file; do
       line = $0
       sub(/^[[:space:]]+- /, "", line)
       gsub(/^"/, "", line); gsub(/"$/, "", line)
-      # For complex items (path:, provides:, from:), extract a one-liner
       if (line ~ /^\{/) {
-        # YAML flow mapping — emit as-is
       }
       items = items (items ? "; " : "") line
       next
@@ -418,10 +361,6 @@ while IFS= read -r plan_file; do
     END { print items }
   ' "$plan_file" 2>/dev/null) || MUST_HAVES=""
 
-  # Find corresponding SUMMARY file
-  # Phase-root plans: {NN}-{MM}-PLAN.md → {NN}-{MM}-SUMMARY.md (same dir)
-  # Legacy phase-root plan: PLAN.md → SUMMARY.md (same dir)
-  # Round-dir plans: R{RR}-PLAN.md → R{RR}-SUMMARY.md (same dir)
   PLAN_BASE=$(basename "$plan_file" | sed 's/-PLAN\.md$//')
   PLAN_DIR=$(dirname "$plan_file")
   if [ "$(basename "$plan_file")" = "PLAN.md" ] && [ -f "$PLAN_DIR/SUMMARY.md" ]; then
@@ -442,7 +381,6 @@ while IFS= read -r plan_file; do
   SUMMARY_DEVIATION_RECORDS=""
 
   if [ -n "$SUMMARY_FILE" ] && [ -f "$SUMMARY_FILE" ]; then
-    # Extract status from frontmatter
     STATUS=$(awk '
       BEGIN { in_fm=0 }
       NR==1 && /^---[[:space:]]*$/ { in_fm=1; next }
@@ -450,8 +388,6 @@ while IFS= read -r plan_file; do
       in_fm && /^status:/ { sub(/^status:[[:space:]]*/, ""); print; exit }
     ' "$SUMMARY_FILE" 2>/dev/null) || STATUS="unknown"
 
-    # Extract frontmatter files_modified array when present. This is the canonical
-    # source for remediation summaries, which aggregate changed files in YAML.
     FILES_MODIFIED=$(extract_frontmatter_array_items "$SUMMARY_FILE" files_modified | awk '
       {
         files = files (files ? ", " : "") $0
@@ -459,7 +395,6 @@ while IFS= read -r plan_file; do
       END { print files }
     ' 2>/dev/null) || FILES_MODIFIED=""
 
-    # Extract "What Was Built" (first 5 lines after the heading)
     WHAT_BUILT=$(awk '
       /^## What Was Built/ { found=1; count=0; next }
       found && /^## / { exit }
@@ -467,8 +402,6 @@ while IFS= read -r plan_file; do
       found { count++; if (count <= 5) print; if (count >= 5) exit }
     ' "$SUMMARY_FILE" 2>/dev/null) || WHAT_BUILT=""
 
-    # Canonical remediation summaries keep build notes under per-task
-    # sections (`### What Was Built`) rather than a top-level heading.
     if [ -z "$WHAT_BUILT" ]; then
       WHAT_BUILT=$(awk '
         /^### What Was Built/ { found=1; next }
@@ -482,7 +415,6 @@ while IFS= read -r plan_file; do
       ' "$SUMMARY_FILE" 2>/dev/null) || WHAT_BUILT=""
     fi
 
-    # Fallback for phase-root summaries that still list files in a body section.
     if [ -z "$FILES_MODIFIED" ]; then
       FILES_MODIFIED=$(awk '
         /^## Files Modified/ { found=1; next }
@@ -491,11 +423,9 @@ while IFS= read -r plan_file; do
         found && /^- / {
           line = $0
           sub(/^- /, "", line)
-          # Extract just the file path (before " -- ")
           if (index(line, " -- ") > 0) {
             line = substr(line, 1, index(line, " -- ") - 1)
           }
-          # Strip backticks
           gsub(/`/, "", line)
           files = files (files ? ", " : "") line
         }
@@ -503,9 +433,6 @@ while IFS= read -r plan_file; do
       ' "$SUMMARY_FILE" 2>/dev/null) || FILES_MODIFIED=""
     fi
 
-    # Extract deviations from both YAML frontmatter and body sections.
-    # Frontmatter no longer masks body deviations; UAT uses the explicit
-    # SUMMARY_DEVIATION records below to prefill review checkpoints.
     if type extract_summary_deviations >/dev/null 2>&1; then
       SUMMARY_DEVIATIONS=$(extract_summary_deviations "$SUMMARY_FILE" 2>/dev/null || true)
       DEVIATIONS=$(printf '%s\n' "$SUMMARY_DEVIATIONS" | awk 'NF { items = items (items ? "; " : "") $0 } END { print items }')
@@ -561,7 +488,6 @@ while IFS= read -r plan_file; do
       done <<< "$SUMMARY_DEVIATIONS"
     fi
 
-    # Extract pre-existing issues from canonical SUMMARY.md frontmatter first.
     PRE_EXISTING=$(extract_frontmatter_array_items "$SUMMARY_FILE" pre_existing_issues | while IFS= read -r item; do
       [ -n "$item" ] || continue
       if ! printf '%s' "$item" | jq -e '
@@ -587,7 +513,6 @@ while IFS= read -r plan_file; do
       END { print items }
     ' 2>/dev/null) || PRE_EXISTING=""
 
-    # Brownfield fallback: extract pre-existing issues from the legacy body section.
     if [ -z "$PRE_EXISTING" ] && ! frontmatter_key_present "$SUMMARY_FILE" pre_existing_issues; then
       PRE_EXISTING=$(awk '
         /^## Pre-existing Issues/ { found=1; next }
@@ -603,7 +528,6 @@ while IFS= read -r plan_file; do
     fi
   fi
 
-  # Emit structured block
   echo "=== PLAN ${PLAN_ID}: ${TITLE} ==="
   echo "must_haves: ${MUST_HAVES:-none}"
   if [ -n "$WHAT_BUILT" ]; then
@@ -624,7 +548,6 @@ while IFS= read -r plan_file; do
   echo ""
 done <<< "$ALL_PLAN_FILES"
 
-# --- Known Issues (phase-scoped machine state for QA remediation/UAT gating) ---
 _cvc_known_issues_path="$PHASE_DIR/known-issues.json"
 if [ -f "$_cvc_known_issues_path" ]; then
   if jq -e '.issues | type == "array"' "$_cvc_known_issues_path" >/dev/null 2>&1; then
@@ -653,10 +576,6 @@ if [ -f "$_cvc_known_issues_path" ]; then
   fi
 fi
 
-# --- Verification History (compound for QA remediation rounds) ---
-# Extracts FAIL rows from phase-level and per-round VERIFICATION.md files
-# so each QA round has full visibility into what was originally broken
-# and what prior rounds attempted/found.
 _cvc_phase_verif=$(bash "${_CVC_SCRIPT_DIR}/resolve-verification-path.sh" phase "$PHASE_DIR" 2>/dev/null || true)
 if [ -n "$_cvc_phase_verif" ] && [ ! -f "$_cvc_phase_verif" ]; then
   _cvc_phase_verif=""
@@ -687,7 +606,6 @@ if [ "$_cvc_source_fail_verif_missing" = false ] && [ -z "$_cvc_source_fail_veri
   _cvc_source_fail_verif="$_cvc_phase_verif"
 fi
 
-# QA round VERIFICATION.md files
 _cvc_qa_round_verifs=$(find "$PHASE_DIR" -path '*/remediation/qa/round-*/R*-VERIFICATION.md' 2>/dev/null | sort)
 
 _cvc_has_verif_history=false
@@ -704,7 +622,6 @@ fi
 if [ "$_cvc_has_verif_history" = true ]; then
   echo "=== VERIFICATION HISTORY ==="
 
-  # Phase-level (original findings)
   if [ -n "$_cvc_phase_verif" ] && [ -f "$_cvc_phase_verif" ]; then
     _cvc_vhist_result=$(awk '
       BEGIN { in_fm=0 }
@@ -738,10 +655,6 @@ if [ "$_cvc_has_verif_history" = true ]; then
 
   fi
 
-  # Emit structured FAIL resolution requirements from the current remediation
-  # planning input (phase-level on round 01, previous round verification on
-  # round 02+). QA uses this block as the authoritative set of FAIL_IDs that
-  # must be resolved in the current remediation round.
   if [ "$_cvc_source_fail_verif_missing" = true ]; then
     echo "--- ORIGINAL FAIL RESOLUTION STATUS ---"
     echo "source_verification_missing=true"
@@ -789,7 +702,6 @@ if [ "$_cvc_has_verif_history" = true ]; then
     ' "$_cvc_source_fail_verif" 2>/dev/null || true
   fi
 
-  # Per-round (chronological compounding)
   if [ -n "$_cvc_qa_round_verifs" ]; then
     while IFS= read -r _cvc_verif_file; do
       [ -f "$_cvc_verif_file" ] || continue

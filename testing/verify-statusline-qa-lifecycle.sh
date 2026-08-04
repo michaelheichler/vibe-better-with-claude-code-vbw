@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# verify-statusline-qa-lifecycle.sh — Tests for lifecycle-aware QA/UAT statusline indicator
+# verify-statusline-qa-lifecycle.sh, Tests for lifecycle-aware QA/UAT statusline indicator
 #
 # Verifies that the statusline QA indicator reflects the actual phase lifecycle
 # state (QA pass, UAT pass, UAT fail, remediation in progress, re-verify needed)

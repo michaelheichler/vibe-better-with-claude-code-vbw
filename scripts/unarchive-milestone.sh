@@ -1,16 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# unarchive-milestone.sh — Restore an archived milestone to active work
-#
-# Usage: unarchive-milestone.sh MILESTONE_DIR PLANNING_DIR
-#
-# Moves phases/, ROADMAP.md, STATE.md back to root PLANNING_DIR.
-# Merges Todos and Decisions sections from both root and archived STATE.md,
-# deduplicating by normalized text comparison.
-# Deletes SHIPPED.md and removes the milestone dir if empty.
-#
-# Exit codes: 0 on success, 1 on failure
 
 MILESTONE_DIR="${1:-}"
 PLANNING_DIR="${2:-}"
@@ -25,8 +15,6 @@ if [[ ! -d "$MILESTONE_DIR" ]]; then
   exit 1
 fi
 
-# --- Extract todos from STATE.md ---
-# Supports current/legacy headings: "## Todos" and "### Pending Todos"
 extract_todo_items() {
   local file="$1"
   [ -f "$file" ] || return 0
@@ -75,8 +63,6 @@ extract_named_section() {
   ' "$file"
 }
 
-# --- Extract decisions from STATE.md ---
-# Supports current/legacy headings: "## Key Decisions" and "## Decisions"
 extract_decision_items() {
   local file="$1"
   [ -f "$file" ] || return 0
@@ -114,7 +100,6 @@ extract_decision_items() {
       }
 
       if (/^\|/) {
-        # Skip markdown separators and common table header row
         if (low ~ /^\|([[:space:]:-]+\|)+[[:space:]:-]*$/) {
           next
         }
@@ -130,7 +115,6 @@ extract_decision_items() {
   ' "$file"
 }
 
-# --- Normalize todo item for dedup comparison ---
 normalize_todo_item() {
   local normalized
   normalized=$(printf '%s\n' "$1" | \
@@ -143,8 +127,6 @@ normalize_todo_item() {
   printf '%s\n' "$normalized"
 }
 
-# --- Normalize decision item for dedup comparison ---
-# For table rows, dedup by the decision text (first column) only.
 normalize_decision_item() {
   local line="$1"
   local escaped_pipe='__VBW_ESCAPED_PIPE__'
@@ -186,15 +168,11 @@ decision_item_score() {
   echo "$score"
 }
 
-# --- Merge two sets of items with dedup ---
-# Usage: merge_items KIND "items1_multiline" "items2_multiline"
-# Returns deduplicated union
 merge_items() {
   local kind="$1" items1="$2" items2="$3"
   local -a seen_normalized=()
   local -a result=()
 
-  # Process items1 first (keep original formatting)
   while IFS= read -r line; do
     [ -z "$line" ] && continue
     [[ "$line" == "None." || "$line" == "None" ]] && continue
@@ -228,7 +206,6 @@ merge_items() {
     fi
   done <<< "$items1"
 
-  # Process items2 (add only unseen)
   while IFS= read -r line; do
     [ -z "$line" ] && continue
     [[ "$line" == "None." || "$line" == "None" ]] && continue
@@ -306,9 +283,6 @@ format_decision_items_for_state() {
   done <<< "$items"
 }
 
-# --- Replace or append a section in a file with normalized heading matching ---
-# Usage: replace_or_append_section FILE KIND CANONICAL_HEADER NEW_CONTENT
-# KIND: "todos" or "decisions"
 replace_or_append_section() {
   local file="$1" kind="$2" canonical_header="$3" new_content="$4"
   local tmp="${file}.tmp.$$"
@@ -488,7 +462,6 @@ ARCHIVED_STATE="$MILESTONE_DIR/STATE.md"
 ROOT_ROADMAP="$PLANNING_DIR/ROADMAP.md"
 ROOT_CONTEXT="$PLANNING_DIR/CONTEXT.md"
 
-# --- Merge Todos and Decisions ---
 root_todos=""
 archived_todos=""
 root_decisions=""
@@ -543,21 +516,18 @@ has_active_root_scope_artifacts() {
   return 1
 }
 
-# --- Refuse to clobber active scoped milestone artifacts ---
 if has_active_root_scope_artifacts "$PLANNING_DIR"; then
-  echo "Error: root phases/ directory contains active milestone artifacts — aborting to prevent data loss" >&2
+  echo "Error: root phases/ directory contains active milestone artifacts, aborting to prevent data loss" >&2
   echo "  Back up or remove $PLANNING_DIR/phases/, ROADMAP.md, and CONTEXT.md before unarchiving." >&2
   exit 1
 fi
 
 if [ -f "$ROOT_ROADMAP" ] || [ -f "$ROOT_CONTEXT" ]; then
-  echo "Error: root ROADMAP.md or CONTEXT.md exists — aborting to prevent overwriting scoped work" >&2
+  echo "Error: root ROADMAP.md or CONTEXT.md exists, aborting to prevent overwriting scoped work" >&2
   echo "  Back up or remove $ROOT_ROADMAP and $ROOT_CONTEXT before unarchiving." >&2
   exit 1
 fi
 
-# --- Move files back to root ---
-# Move phases
 if [ -d "$MILESTONE_DIR/phases" ]; then
   if [ -d "$PLANNING_DIR/phases" ]; then
     rm -rf "$PLANNING_DIR/phases"
@@ -565,22 +535,18 @@ if [ -d "$MILESTONE_DIR/phases" ]; then
   mv "$MILESTONE_DIR/phases" "$PLANNING_DIR/phases"
 fi
 
-# Move ROADMAP.md
 if [ -f "$MILESTONE_DIR/ROADMAP.md" ]; then
   mv "$MILESTONE_DIR/ROADMAP.md" "$PLANNING_DIR/ROADMAP.md"
 fi
 
-# Move milestone CONTEXT.md (scope decisions)
 if [ -f "$MILESTONE_DIR/CONTEXT.md" ]; then
   mv "$MILESTONE_DIR/CONTEXT.md" "$PLANNING_DIR/CONTEXT.md"
 fi
 
-# Move STATE.md (archived version is the base)
 if [ -f "$ARCHIVED_STATE" ]; then
   mv "$ARCHIVED_STATE" "$ROOT_STATE"
 fi
 
-# --- Write merged sections into restored STATE.md ---
 if [ -f "$ROOT_STATE" ]; then
   replace_or_append_section "$ROOT_STATE" "todos" "## Todos" "${merged_todos:-None.}"
   replace_or_append_section "$ROOT_STATE" "decisions" "## Key Decisions" "$merged_decisions"
@@ -594,13 +560,10 @@ if [ -f "$ROOT_STATE" ]; then
   fi
 fi
 
-# --- Clean up milestone dir ---
 rm -f "$MILESTONE_DIR/SHIPPED.md" 2>/dev/null || true
 
-# Remove milestone dir if empty (or only has empty subdirs)
 find "$MILESTONE_DIR" -type d -empty -delete 2>/dev/null || true
 if [ -d "$MILESTONE_DIR" ]; then
-  # Check if truly empty (no files remaining)
   if [ -z "$(find "$MILESTONE_DIR" -type f 2>/dev/null)" ]; then
     rm -rf "$MILESTONE_DIR"
   fi

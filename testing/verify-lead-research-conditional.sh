@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# verify-lead-research-conditional.sh — Verify Lead agent research-conditional Stage 1 + LSP preference
+# verify-lead-research-conditional.sh, Verify Lead agent research-conditional Stage 1 + LSP preference
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 
@@ -143,7 +143,7 @@ cat > "$TMP/.vbw-planning/REQUIREMENTS.md" <<'REQ'
 - [ ] REQ-01: Build something
 REQ
 
-# Test 1: Compile without research — should include codebase mapping hint
+# Test 1: Compile without research, should include codebase mapping hint
 (cd "$TMP" && bash "$ROOT/scripts/compile-context.sh" 02 lead .vbw-planning/phases > /dev/null 2>&1) || true
 if [ -f "$TMP/.vbw-planning/phases/02-build/.context-lead.md" ]; then
   CTX1="$TMP/.vbw-planning/phases/02-build/.context-lead.md"
@@ -159,7 +159,7 @@ fi
 # Test 2: Get cache hash without research
 HASH1=$(cd "$TMP" && bash "$ROOT/scripts/cache-context.sh" 02 lead .vbw-planning/config.json 2>/dev/null | awk '{print $2}') || HASH1="error1"
 
-# Test 3: Add research file, recompile — should include Research Findings
+# Test 3: Add research file, recompile, should include Research Findings
 cat > "$TMP/.vbw-planning/phases/02-build/02-RESEARCH.md" <<'RES'
 ## Research
 Scout found things.

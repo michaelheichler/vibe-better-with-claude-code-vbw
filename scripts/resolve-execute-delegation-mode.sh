@@ -1,14 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# resolve-execute-delegation-mode.sh — dependency-aware Execute routing helper
-#
-# Usage:
-#   resolve-execute-delegation-mode.sh --phase-dir <dir> [--config <path>] [--execution-state <path>] [--route-map <path>] [--segments]
-#
-# Computes whether the current Execute segment should use true team mode or
-# serialized subagents. Missing route-map entries default to delegate. Route-map
-# entries may explicitly set route=delegate|turbo|direct.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PHASE_DIR=""
@@ -462,7 +454,6 @@ remaining_nodes=$(jq -cn --argjson a "$pending_delegate_nodes" --argjson b "$exc
 remaining_count=$(jq -r 'length' <<< "$remaining_nodes")
 delegate_count=$(jq -r 'length' <<< "$pending_delegate_nodes")
 
-# Extract dependencies for every plan and validate references against satisfied or remaining known nodes.
 for plan_id in $(jq -r 'keys[]' <<< "$plans_json"); do
   plan_path=$(jq -r --arg id "$plan_id" '.[$id].path' <<< "$plans_json")
   deps_json="[]"
@@ -539,7 +530,6 @@ plan_pair_conflicts() {
   return 1
 }
 
-# Simulate topological waves over all remaining nodes. Count only delegate nodes in each wave.
 completed_for_sim="$completed_satisfied_nodes"
 unresolved="$remaining_nodes"
 max_parallel_width=0
@@ -735,7 +725,6 @@ fi
 segments_json="[]"
 team_segment_index=0
 for wave in $(jq -cr '.[]' <<< "$waves_json"); do
-  # Direct and turbo plans are always serialized one plan at a time.
   for route in turbo direct; do
     for node in $(jq -r --arg route "$route" --argjson plans "$plans_json" '.[] | select($plans[.].route == $route)' <<< "$wave"); do
       seg_effort="$route"

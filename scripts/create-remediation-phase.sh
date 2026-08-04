@@ -1,15 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# create-remediation-phase.sh — create an active remediation phase from archived milestone UAT
-#
-# Usage:
-#   create-remediation-phase.sh PLANNING_DIR MILESTONE_PHASE_DIR
-#
-# Output (stdout):
-#   phase=<NN>
-#   phase_dir=<path>
-#   source_uat=<path|none>
 
 PLANNING_DIR="${1:-}"
 MILESTONE_PHASE_DIR="${2:-}"
@@ -260,8 +251,6 @@ seed_remediation_roadmap_and_state() {
 
   phase_count=$(jq 'length' "$phases_json" 2>/dev/null || echo 0)
   if [ "$phase_count" -gt 0 ]; then
-    # Preserve existing progress rows from ROADMAP.md (avoid clobbering
-    # progress when re-entering idempotently or adding new phases).
     existing_progress=""
     if [ -f "$roadmap_file" ]; then
       existing_progress=$(grep -E '^[[:space:]]*\|[[:space:]]*[0-9]+[[:space:]]*\|' "$roadmap_file" 2>/dev/null || true)
@@ -337,10 +326,6 @@ seed_remediation_roadmap_and_state() {
 
     project_name=$(extract_project_name)
 
-    # Sync STATE.md with current phase directories.
-    # update-phase-total.sh owns the Phase: total and ## Phase Status section —
-    # it derives status from filesystem (PLAN/SUMMARY presence).
-    # F-10: also require Phase: line; if archive stripped it, re-bootstrap.
     if [ -f "$state_file" ] && grep -q '^\*\*Milestone:\*\* UAT Remediation$' "$state_file" 2>/dev/null && grep -q '^Phase: ' "$state_file" 2>/dev/null; then
       bash "$SCRIPT_DIR/update-phase-total.sh" "$PLANNING_DIR"
     else
@@ -351,8 +336,6 @@ seed_remediation_roadmap_and_state() {
   rm -f "$phases_json"
 }
 
-# Idempotency: if this milestone phase already maps to a previously created
-# remediation phase dir, return that mapping instead of creating duplicates.
 EXISTING_MARKER_FILE="$MILESTONE_PHASE_DIR/.remediated"
 if [[ -f "$EXISTING_MARKER_FILE" ]]; then
   EXISTING_TARGET_DIR=$(head -n1 "$EXISTING_MARKER_FILE" 2>/dev/null || true)
@@ -375,14 +358,12 @@ fi
 PHASES_DIR="$PLANNING_DIR/phases"
 mkdir -p "$PHASES_DIR"
 
-# Determine next phase number from existing active phases.
 MAX_PHASE=0
 for d in "$PHASES_DIR"/*/; do
   [[ -d "$d" ]] || continue
   base=$(basename "$d")
   num=$(echo "$base" | sed 's/[^0-9].*//')
   [[ -n "$num" ]] || continue
-  # Force base-10 to avoid octal interpretation for leading zeroes.
   n=$((10#$num))
   if [[ "$n" -gt "$MAX_PHASE" ]]; then
     MAX_PHASE="$n"
@@ -410,10 +391,6 @@ fi
 
 TARGET_PHASE_DIR="$PHASES_DIR/${NEXT_PHASE_PADDED}-${PHASE_SLUG}"
 
-# F-01 guard: detect an existing dir with the same slug (race window between
-# mkdir and .remediated write). Reuse only when the existing dir provenance
-# matches this exact archived milestone phase; slug collisions must allocate a
-# new numeric phase instead of silently aliasing a different source phase.
 EXISTING_SLUG_DIR=""
 while IFS= read -r _slug_dir; do
   [ -d "$_slug_dir" ] || continue
@@ -432,7 +409,6 @@ mkdir -p "$TARGET_PHASE_DIR"
 
 SOURCE_UAT=$(latest_non_source_uat "$MILESTONE_PHASE_DIR")
 
-# Extract UAT issues content to inline into CONTEXT.md as pre-seeded discussion
 UAT_CONTENT=""
 if [[ -n "$SOURCE_UAT" && -f "$SOURCE_UAT" ]]; then
   UAT_CONTENT=$(cat "$SOURCE_UAT")
@@ -449,30 +425,22 @@ source_phase: ${SOURCE_PHASE_BASENAME}
 pre_seeded: true
 ---
 
-# Phase ${NEXT_PHASE_PADDED}: UAT Remediation — Context
 
-## User Vision
 
 Fix unresolved UAT issues from archived milestone \`${SOURCE_MILESTONE_SLUG}\` (phase \`${SOURCE_PHASE_BASENAME}\`).
 
-## Essential Features
 
 All issues identified in the source UAT report must be resolved.
 
-## Boundaries
 
 Only address the issues listed below. Do not refactor or add features beyond what is needed to fix these issues.
 
-## Acceptance Criteria
 
 All UAT issues below are resolved and verified.
 
-## Source UAT Report
 
 CTXEOF
 
-# Append UAT content verbatim — do not use unquoted heredoc to avoid
-# shell expansion of $, backticks, or $() inside UAT report content.
 if [ -n "$UAT_CONTENT" ]; then
   printf '%s\n' "$UAT_CONTENT" >> "$CONTEXT_FILE"
 else
@@ -486,8 +454,6 @@ else
   SOURCE_UAT_OUT="none"
 fi
 
-# Mark the source milestone phase as remediated so phase-detect.sh
-# won't trigger repeated milestone UAT recovery for the same issues.
 echo "${TARGET_PHASE_DIR}" > "$MILESTONE_PHASE_DIR/.remediated"
 
 seed_remediation_roadmap_and_state

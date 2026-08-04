@@ -1,17 +1,26 @@
 # Context Compiler Milestone: Token Routing Analysis
 
+
 **Date:** 2026-02-11
+
+
 **Version:** v1.10.7
+
 **Baseline:** v1.10.2 (post-compression)
+
+
 **Scope:** Measured impact of deterministic context routing across 3 phases of optimization
+
 **Method:** 6 plans, 18 tasks, 15 commits, 65/65 QA checks across 3 phases (all PASS)
-**Verdict:** Agent spawn/context overhead reduced by **40-50%** through pre-computed context routing. Total per-session savings scale from **~24,000 tokens** (small projects) to **~130,000 tokens** (large projects) — equivalent to **~15-35% reduction** in total context loading.
+
+
+**Verdict:** Agent spawn/context overhead reduced by **40-50%** through pre-computed context routing. Total per-session savings scale from **~24,000 tokens** (small projects) to **~130,000 tokens** (large projects), equivalent to **~15-35% reduction** in total context loading.
 
 ---
 
 ## Executive Summary
 
-VBW v1.10.2 compressed *the content* — making every file smaller. v1.10.7 changes *what gets loaded* — routing only relevant content to each agent role.
+VBW v1.10.2 compressed *the content*, making every file smaller. v1.10.7 changes *what gets loaded*, routing only relevant content to each agent role.
 
 The v1.10.2 compression milestone reduced VBW's coordination overhead to 75% below stock teams. This milestone compounds on top: instead of loading 3-4 full project files per agent spawn, each agent now receives a single pre-compiled context file containing only what its role needs.
 
@@ -23,7 +32,7 @@ Three phases attacked three distinct waste sources:
 | 2: Context Compiler | Full-file loads replaced by filtered views | `compile-context.sh` produces role-specific context | ~1,400-2,800 tokens |
 | 3: Compound Optimizations | Per-task re-reads + per-task skill loads | Compaction marker + skill bundling | ~1,000-2,400 tokens |
 
-**The key insight:** v1.10.2 made files smaller but every agent still loaded the same files regardless of role. A Dev building a 5-task plan loaded the same 46-line STATE.md it never uses. A Lead planning Phase 3 loaded all 30 requirements when only 5 are mapped to its phase. A QA agent loaded a 146-line protocol reference to learn its tier — information the spawning command already knew.
+**The key insight:** v1.10.2 made files smaller but every agent still loaded the same files regardless of role. A Dev building a 5-task plan loaded the same 46-line STATE.md it never uses. A Lead planning Phase 3 loaded all 30 requirements when only 5 are mapped to its phase. A QA agent loaded a 146-line protocol reference to learn its tier, information the spawning command already knew.
 
 **Scale matters:** The savings are modest for small projects (~15%) but significant for large ones (~35%). Requirement filtering alone saves ~2,800 tokens per Lead spawn on a 30-requirement project. STATE.md removal saves ~6,000 tokens per phase when 5 Devs each skip a file that grew to 80 lines. The context compiler's value increases precisely where token pressure is highest.
 
@@ -54,7 +63,7 @@ After the compression milestone, VBW's file sizes were optimized but loading pat
 
 ---
 
-## Phase 1: Quick Wins — Eliminate Redundant Loads
+## Phase 1: Quick Wins, Eliminate Redundant Loads
 
 **Goal:** Remove file loads that provide zero value to the receiving agent.
 **Result:** 3 runtime file loads eliminated across all commands and agents.
@@ -90,7 +99,7 @@ Agent definitions grew slightly (+15 lines total across Dev and QA) because the 
 
 ---
 
-## Phase 2: Context Compiler — Filtered Views
+## Phase 2: Context Compiler, Filtered Views
 
 **Goal:** Replace full-file loads with role-specific compiled context.
 **Result:** `compile-context.sh` (164 lines) produces 3 role-specific files.
@@ -123,7 +132,7 @@ Agent definitions grew slightly (+15 lines total across Dev and QA) because the 
 | Output File | Lines | Est. Tokens | Replaces |
 |---|---|---|---|
 | .context-lead.md | 27 | ~405 | REQUIREMENTS.md (43 lines) + ROADMAP.md (33) + STATE.md (46) = 122 lines, ~1,830 tokens |
-| .context-dev.md | 21 | ~315 | Phase awareness (additive — Dev had no phase context before) |
+| .context-dev.md | 21 | ~315 | Phase awareness (additive, Dev had no phase context before) |
 | .context-qa.md | 34 | ~510 | Ad-hoc reads of REQUIREMENTS.md + phase context |
 
 ### Lead Context Savings at Scale
@@ -137,11 +146,11 @@ This is the highest-impact mechanism. As projects grow, REQUIREMENTS.md balloons
 | Medium (20 reqs, phase has 4) | 20 | ~50 lines, 750 tokens | ~18 lines, 270 tokens | ~480 |
 | Large (30 reqs, phase has 5) | 30 | ~90 lines, 1,350 tokens | ~22 lines, 330 tokens | ~1,020 |
 
-The Lead also no longer loads ROADMAP.md (~495-900 tokens) or STATE.md (~690-1,200 tokens) separately — these are extracted into the compiled file. Total Lead spawn saving: **~1,425 (current) to ~2,800 (large)** tokens.
+The Lead also no longer loads ROADMAP.md (~495-900 tokens) or STATE.md (~690-1,200 tokens) separately, these are extracted into the compiled file. Total Lead spawn saving: **~1,425 (current) to ~2,800 (large)** tokens.
 
 ### Config Toggle
 
-`context_compiler: true` (default) in `config/defaults.json`. When `false`, all commands fall back to direct file reads — v1.10.2 behavior restored. The toggle is emitted by `phase-detect.sh` as `config_context_compiler=` so commands check it from pre-computed context.
+`context_compiler: true` (default) in `config/defaults.json`. When `false`, all commands fall back to direct file reads, v1.10.2 behavior restored. The toggle is emitted by `phase-detect.sh` as `config_context_compiler=` so commands check it from pre-computed context.
 
 ### Integration Points
 
@@ -200,7 +209,7 @@ Lifecycle:
   Dev starts task 4  → marker older than last read → skip re-read
 ```
 
-**Conservative default:** "When in doubt, re-read." Marker check failure or ambiguity triggers re-read. False negatives (unnecessary re-reads) are acceptable; false positives (skipped re-reads when needed) are not.
+**Conservative default:** "When in doubt, re-read." Marker check failure or ambiguity triggers re-read. False negatives (unnecessary re-reads) are acceptable, false positives (skipped re-reads when needed) are not.
 
 **Saving:** Typically 1-2 re-reads saved per plan. At ~500-800 tokens per PLAN.md: **~500-1,600 tokens per plan**.
 
@@ -210,7 +219,7 @@ Lifecycle:
 
 ### Spawn & Context Overhead (Excludes Per-Request)
 
-This is the "controllable" overhead — the part that scales with agents, plans, and project size. Per-request overhead (always-on commands + CLAUDE.md) is essentially unchanged.
+This is the "controllable" overhead, the part that scales with agents, plans, and project size. Per-request overhead (always-on commands + CLAUDE.md) is essentially unchanged.
 
 ```
                               v1.10.2      v1.10.7      Saving
@@ -273,7 +282,7 @@ Per-request overhead      10,800       4,970      3,230      3,245
 Per-phase spawn+context   87,100      33,200     21,745     10,910
                          ──────      ──────     ──────     ──────
 Total coordination/phase  97,900      38,170     24,975     14,155
-Reduction vs stock             —        61%        74%        86%
+Reduction vs stock             N/A      61%        74%        86%
 ```
 
 **VBW v1.10.7 delivers ~86% reduction in per-phase coordination overhead vs stock Agent Teams** (up from 74% at v1.10.2, 61% at v1.0.99).
@@ -397,7 +406,7 @@ Reference loads/phase    4,860          0    -4,860    Eliminated entirely
 Agent context loads     10,335      5,295    -5,040    Compiled + removed
 Plan re-reads/phase      3,000      1,000    -2,000    Compaction marker
 ─────────────────────────────────────────────────────────────────────
-Runtime savings/phase        —          —    11,900    NET per phase
+Runtime savings/phase        N/A        N/A    11,900    NET per phase
 ```
 
 **The paradox:** Static files got larger (+250 lines across inventory) but runtime token consumption dropped by ~11,900 tokens per phase. Instructions grew because they now contain compile-and-route logic. But that logic eliminates multiple runtime file loads per phase, which is a net win.
@@ -456,7 +465,7 @@ Same methodology as v1.10.2 analysis: ~15 tokens/line for markdown. Compiled con
 | Compiled output sizes | `compile-context.sh` run on real project | Exact |
 | Reference load elimination | `grep` confirms zero runtime references | High |
 | Re-read savings | Estimated 1-2 saves per plan (compaction occurs 0-2 times) | Medium |
-| Skill bundling savings | Measured for bash-pro (337 lines); other skills vary | Medium |
+| Skill bundling savings | Measured for bash-pro (337 lines), other skills vary | Medium |
 | Per-request overhead | Line count of active commands + CLAUDE.md | High |
 | Scale projections | Linear extrapolation from known file growth patterns | Medium |
 
@@ -464,11 +473,11 @@ Same methodology as v1.10.2 analysis: ~15 tokens/line for markdown. Compiled con
 
 | Component | Why Unchanged |
 |---|---|
-| Per-request overhead | Not the target — commands grew slightly but reference loads moved to compile time |
-| Template loads | Already compressed in v1.10.2 — no further optimization available |
-| Agent model routing | Already optimal — Sonnet for QA, Opus for Lead/Dev |
-| Hook execution costs | Already zero model tokens — shell execution |
-| `disable-model-invocation` | Already prevents loading disabled commands — unchanged |
+| Per-request overhead | Not the target, commands grew slightly but reference loads moved to compile time |
+| Template loads | Already compressed in v1.10.2, no further optimization available |
+| Agent model routing | Already optimal, Sonnet for QA, Opus for Lead/Dev |
+| Hook execution costs | Already zero model tokens, shell execution |
+| `disable-model-invocation` | Already prevents loading disabled commands, unchanged |
 
 ---
 
@@ -476,9 +485,9 @@ Same methodology as v1.10.2 analysis: ~15 tokens/line for markdown. Compiled con
 
 | Phase | Plans | Checks | Result | Key Validations |
 |---|---|---|---|---|
-| Phase 1: Quick Wins | 01-01, 01-02 | 21/21 | PASS | Zero runtime refs to phase-detection.md; STATE.md absent from Dev; inline QA spec functional |
-| Phase 2: Compiler Core | 02-01, 02-02 | 22/22 | PASS | compile-context.sh produces correct output for all 3 roles; config toggle works; graceful degradation verified |
-| Phase 3: Compound | 03-01, 03-02 | 22/22 | PASS | Skill bundling produces correct output; compaction marker written/cleaned; conservative default preserved |
+| Phase 1: Quick Wins | 01-01, 01-02 | 21/21 | PASS | Zero runtime refs to phase-detection.md, STATE.md absent from Dev, inline QA spec functional |
+| Phase 2: Compiler Core | 02-01, 02-02 | 22/22 | PASS | compile-context.sh produces correct output for all 3 roles, config toggle works, graceful degradation verified |
+| Phase 3: Compound | 03-01, 03-02 | 22/22 | PASS | Skill bundling produces correct output, compaction marker written/cleaned, conservative default preserved |
 | **Total** | **6 plans** | **65/65** | **PASS** | |
 
 ---
@@ -487,17 +496,17 @@ Same methodology as v1.10.2 analysis: ~15 tokens/line for markdown. Compiled con
 
 1. **Context routing compounds with content compression.** v1.10.2 made files smaller. v1.10.7 ensures agents only see files relevant to their role. Together: smaller files × fewer files = multiplicative savings.
 
-2. **The spawn/context layer is the high-leverage target.** Per-request overhead (always-on commands + CLAUDE.md) barely changed. But spawn/context overhead — agent definitions, state reads, reference loads — was cut 40-50%. This is where tokens scale with project complexity.
+2. **The spawn/context layer is the main target.** Per-request overhead (always-on commands + CLAUDE.md) barely changed. Spawn/context overhead includes agent definitions, state reads, and reference loads. This layer was cut 40-50%. Token use scales here with project complexity.
 
-3. **Requirement filtering is the highest quality-impact mechanism.** A Lead that sees 5 focused requirements produces more targeted plans than one that sees all 30 and self-filters. The token saving is a bonus; the quality improvement is the real win.
+3. **Requirement filtering is the highest quality-impact mechanism.** A Lead that sees 5 focused requirements produces more targeted plans than one that sees all 30 and self-filters. The token saving is a bonus, the quality improvement is the real win.
 
 4. **Deterministic beats probabilistic.** Every mechanism in this milestone is deterministic. The compiler uses grep/sed on known formats, not LLM interpretation. The compaction marker is a file timestamp, not LLM self-evaluation. Deterministic signals are cheaper and more reliable.
 
-5. **Graceful degradation is mandatory at every level.** Every compile step has `2>/dev/null || fallback`. Every config check has a default. The `context_compiler: false` toggle reverts everything. This means zero risk of regression — the worst case is v1.10.2 behavior.
+5. **Graceful degradation is mandatory at every level.** Every compile step has `2>/dev/null || fallback`. Every config check has a default. The `context_compiler: false` toggle reverts everything. This means zero risk of regression, the worst case is v1.10.2 behavior.
 
 6. **Static file growth is acceptable when runtime loads decrease.** Files grew +250 lines but runtime loads dropped ~11,900 tokens per phase. The instructions cost ~250 tokens once (when the command is loaded) but save thousands across multiple agent spawns.
 
-7. **Scale-dependent value is the right design.** Small projects see ~15% savings — modest but free. Large projects see ~35% savings — significant and precisely where token pressure is highest. The compiler's value grows with the problem it solves.
+7. **Scale-dependent value is the right design.** Small projects see ~15% savings, modest but free. Large projects see ~35% savings, significant and precisely where token pressure is highest. The compiler's value grows with the problem it solves.
 
 ---
 
@@ -566,7 +575,7 @@ Add skill bundling and compaction-aware re-reads on top of the compiler
 ### Skills Reference
 
 #### bash-pro
-[337 lines of skill content — loaded once, not per-task]
+[337 lines of skill content, loaded once, not per-task]
 ```
 
 **336 lines loaded once per phase, instead of 337 × 3 tasks = 1,011 lines.**

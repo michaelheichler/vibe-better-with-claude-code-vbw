@@ -1,22 +1,4 @@
 #!/usr/bin/env bash
-# compile-fix-commit-context.sh — Produce compact QA/UAT context from fix marker.
-#
-# Reads .last-fix-commit marker and outputs structured context for
-# QA agent consumption or UAT checkpoint generation.
-#
-# Usage:
-#   compile-fix-commit-context.sh [planning-dir] [mode]
-#
-# Arguments:
-#   planning-dir  — path to .vbw-planning (default: .vbw-planning)
-#   mode          — qa or uat (default: qa)
-#
-# Output (stdout):
-#   First line: fix_context=available or fix_context=empty
-#   If available, followed by --- separator and markdown context block.
-#
-# Exit codes:
-#   0 — always (non-blocking helper)
 
 set -u
 
@@ -25,13 +7,11 @@ MODE="${2:-qa}"
 
 marker_file="$PLANNING_DIR/.last-fix-commit"
 
-# Check marker exists
 if [ ! -f "$marker_file" ]; then
   echo "fix_context=empty"
   exit 0
 fi
 
-# Check staleness (24 hours = 86400 seconds); fail-closed on stat/date errors
 marker_mtime=$(stat -c '%Y' "$marker_file" 2>/dev/null || stat -f '%m' "$marker_file" 2>/dev/null || echo 0)
 now=$(date +%s 2>/dev/null || echo 0)
 
@@ -46,7 +26,6 @@ if [ "$age" -lt 0 ] || [ "$age" -gt 86400 ]; then
   exit 0
 fi
 
-# Read marker fields
 commit=""
 message=""
 timestamp=""
@@ -72,26 +51,22 @@ while IFS= read -r line; do
   esac
 done < "$marker_file"
 
-# Validate minimum required fields
 if [ -z "$commit" ]; then
   echo "fix_context=empty"
   exit 0
 fi
 
-# Get change summary from git if available
 change_summary=""
 if command -v git &>/dev/null; then
   change_summary=$(git show --stat --format='' "$commit" 2>/dev/null | tail -5) || true
 fi
 
-# Format mode title
 if [ "$MODE" = "uat" ]; then
   title="Fix Commit UAT Context"
 else
   title="Fix Commit QA Context"
 fi
 
-# Build file list
 file_list=""
 if [ -n "$files" ]; then
   while IFS= read -r f; do
@@ -100,12 +75,11 @@ if [ -n "$files" ]; then
   done <<< "$files"
 fi
 
-# Output context
 echo "fix_context=available"
 echo "---"
 echo "## ${title}"
 echo ""
-echo "**Commit:** ${commit} — ${message}"
+echo "**Commit:** ${commit}, ${message}"
 if [ -n "$description" ] && [ "$description" != "$message" ]; then
   echo "**Description:** ${description}"
 fi

@@ -1,17 +1,26 @@
 # VBW v1.21.30 Token & Infrastructure Analysis
 
+
 **Date:** 2026-02-17
+
+
 **Version:** v1.21.30
+
 **Baseline:** v1.20.0 (full spec compliance)
-**Scope:** 368 commits across 6 milestones — from full spec to discovery intelligence, team resilience, agent health, and event correlation
+
+
+**Scope:** 368 commits across 6 milestones, from full spec to discovery intelligence, team resilience, agent health, and event correlation
+
 **Method:** 368 commits, 78 scripts, 51 test files (8,703 lines), 575 bats tests
+
+
 **Verdict:** Per-request overhead **reduced 17%** from v1.20.0 (and 23% from v1.10.7). vibe.md skill extraction removed 343 lines from per-request loading. Shell-only architecture continues: 15 new scripts add **zero model tokens**.
 
 ---
 
 ## Executive Summary
 
-v1.20.0 built the full V2/V3 enforcement infrastructure. v1.21.x refines how that infrastructure is loaded — moving the largest command (vibe.md) from per-request to on-demand skill loading, adding 7 agents (up from 6), and shipping 6 milestones that expand shell infrastructure without touching per-request overhead.
+v1.20.0 built the full V2/V3 enforcement infrastructure. v1.21.x refines how that infrastructure is loaded. It moves the largest command (vibe.md) from per-request to on-demand skill loading, adds 7 agents (up from 6), and ships 6 milestones that expand shell infrastructure without touching per-request overhead.
 
 The key architectural shift: **vibe.md became a skill**. In v1.20.0, vibe.md (343 lines) was an active command loaded on every user message. In v1.21.x, it has `disable-model-invocation: true` and is loaded only when the user invokes `/vbw:vibe`. This single change accounts for most of the per-request reduction.
 
@@ -91,7 +100,7 @@ list-todos.md        64 lines    (NEW)
 qa.md                81 lines    (+4)
 research.md          56 lines    (+5)
 status.md            99 lines    (+2)
-verify.md           140 lines    (NEW — was invoked inline, now active command)
+verify.md           140 lines    (NEW, was invoked inline, now active command)
 CLAUDE.md            54 lines    (-23)
                     ─────────
 Total:              642 lines  (~9,630 tokens)
@@ -118,7 +127,7 @@ Shell-only work: config migration during session-start.sh, research validation t
 **Commits:** ~50
 **Token impact:** Zero per-request. +6 lines reference growth (discussion-engine.md, lazy load).
 
-Replaced the discovery-protocol.md (159 lines) with discussion-engine.md (165 lines). The engine is loaded only during bootstrap and discuss modes — never per-request. Added domain research spawning to bootstrap flow (shell orchestration). Three-tier feature classification, thread-following questions, vague answer disambiguation — all encoded in the discussion engine reference.
+Replaced the discovery-protocol.md (159 lines) with discussion-engine.md (165 lines). The engine is loaded only during bootstrap and discuss modes, never per-request. Added domain research spawning to bootstrap flow (shell orchestration). Three-tier feature classification, thread-following questions, vague answer disambiguation, all encoded in the discussion engine reference.
 
 ---
 
@@ -127,7 +136,7 @@ Replaced the discovery-protocol.md (159 lines) with discussion-engine.md (165 li
 **Commits:** ~12
 **Token impact:** Zero per-request
 
-Added `prefer_teams` enum to config (replacing boolean `agent_teams`). Updated execute-protocol.md, vibe.md, and debug.md with team creation decision trees. All protocol text changes — no new per-request loading.
+Added `prefer_teams` enum to config (replacing boolean `agent_teams`). Updated execute-protocol.md, vibe.md, and debug.md with team creation decision trees. All protocol text changes, no new per-request loading.
 
 ---
 
@@ -156,7 +165,7 @@ Agent definitions grew from 267 to 462 lines (+195) across 7 agents (docs agent 
 **Commits:** ~30
 **Token impact:** Zero per-request
 
-Built `agent-health.sh` with start/idle/stop/cleanup subcommands, wired into 4 hooks. Added circuit breaker advisory to all 7 agent definitions. Created `compile-rolling-summary.sh` for context cost reduction in late phases. All shell infrastructure — zero per-request model tokens.
+Built `agent-health.sh` with start/idle/stop/cleanup subcommands, wired into 4 hooks. Added circuit breaker advisory to all 7 agent definitions. Created `compile-rolling-summary.sh` for context cost reduction in late phases. All shell infrastructure, zero per-request model tokens.
 
 ---
 
@@ -241,13 +250,13 @@ Total coordination/phase  97,900      38,170     14,155     22,188     27,715
 Per-request × 80 msgs   864,000     397,600    259,600    255,840    212,400
 
 Total session (1 phase)  961,900     435,770    273,755    277,828    240,115
-Reduction vs stock             —        55%        72%        71%        75%
+Reduction vs stock,        55%        72%        71%        75%
 
 Total session (5 phases) 4,809,500  2,178,850  1,368,775  1,289,140  1,101,575
-Reduction vs stock             —        55%        72%        73%        77%
+Reduction vs stock,        55%        72%        73%        77%
 ```
 
-**v1.21.29 achieves 75-77% overhead reduction vs stock teams** — the best yet. The skill extraction moved the largest active command out of per-request loading, and the per-request savings compound across every user message.
+**v1.21.29 achieves 75-77% overhead reduction vs stock teams**, the best yet. The skill extraction moved the largest active command out of per-request loading, and the per-request savings compound across every user message.
 
 ---
 
@@ -310,17 +319,17 @@ Shell-only total        14,434     21,643     +7,209    ALL zero model tokens
 
 ## Key Takeaways
 
-1. **Skill extraction is the next frontier.** Moving vibe.md from active command to on-demand skill saved 343 lines per request — 17% reduction. Any active command that isn't needed on every message is a candidate for skill extraction.
+1. **Skill extraction is the next frontier.** Moving vibe.md from active command to on-demand skill saved 343 lines per request, 17% reduction. Any active command that isn't needed on every message is a candidate for skill extraction.
 
 2. **Per-request remains king.** Despite per-phase overhead growing +6,070 tokens (agent circuit breakers, protocol growth), the per-request drop of -1,965 tokens produces net savings of 66,775 tokens per session (5-phase medium project).
 
 3. **77% overhead reduction vs stock teams.** The cumulative effect of 16 optimization milestones over 6 versions. Stock Opus 4.6 agent teams consume ~4.8M tokens for a 5-phase project. VBW: ~1.1M.
 
-4. **Shell-only growth continues to scale.** 15 new scripts (3,152 lines), 251 new tests (3,936 lines) — all zero model tokens. The test suite alone grew 82% without any model cost.
+4. **Shell-only growth continues to scale.** 15 new scripts (3,152 lines), 251 new tests (3,936 lines), all zero model tokens. The test suite alone grew 82% without any model cost.
 
 5. **Agent definitions are the new growth area.** 267 → 462 lines (+73%) from circuit breakers, compaction recovery, and the docs agent. Each agent spawn now costs ~60-90 more tokens. This is the trade-off for resilience: agents recover from stuck states and compaction, reducing costly retries.
 
-6. **The codebase grew 64%; the model barely noticed.** 16,154 → 26,533 lines. Per-request tokens: 11,595 → 9,630 (-17%). The decoupling between codebase size and model cost is now a proven pattern across 368 commits.
+6. **The codebase grew 64%, the model barely noticed.** 16,154 → 26,533 lines. Per-request tokens: 11,595 → 9,630 (-17%). The decoupling between codebase size and model cost is now a proven pattern across 368 commits.
 
 ---
 
@@ -332,12 +341,12 @@ Shell-only total        14,434     21,643     +7,209    ALL zero model tokens
 |---|---|---|---|---|
 | config.md | 345 (disabled) | 442 (disabled) | Modified | +97 |
 | debug.md | 77 (active) | 94 (active) | Modified | +17 |
-| discuss.md | — | 34 (disabled) | New | Standalone discuss |
+| discuss.md |, | 34 (disabled) | New | Standalone discuss |
 | doctor.md | 72 (disabled) | 111 (disabled) | Modified | +39 |
 | fix.md | 51 (active) | 54 (active) | Modified | +3 |
 | help.md | 73 (disabled) | 37 (disabled) | Modified | -36 |
 | init.md | 467 (disabled) | 504 (disabled) | Modified | +37 |
-| list-todos.md | — | 64 (active) | New | Todo list viewer |
+| list-todos.md |, | 64 (active) | New | Todo list viewer |
 | map.md | 120 (disabled) | 123 (disabled) | Modified | +3 |
 | pause.md | 28 (disabled) | 29 (disabled) | Modified | +1 |
 | profile.md | 60 (disabled) | 61 (disabled) | Modified | +1 |
@@ -351,7 +360,7 @@ Shell-only total        14,434     21,643     +7,209    ALL zero model tokens
 | todo.md | 29 (disabled) | 31 (disabled) | Modified | +2 |
 | uninstall.md | 58 (disabled) | 55 (disabled) | Modified | -3 |
 | update.md | 87 (disabled) | 94 (disabled) | Modified | +7 |
-| verify.md | — | 140 (active) | New | UAT command |
+| verify.md |, | 140 (active) | New | UAT command |
 | vibe.md | 343 (active) | 427 (disabled) | **Moved** | +84, active→disabled |
 | whats-new.md | 25 (disabled) | 30 (disabled) | Modified | +5 |
 
@@ -362,7 +371,7 @@ Shell-only total        14,434     21,643     +7,209    ALL zero model tokens
 | vbw-architect.md | 34 | 43 | +9 (circuit breaker) |
 | vbw-debugger.md | 40 | 54 | +14 (circuit breaker + recovery) |
 | vbw-dev.md | 54 | 72 | +18 (circuit breaker + compaction) |
-| vbw-docs.md | — | 85 | New (documentation agent) |
+| vbw-docs.md |, | 85 | New (documentation agent) |
 | vbw-lead.md | 54 | 69 | +15 (circuit breaker + shutdown) |
 | vbw-qa.md | 54 | 76 | +22 (circuit breaker + recovery) |
 | vbw-scout.md | 31 | 63 | +32 (circuit breaker + web search) |

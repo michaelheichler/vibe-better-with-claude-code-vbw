@@ -1,33 +1,9 @@
 #!/usr/bin/env bash
-# resolve-agent-model.sh - Model resolution for VBW agents
-#
-# Resolution precedence:
-#   1. model_overrides.<agent> in config.json (string or preference array)
-#   2. model_matrix.<agent>.<effort> in config.json (string or preference array)
-#   3. model_profile preset from model-profiles.json (legacy tier table)
-#
-# Preference arrays resolve to the first entry present in the detected model
-# catalog (scripts/detect-models.sh, 1h cache); when no catalog is available
-# the first entry is trusted as-is. Single strings are emitted without an
-# availability check: the matrix is written from a detected catalog at init
-# time, so configured models are available by construction.
-#
-# Usage: resolve-agent-model.sh <agent-name> <config-path> <profiles-path>
-#   agent-name: lead|dev|qa|scout|debugger|architect|docs
-#   config-path: path to .vbw-planning/config.json
-#   profiles-path: path to config/model-profiles.json
-#
-# Returns: stdout = model string (tier alias or full model id), exit 0
-# Errors: stderr = error message, exit 1
-#
-# Integration pattern (from command files):
-#   MODEL=$(bash ${CLAUDE_PLUGIN_ROOT}/scripts/resolve-agent-model.sh lead .vbw-planning/config.json ${CLAUDE_PLUGIN_ROOT}/config/model-profiles.json)
-#   if [ $? -ne 0 ]; then echo "Model resolution failed"; exit 1; fi
-#   # Pass to Task tool: model: "${MODEL}"
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PRICING_PATH="$SCRIPT_DIR/../config/model-pricing.json"
 CACHE_KEY_LIB="$SCRIPT_DIR/lib/vbw-cache-key.sh"
 hash_path() {
   bash -c '. "$1"; vbw_hash_path "$2"' _ "$CACHE_KEY_LIB" "$1"
@@ -45,10 +21,8 @@ file_content_fingerprint() {
   fi
 }
 
-# Task model parameters accept one token, including gateway id punctuation.
 MODEL_SHAPE='^[][A-Za-z0-9._:/-]+$'
 
-# Argument parsing
 if [ $# -ne 3 ]; then
   echo "Usage: resolve-agent-model.sh <agent-name> <config-path> <profiles-path>" >&2
   exit 1
@@ -58,10 +32,8 @@ AGENT="$1"
 CONFIG_PATH="$2"
 PROFILES_PATH="$3"
 
-# Validate agent name
 case "$AGENT" in
   lead|dev|qa|scout|debugger|architect|docs)
-    # Valid agent
     ;;
   *)
     echo "Invalid agent name '$AGENT'. Valid: lead, dev, qa, scout, debugger, architect, docs" >&2
@@ -69,34 +41,21 @@ case "$AGENT" in
     ;;
 esac
 
-# Validate config file exists
 if [ ! -f "$CONFIG_PATH" ]; then
   echo "Config not found at $CONFIG_PATH. Run /vbw:init first." >&2
   exit 1
 fi
 
-# Validate profiles file exists
 if [ ! -f "$PROFILES_PATH" ]; then
   echo "Model profiles not found at $PROFILES_PATH. Plugin installation issue." >&2
   exit 1
 fi
 
-# Catalog fingerprints prevent stale model resolutions after refresh.
-_MODELS_BASE="${ANTHROPIC_BASE_URL:-https://api.anthropic.com}"
-_MODELS_BASE="${_MODELS_BASE%/}"
-_MODELS_AUTH=""
-if [ -n "${ANTHROPIC_API_KEY:-}" ] || [ -n "${ANTHROPIC_AUTH_TOKEN:-}" ]; then
-  _MODELS_AUTH="1"
-fi
 _MODELS_BIN="${CLAUDE_CODE_EXECPATH:-$(command -v claude || true)}"
 [ -f "$_MODELS_BIN" ] || _MODELS_BIN=""
-_MODELS_STAMP="0:0"
-if [ -n "$_MODELS_BIN" ]; then
-  _MODELS_STAMP="$(stat -f '%m:%z' "$_MODELS_BIN" 2>/dev/null || stat -c '%Y:%s' "$_MODELS_BIN" 2>/dev/null || echo 0:0)"
-fi
-_MODELS_CACHE="/tmp/vbw-models-$(hash_path "bin:${_MODELS_BIN:-none}:${_MODELS_STAMP}|${_MODELS_AUTH:+$_MODELS_BASE}")"
+_MODELS_SOURCE="$(bash -c '. "$1"; vbw_model_cache_source "$2" "$3"' _ "$CACHE_KEY_LIB" "$_MODELS_BIN" "$PRICING_PATH")"
+_MODELS_CACHE="/tmp/vbw-models-$(hash_path "$_MODELS_SOURCE")"
 if [ -n "${VBW_MODEL_CATALOG_FILE:-}" ]; then
-  # Test catalogs override live detection, so their content must scope the cache.
   if [ -f "$VBW_MODEL_CATALOG_FILE" ]; then
     MODELS_HASH=$(file_content_fingerprint "$VBW_MODEL_CATALOG_FILE")
   else
@@ -108,20 +67,21 @@ else
   MODELS_HASH="none"
 fi
 
-# Session-level cache: avoid repeated jq calls for the same agent + config pair.
-# Scope by content fingerprints and path hash so parallel BATS workers
-# using different temp repos cannot collide.
 CONFIG_HASH=$(file_content_fingerprint "$CONFIG_PATH")
 PROFILES_HASH=$(file_content_fingerprint "$PROFILES_PATH")
+if [ -f "$PRICING_PATH" ]; then
+  PRICING_HASH=$(file_content_fingerprint "$PRICING_PATH")
+else
+  PRICING_HASH="none"
+fi
 PATH_HASH=$(hash_path "${CONFIG_PATH}|${PROFILES_PATH}")
-CACHE_FILE="/tmp/vbw-model-${AGENT}-${PATH_HASH}-${CONFIG_HASH}-${PROFILES_HASH}-${MODELS_HASH}"
+CACHE_FILE="/tmp/vbw-model-${AGENT}-${PATH_HASH}-${CONFIG_HASH}-${PROFILES_HASH}-${MODELS_HASH}-${PRICING_HASH}"
 if [ -f "$CACHE_FILE" ]; then
   _cached=$(cat "$CACHE_FILE")
   if [[ "$_cached" =~ $MODEL_SHAPE ]]; then
     echo "$_cached"
     exit 0
   fi
-  # Cache is corrupt or empty — fall through to recompute
 fi
 
 CATALOG=""
@@ -129,20 +89,61 @@ CATALOG_EXTRA=""
 CATALOG_LOADED=false
 load_catalog() {
   if [ "$CATALOG_LOADED" = false ]; then
-    CATALOG=$(bash "$SCRIPT_DIR/detect-models.sh" 2>/dev/null) || CATALOG=""
-    # model_catalog_extra: trusted ids treated as available even if undetected.
-    CATALOG_EXTRA=$(jq -r '(.model_catalog_extra // [])[]' "$CONFIG_PATH" 2>/dev/null || true)
-    CATALOG_LOADED=true
+    printf -v CATALOG '%s' "$(bash "$SCRIPT_DIR/detect-models.sh" 2>/dev/null || true)"
+    printf -v CATALOG_EXTRA '%s' "$(jq -r '(.model_catalog_extra // [])[]' "$CONFIG_PATH" 2>/dev/null || true)"
+    printf -v CATALOG_LOADED '%s' true
   fi
 }
 
 candidates_from() {
-  # The jq filter emits one candidate per line.
   jq -r "($1) // empty | if type == \"array\" then .[] else . end" "$CONFIG_PATH" 2>/dev/null || true
 }
 
+resolve_alias() {
+  local model="$1"
+  case "$model" in
+    opus|sonnet|haiku|fable|default)
+      printf '%s\n' "$model"
+      return 0
+      ;;
+  esac
+  if [ -f "$PRICING_PATH" ]; then
+    jq -r --arg m "$model" '.aliases[$m] // $m' "$PRICING_PATH" 2>/dev/null || printf '%s\n' "$model"
+  else
+    printf '%s\n' "$model"
+  fi
+}
+
+resolve_catalog_alias() {
+  local model="$1"
+  if [ -f "$PRICING_PATH" ]; then
+    jq -r --arg m "$model" '.aliases[$m] // $m' "$PRICING_PATH" 2>/dev/null || printf '%s\n' "$model"
+  else
+    printf '%s\n' "$model"
+  fi
+}
+
+emit_catalog_choice() {
+  local model="$1" canonical="$2"
+  case "$model" in
+    opus|sonnet|haiku|fable|default) printf '%s\n' "$model" ;;
+    *) printf '%s\n' "$canonical" ;;
+  esac
+}
+
+pick_catalog_model() {
+  local candidates="$1" haystack="$2" c catalog_model
+  while IFS= read -r c; do
+    [ -z "$c" ] && continue
+    catalog_model=$(resolve_catalog_alias "$c")
+    if grep -Fxq -- "$catalog_model" <<< "$haystack" || { case "$c" in opus|sonnet|haiku|fable|default) false ;; *) [ "$catalog_model" != "$c" ] ;; esac; }; then
+      emit_catalog_choice "$c" "$catalog_model"
+      return 0
+    fi
+  done <<< "$candidates"
+}
+
 pick_model() {
-  # Preference arrays require catalog matching, while single candidates are trusted.
   local first="" count=0 c chosen=""
   local all=""
   while IFS= read -r c; do
@@ -152,6 +153,7 @@ pick_model() {
     all="${all}${c}"$'\n'
   done
   [ "$count" -eq 0 ] && return 0
+  first=$(resolve_alias "$first")
   if [ "$count" -eq 1 ]; then
     echo "$first"
     return 0
@@ -159,13 +161,8 @@ pick_model() {
   load_catalog
   if [ -n "$CATALOG" ]; then
     local haystack="${CATALOG}"$'\n'"${CATALOG_EXTRA}"
-    while IFS= read -r c; do
-      [ -z "$c" ] && continue
-      if grep -Fxq -- "$c" <<< "$haystack"; then
-        chosen="$c"
-        break
-      fi
-    done <<< "$all"
+    chosen=$(pick_catalog_model "$all" "$haystack")
+
   fi
   echo "${chosen:-$first}"
 }
@@ -184,12 +181,11 @@ if [ -z "$MODEL" ]; then
     echo "Invalid model_profile '$PROFILE'. Valid: quality, balanced, budget" >&2
     exit 1
   fi
-  MODEL=$(jq -r ".$PROFILE.$AGENT" "$PROFILES_PATH")
+  MODEL=$(resolve_alias "$(jq -r ".$PROFILE.$AGENT" "$PROFILES_PATH")")
 fi
 
 if [[ "$MODEL" =~ $MODEL_SHAPE ]]; then
   echo "$MODEL"
-  # Cache result for session reuse
   echo "$MODEL" > "$CACHE_FILE" 2>/dev/null || true
 else
   echo "Invalid model '$MODEL' for $AGENT. Must be a single model id token." >&2

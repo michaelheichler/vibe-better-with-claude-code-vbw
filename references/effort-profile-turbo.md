@@ -32,7 +32,7 @@ See: @references/model-profiles.md for model profile details.
 |----------|------|
 | All levels | OFF |
 
-No lead agent at Turbo; plan approval requires a lead.
+No lead agent at Turbo, plan approval requires a lead.
 
 ## Effort Parameter Mapping
 

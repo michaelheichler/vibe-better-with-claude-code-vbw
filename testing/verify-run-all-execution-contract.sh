@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# verify-run-all-execution-contract.sh — Guard CONTRIBUTING.md against removing the
+# verify-run-all-execution-contract.sh, Guard CONTRIBUTING.md against removing the
 # no-tail / no-wrapper guidance for run-all.sh execution.
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -23,7 +23,7 @@ fail() {
 echo "=== run-all Execution Contract Verification ==="
 
 if [[ ! -f "$TARGET" ]]; then
-  echo "SKIP  CONTRIBUTING.md not found — nothing to verify"
+  echo "SKIP  CONTRIBUTING.md not found, nothing to verify"
   exit 0
 fi
 

@@ -1,49 +1,23 @@
 #!/usr/bin/env bash
 set -u
 
-# verify-state-consistency.sh — Cross-file state consistency verification.
-#
-# Checks that STATE.md, ROADMAP.md, PROJECT.md, .execution-state.json, and
-# the phase filesystem agree with each other. Used at these integration
-# points:
-#   - Archive (--mode archive): hard gate, exit 2 on any failure
-#   - Session start (--mode advisory): exit 0 always
-#   - Execute-time advisory (--mode advisory): exit 0 always
-#   - Doctor (--mode advisory): exit 0 always
-#
-# Usage: verify-state-consistency.sh [planning_dir] [--mode archive|advisory]
-# Output: JSON object on stdout with per-check pass/fail and a verdict.
-# Exit codes:
-#   0 — all pass, or advisory mode (regardless of failures)
-#   2 — archive mode AND at least one check failed
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
-# --- Source shared utilities ------------------------------------------------
-# shellcheck source=lib/vbw-config-root.sh
 . "$SCRIPT_DIR/lib/vbw-config-root.sh"
 
 if [ -f "$SCRIPT_DIR/summary-utils.sh" ]; then
-  # shellcheck source=summary-utils.sh
   . "$SCRIPT_DIR/summary-utils.sh"
 fi
 
 if [ -f "$SCRIPT_DIR/phase-state-utils.sh" ]; then
-  # shellcheck source=phase-state-utils.sh
   . "$SCRIPT_DIR/phase-state-utils.sh"
 fi
 
 if [ -f "$SCRIPT_DIR/uat-utils.sh" ]; then
-  # shellcheck source=uat-utils.sh
   . "$SCRIPT_DIR/uat-utils.sh"
 fi
 
-# --- Dependency preflight ----------------------------------------------------
-# Required functions from sourced utility scripts. If any are missing (e.g. a
-# source path is wrong or a lib file was deleted), emit a structured failure
-# rather than silently producing misleading results.
-# Note: Only list functions from *sourced* files, not those defined later in
-# this script (e.g. phase_has_blocking_uat).
 REQUIRED_FUNCTIONS=(
   list_canonical_phase_dirs
   count_phase_plans
@@ -69,7 +43,6 @@ for fn in "${REQUIRED_FUNCTIONS[@]}"; do
   fi
 done
 
-# --- Argument parsing -------------------------------------------------------
 MODE="advisory"
 PLANNING_DIR=""
 
@@ -85,7 +58,6 @@ while [ $# -gt 0 ]; do
       MODE="${1#--mode=}"
       ;;
     -*)
-      # unknown flag — ignore
       ;;
     *)
       if [ -z "$PLANNING_DIR" ]; then
@@ -96,33 +68,27 @@ while [ $# -gt 0 ]; do
   shift
 done
 
-# Validate MODE — reject typos that could silently bypass archive gating
 case "$MODE" in
   archive|advisory) ;;
   *) echo "verify-state-consistency: unknown mode '$MODE', defaulting to archive" >&2
      MODE="archive" ;;
 esac
 
-# Resolve VBW workspace root (fail-open) so VBW_CONFIG_ROOT is available for
-# relative path resolution even when PLANNING_DIR is passed as an argument.
 find_vbw_root "$SCRIPT_DIR" 2>/dev/null || true
 
-# Resolve planning dir from workspace root if not provided
 if [ -z "$PLANNING_DIR" ]; then
   PLANNING_DIR="${VBW_PLANNING_DIR:-.vbw-planning}"
 fi
 
-# Make absolute — resolve relative paths against VBW workspace root, falling back to cwd
 case "$PLANNING_DIR" in
-  /*) ;; # already absolute
-  *)  planning_root="${VBW_CONFIG_ROOT:-$(pwd)}"
-      PLANNING_DIR="$planning_root/$PLANNING_DIR" ;;
+  /*)
+    ;;
+  *)
+    planning_root="${VBW_CONFIG_ROOT:-$(pwd)}"
+    PLANNING_DIR="$planning_root/$PLANNING_DIR"
+    ;;
 esac
 
-# --- Prerequisite: jq must be available --------------------------------------
-# All JSON output (early-exit and final) is built with jq. Without it, archive
-# mode could reach VERDICT=pass → exit 0 with no JSON, silently bypassing the
-# archive gate. Emit a hardcoded JSON payload (no jq dependency) and exit.
 if ! command -v jq >/dev/null 2>&1; then
   cat <<NOJQ
 {"verdict":"fail","mode":"$MODE","checks":{"state_vs_filesystem":{"pass":false,"detail":"not evaluated: jq not found"},"roadmap_vs_summaries":{"pass":false,"detail":"not evaluated: jq not found"},"exec_state_vs_filesystem":{"pass":false,"detail":"not evaluated: jq not found"},"state_vs_roadmap":{"pass":false,"detail":"not evaluated: jq not found"},"project_vs_state":{"pass":false,"detail":"not evaluated: jq not found"}},"failed_checks":["missing_jq"],"reason":"jq not found"}
@@ -133,7 +99,6 @@ NOJQ
   exit 0
 fi
 
-# Helper for early-exit JSON with per-check structure
 early_exit_json() {
   local verdict="$1" mode="$2" failed_check="$3" reason="${4:-}"
   local check_pass="true"
@@ -168,7 +133,6 @@ early_exit_json() {
     }'
 }
 
-# --- Prerequisite: required utility functions --------------------------------
 if [ ${#MISSING_FUNCTIONS[@]} -gt 0 ]; then
   missing_list=$(IFS=', '; echo "${MISSING_FUNCTIONS[*]}")
   early_exit_json "fail" "$MODE" "missing_deps" "required utility functions not available: $missing_list"
@@ -178,7 +142,6 @@ if [ ${#MISSING_FUNCTIONS[@]} -gt 0 ]; then
   exit 0
 fi
 
-# --- Early exit: no project state -------------------------------------------
 if [ ! -d "$PLANNING_DIR" ]; then
   if [ "$MODE" = "archive" ]; then
     early_exit_json "fail" "archive" "missing_planning_dir" "no planning directory"
@@ -207,9 +170,6 @@ ROADMAP_FILE="$PLANNING_DIR/ROADMAP.md"
 PROJECT_FILE="$PLANNING_DIR/PROJECT.md"
 EXEC_STATE_FILE="$PLANNING_DIR/.execution-state.json"
 
-# --- Check result accumulators -----------------------------------------------
-# Each check sets check_NAME_pass (true/false) and check_NAME_detail (string).
-# Checks that can't parse their input set pass=false with a "skip: ..." detail message.
 check_state_vs_filesystem_pass=true
 check_state_vs_filesystem_detail="ok"
 check_roadmap_vs_summaries_pass=true
@@ -221,13 +181,10 @@ check_state_vs_roadmap_detail="ok"
 check_project_vs_state_pass=true
 check_project_vs_state_detail="ok"
 
-# --- Helper: parse STATE.md phase line ---------------------------------------
-# Normalize a status string: strip quotes, leading/trailing whitespace, and \r
 normalize_status() {
   printf '%s' "$1" | tr -d "\r\"'" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//'
 }
 
-# Extracts "N of M" from "Phase: N of M (...)" — tolerates missing parenthesized name.
 parse_state_phase() {
   local state_file="$1"
   STATE_PHASE_CURRENT=""
@@ -245,16 +202,12 @@ parse_state_phase() {
   return 0
 }
 
-# --- Helper: parse STATE.md project name -------------------------------------
 parse_state_project_name() {
   local state_file="$1"
   STATE_PROJECT_NAME=""
   STATE_PROJECT_NAME=$(grep -m1 '^\*\*Project:\*\*' "$state_file" 2>/dev/null | sed 's/.*\*\*Project:\*\*[[:space:]]*//' || true)
 }
 
-# --- Helper: classify whether a phase has blocking UAT ----------------------
-# Mirrors the logic in state-updater.sh/reconcile-state-md.sh so the verifier's
-# notion of "active" matches what STATE.md/ROADMAP.md are actually driven by.
 phase_blocking_uat_class() {
   local phase_dir="$1"
   local status_class
@@ -275,10 +228,6 @@ phase_has_blocking_uat() {
   esac
 }
 
-# --- Helper: find active phase dir (first incomplete phase) ------------------
-# Uses the selected ROADMAP display-numbering scheme for STATE.md comparison.
-# Sets ACTIVE_PHASE_NUM (display number for STATE.md comparison),
-# ACTIVE_PHASE_PREFIX (directory prefix number for .execution-state.json comparison).
 find_active_phase_num() {
   local phases_dir="$1"
   local roadmap_file="${2:-${ROADMAP_FILE:-}}"
@@ -305,7 +254,6 @@ find_active_phase_num() {
     fi
   done < <(list_canonical_phase_dirs "$phases_dir")
   total_dirs="$phase_idx"
-  # All phases complete — use the last ordinal position
   if [ -z "$active_ordinal" ] && [ "$phase_idx" -gt 0 ]; then
     active_ordinal="$phase_idx"
     active_prefix="$prefix_num"
@@ -334,9 +282,6 @@ find_active_phase_num() {
   return 0
 }
 
-# =============================================================================
-# CHECK 1: STATE.md ↔ filesystem (phase number and total)
-# =============================================================================
 run_check_state_vs_filesystem() {
   if ! parse_state_phase "$STATE_FILE"; then
     if [ "$MODE" = "archive" ]; then
@@ -390,9 +335,6 @@ run_check_state_vs_filesystem() {
   fi
 }
 
-# =============================================================================
-# CHECK 2: ROADMAP.md ↔ SUMMARY.md (completion markers)
-# =============================================================================
 run_check_roadmap_vs_summaries() {
   if [ ! -f "$ROADMAP_FILE" ]; then
     check_roadmap_vs_summaries_detail="skip: no ROADMAP.md"
@@ -443,7 +385,6 @@ run_check_roadmap_vs_summaries() {
   while IFS= read -r line || [ -n "$line" ]; do
     phase_num=$(roadmap_checklist_phase_num_from_line "$line") || continue
 
-    # Duplicate detection
     case " $seen_phases " in
       *" $phase_num "*)
         mismatches="${mismatches:+$mismatches, }duplicate ROADMAP checklist entry for phase $phase_num"
@@ -456,7 +397,6 @@ run_check_roadmap_vs_summaries() {
       -\ \[x\]*|-\ \[X\]*) checked=true ;;
     esac
 
-    # Find phase dir using the ROADMAP's existing numbering scheme.
     phase_dir=""
     if [ "$scheme" != "unknown" ]; then
       phase_dir=$(roadmap_phase_dir_for_num "$scheme" "$PHASES_DIR" "$phase_num" 2>/dev/null || true)
@@ -470,12 +410,10 @@ run_check_roadmap_vs_summaries() {
     plans=$(count_phase_plans "$phase_dir")
     complete=$(count_complete_summaries "$phase_dir")
 
-    # Marked complete in roadmap but not all plans done
     if [ "$checked" = "true" ] && { [ "$plans" -eq 0 ] || [ "$complete" -lt "$plans" ]; }; then
       mismatches="${mismatches:+$mismatches, }phase $phase_num marked [x] but incomplete ($complete/$plans done)"
     fi
 
-    # Marked complete in roadmap but phase has blocking UAT state.
     if [ "$checked" = "true" ] && [ -n "$phase_dir" ]; then
       blocking_uat_class=$(phase_blocking_uat_class "$phase_dir" 2>/dev/null)
       case "$blocking_uat_class" in
@@ -488,16 +426,13 @@ run_check_roadmap_vs_summaries() {
       esac
     fi
 
-    # Not marked complete but all plans are done
     if [ "$checked" = "false" ] && [ "$plans" -gt 0 ] && [ "$complete" -ge "$plans" ]; then
-      # Blocking UAT keeps the phase unchecked even when all plans are complete.
       if ! phase_has_blocking_uat "$phase_dir"; then
         mismatches="${mismatches:+$mismatches, }phase $phase_num marked [ ] but all plans complete ($complete/$plans)"
       fi
     fi
   done < "$ROADMAP_FILE"
 
-  # Reverse check: every phase dir should have a matching ROADMAP entry
   local rd rd_num rd_idx rd_base rd_prefix
   rd_idx=0
   while IFS= read -r rd; do
@@ -537,16 +472,12 @@ run_check_roadmap_vs_summaries() {
   fi
 }
 
-# =============================================================================
-# CHECK 3: .execution-state.json ↔ filesystem
-# =============================================================================
 run_check_exec_state_vs_filesystem() {
   if [ ! -f "$EXEC_STATE_FILE" ]; then
     check_exec_state_vs_filesystem_detail="skip: no .execution-state.json"
     return
   fi
 
-  # Validate JSON
   if ! jq empty "$EXEC_STATE_FILE" 2>/dev/null; then
     if [ "$MODE" = "archive" ]; then
       check_exec_state_vs_filesystem_pass=false
@@ -573,7 +504,6 @@ run_check_exec_state_vs_filesystem() {
     return
   fi
 
-  # Validate phase is numeric before arithmetic comparison
   case "$es_phase" in
     *[!0-9]*)
       if [ "$MODE" = "archive" ]; then
@@ -587,7 +517,6 @@ run_check_exec_state_vs_filesystem() {
       ;;
   esac
 
-  # Remove leading zeros (sed, not arithmetic — avoids octal for 08/09)
   es_phase=$(printf '%s' "$es_phase" | sed 's/^0*//')
   es_phase=${es_phase:-0}
 
@@ -604,7 +533,6 @@ run_check_exec_state_vs_filesystem() {
 
   local details=""
 
-  # Find phase dir matching es_phase number
   local target_dir="" d d_num
   while IFS= read -r d; do
     [ -n "$d" ] || continue
@@ -624,20 +552,12 @@ run_check_exec_state_vs_filesystem() {
     return
   fi
 
-  # Cross-check: exec-state phase vs actual active phase on disk.
-  # When es_status is "complete", the exec-state is expected to reference a
-  # finished phase while the active phase has moved on — that is normal.
-  # Drift is only meaningful when the exec state claims work is still running
-  # on a phase that is not the current active phase.
-  # Compare using directory prefix (ACTIVE_PHASE_PREFIX), not ordinal position
-  # (ACTIVE_PHASE_NUM), because .execution-state.json stores the prefix number.
   if [ "$es_status" != "complete" ] && find_active_phase_num "$PHASES_DIR" 2>/dev/null && [ -n "$ACTIVE_PHASE_PREFIX" ] && [ "$ACTIVE_PHASE_PREFIX" != "$es_phase" ]; then
     local actual_active_prefix="$ACTIVE_PHASE_PREFIX"
     details="exec-state phase ($es_phase) does not match active phase on disk (prefix $actual_active_prefix)"
     check_exec_state_vs_filesystem_pass=false
   fi
 
-  # Status coherence: complete but incomplete plans
   local plans complete
   plans=$(count_phase_plans "$target_dir")
   complete=$(count_complete_summaries "$target_dir")
@@ -662,7 +582,6 @@ run_check_exec_state_vs_filesystem() {
     check_exec_state_vs_filesystem_pass=false
   fi
 
-  # Stale top-level status: running but all plans already complete
   if [ "$es_status" = "running" ] && [ "$plans" -gt 0 ] && [ "$complete" -ge "$plans" ]; then
     local msg="status is 'running' but all plans in phase $es_phase are complete ($complete/$plans)"
     if [ -n "$details" ]; then
@@ -673,14 +592,12 @@ run_check_exec_state_vs_filesystem() {
     check_exec_state_vs_filesystem_pass=false
   fi
 
-  # Stale top-level status: failed but no failed plans on disk
   if [ "$es_status" = "failed" ]; then
     local failed_count=0 sf sf_status
     for sf in "$target_dir"/*-SUMMARY.md; do
       [ -f "$sf" ] || continue
       sf_status=$(extract_summary_status "$sf")
       sf_status=$(normalize_status "$sf_status")
-      # Normalize brownfield "completed" → "complete"
       [ "$sf_status" = "completed" ] && sf_status="complete"
       [ "$sf_status" = "failed" ] && failed_count=$((failed_count + 1))
     done
@@ -695,7 +612,6 @@ run_check_exec_state_vs_filesystem() {
     fi
   fi
 
-  # Stale top-level status: pending but phase has finalized plans
   if [ "$es_status" = "pending" ]; then
     local terminal
     terminal=$(count_terminal_summaries "$target_dir")
@@ -710,7 +626,6 @@ run_check_exec_state_vs_filesystem() {
     fi
   fi
 
-  # Non-terminal statuses (ready/paused/blocked): stale if all plans already complete
   case "$es_status" in
     ready|paused|blocked)
       if [ "$plans" -gt 0 ] && [ "$complete" -ge "$plans" ]; then
@@ -725,7 +640,6 @@ run_check_exec_state_vs_filesystem() {
       ;;
   esac
 
-  # Unrecognized top-level status
   case "$es_status" in
     complete|running|ready|paused|blocked|failed|pending) ;; # known statuses
     *)
@@ -739,7 +653,6 @@ run_check_exec_state_vs_filesystem() {
       ;;
   esac
 
-  # Per-plan status verification
   local plan_count plan_id plan_status plan_mismatches=""
   local plans_type
   plans_type=$(jq -r '.plans | type // "null"' "$EXEC_STATE_FILE" 2>/dev/null || echo "null")
@@ -759,9 +672,6 @@ run_check_exec_state_vs_filesystem() {
     plan_status=$(jq -r ".plans[$i].status // empty" "$EXEC_STATE_FILE" 2>/dev/null || true)
 
     if [ -n "$plan_id" ] && [ -n "$plan_status" ]; then
-      # Validate plan_id against safe filename pattern to prevent path traversal.
-      # Use whole-string bash pattern matching so embedded newlines cannot pass
-      # validation line-by-line.
       case "$plan_id" in
         ''|*[!A-Za-z0-9._-]*)
           plan_mismatches="${plan_mismatches:+$plan_mismatches, }plan '$plan_id' has invalid id (must match ^[A-Za-z0-9._-]+$)"
@@ -772,18 +682,15 @@ run_check_exec_state_vs_filesystem() {
       case "$plan_status" in
 
         complete|partial|failed)
-          # Require plan artifact still present on disk
           if [ ! -f "$target_dir/${plan_id}-PLAN.md" ]; then
             plan_mismatches="${plan_mismatches:+$plan_mismatches, }plan '$plan_id' status=$plan_status but no ${plan_id}-PLAN.md found (plan artifact missing)"
           fi
-          # Require plan-specific SUMMARY.md — generic SUMMARY.md does not satisfy
           if [ ! -f "$target_dir/${plan_id}-SUMMARY.md" ]; then
             plan_mismatches="${plan_mismatches:+$plan_mismatches, }plan '$plan_id' status=$plan_status but no ${plan_id}-SUMMARY.md found"
           else
             local sum_status
             sum_status=$(extract_summary_status "$target_dir/${plan_id}-SUMMARY.md")
             sum_status=$(normalize_status "$sum_status")
-            # Normalize brownfield "completed" → "complete"
             [ "$sum_status" = "completed" ] && sum_status="complete"
             if [ -z "$sum_status" ] || ! is_valid_summary_status "$sum_status"; then
               plan_mismatches="${plan_mismatches:+$plan_mismatches, }plan '$plan_id' has ${plan_id}-SUMMARY.md but no valid frontmatter status"
@@ -793,11 +700,9 @@ run_check_exec_state_vs_filesystem() {
           fi
           ;;
         pending|running)
-          # Require plan-specific PLAN.md — generic PLAN.md does not satisfy
           if [ ! -f "$target_dir/${plan_id}-PLAN.md" ]; then
             plan_mismatches="${plan_mismatches:+$plan_mismatches, }plan '$plan_id' status=$plan_status but no ${plan_id}-PLAN.md found"
           fi
-          # Stale status: pending/running plan already has a SUMMARY.md
           if [ -f "$target_dir/${plan_id}-SUMMARY.md" ]; then
             plan_mismatches="${plan_mismatches:+$plan_mismatches, }plan '$plan_id' status=$plan_status but ${plan_id}-SUMMARY.md already exists (stale status)"
           fi
@@ -821,17 +726,13 @@ run_check_exec_state_vs_filesystem() {
     check_exec_state_vs_filesystem_pass=false
   fi
 
-  # Reverse check: on-disk plan artifacts not represented in .plans[]
-  # Runs regardless of plan_count — an empty .plans[] with on-disk plans is drift
   local disk_plans_missing=""
   local plan_file plan_base disk_plan_id found_in_json
   while IFS= read -r plan_file; do
     [ -n "$plan_file" ] || continue
     plan_base=$(basename "$plan_file")
-    # Extract plan ID from filename: {plan_id}-PLAN.md
     disk_plan_id=$(printf '%s' "$plan_base" | sed 's/-PLAN\.md$//')
     [ -n "$disk_plan_id" ] || continue
-    # Check if this plan ID exists in .plans[] (only when .plans is an array)
     if [ "$plans_type" = "array" ]; then
       found_in_json=$(jq -r --arg pid "$disk_plan_id" '.plans[]? | select(.id == $pid) | .id' "$EXEC_STATE_FILE" 2>/dev/null || true)
     else
@@ -842,12 +743,10 @@ run_check_exec_state_vs_filesystem() {
     fi
   done < <(find "$target_dir" -maxdepth 1 -name '*-PLAN.md' 2>/dev/null | sort)
 
-  # Also check for bare legacy PLAN.md not represented in .plans[]
   if [ -f "$target_dir/PLAN.md" ]; then
     disk_plans_missing="${disk_plans_missing:+$disk_plans_missing, }on-disk bare PLAN.md not represented in .execution-state.json .plans[]"
   fi
 
-  # Reverse check for SUMMARY.md files: orphaned summaries not tracked in .plans[]
   local sum_file sum_base disk_sum_id
   while IFS= read -r sum_file; do
     [ -n "$sum_file" ] || continue
@@ -864,7 +763,6 @@ run_check_exec_state_vs_filesystem() {
     fi
   done < <(find "$target_dir" -maxdepth 1 -name '*-SUMMARY.md' 2>/dev/null | sort)
 
-  # Also check for bare legacy SUMMARY.md not represented in .plans[]
   if [ -f "$target_dir/SUMMARY.md" ]; then
     disk_plans_missing="${disk_plans_missing:+$disk_plans_missing, }on-disk bare SUMMARY.md not represented in .execution-state.json .plans[]"
   fi
@@ -883,9 +781,6 @@ run_check_exec_state_vs_filesystem() {
   fi
 }
 
-# =============================================================================
-# CHECK 4: STATE.md ↔ ROADMAP.md (phase count)
-# =============================================================================
 run_check_state_vs_roadmap() {
   if ! parse_state_phase "$STATE_FILE"; then
     if [ "$MODE" = "archive" ]; then
@@ -904,14 +799,12 @@ run_check_state_vs_roadmap() {
   fi
 
   local roadmap_checklist_count roadmap_section_count
-  # Accept both plain "- [ ] Phase N:" and bootstrap link "- [ ] [Phase N:"
   roadmap_checklist_count=0
   while IFS= read -r line || [ -n "$line" ]; do
     if roadmap_checklist_phase_num_from_line "$line" >/dev/null 2>&1; then
       roadmap_checklist_count=$((roadmap_checklist_count + 1))
     fi
   done < "$ROADMAP_FILE"
-  # Accept ### or ## section headings (bootstrap may use ## instead of ###)
   roadmap_section_count=$(grep -cE '^#{2,3} (\[)?Phase [0-9]+:' "$ROADMAP_FILE" 2>/dev/null || true)
 
   local details="" failed=false
@@ -947,9 +840,6 @@ run_check_state_vs_roadmap() {
   fi
 }
 
-# =============================================================================
-# CHECK 5: PROJECT.md ↔ STATE.md (project name)
-# =============================================================================
 run_check_project_vs_state() {
   if [ ! -f "$PROJECT_FILE" ]; then
     if [ "$MODE" = "archive" ]; then
@@ -994,14 +884,12 @@ run_check_project_vs_state() {
   fi
 }
 
-# --- Run all checks ----------------------------------------------------------
 run_check_state_vs_filesystem
 run_check_roadmap_vs_summaries
 run_check_exec_state_vs_filesystem
 run_check_state_vs_roadmap
 run_check_project_vs_state
 
-# --- Assemble failed_checks list ---------------------------------------------
 FAILED_CHECKS=""
 if [ "$check_state_vs_filesystem_pass" = "false" ]; then
   FAILED_CHECKS="${FAILED_CHECKS:+$FAILED_CHECKS,}\"state_vs_filesystem\""
@@ -1019,13 +907,11 @@ if [ "$check_project_vs_state_pass" = "false" ]; then
   FAILED_CHECKS="${FAILED_CHECKS:+$FAILED_CHECKS,}\"project_vs_state\""
 fi
 
-# --- Determine verdict -------------------------------------------------------
 VERDICT="pass"
 if [ -n "$FAILED_CHECKS" ]; then
   VERDICT="fail"
 fi
 
-# --- Output JSON --------------------------------------------------------------
 jq -n \
   --arg verdict "$VERDICT" \
   --arg mode "$MODE" \
@@ -1053,7 +939,6 @@ jq -n \
     failed_checks: $failed
   }'
 
-# --- Exit code ----------------------------------------------------------------
 if [ "$VERDICT" = "fail" ] && [ "$MODE" = "archive" ]; then
   exit 2
 fi

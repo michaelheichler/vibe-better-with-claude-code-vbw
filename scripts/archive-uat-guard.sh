@@ -1,11 +1,6 @@
 #!/usr/bin/env bash
 set -u
 
-# archive-uat-guard.sh — hard gate for archive attempts when unresolved UAT exists.
-#
-# Exit codes:
-#   0 => archive allowed (no unresolved UAT detected)
-#   2 => block archive (active phase or milestone unresolved UAT)
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PHASE_DETECT_OUT=$(bash "$SCRIPT_DIR/phase-detect.sh" 2>/dev/null || true)

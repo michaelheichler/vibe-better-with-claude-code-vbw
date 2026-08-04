@@ -1,12 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
+MD_HASH="#"
 
-# verify-init-todo.sh — Contract checks for init/todo state shape
-#
-# Validates consistency across:
-# - templates/STATE.md
-# - commands/todo.md instructions
-# - scripts/bootstrap/bootstrap-state.sh generated output
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 TEMPLATE="$ROOT/templates/STATE.md"
@@ -41,8 +36,6 @@ check "TODO-02" "todo command does not reference Pending Todos" test ! "$(grep -
 check "TODO-03" "todo command avoids preflight plugin-root resolver shell block" test ! "$(grep -c 'VBW_CACHE_ROOT=' "$TODO_CMD")" -gt 0
 check "TODO-04" "todo command explains Bash + write-access requirement in restricted modes" \
   bash -c 'grep -qi "restricted" "$1" && grep -qi "bash" "$1" && grep -qi "write access" "$1"' _ "$TODO_CMD"
-# TODO-05: Contract: file contains a STOP for missing STATE.md with restart guidance.
-# Heading-agnostic — greps the whole file for the stop-message keywords.
 check "TODO-05" "todo command STOPs with restart guidance when STATE.md missing" \
   bash -c 'grep -q "STATE\.md not found\|STATE\.md does not exist" "$1" && grep -qi "restart" "$1"' _ "$TODO_CMD"
 check "TODO-06" "todo command defines inline PLUGIN_ROOT resolution for helper writes" \
@@ -82,7 +75,6 @@ check "TODO-19" "planning boundary step appears before final confirmation" \
   bash -c '[ -n "$1" ] && [ -n "$2" ] && [ "$1" -lt "$2" ]' _ "$planning_line" "$confirm_line"
 check "LIST-01" "list-todos command avoids preflight plugin-root resolver shell block" test ! "$(grep -c 'VBW_CACHE_ROOT=' "$LIST_CMD")" -gt 0
 check "LIST-02" "list-todos command explains restricted-mode requirement" grep -qi 'restricted mode\|restricted.*permission' "$LIST_CMD"
-# LIST-03: Contract: file contains a STOP for failed plugin root resolution with restart guidance.
 check "LIST-03" "list-todos command STOPs with restart guidance when plugin root fails" \
   bash -c 'grep -qi "root not found\|none resolves" "$1" && grep -qi "restart" "$1"' _ "$LIST_CMD"
 
@@ -119,9 +111,9 @@ echo "=== List-Todos Ref Handling ==="
 LIST_TMP="$(mktemp -d "${TMPDIR:-/tmp}/vbw-list-ref.XXXXXX")"
 trap 'rm -rf "$TMP_DIR" "$LIST_TMP"' EXIT
 mkdir -p "$LIST_TMP/.vbw-planning"
-cat > "$LIST_TMP/.vbw-planning/STATE.md" << 'HEREDOC'
-# State
-## Todos
+cat > "$LIST_TMP/.vbw-planning/STATE.md" << HEREDOC
+${MD_HASH} State
+${MD_HASH}${MD_HASH} Todos
 - [HIGH] Fix the widget (added 2025-04-10) (ref:abc12345)
 HEREDOC
 

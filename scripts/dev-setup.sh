@@ -1,18 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# VBW Local Development Setup
-# Sets up (or tears down) the local dev environment for contributing to VBW.
-#
-# Usage:
-#   bash scripts/dev-setup.sh              # set up local dev
-#   bash scripts/dev-setup.sh --teardown   # revert to marketplace
-#   bash scripts/dev-setup.sh --status     # check current state
-#
-# Setup must be run from the root of the VBW clone.
-# --teardown and --status work from any directory.
 
-# ---------- constants ----------
 
 CLAUDE_DIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
 CACHE_BASE="$CLAUDE_DIR/plugins/cache/vbw-marketplace/vbw"
@@ -21,7 +10,6 @@ COMMANDS_CACHE="$CLAUDE_DIR/commands/vbw"
 LOCAL_BIN="$HOME/.local/bin"
 LAUNCHER_LINK="$LOCAL_BIN/claude-vbw"
 
-# ---------- helpers ----------
 
 info()  { echo "[info]  $*"; }
 ok()    { echo "[ok]    $*"; }
@@ -37,12 +25,10 @@ check_clone_root() {
   fi
 }
 
-# ---------- status ----------
 
 do_status() {
   step "VBW dev environment status"
 
-  # Symlink
   if [ -L "$SYMLINK_PATH" ]; then
     local target
     target=$(readlink "$SYMLINK_PATH")
@@ -53,23 +39,20 @@ do_status() {
     info "No cache symlink at $SYMLINK_PATH (marketplace mode)"
   fi
 
-  # Command cache
   if [ -d "$COMMANDS_CACHE" ]; then
     warn "Command cache exists at $COMMANDS_CACHE (may shadow local commands)"
   else
     ok "No stale command cache"
   fi
 
-  # Glob check
   local glob_result
   glob_result=$(compgen -G "$CACHE_BASE/*/scripts/hook-wrapper.sh" || true)
   if [ -n "$glob_result" ]; then
     ok "Plugin root glob resolves: $glob_result"
   else
-    warn "Plugin root glob does NOT resolve — hooks and scripts will fail at runtime"
+    warn "Plugin root glob does NOT resolve, hooks and scripts will fail at runtime"
   fi
 
-  # Git hooks
   local repo_root
   repo_root=$(git rev-parse --show-toplevel 2>/dev/null || true)
   if [ -n "$repo_root" ] && [ -f "$repo_root/.git/hooks/pre-push" ] && grep -q "VBW pre-push hook" "$repo_root/.git/hooks/pre-push" 2>/dev/null; then
@@ -78,7 +61,6 @@ do_status() {
     info "Git pre-push hook not installed (optional)"
   fi
 
-  # Launcher
   if [ -L "$LAUNCHER_LINK" ]; then
     local launcher_target
     launcher_target=$(readlink "$LAUNCHER_LINK")
@@ -92,7 +74,6 @@ do_status() {
   echo ""
 }
 
-# ---------- setup ----------
 
 do_setup() {
   local clone
@@ -104,7 +85,7 @@ do_setup() {
   if command -v claude >/dev/null 2>&1; then
     ok "Claude Code CLI found"
   else
-    warn "Claude Code CLI not found in PATH — install it before testing"
+    warn "Claude Code CLI not found in PATH, install it before testing"
   fi
 
   step "2/6  Clearing stale command cache"
@@ -118,16 +99,12 @@ do_setup() {
   step "3/6  Setting up plugin cache symlink"
   mkdir -p "$CACHE_BASE"
 
-  # Remove any versioned directories from prior marketplace installs.
-  # Only targets direct children of the VBW-specific cache path, so this
-  # is safe — the new "local" symlink replaces them.
   while IFS= read -r entry; do
     [ -z "$entry" ] && continue
     rm -rf "$entry"
     ok "Removed old cache entry: $(basename "$entry")"
   done < <(find "$CACHE_BASE" -mindepth 1 -maxdepth 1 -type d 2>/dev/null)
 
-  # Remove existing symlink (broken or pointing elsewhere)
   if [ -L "$SYMLINK_PATH" ]; then
     rm "$SYMLINK_PATH"
   fi
@@ -137,18 +114,16 @@ do_setup() {
 
   step "4/6  Verifying setup"
 
-  # Show symlink details (like the old manual ls -la check)
   info "Cache directory contents:"
   ls -la "$CACHE_BASE"/
   echo ""
 
-  # Verify the glob resolves (like the old manual hook-wrapper.sh check)
   local glob_result
   glob_result=$(compgen -G "$CACHE_BASE/*/scripts/hook-wrapper.sh" || true)
   if [ -n "$glob_result" ]; then
     ok "Plugin root glob resolves: $glob_result"
   else
-    err "Glob does NOT resolve — something went wrong with the symlink"
+    err "Glob does NOT resolve, something went wrong with the symlink"
     exit 1
   fi
 
@@ -157,7 +132,7 @@ do_setup() {
     bash scripts/install-hooks.sh
     ok "Git hooks installed"
   else
-    warn "scripts/install-hooks.sh not found — skipping"
+    warn "scripts/install-hooks.sh not found, skipping"
   fi
 
   step "6/6  claude-vbw launcher (optional)"
@@ -169,7 +144,6 @@ do_setup() {
     if [ "$install_launcher" = "y" ] || [ "$install_launcher" = "Y" ]; then
       mkdir -p "$LOCAL_BIN"
 
-      # Remove existing link (broken or pointing elsewhere)
       if [ -L "$LAUNCHER_LINK" ]; then
         rm "$LAUNCHER_LINK"
       fi
@@ -177,24 +151,22 @@ do_setup() {
       ln -s "$launcher_script" "$LAUNCHER_LINK"
       ok "Installed: $LAUNCHER_LINK -> $launcher_script"
 
-      # Check if ~/.local/bin is in PATH
       if ! echo "$PATH" | tr ':' '\n' | grep -qxF "$LOCAL_BIN"; then
         warn "$LOCAL_BIN is not in your PATH"
         info "Add it to your shell profile:"
         info "  bash/zsh: echo 'export PATH=\"\$HOME/.local/bin:\$PATH\"' >> ~/.bashrc"
         info "  fish:     fish_add_path ~/.local/bin"
       else
-        ok "$LOCAL_BIN is in PATH — claude-vbw is ready to use"
+        ok "$LOCAL_BIN is in PATH, claude-vbw is ready to use"
       fi
     else
-      ok "Skipped — you can always install it later with:"
+      ok "Skipped, you can always install it later with:"
       info "  ln -s $launcher_script $LAUNCHER_LINK"
     fi
   else
-    warn "scripts/dev-launch.sh not found — skipping launcher install"
+    warn "scripts/dev-launch.sh not found, skipping launcher install"
   fi
 
-  # ---------- summary ----------
 
   echo ""
   echo "Local dev environment ready."
@@ -214,7 +186,6 @@ do_setup() {
   echo ""
 }
 
-# ---------- teardown ----------
 
 do_teardown() {
   step "1/4  Removing plugin cache symlink"
@@ -222,7 +193,7 @@ do_teardown() {
     rm "$SYMLINK_PATH"
     ok "Removed symlink: $SYMLINK_PATH"
   elif [ -e "$SYMLINK_PATH" ]; then
-    warn "$SYMLINK_PATH exists but is not a symlink — removing anyway"
+    warn "$SYMLINK_PATH exists but is not a symlink, removing anyway"
     rm -rf "$SYMLINK_PATH"
     ok "Removed $SYMLINK_PATH"
   else
@@ -255,7 +226,6 @@ do_teardown() {
     ok "No claude-vbw launcher to remove"
   fi
 
-  # ---------- summary ----------
 
   echo ""
   echo "Local dev environment removed."
@@ -267,7 +237,6 @@ do_teardown() {
   echo ""
 }
 
-# ---------- main ----------
 
 case "${1:-}" in
   --teardown) do_teardown ;;

@@ -34,7 +34,7 @@ Display Phase Banner "VBW Uninstall" explaining system-level config removal. Pro
 
 ### Step 2: Clean statusLine
 
-Read `CLAUDE_DIR/settings.json`. If statusLine contains `vbw-statusline`: remove entire statusLine key, display ✓. If not VBW's: "○ Statusline is not VBW's — skipped".
+Read `CLAUDE_DIR/settings.json`. If statusLine contains `vbw-statusline`: remove entire statusLine key, display ✓. If not VBW's: "○ Statusline is not VBW's , skipped".
 
 ### Step 3: Clean Agent Teams env var
 
@@ -56,8 +56,8 @@ Display Phase Banner "VBW Cleanup Complete" with ✓/○ per step. Then:
   /plugin uninstall vbw@vbw-marketplace
   Then optionally: /plugin marketplace remove vbw-marketplace
 ```
-**Do NOT run plugin uninstall yourself** — it would remove itself mid-execution.
+**Do NOT run plugin uninstall yourself** , it would remove itself mid-execution.
 
 ## Output Format
 
-Follow @${CLAUDE_PLUGIN_ROOT}/references/vbw-brand-essentials.md — Phase Banner (double-line box), ✓ completed, ○ skipped, Next Up, no ANSI.
+Follow @${CLAUDE_PLUGIN_ROOT}/references/vbw-brand-essentials.md , Phase Banner (double-line box), ✓ completed, ○ skipped, Next Up, no ANSI.

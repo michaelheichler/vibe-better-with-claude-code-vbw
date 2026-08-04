@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# run-lint.sh — Shared shell lint entrypoint for local runs and CI.
+# run-lint.sh, Shared shell lint entrypoint for local runs and CI.
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 

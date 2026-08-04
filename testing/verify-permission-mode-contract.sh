@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# verify-permission-mode-contract.sh — Verify agent permissionMode declarations
+# verify-permission-mode-contract.sh, Verify agent permissionMode declarations
 #
 # Checks:
 # - Plan-mode agents (Scout, QA) declare permissionMode: plan
@@ -86,7 +86,7 @@ compare_tool_lists() {
 
 echo "=== Agent permissionMode Contract Verification ==="
 
-# Define expected permission modes (bash 3.2 compatible — no associative arrays)
+# Define expected permission modes (bash 3.2 compatible, no associative arrays)
 AGENTS="vbw-scout vbw-qa vbw-dev vbw-lead vbw-architect vbw-debugger vbw-docs"
 
 get_expected_mode() {

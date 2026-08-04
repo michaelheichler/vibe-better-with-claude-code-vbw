@@ -1,12 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
+MD_HASH="#"
 
-# planning-git.sh — Manage planning artifact git behavior from config.
-#
-# Usage:
-#   planning-git.sh sync-ignore [CONFIG_FILE]
-#   planning-git.sh commit-boundary <action> [CONFIG_FILE]
-#   planning-git.sh push-after-phase [CONFIG_FILE]
 
 COMMAND="${1:-}"
 ARG2="${2:-}"
@@ -34,8 +29,8 @@ ensure_transient_ignore() {
 
   [ -d "$planning_dir" ] || return 0
 
-  cat > "$ignore_file" <<'EOF'
-# VBW transient runtime artifacts
+  cat > "$ignore_file" <<EOF
+${MD_HASH} VBW transient runtime artifacts
 .execution-state.json
 .execution-state.json.tmp
 .context-*.md
@@ -44,7 +39,7 @@ ensure_transient_ignore() {
 .locks/
 .token-state/
 
-# Session & agent tracking
+${MD_HASH} Session & agent tracking
 .vbw-context
 .vbw-session
 .active-agent
@@ -56,22 +51,22 @@ ensure_transient_ignore() {
 .agent-pids
 .task-verify-seen
 
-# Metrics & cost tracking
+${MD_HASH} Metrics & cost tracking
 .metrics/
 .cost-ledger.json
 
-# Caching
+${MD_HASH} Caching
 .cache/
 
-# Artifacts & events (v2/v3 feature-gated)
+${MD_HASH} Artifacts & events (v2/v3 feature-gated)
 .artifacts/
 .events/
 .event-log.jsonl
 
-# Snapshots & recovery
+${MD_HASH} Snapshots & recovery
 .snapshots/
 
-# Logging & markers
+${MD_HASH} Logging & markers
 .hook-errors.log
 .hook-debug.log
 .skill-decisions.log
@@ -85,10 +80,10 @@ ensure_transient_ignore() {
 .tmux-mode-patched
 .delegated-workflow.json
 
-# Baselines
+${MD_HASH} Baselines
 .baselines/
 
-# Codebase mapping
+${MD_HASH} Codebase mapping
 codebase/
 EOF
 }
@@ -121,7 +116,6 @@ push_if_configured() {
   local push_mode="$1"
   [ "$push_mode" = "always" ] || return 0
 
-  # Skip if current branch has no upstream yet.
   if ! git rev-parse --abbrev-ref --symbolic-full-name '@{u}' >/dev/null 2>&1; then
     return 0
   fi
@@ -194,7 +188,6 @@ case "$COMMAND" in
     read_config "$CONFIG_FILE"
 
     if [ "$CFG_AUTO_PUSH" = "after_phase" ]; then
-      # Skip if current branch has no upstream yet.
       if git rev-parse --abbrev-ref --symbolic-full-name '@{u}' >/dev/null 2>&1; then
         git push
       fi

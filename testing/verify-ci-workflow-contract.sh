@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# verify-ci-workflow-contract.sh — Validate CI workflow parity invariants.
+# verify-ci-workflow-contract.sh, Validate CI workflow parity invariants.
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 WORKFLOW="$ROOT/.github/workflows/ci.yml"

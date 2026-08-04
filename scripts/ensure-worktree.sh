@@ -1,12 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# ensure-worktree.sh — Resolve or create a canonical worktree for a branch.
-# Handles: existing worktrees, legacy slash-named worktrees, conflicts, creation.
-#
-# Usage: bash scripts/ensure-worktree.sh <branch-name>
-# Output on success: prints the absolute worktree path on stdout.
-# Exit codes: 0 = success (prints worktree path on stdout), 1 = error (stderr has details)
 
 branch="${1:?Usage: ensure-worktree.sh <branch-name>}"
 
@@ -42,7 +36,6 @@ while IFS= read -r line; do
             fi
             ;;
         '')
-            # End of stanza — check for detached worktree at target path
             if [ "$wt_path" = "$target_worktree" ] && [ -z "$wt_branch" ]; then
                 target_worktree_occupied=true
             fi
@@ -51,7 +44,6 @@ while IFS= read -r line; do
             ;;
     esac
 done < <(git worktree list --porcelain 2>/dev/null)
-# Handle final stanza (porcelain output may not end with blank line)
 if [ "$wt_path" = "$target_worktree" ] && [ -z "$wt_branch" ] && [ -z "$target_worktree_branch" ]; then
     target_worktree_occupied=true
 fi

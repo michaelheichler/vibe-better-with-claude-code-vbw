@@ -1,19 +1,6 @@
 #!/usr/bin/env bash
 set -u
 
-# normalize-prefer-teams.sh — emit canonical prefer_teams values.
-#
-# Usage:
-#   bash scripts/normalize-prefer-teams.sh [path/to/config.json]
-#   bash scripts/normalize-prefer-teams.sh --value <raw-value>
-#
-# Canonical values:
-#   always | auto | never
-#
-# Legacy normalization:
-#   when_parallel -> auto
-#   true          -> always
-#   false/null    -> auto
 
 read_raw_value() {
   local config_path="$1"
@@ -38,8 +25,6 @@ normalize_prefer_teams() {
       echo "$1"
       ;;
     *)
-      # Intentionally preserve unknown values so callers can decide whether to
-      # validate strictly or fail open.
       echo "$1"
       ;;
   esac

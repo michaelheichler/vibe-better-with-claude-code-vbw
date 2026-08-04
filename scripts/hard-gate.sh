@@ -1,18 +1,6 @@
 #!/usr/bin/env bash
 set -u
 
-# hard-gate.sh <gate_type> <phase> <plan> <task> <contract_path>
-# Runs a single hard gate check. Returns JSON result.
-# Gate types: contract_compliance, protected_file, required_checks,
-#             commit_hygiene, artifact_persistence, verification_threshold
-#
-# Output: JSON {gate, result, evidence, ts}
-# Exit: 0 on pass, 2 on fail (when v2_hard_gates=true)
-# AUTONOMY INDEPENDENCE (V2 spec line 162):
-# Gates fire regardless of the autonomy config value. YOLO/full autonomy
-# skips interactive prompts and confirmation gates, but hard gates (file
-# integrity, contract compliance, commit hygiene) always execute. The
-# autonomy value is included in gate output for observability only.
 
 if [ $# -lt 5 ]; then
   echo '{"gate":"unknown","result":"error","evidence":"insufficient arguments","ts":"unknown"}'
@@ -29,7 +17,6 @@ PLANNING_DIR="${VBW_PLANNING_DIR:-.vbw-planning}"
 CONFIG_PATH="${PLANNING_DIR}/config.json"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 if [ -f "${SCRIPT_DIR}/verification-freshness.sh" ]; then
-  # shellcheck source=verification-freshness.sh
   . "${SCRIPT_DIR}/verification-freshness.sh"
 else
   verification_is_stale() { return 0; }
@@ -48,13 +35,11 @@ emit_result() {
   local event_type="gate_passed"
   [ "$result" = "fail" ] && event_type="gate_failed"
 
-  # Log event
   if [ -f "${SCRIPT_DIR}/log-event.sh" ]; then
     bash "${SCRIPT_DIR}/log-event.sh" "$event_type" "$PHASE" "$PLAN" \
       "gate=${GATE_TYPE}" "task=${TASK}" "evidence=${evidence}" 2>/dev/null || true
   fi
 
-  # Log metric
   if [ -f "${SCRIPT_DIR}/collect-metrics.sh" ]; then
     bash "${SCRIPT_DIR}/collect-metrics.sh" "gate_${result}" "$PHASE" "$PLAN" \
       "gate=${GATE_TYPE}" "task=${TASK}" 2>/dev/null || true
@@ -65,13 +50,11 @@ emit_result() {
 
 case "$GATE_TYPE" in
   contract_compliance)
-    # Verify contract hash integrity + task in range
     if [ ! -f "$CONTRACT_PATH" ]; then
       emit_result "fail" "contract file not found"
       exit 2
     fi
 
-    # Hash check
     STORED_HASH=$(jq -r '.contract_hash // ""' "$CONTRACT_PATH" 2>/dev/null) || STORED_HASH=""
     if [ -n "$STORED_HASH" ]; then
       COMPUTED_HASH=$(jq 'del(.contract_hash)' "$CONTRACT_PATH" 2>/dev/null | shasum -a 256 | cut -d' ' -f1) || COMPUTED_HASH=""
@@ -81,7 +64,6 @@ case "$GATE_TYPE" in
       fi
     fi
 
-    # Task range check
     TASK_COUNT=$(jq -r '.task_count // 0' "$CONTRACT_PATH" 2>/dev/null) || TASK_COUNT=0
     if [ "$TASK" -gt "$TASK_COUNT" ] 2>/dev/null || [ "$TASK" -lt 1 ] 2>/dev/null; then
       emit_result "fail" "task ${TASK} outside range 1-${TASK_COUNT}"
@@ -92,7 +74,6 @@ case "$GATE_TYPE" in
     ;;
 
   protected_file)
-    # Check if any modified files are in forbidden_paths
     if [ ! -f "$CONTRACT_PATH" ]; then
       emit_result "pass" "no contract, fail-open"
       exit 0
@@ -104,7 +85,6 @@ case "$GATE_TYPE" in
       exit 0
     fi
 
-    # Check git staged files against forbidden paths
     STAGED=$(git diff --cached --name-only 2>/dev/null) || STAGED=""
     BLOCKED=""
     while IFS= read -r file; do
@@ -126,7 +106,6 @@ case "$GATE_TYPE" in
     ;;
 
   required_checks)
-    # Run verification_checks from contract
     if [ ! -f "$CONTRACT_PATH" ]; then
       emit_result "pass" "no contract, fail-open"
       exit 0
@@ -155,14 +134,12 @@ case "$GATE_TYPE" in
     ;;
 
   commit_hygiene)
-    # Validate last commit message format
     LAST_MSG=$(git log -1 --format=%s 2>/dev/null) || LAST_MSG=""
     if [ -z "$LAST_MSG" ]; then
       emit_result "pass" "no commits to check"
       exit 0
     fi
 
-    # Check conventional commit format: type(scope): description
     if echo "$LAST_MSG" | grep -qE '^(feat|fix|test|refactor|perf|docs|style|chore)\(.+\): .+'; then
       emit_result "pass" "commit format valid"
     else
@@ -172,19 +149,16 @@ case "$GATE_TYPE" in
     ;;
 
   artifact_persistence)
-    # Verify SUMMARY.md exists for completed plans
     PHASES_DIR="${PLANNING_DIR}/phases"
     [ ! -d "$PHASES_DIR" ] && { emit_result "pass" "no phases dir"; exit 0; }
 
     PHASE_DIR=$(ls -d "${PHASES_DIR}/${PHASE}-"* 2>/dev/null | head -1)
     [ -z "$PHASE_DIR" ] && { emit_result "pass" "phase dir not found"; exit 0; }
 
-    # Check all plans up to current have SUMMARY.md
     MISSING=""
     for plan_file in "$PHASE_DIR"/*-PLAN.md; do
       [ ! -f "$plan_file" ] && continue
       PLAN_NUM=$(basename "$plan_file" | sed 's/^[0-9]*-\([0-9]*\)-.*/\1/')
-      # Only check plans before the current one
       if [ "$PLAN_NUM" -lt "$PLAN" ] 2>/dev/null; then
         SUMMARY_FILE="${plan_file%-PLAN.md}-SUMMARY.md"
         if [ ! -f "$SUMMARY_FILE" ]; then
@@ -202,14 +176,10 @@ case "$GATE_TYPE" in
     ;;
 
   verification_threshold)
-    # Check QA pass rate meets threshold
     PHASES_DIR="${PLANNING_DIR}/phases"
     PHASE_DIR=$(ls -d "${PHASES_DIR}/${PHASE}-"* 2>/dev/null | head -1)
     [ -z "$PHASE_DIR" ] && { emit_result "pass" "phase dir not found"; exit 0; }
 
-    # Resolve the authoritative verification artifact first. Under QA remediation,
-    # this may be the completed round's R{RR}-VERIFICATION.md rather than the
-    # frozen phase-root FAIL record.
     VERIFICATION_FILE=""
     PHASE_VERIFICATION_FILE=""
     AUTHORITATIVE_MISSING_FATAL="false"
@@ -225,7 +195,6 @@ case "$GATE_TYPE" in
       fi
     fi
 
-    # Legacy fallback: any prefixed verification artifact.
     if [ -z "$VERIFICATION_FILE" ] && [ "$AUTHORITATIVE_MISSING_FATAL" != "true" ]; then
       for vf in "$PHASE_DIR"/*-VERIFICATION*.md; do
         [ -f "$vf" ] && VERIFICATION_FILE="$vf" && break
@@ -233,7 +202,6 @@ case "$GATE_TYPE" in
     fi
 
     if [ -z "$VERIFICATION_FILE" ]; then
-      # No verification file — check config for verification_tier
       TIER=$(jq -r '.verification_tier // "standard"' "$CONFIG_PATH" 2>/dev/null || echo "standard")
       if [ "$TIER" = "quick" ] || [ "$TIER" = "skip" ]; then
         emit_result "pass" "verification not required (tier=${TIER})"
@@ -293,7 +261,6 @@ case "$GATE_TYPE" in
         ;;
     esac
 
-    # Brownfield fallback: no structured result field available.
     if grep -qi 'FAIL\|failed' "$VERIFICATION_FILE" 2>/dev/null; then
       emit_result "fail" "verification failed"
       exit 2
@@ -305,7 +272,6 @@ case "$GATE_TYPE" in
     ;;
 
   forbidden_commands)
-    # Check if any recently executed commands match forbidden_commands patterns
     if [ ! -f "$CONTRACT_PATH" ]; then
       emit_result "pass" "no contract, fail-open"
       exit 0
@@ -317,14 +283,12 @@ case "$GATE_TYPE" in
       exit 0
     fi
 
-    # Check event log for bash_guard_block events in current plan
     EVENT_LOG="${PLANNING_DIR}/.event-log.jsonl"
     if [ ! -f "$EVENT_LOG" ]; then
       emit_result "pass" "no event log, fail-open"
       exit 0
     fi
 
-    # Look for bash_guard_block events (any blocked destructive command is a violation)
     VIOLATIONS=$(grep '"bash_guard_block"' "$EVENT_LOG" 2>/dev/null | tail -5)
     if [ -n "$VIOLATIONS" ]; then
       PREVIEW=$(echo "$VIOLATIONS" | jq -r '.command_preview // "unknown"' 2>/dev/null | head -1)
