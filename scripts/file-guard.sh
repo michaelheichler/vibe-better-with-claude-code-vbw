@@ -5,6 +5,7 @@ INPUT=$(cat 2>/dev/null) || exit 0
 
 FILE_PATH=$(echo "$INPUT" | jq -r '.tool_input.file_path // ""' 2>/dev/null) || exit 0
 [ -z "$FILE_PATH" ] && exit 0
+case "$FILE_PATH" in *$'\n'*) exit 2 ;; esac
 
 _FG_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 if [ -f "$_FG_SCRIPT_DIR/lib/active-agent-state.sh" ]; then
@@ -271,39 +272,58 @@ normalize_path() {
   echo "$input_path"
 }
 
+declare -A _FG_PATTERN_MATCH_CACHE=()
+
 path_pattern_components_match_at() {
-  local target_index="$1" pattern_index="$2"
+  local target_index="$1" pattern_index="$2" cache_key result
   local target_segment pattern_segment
   local target_count="${#_FG_TARGET_COMPONENTS[@]}" pattern_count="${#_FG_PATTERN_COMPONENTS[@]}"
-
+  cache_key="$target_index:$pattern_index"
+  if [ -n "${_FG_PATTERN_MATCH_CACHE[$cache_key]+set}" ]; then
+    return "${_FG_PATTERN_MATCH_CACHE[$cache_key]}"
+  fi
   if [ "$pattern_index" -eq "$pattern_count" ]; then
-    [ "$target_index" -eq "$target_count" ]
-    return
+    result=1
+    [ "$target_index" -eq "$target_count" ] && result=0
+  else
+    pattern_segment="${_FG_PATTERN_COMPONENTS[$pattern_index]}"
+    if [ "$target_index" -ge "$target_count" ] && [ "$pattern_segment" != "**" ]; then
+      result=1
+    elif [ "$pattern_segment" = "**" ]; then
+      result=1
+      path_pattern_components_match_at "$target_index" "$((pattern_index + 1))" && result=0
+      if [ "$result" -ne 0 ] && [ "$target_index" -lt "$target_count" ] && path_pattern_components_match_at "$((target_index + 1))" "$pattern_index"; then
+        result=0
+      fi
+    else
+      result=1
+      target_segment="${_FG_TARGET_COMPONENTS[$target_index]}"
+      # shellcheck disable=SC2254 # Because quoting would disable lexical glob matching.
+      case "$target_segment" in
+        $pattern_segment) path_pattern_components_match_at "$((target_index + 1))" "$((pattern_index + 1))" && result=0 ;;
+      esac
+    fi
   fi
+  _FG_PATTERN_MATCH_CACHE[$cache_key]="$result"
+  return "$result"
+}
 
-  pattern_segment="${_FG_PATTERN_COMPONENTS[$pattern_index]}"
-  if [ "$pattern_segment" = "**" ]; then
-    path_pattern_components_match_at "$target_index" "$((pattern_index + 1))" && return 0
-    [ "$target_index" -lt "$target_count" ] || return 1
-    path_pattern_components_match_at "$((target_index + 1))" "$pattern_index"
-    return
-  fi
-
-  [ "$target_index" -lt "$target_count" ] || return 1
-  target_segment="${_FG_TARGET_COMPONENTS[$target_index]}"
-  # shellcheck disable=SC2254 # Because quoting would disable lexical glob matching.
-  case "$target_segment" in
-    $pattern_segment)
-      path_pattern_components_match_at "$((target_index + 1))" "$((pattern_index + 1))"
-      ;;
-    *) return 1 ;;
-  esac
+path_pattern_split_components() {
+  local value="$1" target_array="$2" part
+  if [ "$target_array" = target ]; then _FG_TARGET_COMPONENTS=(); else _FG_PATTERN_COMPONENTS=(); fi
+  while [[ "$value" == */* ]]; do
+    part="${value%%/*}"
+    if [ "$target_array" = target ]; then _FG_TARGET_COMPONENTS+=("$part"); else _FG_PATTERN_COMPONENTS+=("$part"); fi
+    value="${value#*/}"
+  done
+  if [ "$target_array" = target ]; then _FG_TARGET_COMPONENTS+=("$value"); else _FG_PATTERN_COMPONENTS+=("$value"); fi
 }
 
 path_pattern_components_match() {
   local target="$1" pattern="$2"
-  IFS='/' read -r -a _FG_TARGET_COMPONENTS <<< "$target"
-  IFS='/' read -r -a _FG_PATTERN_COMPONENTS <<< "$pattern"
+  path_pattern_split_components "$target" target
+  path_pattern_split_components "$pattern" pattern
+  _FG_PATTERN_MATCH_CACHE=()
   path_pattern_components_match_at 0 0
 }
 

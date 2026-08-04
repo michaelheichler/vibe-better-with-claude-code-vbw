@@ -97,6 +97,25 @@ run_file_guard() {
   [[ "$output" == *"not in active plan's files_modified"* ]]
 }
 
+@test "multiple recursive glob components match without backtracking errors" {
+  write_plan 'src/**/test/**/fixtures/*.js'
+  mark_execution_running
+
+  run_file_guard 'src/a/b/test/c/d/fixtures/index.js'
+  [ "$status" -eq 0 ]
+
+  run_file_guard 'src/a/b/test/c/d/other/index.js'
+  [ "$status" -eq 2 ]
+}
+
+@test "embedded newlines remain part of the checked path" {
+  write_plan 'src/*/safe.js'
+  mark_execution_running
+
+  run_file_guard $'src/a\nb/safe.js'
+  [ "$status" -eq 2 ]
+}
+
 @test "contract allowed_paths matches a glob and rejects outside paths" {
   write_plan 'README.md'
   jq -n '{allowed_paths:["crates/phenprocoumon-core/**"],forbidden_paths:[]}' \
