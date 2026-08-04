@@ -87,6 +87,25 @@ version_snapshot() {
   [ "$(version_snapshot)" = "$before" ]
 }
 
+@test "bump-version: --set without changelog entry prints changelog warning" {
+  printf '# Changelog\n\n## [1.0.0] - 2026-01-01\n' > "$SANDBOX/CHANGELOG.md"
+
+  run bash "$SCRIPT" --set 2.0.0
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"CHANGELOG REQUIRED: no CHANGELOG.md entry for 2.0.0."* ]]
+}
+
+@test "bump-version: --set with changelog entry confirms and skips warning" {
+  printf '# Changelog\n\n## [2.0.0] - 2026-01-01\n' > "$SANDBOX/CHANGELOG.md"
+
+  run bash "$SCRIPT" --set 2.0.0
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"CHANGELOG.md entry for 2.0.0 found."* ]]
+  [[ "$output" != *"CHANGELOG REQUIRED"* ]]
+}
+
 @test "bump-version: --verify passes on a synced fixture" {
   run bash "$SCRIPT" --verify
 

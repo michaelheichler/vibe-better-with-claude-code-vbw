@@ -55,6 +55,21 @@ write_version() {
   done
   echo ""
   echo "Version is now $new"
+  check_changelog "$new"
+}
+
+check_changelog() {
+  local new="$1"
+  if grep -q "^## \[$new\]" "$ROOT/CHANGELOG.md" 2>/dev/null; then
+    echo "CHANGELOG.md entry for $new found."
+    return 0
+  fi
+  echo ""
+  echo "==============================================================="
+  echo "  CHANGELOG REQUIRED: no CHANGELOG.md entry for $new."
+  echo "  Write one before pushing, newest first, house format:"
+  echo "    ## [$new] - $(date +%Y-%m-%d)"
+  echo "==============================================================="
 }
 
 MODE="${1:-}"
