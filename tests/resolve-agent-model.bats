@@ -254,6 +254,28 @@ run_fixture_resolver() {
   [ "$output" = "sol" ]
 }
 
+@test "tier preference matches canonical catalog id and emits tier alias" {
+  printf 'claude-haiku-4-5\n' > "$TEST_TEMP_DIR/catalog.txt"
+  export VBW_MODEL_CATALOG_FILE="$TEST_TEMP_DIR/catalog.txt"
+  jq '.model_matrix = {dev: {balanced: ["haiku", "opus48"]}}' \
+    "$TEST_TEMP_DIR/.vbw-planning/config.json" > "$TEST_TEMP_DIR/.vbw-planning/config.json.tmp"
+  mv "$TEST_TEMP_DIR/.vbw-planning/config.json.tmp" "$TEST_TEMP_DIR/.vbw-planning/config.json"
+  run bash "$SCRIPTS_DIR/resolve-agent-model.sh" dev "$TEST_TEMP_DIR/.vbw-planning/config.json" "$CONFIG_DIR/model-profiles.json"
+  [ "$status" -eq 0 ]
+  [ "$output" = "haiku" ]
+}
+
+@test "custom alias follows tier when tier is absent from catalog" {
+  printf 'sol\n' > "$TEST_TEMP_DIR/catalog.txt"
+  export VBW_MODEL_CATALOG_FILE="$TEST_TEMP_DIR/catalog.txt"
+  jq '.model_matrix = {dev: {balanced: ["haiku", "opus48"]}}' \
+    "$TEST_TEMP_DIR/.vbw-planning/config.json" > "$TEST_TEMP_DIR/.vbw-planning/config.json.tmp"
+  mv "$TEST_TEMP_DIR/.vbw-planning/config.json.tmp" "$TEST_TEMP_DIR/.vbw-planning/config.json"
+  run bash "$SCRIPTS_DIR/resolve-agent-model.sh" dev "$TEST_TEMP_DIR/.vbw-planning/config.json" "$CONFIG_DIR/model-profiles.json"
+  [ "$status" -eq 0 ]
+  [ "$output" = "claude-opus-4-8" ]
+}
+
 @test "model_catalog_extra makes an undetected sneak id eligible" {
   printf 'sol\n' > "$TEST_TEMP_DIR/catalog.txt"
   export VBW_MODEL_CATALOG_FILE="$TEST_TEMP_DIR/catalog.txt"

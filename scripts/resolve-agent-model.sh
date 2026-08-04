@@ -114,8 +114,37 @@ resolve_alias() {
   fi
 }
 
+resolve_catalog_alias() {
+  local model="$1"
+  if [ -f "$PRICING_PATH" ]; then
+    jq -r --arg m "$model" '.aliases[$m] // $m' "$PRICING_PATH" 2>/dev/null || printf '%s\n' "$model"
+  else
+    printf '%s\n' "$model"
+  fi
+}
+
+emit_catalog_choice() {
+  local model="$1" canonical="$2"
+  case "$model" in
+    opus|sonnet|haiku|fable|default) printf '%s\n' "$model" ;;
+    *) printf '%s\n' "$canonical" ;;
+  esac
+}
+
+pick_catalog_model() {
+  local candidates="$1" haystack="$2" c catalog_model
+  while IFS= read -r c; do
+    [ -z "$c" ] && continue
+    catalog_model=$(resolve_catalog_alias "$c")
+    if grep -Fxq -- "$catalog_model" <<< "$haystack" || { case "$c" in opus|sonnet|haiku|fable|default) false ;; *) [ "$catalog_model" != "$c" ] ;; esac; }; then
+      emit_catalog_choice "$c" "$catalog_model"
+      return 0
+    fi
+  done <<< "$candidates"
+}
+
 pick_model() {
-  local first="" count=0 c chosen="" canonical=""
+  local first="" count=0 c chosen="" catalog_model=""
   local all=""
   while IFS= read -r c; do
     [ -z "$c" ] && continue
@@ -132,14 +161,8 @@ pick_model() {
   load_catalog
   if [ -n "$CATALOG" ]; then
     local haystack="${CATALOG}"$'\n'"${CATALOG_EXTRA}"
-    while IFS= read -r c; do
-      [ -z "$c" ] && continue
-      canonical=$(resolve_alias "$c")
-      if grep -Fxq -- "$canonical" <<< "$haystack" || [ "$canonical" != "$c" ]; then
-        chosen="$canonical"
-        break
-      fi
-    done <<< "$all"
+    chosen=$(pick_catalog_model "$all" "$haystack")
+
   fi
   echo "${chosen:-$first}"
 }
