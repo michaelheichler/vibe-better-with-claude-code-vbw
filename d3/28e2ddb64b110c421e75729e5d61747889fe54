@@ -1,0 +1,21 @@
+.vbw-planning/phases/02-qa-and-verification-gate-correctness/02-01-SUMMARY.md
+  s_55c34ee548bef4::t_8abe7d31734e42 50
+  s_55c34ee548bef4::t_16ae2a872d2afb 1-9,11-49
+  s_55c34ee548bef4::t_9b363bfa9a8e54 10
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "d328e2ddb64b110c421e75729e5d61747889fe54",
+  "prompts": {},
+  "sessions": {
+    "s_55c34ee548bef4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e2c40e1d-1763-4ad0-a1b3-bd1755008e2b",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
