@@ -1,0 +1,20 @@
+scripts/lib/track-known-issues-frontmatter.sh
+  s_396441278312df::t_db20fc59c8898f 95
+  s_396441278312df::t_9d4e3231dbb13b 26,28,31-37,39-42
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "165e72dd321a9c49501757f5f9edd74f112610e2",
+  "prompts": {},
+  "sessions": {
+    "s_396441278312df": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8b693812-fc94-4ea6-be47-0ddb22b766f3",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
