@@ -1,0 +1,43 @@
+tests/active-agent-state.bats
+  s_ef82bfd9ee37ed::t_c0a82429799253 33-44
+scripts/file-guard.sh
+  s_ef82bfd9ee37ed::t_b648556353f51e 27-30,32-34
+  s_ef82bfd9ee37ed::t_bf782e0dffbcaf 25,31
+  s_ef82bfd9ee37ed::t_d1c9f7dadc8642 51-52
+  s_ef82bfd9ee37ed::t_bfd2636e02bb7a 15-24,26,36-50,53-60
+  s_ef82bfd9ee37ed::t_b1adbc0af324a0 35
+scripts/lib/active-agent-state.sh
+  s_ef82bfd9ee37ed::t_c67637b8335b2e 70,82-88
+tests/qa-bash-guard.bats
+  s_ef82bfd9ee37ed::t_b6dcd9e082880b 412-432
+tests/qa-file-guard.bats
+  s_ef82bfd9ee37ed::t_ea1e1ee2130e82 152-171
+scripts/lib/guard-enforcement.sh
+  s_ef82bfd9ee37ed::t_29f357125109f8 11,13,15,17-21
+  s_ef82bfd9ee37ed::t_5e7103dbbdca42 50-53
+scripts/bash-guard.sh
+  s_ef82bfd9ee37ed::t_f2a7a0ceeafa63 13
+  s_ef82bfd9ee37ed::t_4cf8527d3b7d68 30-42,45-50
+  s_ef82bfd9ee37ed::t_2e2af0f3aaae1a 18
+  s_ef82bfd9ee37ed::t_07b7de84ba3501 19,21-27
+  s_ef82bfd9ee37ed::t_a2b222c765acf0 28-29
+docs/database-safety-guard.md
+  s_ef82bfd9ee37ed::t_3d3d233f5a2cae 7
+  s_ef82bfd9ee37ed::t_462b595f69e59f 26-39
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "7e5dc46b77a815c50154d4889c5baeaf081d0e80",
+  "prompts": {},
+  "sessions": {
+    "s_ef82bfd9ee37ed": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "41f89902-2bb1-4545-a5ea-81f49ca08704",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
