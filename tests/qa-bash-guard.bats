@@ -147,6 +147,13 @@ new_test_project() {
   [ "$status" -eq 0 ]
 }
 
+@test "bash-guard: git alias payloads remain executable evidence" {
+  TEST_PROJECT=$(new_test_project qa-git-alias-payload)
+  run_role_bash_guard dev "$TEST_PROJECT" "git -c alias.danger='!php artisan migrate:fresh' danger"
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"destructive command detected"* ]]
+}
+
 @test "bash-guard: quoted destructive evidence does not trigger the pattern blocklist" {
   TEST_PROJECT=$(new_test_project destructive-evidence)
   run_role_bash_guard dev "$TEST_PROJECT" 'echo "artisan migrate:fresh output"'

@@ -552,8 +552,11 @@ command_has_quoted_executable_payload() {
     command_token=$(segment_command_token "$segment") || continue
     is_shell_interpreter_token "$command_token" && continue
     case "$command_token" in
-      echo|printf|print|cat|grep|egrep|fgrep|awk|sed|jq|git)
+      echo|printf|print|cat|grep|egrep|fgrep|awk|sed|jq)
         continue
+        ;;
+      git)
+        scout_git_segments_are_readonly "$segment" && continue
         ;;
     esac
     visible=$(shell_visible_tokens "$segment" | tr '\n' ' ')
