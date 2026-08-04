@@ -18,6 +18,170 @@
 - **`qa`** -- removed duplicated skill-outcome and deviation-checkpoint guidance that could prompt an orchestrator to run the same helper twice. (PR #21)
 - **`scripts`** -- `extract-verified-items.sh` now labels output per phase, keeps going when one phase directory fails, and reports the failure on stderr instead of silently dropping the remaining phases. (PR #21)
 
+## [1.39.18] - 2026-08-04
+
+### Changed
+
+- **`guards`** -- integrated the phase 01 guard-state fixes with tiered enforcement so unrelated repositories are not blocked by VBW-only checks. (PR #15, PR #19)
+- **`qa`** -- integrated phase 06 markdown decomposition with phase 02 gate work and removed dangling planning-artifact references. (PR #20)
+
+## [1.39.17] - 2026-08-04
+
+### Fixed
+
+- **`qa`** -- corrected QA and verification gate classification, partial-summary handling, freshness evidence, and archived gate routing. (PR #16)
+
+## [1.39.16] - 2026-08-04
+
+### Added
+
+- **`models`** -- added repository-wide custom model alias resolution, including the built-in `opus48` alias and cached catalog handling. (PR #17)
+
+### Fixed
+
+- **`guards`** -- completed phase 01 guard-state correctness, file-pattern matching, and reasoning-effort enforcement. (PR #14)
+
+## [1.39.14] - 2026-08-03
+
+### Fixed
+
+- **`guards`** -- closed fail-open identity paths, isolated concurrent state, restored executable entry points, and added glob and brace-group matching for guarded plan files. (PR #14)
+- **`agent-health`** -- unified health lifecycle remediation and synchronized known-issue backlog evidence into planning state. (PR #14)
+
+## [1.39.13] - 2026-08-03
+
+### Changed
+
+- **`punctuation`** -- removed prohibited punctuation from commands, references, templates, tests, scripts, and user-facing documentation while preserving parser-compatible text. (PR #14)
+
+## [1.39.12] - 2026-08-03
+
+### Fixed
+
+- **`execution-state`** -- finalized execution status when every plan is terminal and excluded version-sync files from QA freshness checks. (PR #13)
+
+## [1.39.11] - 2026-08-02
+
+### Fixed
+
+- **`session-state`** -- stopped stale execute markers from blocking team spawns and corrected phase 05 QA-remediation drift. (PR #11, PR #12)
+
+## [1.38.10] - 2026-08-02
+
+### Fixed
+
+- **`agents`** -- aligned QA Author with the canonical shutdown contract and shipped the shared-contract and parallel-workflow review fixes. (PR #9, PR #10)
+
+## [1.38.9] - 2026-08-01
+
+### Added
+
+- **`execute`** -- added opt-in TDD execution, next-phase research pipelining, plan-research scout fan-out, and conflict detection for parallel plans. (6c834fa5, 9104c216, 3b6fbd98, 15b19108)
+- **`teams`** -- added real parallel agent-team capability with child-session detection and delegation routing safeguards. (6bf93a00, 3c2e033c, c7c1a7fe)
+
+### Fixed
+
+- **`guards`** -- isolated orchestrator state, recognized child teammate sessions, and aligned payload-less caller handling. (6bf93a00, 15b19108, 2ebe0040, 455bd16b, c7c1a7fe, 3b6fbd98, 6c834fa5, 9104c216)
+
+## [1.38.8] - 2026-08-01
+
+### Changed
+
+- **`commands`** -- replaced repeated plugin-root preambles with a compact strict locator and reused it for RTK state directives. (6a1a21cf, e0d08da7)
+
+### Fixed
+
+- **`resolver`** -- made fatal plugin-root errors actionable for agents and documented the updated failure message. (a86e0a73, c9fbf95c)
+
+## [1.38.7] - 2026-07-31
+
+### Added
+
+- **`models`** -- added per-agent reasoning-effort resolution and a model-pricing catalog. (commits in release range)
+- **`plugin-root`** -- added SessionStart bootstrap and a shared command resolver for plugin-root discovery. (commits in release range)
+
+### Changed
+
+- **`docs`** -- refreshed contributor and README guidance for the shared resolver, model detection, fork workflow, and runtime behavior. (commits in release range)
+
+### Fixed
+
+- **`guards`** -- detected the calling subagent role from tool payloads and recognized background subagent writes. (commits in release range)
+
+## [1.38.6] - 2026-07-31
+
+### Changed
+
+- **`runtime`** -- documented the Bash 4.4+ floor and distinguished the jq dependency from the shell runtime requirement. (commits in release range)
+
+### Fixed
+
+- **`qa-gate`** -- corrected doubled single quotes in YAML frontmatter arrays. (commits in release range)
+- **`testing`** -- made shutdown and legacy-fallback fixtures bounded and hermetic under parallel runs. (commits in release range)
+
+## [1.38.5] - 2026-07-31
+
+### Added
+
+- **`models`** -- made the Claude Code binary the sole source for native model catalog detection and added model-pick routing documentation. (commits in release range)
+
+### Fixed
+
+- **`commands`** -- kept model-matrix flows inside the AskUserQuestion loop. (commits in release range)
+
+## [1.38.4] - 2026-07-31
+
+### Changed
+
+- **`models`** -- made the Claude Code binary the primary model-catalog source and documented the routing behavior. (commits in release range)
+- **`runtime`** -- documented the Bash 4.4+ runtime floor in contributor guidance. (commits in release range)
+
+### Fixed
+
+- **`skills`** -- removed the false find-skills prerequisite from registry discovery. (commits in release range)
+- **`vibe`** -- restored the planning-git diagnostic at the remediation commit boundary. (commits in release range)
+- **`interaction`** -- documented the four current AskUserQuestion schema fields and tied them to verification. (commits in release range)
+
+## [1.38.3] - 2026-07-30
+
+### Fixed
+
+- **`guards`** -- made file-change checks depend on execution liveness and added file-guard coverage for guarded patterns. (commits in release range)
+- **`scripts`** -- made dash stripping locale-independent and isolated guard fixtures. (commits in release range)
+- **`testing`** -- expanded delegation, role-isolation, and review-submission contract coverage. (commits in release range)
+
+## [1.38.2] - 2026-07-30
+
+### Added
+
+- **`models`** -- added native model-catalog detection and agent-by-effort matrix routing. (commits in release range)
+
+## [1.38.1] - 2026-07-30
+
+### Fixed
+
+- **`agents`** -- closed QA persistence and debugger already-fixed contract gaps. (commits in release range)
+- **`commands`** -- replaced en dashes that broke BSD grep bracket classes. (commits in release range)
+- **`scripts`** -- made bump-version argument validation reject unknown options and added behavior coverage. (commits in release range)
+
+## [1.38.0] - 2026-07-30
+
+### Added
+
+- **`agents`** -- added Dijkstra correctness guidance to Dev, QA, and Lead workflows with routed references and contract coverage. (commits in release range)
+- **`workflow`** -- added real parallel agent-team workflow support with probing, conflict handling, fan-out, and an opt-in TDD pipeline. (commits in release range)
+
+### Changed
+
+- **`agents`** -- tightened Scout, Dev, Docs, Lead, Debugger, and QA role contracts, including explicit model and tool boundaries. (PR #1, PR #2, PR #3, PR #4, PR #5, PR #6)
+- **`repository`** -- stopped tracking local-only `.claude/` and `.agents/` configuration. (commits in release range)
+
+### Fixed
+
+- **`guards`** -- closed QA file-marker and read-only Bash enforcement gaps. (PR #7, PR #8)
+- **`resolver`** -- fixed plugin-root discovery for marketplace-root installs and guarded empty plan filename arrays. (commits in release range)
+- **`marketplace`** -- changed install and self-update guidance to use the fork instead of the upstream repository. (commits in release range)
+
 ## [1.37.1] - 2026-05-11
 
 ### Fixed
