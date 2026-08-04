@@ -1,0 +1,26 @@
+tests/qa-file-guard.bats
+  s_ef82bfd9ee37ed::t_de1e851ffe5c3a 55-56
+  s_ef82bfd9ee37ed::t_3f8fa7bd1fb758 87-88
+  s_ef82bfd9ee37ed::t_17a22d2df0ff99 109-155,157-176,178-206
+  s_ef82bfd9ee37ed::t_669c18f74395d9 68
+  s_ef82bfd9ee37ed::t_a37c62e79f2b59 16-19
+  s_ef82bfd9ee37ed::t_1a30e3100ede1e 156,177
+tests/file-guard-plan-pattern-matching.bats
+  s_ef82bfd9ee37ed::t_52a38a2496db9e 76,84,87,95
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "b30bf4fece8316aa8254b67c7059b2428fcb9936",
+  "prompts": {},
+  "sessions": {
+    "s_ef82bfd9ee37ed": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "41f89902-2bb1-4545-a5ea-81f49ca08704",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
