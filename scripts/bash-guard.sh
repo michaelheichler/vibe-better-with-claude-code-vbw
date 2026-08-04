@@ -9,9 +9,9 @@ PLUGIN_ROOT="$(dirname "$SCRIPT_DIR")"
 [ -f "$SCRIPT_DIR/lib/active-agent-state.sh" ] || { printf 'Blocked: VBW guard library missing (%s)\n' "$SCRIPT_DIR/lib/active-agent-state.sh" >&2; exit 2; }
 [ -f "$SCRIPT_DIR/lib/orchestrator-identity.sh" ] || { printf 'Blocked: VBW guard library missing (%s)\n' "$SCRIPT_DIR/lib/orchestrator-identity.sh" >&2; exit 2; }
 [ -f "$SCRIPT_DIR/lib/guard-enforcement.sh" ] || { printf 'Blocked: VBW guard library missing (%s)\n' "$SCRIPT_DIR/lib/guard-enforcement.sh" >&2; exit 2; }
-. "$SCRIPT_DIR/lib/active-agent-state.sh" || exit 2
-. "$SCRIPT_DIR/lib/orchestrator-identity.sh" || exit 2
-. "$SCRIPT_DIR/lib/guard-enforcement.sh" || exit 2
+. "$SCRIPT_DIR/lib/active-agent-state.sh" || { printf 'Blocked: VBW guard library failed to load (%s)\n' "$SCRIPT_DIR/lib/active-agent-state.sh" >&2; exit 2; }
+. "$SCRIPT_DIR/lib/orchestrator-identity.sh" || { printf 'Blocked: VBW guard library failed to load (%s)\n' "$SCRIPT_DIR/lib/orchestrator-identity.sh" >&2; exit 2; }
+. "$SCRIPT_DIR/lib/guard-enforcement.sh" || { printf 'Blocked: VBW guard library failed to load (%s)\n' "$SCRIPT_DIR/lib/guard-enforcement.sh" >&2; exit 2; }
 PROJECT_ROOT=$(vbw_guard_project_root "$PWD") || PROJECT_ROOT=""
 GUARD_LEVEL=$(vbw_guard_enforcement_level "$PROJECT_ROOT" "$INPUT")
 [ "$GUARD_LEVEL" = "off" ] && exit 0

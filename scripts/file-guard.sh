@@ -9,9 +9,9 @@ _FG_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 [ -f "$_FG_SCRIPT_DIR/lib/active-agent-state.sh" ] || { printf 'Blocked: VBW guard library missing (%s)\n' "$_FG_SCRIPT_DIR/lib/active-agent-state.sh" >&2; exit 2; }
 [ -f "$_FG_SCRIPT_DIR/lib/orchestrator-identity.sh" ] || { printf 'Blocked: VBW guard library missing (%s)\n' "$_FG_SCRIPT_DIR/lib/orchestrator-identity.sh" >&2; exit 2; }
 [ -f "$_FG_SCRIPT_DIR/lib/guard-enforcement.sh" ] || { printf 'Blocked: VBW guard library missing (%s)\n' "$_FG_SCRIPT_DIR/lib/guard-enforcement.sh" >&2; exit 2; }
-. "$_FG_SCRIPT_DIR/lib/active-agent-state.sh" || exit 2
-. "$_FG_SCRIPT_DIR/lib/orchestrator-identity.sh" || exit 2
-. "$_FG_SCRIPT_DIR/lib/guard-enforcement.sh" || exit 2
+. "$_FG_SCRIPT_DIR/lib/active-agent-state.sh" || { printf 'Blocked: VBW guard library failed to load (%s)\n' "$_FG_SCRIPT_DIR/lib/active-agent-state.sh" >&2; exit 2; }
+. "$_FG_SCRIPT_DIR/lib/orchestrator-identity.sh" || { printf 'Blocked: VBW guard library failed to load (%s)\n' "$_FG_SCRIPT_DIR/lib/orchestrator-identity.sh" >&2; exit 2; }
+. "$_FG_SCRIPT_DIR/lib/guard-enforcement.sh" || { printf 'Blocked: VBW guard library failed to load (%s)\n' "$_FG_SCRIPT_DIR/lib/guard-enforcement.sh" >&2; exit 2; }
 if [ -f "$_FG_SCRIPT_DIR/lib/vbw-config-root.sh" ]; then
   if source "$_FG_SCRIPT_DIR/lib/vbw-config-root.sh" 2>/dev/null; then
     find_vbw_root >/dev/null 2>&1 || true
