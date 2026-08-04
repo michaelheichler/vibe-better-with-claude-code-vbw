@@ -423,7 +423,7 @@ EOF
   printf '#!/bin/sh\nexit 127\n' > "$fake_bin/jq"
   chmod +x "$fake_bin/jq"
   input=$(printf '%s' '{"tool_input":{"command":"rm -rf build/"}}')
-  run bash -c 'cd "$1"; unset VBW_AGENT_ROLE VBW_ACTIVE_AGENT CLAUDE_SESSION_ID; PATH="$2:/usr/bin:/bin"; printf "%s" "$3" | bash "$4"' _ \
+  run bash -c 'cd "$1"; unset VBW_AGENT_ROLE CLAUDE_SESSION_ID; VBW_ACTIVE_AGENT="$(printf "dev\t")"; export VBW_ACTIVE_AGENT; PATH="$2:/usr/bin:/bin"; printf "%s" "$3" | bash "$4"' _ \
     "$TEST_TEMP_DIR" "$fake_bin" "$input" "$SCRIPTS_DIR/bash-guard.sh"
   [ "$status" -eq 0 ]
   [ "$("$jq_bin" -s length "$TEST_TEMP_DIR/.vbw-planning/.event-log.jsonl")" -ge 1 ]

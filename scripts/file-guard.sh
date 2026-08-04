@@ -22,7 +22,7 @@ GUARD_LEVEL=$(vbw_guard_enforcement_level "$PROJECT_ROOT" "")
 [ "$GUARD_LEVEL" = "off" ] && exit 0
 
 guard_log_event() {
-  local message="$1" level="${2:-${GUARD_LEVEL:-enforce}}" agent="${ACTIVE_AGENT_ROLE:-unknown}"
+  local message="$1" level="${2:-${GUARD_LEVEL:-enforce}}" agent="${ACTIVE_AGENT_ROLE:-${VBW_ACTIVE_AGENT:-unknown}}"
   [ -d "$PROJECT_ROOT/.vbw-planning" ] || return 0
   if command -v jq >/dev/null 2>&1 && jq -cn --arg message "$message" --arg level "$level" --arg agent "$agent" \
     '{event:"guard_block",level:$level,message:$message,agent:$agent}' \

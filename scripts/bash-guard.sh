@@ -15,14 +15,14 @@ GUARD_LEVEL=$(vbw_guard_enforcement_level "$PROJECT_ROOT" "")
 PLANNING_DIR="$PROJECT_ROOT/.vbw-planning"
 
 guard_log_event() {
-  local message="$1" level="${GUARD_LEVEL:-enforce}" agent="${ACTIVE_AGENT_ROLE:-unknown}"
+  local message="$1" level="${GUARD_LEVEL:-enforce}" agent="${ACTIVE_AGENT_ROLE:-${VBW_ACTIVE_AGENT:-unknown}}"
   if command -v jq >/dev/null 2>&1 && jq -cn --arg message "$message" --arg level "$level" --arg agent "$agent" \
     '{event:"guard_block",level:$level,message:$message,agent:$agent}' \
     >> "$PLANNING_DIR/.event-log.jsonl" 2>/dev/null; then
     return 0
   fi
-  message=$(printf '%s' "$message" | tr '\r\n' ' ' | sed 's/\\/\\\\/g; s/"/\\"/g')
-  agent=$(printf '%s' "$agent" | tr '\r\n' ' ' | sed 's/\\/\\\\/g; s/"/\\"/g')
+  message=$(printf '%s' "$message" | tr '\r\n' ' ' | sed 's/\\/\\\\/g; s/"/\\"/g' | tr -d '[:cntrl:]')
+  agent=$(printf '%s' "$agent" | tr '\r\n' ' ' | sed 's/\\/\\\\/g; s/"/\\"/g' | tr -d '[:cntrl:]')
   printf '{"event":"guard_block","level":"%s","message":"%s","agent":"%s"}\n' \
     "$level" "$message" "$agent" >> "$PLANNING_DIR/.event-log.jsonl" 2>/dev/null || true
 }
