@@ -1,33 +1,56 @@
 #!/usr/bin/env bash
-set -u
 
 extract_fail_classification_field() {
   local file_path="${1:-}"
   local field_name="${2:-}"
-  [ -f "$file_path" ] && [ -n "$field_name" ] || return 0
+  [ -f "$file_path" ] || return 0
+  [ -n "$field_name" ] || return 0
   awk -v field="$field_name" '
-    function trim(v) { gsub(/^[[:space:]]+|[[:space:]]+$/, "", v); return v }
-    function emit(v) { gsub(/[",}\]]/, "", v); v=trim(v); if (v != "") print v }
-    BEGIN { in_fm=0; in_fc=0 }
-    NR == 1 && /^---[[:space:]]*$/ { in_fm=1; next }
+    function trim(v) {
+      gsub(/^[[:space:]]+|[[:space:]]+$/, "", v)
+      return v
+    }
+    function emit(v) {
+      gsub(/[",}\]]/, "", v)
+      v = trim(v)
+      if (v != "") print v
+    }
+    BEGIN {
+      in_fm = 0
+      in_fc = 0
+    }
+    NR == 1 && /^---[[:space:]]*$/ { in_fm = 1; next }
     in_fm && /^---[[:space:]]*$/ { exit }
     in_fm && /^fail_classifications:/ {
-      rest=$0; sub(/^fail_classifications:[[:space:]]*/, "", rest)
+      rest = $0
+      sub(/^fail_classifications:[[:space:]]*/, "", rest)
       if (rest ~ /^\[/) {
         while (match(rest, field ":[[:space:]]*[^,}]+")) {
-          value=substr(rest, RSTART, RLENGTH); sub("^" field ":[[:space:]]*", "", value)
-          emit(value); rest=substr(rest, RSTART + RLENGTH)
+          value = substr(rest, RSTART, RLENGTH)
+          sub("^" field ":[[:space:]]*", "", value)
+          emit(value)
+          rest = substr(rest, RSTART + RLENGTH)
         }
         exit
       }
-      in_fc=1; next
-    }
-    in_fm && in_fc && /^[[:space:]]+- / {
-      line=$0
-      if (match(line, field ":[[:space:]]*[^,}]+")) { value=substr(line, RSTART, RLENGTH); sub("^" field ":[[:space:]]*", "", value); emit(value) }
+      in_fc = 1
       next
     }
-    in_fm && in_fc && $0 ~ ("^[[:space:]]+" field ":") { line=$0; sub("^[[:space:]]*" field ":[[:space:]]*", "", line); emit(line); next }
+    in_fm && in_fc && /^[[:space:]]+- / {
+      line = $0
+      if (match(line, field ":[[:space:]]*[^,}]+")) {
+        value = substr(line, RSTART, RLENGTH)
+        sub("^" field ":[[:space:]]*", "", value)
+        emit(value)
+      }
+      next
+    }
+    in_fm && in_fc && $0 ~ ("^[[:space:]]+" field ":") {
+      line = $0
+      sub("^[[:space:]]*" field ":[[:space:]]*", "", line)
+      emit(line)
+      next
+    }
     in_fm && in_fc && /^[^[:space:]]/ { exit }
   ' "$file_path" 2>/dev/null
 }
@@ -157,19 +180,34 @@ extract_fail_ids_from_verification() {
   local file_path="${1:-}"
   [ -f "$file_path" ] || return 0
   awk -F'|' '
-    function trim(v) { gsub(/^[[:space:]]+|[[:space:]]+$/, "", v); return v }
-    !/^\|/ { header_found=0; next }
+    function trim(v) {
+      gsub(/^[[:space:]]+|[[:space:]]+$/, "", v)
+      return v
+    }
+    !/^\|/ { header_found = 0; next }
     /^\|/ {
       if ($0 ~ /^\|[[:space:]-]+(\|[[:space:]-]+)+\|?[[:space:]]*$/) next
       if (!header_found) {
-        status_col=0; id_col=0
-        for (i=2; i<NF; i++) { cell=trim($i); if (cell == "Status") status_col=i; if (cell == "ID") id_col=i }
-        if (status_col > 0) header_found=1
+        status_col = 0
+        id_col = 0
+        for (i = 2; i < NF; i++) {
+          cell = trim($i)
+          if (cell == "Status") status_col = i
+          if (cell == "ID") id_col = i
+        }
+        if (status_col > 0) header_found = 1
         next
       }
       if (status_col > 0) {
-        status=trim($(status_col)); gsub(/\*+/, "", status); status=trim(status)
-        if (status == "FAIL") { fail_index++; fail_id=(id_col > 0) ? trim($(id_col)) : ""; if (fail_id == "") fail_id=sprintf("FAIL-ROW-%02d", fail_index); print fail_id }
+        status = trim($(status_col))
+        gsub(/\*+/, "", status)
+        status = trim(status)
+        if (status == "FAIL") {
+          fail_index++
+          fail_id = (id_col > 0) ? trim($(id_col)) : ""
+          if (fail_id == "") fail_id = sprintf("FAIL-ROW-%02d", fail_index)
+          print fail_id
+        }
       }
     }
   ' "$file_path" 2>/dev/null
