@@ -31,6 +31,10 @@ log() {
 cleanup_detached_agent_state() {
   if command -v vbw_active_agent_clear_all >/dev/null 2>&1; then
     vbw_active_agent_clear_all "$PLANNING_DIR"
+    if [ -e "$PLANNING_DIR/.active-agent" ] || [ -e "$PLANNING_DIR/.active-agent-count" ]; then
+      rm -rf "$PLANNING_DIR/.active-agent-count.lock" 2>/dev/null || true
+      vbw_active_agent_clear_all "$PLANNING_DIR"
+    fi
   else
     rm -f \
       "$PLANNING_DIR/.active-agent" \
@@ -63,81 +67,81 @@ if ! echo "$COMPACTION_TIMEOUT" | grep -Eq '^[1-9][0-9]{0,5}$'; then
   COMPACTION_TIMEOUT=300
 fi
 
+resolve_agent_pane() {
+  local pid="$1" pane_list walk_pid resolved
+  pane_list=$(tmux list-panes -a -F '#{pane_pid} #{pane_id}' 2>/dev/null) || pane_list=""
+  [ -n "$pane_list" ] || return 0
+  walk_pid="$pid"
+  while [ -n "$walk_pid" ] && [ "$walk_pid" != "0" ] && [ "$walk_pid" != "1" ]; do
+    resolved=$(echo "$pane_list" | awk -v p="$walk_pid" '$1 == p { print $2; exit }')
+    if [ -n "$resolved" ]; then
+      printf '%s\n' "$resolved"
+      return 0
+    fi
+    walk_pid=$(ps -o ppid= -p "$walk_pid" 2>/dev/null | tr -d ' ')
+  done
+}
+
+terminate_timed_out_agent() {
+  local pid="$1" pane_id="$2"
+  (
+    log "Sending SIGTERM to stuck agent PID $pid"
+    kill -TERM "$pid" 2>/dev/null || true
+    sleep 2
+    if kill -0 "$pid" 2>/dev/null; then
+      log "Agent PID $pid survived SIGTERM, sending SIGKILL"
+      kill -KILL "$pid" 2>/dev/null || true
+    fi
+    if [ -n "$pane_id" ]; then
+      log "Killing tmux pane $pane_id"
+      tmux kill-pane -t "$pane_id" 2>/dev/null || true
+    fi
+  ) &
+}
+
+cleanup_timed_out_agent() {
+  local pid="$1" agent_name="$2" marker="$3" age="$4" pane_id pane_map
+  pane_id=$(resolve_agent_pane "$pid")
+  log "COMPACTION TIMEOUT: agent=$agent_name pid=$pid pane=$pane_id age=${age}s (limit=${COMPACTION_TIMEOUT}s)"
+  terminate_timed_out_agent "$pid" "$pane_id"
+  if [ -f "$SCRIPT_DIR/agent-pid-tracker.sh" ]; then
+    bash "$SCRIPT_DIR/agent-pid-tracker.sh" unregister "$pid" 2>/dev/null || true
+  fi
+  pane_map="$PLANNING_DIR/.agent-panes"
+  if [ -f "$pane_map" ]; then
+    grep -v "^${pid} " "$pane_map" > "${pane_map}.tmp" 2>/dev/null || true
+    mv "${pane_map}.tmp" "$pane_map" 2>/dev/null || true
+  fi
+  rm -f "$marker" 2>/dev/null || true
+  log "Compaction timeout cleanup complete for $agent_name (PID $pid)"
+}
+
 check_compaction_timeouts() {
   local compacting_dir="$PLANNING_DIR/.compacting"
   [ ! -d "$compacting_dir" ] && return
-
   local now marker pid agent_name started_at age
   now=$(date +%s)
-
   for marker in "$compacting_dir"/*.json; do
     [ ! -f "$marker" ] && continue
-
     pid=$(jq -r '.pid // ""' "$marker" 2>/dev/null)
     agent_name=$(jq -r '.agent_name // "unknown"' "$marker" 2>/dev/null)
     started_at=$(jq -r '.started_at // 0' "$marker" 2>/dev/null)
-
     if ! echo "$pid" | grep -Eq '^[1-9][0-9]{0,9}$' || ! echo "$started_at" | grep -Eq '^[1-9][0-9]{0,9}$'; then
       rm -f "$marker" 2>/dev/null || true
       continue
     fi
-
     if [ "$started_at" -gt $((now + 60)) ]; then
       rm -f "$marker" 2>/dev/null || true
       continue
     fi
-
     if ! kill -0 "$pid" 2>/dev/null; then
       log "Compaction marker for dead PID $pid ($agent_name), cleaning up"
       rm -f "$marker" 2>/dev/null || true
       continue
     fi
-
     age=$((now - started_at))
     if [ "$age" -gt "$COMPACTION_TIMEOUT" ]; then
-      local _live_pane_id="" _pane_list _walk_pid _resolved
-      _pane_list=$(tmux list-panes -a -F '#{pane_pid} #{pane_id}' 2>/dev/null) || _pane_list=""
-      if [ -n "$_pane_list" ]; then
-        _walk_pid="$pid"
-        while [ -n "$_walk_pid" ] && [ "$_walk_pid" != "0" ] && [ "$_walk_pid" != "1" ]; do
-          _resolved=$(echo "$_pane_list" | awk -v p="$_walk_pid" '$1 == p { print $2; exit }')
-          if [ -n "$_resolved" ]; then
-            _live_pane_id="$_resolved"
-            break
-          fi
-          _walk_pid=$(ps -o ppid= -p "$_walk_pid" 2>/dev/null | tr -d ' ')
-        done
-      fi
-
-      log "COMPACTION TIMEOUT: agent=$agent_name pid=$pid pane=$_live_pane_id age=${age}s (limit=${COMPACTION_TIMEOUT}s)"
-
-      (
-        log "Sending SIGTERM to stuck agent PID $pid"
-        kill -TERM "$pid" 2>/dev/null || true
-        sleep 2
-        if kill -0 "$pid" 2>/dev/null; then
-          log "Agent PID $pid survived SIGTERM, sending SIGKILL"
-          kill -KILL "$pid" 2>/dev/null || true
-        fi
-        if [ -n "$_live_pane_id" ]; then
-          log "Killing tmux pane $_live_pane_id"
-          tmux kill-pane -t "$_live_pane_id" 2>/dev/null || true
-        fi
-      ) &
-
-      if [ -f "$SCRIPT_DIR/agent-pid-tracker.sh" ]; then
-        bash "$SCRIPT_DIR/agent-pid-tracker.sh" unregister "$pid" 2>/dev/null || true
-      fi
-
-      local pane_map="$PLANNING_DIR/.agent-panes"
-      if [ -f "$pane_map" ]; then
-        grep -v "^${pid} " "$pane_map" > "${pane_map}.tmp" 2>/dev/null || true
-        mv "${pane_map}.tmp" "$pane_map" 2>/dev/null || true
-      fi
-
-      rm -f "$marker" 2>/dev/null || true
-
-      log "Compaction timeout cleanup complete for $agent_name (PID $pid)"
+      cleanup_timed_out_agent "$pid" "$agent_name" "$marker" "$age"
     fi
   done
 }
