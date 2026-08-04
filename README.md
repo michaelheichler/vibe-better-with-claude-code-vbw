@@ -2,13 +2,7 @@
 
 # Vibe Better With Claude Code (VBW)
 
-*You talk, the AI codes. That part is already true.*
-
-*The question is whether anyone checks its work before it ships.*
-
-*This plugin is the "someone checks" part.*
-
-*"A good tool going quiet for months looked like a bug. So I fixed it."* (Michael Heichler, fork maintainer)
+VBW gives Claude Code a structured workflow for planning, implementation, and verification. It keeps project state in files so work can continue across sessions.
 
 <img src="assets/einsteinemc2.png" alt="Einstein vibe-coding E=mc^2 side by side in Codex and Claude Code, with the caption: Vibe coded the universe's most famous equation in one retry." width="500"/>
 
@@ -20,11 +14,12 @@
 
 </div>
 
-> **This is an actively developed fork, not the original repo.** [Tiago Serôdio](https://github.com/yidakee) built VBW, and it gave me better results than anything else I had tried, then the original (later hosted under `swt-labs`) went quiet on 2026-06-18. No commits, no releases. Even Einstein didn't leave E=mc^2 half-derived, so instead of watching a good idea stall, I forked it and kept it moving: native model-catalog detection straight from the Claude Code binary, ongoing compatibility fixes as Claude Code itself changes, hardened destructive-command guards, and a self-update path (`/vbw:update`) that actually pulls from a repo someone is still pushing to. Check the commit history if you want proof instead of a promise. Full story in [Contributors](#contributors), and genuine thanks to Tiago for building something worth forking. (Michael Heichler)
+> This is an actively developed fork of [Tiago Serôdio's](https://github.com/yidakee) VBW. The original project, later hosted under `swt-labs`, went quiet on 2026-06-18. This fork keeps compatibility with current Claude Code and adds model-catalog detection, hardened destructive-command guards, and `/vbw:update`. See [Contributors](#contributors) for the project history and credit.
+
 
 ## Token efficiency by design
 
-Most of VBW is not a prompt. It is 237 shell scripts that run as plain bash subprocesses at zero model-token cost, plus per-role context that gets compiled and loaded lazily instead of dumped whole into every agent. Every phase, task, and hook is a script decision first and a model decision only when a script cannot make the call. The stack is validated by 155 bats files (3,771 test cases) alongside the contract and lint suites.
+Most of VBW is not a prompt. It is 253 shell scripts that run as plain bash subprocesses at zero model-token cost, plus per-role context that gets compiled and loaded lazily instead of dumped whole into every agent. Every phase, task, and hook is a script decision first and a model decision only when a script cannot make the call. The stack is validated by 164 BATS files (3,873 test cases) alongside the contract and lint suites.
 
 The `docs/*token-analysis*.md` reports estimate the resulting overhead with a line-count heuristic (roughly 15 tokens per markdown line). They are design estimates, not measured API benchmarks, and the stock-agent-teams baseline they compare against was measured on an older release. Treat the figures as directional, not as a guaranteed bill.
 
@@ -42,14 +37,14 @@ We would rather tell you how to catch us lying than just ask you to trust the nu
 | Slash commands (26) | Computed | `find commands -maxdepth 1 -name "*.md" \| wc -l` |
 | Agents (8) | Computed | `find agents -maxdepth 1 -name "vbw-*.md" \| wc -l` |
 | Hook event types (11) / handlers (30) | Computed | `jq -r '.hooks \| keys[]' hooks/hooks.json` and `jq '[.hooks[][] .hooks[]] \| length' hooks/hooks.json` |
-| Shell scripts (237, repo-wide) | Computed | `find . -path ./.git -prune -o -name "*.sh" -print \| wc -l` |
-| BATS files (155) / test cases (3,771) | Computed | `find . -name "*.bats" \| wc -l` and `grep -rh "^@test" --include="*.bats" . \| wc -l` |
-| VERSION (1.38.9) | Computed | `cat VERSION`, cross-checked with `bash scripts/bump-version.sh --verify` |
+| Shell scripts (253, repo-wide) | Computed | `find . -path ./.git -prune -o -name "*.sh" -print \| wc -l` |
+| BATS files (164) / test cases (3,873) | Computed | `find . -name "*.bats" \| wc -l` and `grep -rh "^@test" --include="*.bats" . \| wc -l` |
+| VERSION (1.39.15) | Computed | `cat VERSION`, cross-checked with `bash scripts/bump-version.sh --verify` |
 | Token-efficiency figures in `docs/*token-analysis*.md` | Estimated | Line-count heuristic against an older stock-agent-teams baseline, not a measured API benchmark. See the caveat at the top of [Token efficiency by design](#token-efficiency-by-design). |
 | Cost Optimization relative percentages | Computed | Derived from list prices in `config/model-pricing.json` (collected 2026-07-31) at an assumed 1:3 input:output ratio, not from logged billing data. Treat as directional. |
 | Benchmark tables in `references/model-profiles.md` | Sourced | Collected 2026-07-31 from Vals AI, tbench.ai, arcprize.org, LMArena, steel.dev, and llm-stats.com. Each row names its source. Re-verify after roughly six months. |
 
-Component counts above were last verified against `VERSION` 1.38.9. Reading this against a newer release? Re-run the commands in the table. Most take under a second and need only `find`, `grep`, and `jq`, all already required by this project.
+Component counts above were verified against `VERSION` 1.39.15. Re-run the commands in the table after an update. Most take under a second and need only `find`, `grep`, and `jq`, all already required by this project.
 
 Any claim in this README that is not in the table above and is not visibly marked as an estimate should be treated as unverified. Open an issue or PR to either cite a command for it or add the estimate caveat.
 
@@ -114,7 +109,7 @@ Think of it as project management for a team where the entire engineering depart
 
 ### Built for how Claude Code works now, not bolted onto it
 
-Most Claude Code plugins were built for the subagent era: one main session spawning helper agents that report back and die. Much like the codebases they produce. VBW is designed from the ground up for the platform features that changed the game, and it is built to get the most out of Sonnet 5, Opus 5, and Fable:
+VBW is designed for current Claude Code platform features and for Sonnet 5, Opus 5, and Fable:
 
 - **Agent Teams for real parallelism.** `/vbw:vibe` uses dependency-aware routing. It creates true Dev teams when plans have real parallel delegate work, while linear dependency chains use serialized Dev subagents to avoid fake coordination overhead. A deterministic capability probe checks the current environment and Claude settings before routing. If Agent Teams are unavailable, VBW uses explicit non-team execution and records a visible `teams_disabled:<reason>` result. `/vbw:map` runs 4 Scout teammates in parallel to analyze your codebase when team support is available. Agent health monitoring tracks lifecycle events, detects orphaned teammates, and recovers stuck agents via circuit breakers.
 
@@ -140,7 +135,7 @@ Agent Teams are [experimental with known limitations](https://code.claude.com/do
 
 - **Worktree isolation.** Each Dev plan can get its own git worktree (physical filesystem isolation, not just file-list enforcement), whether execution is true-team parallel or serialized by dependencies. Six scripts handle the full lifecycle: create, merge, cleanup, status, targeting, and agent mapping. Off by default. Set `worktree_isolation` to `"on"` in config to enable. VBW uses its own `.vbw-worktrees` git worktrees through task prompt/state metadata and blocks teammate spawns that try to force Claude-side `isolation:"worktree"`, unmanaged `.claude/worktrees/agent-*` sidechain CWDs, or `.vbw-worktrees/...` spawn CWD aliases. See [Execution Model](#execution-model) for how this interacts with dependency routing and lease locks.
 
-Agent Teams ship with seven known limitations. VBW addresses all of them. The eighth... that you're using AI to write software doesn't need a fix. It needs an intervention.
+Agent Teams ship with seven known limitations. VBW addresses each one in the workflow.
 
 ### Adaptive multi-model support
 
@@ -208,9 +203,9 @@ claude --dangerously-skip-permissions
 
 No permission prompts. No interruptions. Agents run uninterrupted until the work is done or your API budget isn't. VBW's built-in security controls (Scout writes only to `.vbw-planning/`, can run only read-only validation Bash, and cannot edit code. QA can only persist via a deterministic writer script, `security-filter.sh` blocks `.env` and credentials, QA gates on every task) still apply. The platform just stops asking "are you sure?" every time an agent wants to create a file.
 
-This is how most vibe coders run it. The agents work longer, the flow stays unbroken, and you get to pretend you're supervising while scrolling Twitter.
+This mode keeps the flow unbroken. It also removes the chance to review each permission request, so use it deliberately.
 
-> **Disclaimer:** The `--dangerously-skip-permissions` flag is called that for a reason. It is not called `--everything-will-be-fine` or `--trust-the-AI-it-knows-what-it-is-doing`. By using it, you are giving an AI unsupervised write access to your filesystem. VBW does its best to keep agents on a leash, but you are trusting, either way, software written by an AI, managed by an AI, and verified by a different AI. If this arrangement doesn't concern you, you are exactly the target audience for this plugin.
+> **Disclaimer:** The `--dangerously-skip-permissions` flag gives an AI unsupervised write access to your filesystem. VBW adds agent permissions and file-access hooks, but those controls do not replace review. Use this mode only when you accept that tradeoff.
 
 ---
 
@@ -280,7 +275,7 @@ VBW provides three additional concurrency controls: team creation (`prefer_teams
 
 ## Quick Tutorial
 
-You only need to remember two commands. Seriously. VBW auto-detects where your project is and does the right thing. No decision trees, no memorizing workflows. Just init, then vibe until it's done.
+You only need to remember two commands. VBW detects the project state and selects the next workflow step. Start with `init`, then run `vibe` until the work is done.
 
 ### Starting a brand new project
 
@@ -313,7 +308,7 @@ Yes, the same command again. When Phase 1 finishes, run it again for Phase 2. An
 /vbw:vibe --archive
 ```
 
-When all phases are built, archive the work. VBW runs a completion audit, archives state to `.vbw-planning/milestones/`, tags the git release, and updates project docs. In hook-enabled/archive-flow execution, active/non-terminal UAT and unresolved UAT issues are script-blocked (active phase or milestone) and are not bypassed by `--skip-audit`/`--force`. If `hooks.post_archive` is configured, VBW runs it after successful archive completion. Missing or failing user hooks warn but do not block shipping. You shipped. With actual verification. Your future self won't want to set the codebase on fire. Probably.
+When all phases are built, archive the work. VBW runs a completion audit, archives state to `.vbw-planning/milestones/`, tags the git release, and updates project docs. In hook-enabled/archive-flow execution, active/non-terminal UAT and unresolved UAT issues are script-blocked and are not bypassed by `--skip-audit` or `--force`. If `hooks.post_archive` is configured, VBW runs it after successful archive completion. Missing or failing user hooks warn but do not block shipping.
 
 That's it. `init` → `vibe` (repeat) → `vibe --archive`. Two commands for an entire development lifecycle.
 
@@ -335,7 +330,7 @@ From there, it's the same loop: `/vbw:vibe` until done, `/vbw:vibe --archive`.
 /vbw:resume
 ```
 
-Closed your terminal? Switched branches? Came back after a weekend of pretending you have hobbies? `/vbw:resume` reads ground truth directly from `.vbw-planning/` (STATE.md, ROADMAP.md, plans, summaries) and rebuilds your full project context. No prior `/vbw:pause` needed. It detects interrupted builds, reconciles stale execution state, and tells you exactly what to do next. One command, full situational awareness, zero guessing.
+Closed your terminal or switched branches? `/vbw:resume` reads ground truth directly from `.vbw-planning/` (STATE.md, ROADMAP.md, plans, summaries) and rebuilds your project context. No prior `/vbw:pause` is needed. It detects interrupted builds, reconciles stale execution state, and tells you what to do next.
 
 > **⚠️ Do not use `/clear`.**
 >
@@ -411,7 +406,7 @@ VBW can optionally manage [RTK](https://github.com/rtk-ai/rtk) setup through `/v
 
 ## The Agents
 
-VBW uses 8 specialized agents, each with native tool permissions enforced via YAML frontmatter. Three layers of control (`tools` for what they can use, `disallowedTools` for what's platform-denied, and `permissionMode` for how they interact with the session) mean they can't do what they shouldn't, which is more than can be said for most interns.
+VBW uses 8 specialized agents, each with native tool permissions enforced via YAML frontmatter. Three layers of control (`tools`, `disallowedTools`, and `permissionMode`) define what each agent can use and how it interacts with the session.
 
 | Agent | Role | Tools | Denied / Omitted | Mode |
 | :--- | :--- | :--- | :--- | :--- |
@@ -1041,7 +1036,7 @@ See **[Model Profiles Reference](references/model-profiles.md)** for preset defi
 
 ```text
 .claude-plugin/    Plugin manifest (plugin.json)
-agents/            7 agent definitions with native tool permissions
+agents/            8 agent definitions with native tool permissions
 commands/          Slash-command definitions
 config/            Default settings and stack-to-skill mappings
 hooks/             Plugin hooks for continuous verification
@@ -1064,7 +1059,7 @@ When you run `/vbw:init` in your project, it creates:
   milestones/      Archived milestone records
 ```
 
-Your AI-managed project now has more structure than most startups that raised a Series A.
+The project now has explicit state, plans, and milestones that can be inspected or resumed.
 
 ---
 
@@ -1077,7 +1072,7 @@ Your AI-managed project now has more structure than most startups that raised a 
 - A project directory (new or existing)
 - The willingness to let an AI manage your development lifecycle
 
-That last one is the real barrier to entry.
+That last item is the only non-technical requirement.
 
 ---
 
@@ -1095,7 +1090,7 @@ Thanks to everyone who filed an issue, sent a PR, or just used VBW long enough t
 
 [![Contributors](https://contrib.rocks/image?repo=michaelheichler/vibe-better-with-claude-code-vbw)](https://github.com/michaelheichler/vibe-better-with-claude-code-vbw/graphs/contributors)
 
-**Why this fork exists:** [Tiago Serôdio](https://github.com/yidakee) created VBW (later hosted under `swt-labs`), and it had given me better results than anything else I had tried for AI-assisted development. Then it went quiet: no commits after 2026-06-18. Good tools do not deserve to die from neglect, so I forked it and kept building instead of filing a hopeful issue and waiting. [Michael Heichler](https://github.com/michaelheichler) develops this fork now. The commit log is the receipt, not this paragraph, so it does not need updating every time someone reads it.
+**Why this fork exists:** [Tiago Serôdio](https://github.com/yidakee) created VBW, later hosted under `swt-labs`. [Michael Heichler](https://github.com/michaelheichler) develops this fork now, with ongoing compatibility and workflow updates.
 
 ## License
 
