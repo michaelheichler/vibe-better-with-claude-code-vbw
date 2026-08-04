@@ -372,9 +372,11 @@ ROUND_ALL_RECORDED_PATHS=$(printf '%s\n' "${_mo_all_recorded_paths:-}" | sed '/^
 ROUND_RECORDED_STRUCTURAL_PATHS=$(printf '%s\n' "${_mo_structural_recorded_paths:-}" | sed '/^[[:space:]]*$/d' | (sort -u 2>/dev/null || sort -u))
 ROUND_CLASSIFICATION_TYPES=""
 ROUND_CLASSIFICATION_IDS=""
+ROUND_CLASSIFICATION_PATHS=""
 ROUND_CLASSIFICATION_TYPE_COUNT=0
 ROUND_CLASSIFICATION_ID_COUNT=0
 ROUND_CODE_FIX_COUNT=0
+ROUND_DOC_FIX_COUNT=0
 ROUND_PLAN_AMENDMENT_COUNT=0
 ROUND_PLAN_AMENDMENT_SOURCE_PLANS=""
 ROUND_PLAN_AMENDMENT_SOURCE_PLAN_COUNT=0
@@ -393,16 +395,26 @@ ROUND_PROCESS_EXCEPTION_EVIDENCE_VALID=false
 if [ "$IN_REMEDIATION" = "true" ] && [ "$SUMMARY_SCOPE_DIR" != "$PHASE_DIR" ]; then
   ROUND_CLASSIFICATION_TYPES=$(collect_fail_classification_types_in_dir "$PLAN_SCOPE_DIR")
   ROUND_CLASSIFICATION_IDS=$(collect_fail_classification_ids_in_dir "$PLAN_SCOPE_DIR" | (sort -u 2>/dev/null || sort -u))
+  ROUND_CLASSIFICATION_PATHS=$(collect_fail_classification_paths_in_dir "$PLAN_SCOPE_DIR")
   ROUND_CLASSIFICATION_TYPE_COUNT=$(printf '%s\n' "$ROUND_CLASSIFICATION_TYPES" | awk 'NF { count++ } END { print count + 0 }')
   ROUND_CLASSIFICATION_ID_COUNT=$(printf '%s\n' "$ROUND_CLASSIFICATION_IDS" | awk 'NF { count++ } END { print count + 0 }')
   ROUND_CODE_FIX_COUNT=$(printf '%s\n' "$ROUND_CLASSIFICATION_TYPES" | awk '$0 == "code-fix" { count++ } END { print count + 0 }')
+  ROUND_DOC_FIX_COUNT=$(printf '%s\n' "$ROUND_CLASSIFICATION_TYPES" | awk '$0 == "doc-fix" { count++ } END { print count + 0 }')
   ROUND_PLAN_AMENDMENT_COUNT=$(printf '%s\n' "$ROUND_CLASSIFICATION_TYPES" | awk '$0 == "plan-amendment" { count++ } END { print count + 0 }')
+  if [ "$ROUND_DOC_FIX_COUNT" -gt 0 ] 2>/dev/null; then
+    ROUND_DOC_FIX_PATHS=$(printf '%s\n' "$ROUND_CLASSIFICATION_PATHS" | sed '/^[[:space:]]*$/d')
+  else
+    ROUND_DOC_FIX_PATHS=""
+  fi
+  ROUND_DOC_FIX_PATH_COUNT=$(printf '%s\n' "$ROUND_DOC_FIX_PATHS" | awk 'NF { count++ } END { print count + 0 }')
   ROUND_PLAN_AMENDMENT_SOURCE_PLANS=$(collect_fail_classification_source_plans_in_dir "$PLAN_SCOPE_DIR")
   ROUND_PLAN_AMENDMENT_SOURCE_PLAN_COUNT=$(printf '%s\n' "$ROUND_PLAN_AMENDMENT_SOURCE_PLANS" | awk 'NF { count++ } END { print count + 0 }')
 
   if [ "$ROUND_CLASSIFICATION_ID_COUNT" -ne "$ROUND_CLASSIFICATION_TYPE_COUNT" ] 2>/dev/null; then
     ROUND_CLASSIFICATIONS_VALID=false
   elif [ "$ROUND_CLASSIFICATION_TYPE_COUNT" -gt 0 ] 2>/dev/null && ! fail_classification_types_are_valid <<< "$ROUND_CLASSIFICATION_TYPES"; then
+    ROUND_CLASSIFICATIONS_VALID=false
+  elif [ "$ROUND_DOC_FIX_COUNT" -gt 0 ] 2>/dev/null && [ "$ROUND_DOC_FIX_PATH_COUNT" -ne "$ROUND_DOC_FIX_COUNT" ] 2>/dev/null; then
     ROUND_CLASSIFICATIONS_VALID=false
   elif [ "$METADATA_ONLY_ROUND" = "true" ] && [ "$SOURCE_FAIL_ROW_COUNT" -gt 0 ] 2>/dev/null && [ "$ROUND_CLASSIFICATION_ID_COUNT" -eq 0 ] 2>/dev/null; then
     ROUND_CLASSIFICATIONS_VALID=false
@@ -536,6 +548,12 @@ case "$RESULT" in
         echo "qa_gate_metadata_only_override=true"
         echo "qa_gate_phase_deviation_count=$PHASE_DEVIATION_COUNT"
         echo "qa_gate_routing=REMEDIATION_REQUIRED"
+      elif [ "$ROUND_DOC_FIX_COUNT" -gt 0 ] 2>/dev/null \
+        && ! paths_include_documentation_fix_evidence "$PHASE_DIR" "$ROUND_DOC_FIX_PATHS" <<< "$ROUND_ALL_RECORDED_PATHS"; then
+        echo "qa_gate_doc_fix_evidence_missing=true"
+        echo "qa_gate_routing=REMEDIATION_REQUIRED"
+      elif [ "$ROUND_DOC_FIX_COUNT" -gt 0 ] 2>/dev/null; then
+        echo "qa_gate_routing=PROCEED_TO_UAT"
       elif [ "$ROUND_PLAN_AMENDMENT_COUNT" -eq 0 ] 2>/dev/null \
         && [ "$ROUND_CLASSIFICATION_TYPE_COUNT" -gt 0 ] 2>/dev/null \
         && [ "$ROUND_PROCESS_EXCEPTION_EVIDENCE_VALID" != "true" ]; then

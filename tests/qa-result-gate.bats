@@ -3761,8 +3761,87 @@ VERIF
   [[ "$output" == *"qa_gate_routing=REMEDIATION_REQUIRED"* ]]
 }
 
-@test "absolute documentation and repo-hygiene paths do not satisfy code-fix evidence" {
+@test "doc-fix classification accepts the named documentation path" {
   init_git_repo
+  baseline_commit=$(commit_repo_file "README.md" "original documentation")
+  create_source_fail_verif "FAIL-01" "The README content is incorrect" "$baseline_commit"
+  commit_repo_file "README.md" "corrected documentation" >/dev/null
+
+  mkdir -p "$PHASE_DIR/remediation/qa/round-01"
+  printf 'stage=verify\nround=01\nround_started_at_commit=%s\n' "$baseline_commit" > "$PHASE_DIR/remediation/qa/.qa-remediation-stage"
+
+  create_round_summary_with_files "$PHASE_DIR/remediation/qa/round-01" "01" \
+    '  - "README.md"'
+
+  cat > "$PHASE_DIR/remediation/qa/round-01/R01-PLAN.md" <<'PLAN'
+---
+round: 01
+title: Correct documentation content
+fail_classifications:
+  - {id: "FAIL-01", type: "doc-fix", path: "README.md", rationale: "The documentation is the product surface"}
+---
+PLAN
+  cat > "$PHASE_DIR/remediation/qa/round-01/R01-VERIFICATION.md" <<'VERIF'
+---
+writer: write-verification.sh
+result: PASS
+plans_verified:
+  - R01
+---
+## Checks
+| ID | Category | Description | Status | Evidence |
+|----|----------|-------------|--------|----------|
+| MH-01 | must_have | Documentation content corrected | PASS | Done |
+VERIF
+
+  run bash "$SCRIPT" "$PHASE_DIR"
+
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"qa_gate_process_exception_evidence_missing=true"* ]]
+  [[ "$output" == *"qa_gate_routing=PROCEED_TO_UAT"* ]]
+}
+
+@test "doc-fix classification rejects an unrelated documentation path" {
+  init_git_repo
+  baseline_commit=$(commit_repo_file "README.md" "original documentation")
+  create_source_fail_verif "FAIL-01" "The README content is incorrect" "$baseline_commit"
+  commit_repo_file "docs/other.md" "unrelated documentation" >/dev/null
+
+  mkdir -p "$PHASE_DIR/remediation/qa/round-01"
+  printf 'stage=verify\nround=01\nround_started_at_commit=%s\n' "$baseline_commit" > "$PHASE_DIR/remediation/qa/.qa-remediation-stage"
+
+  create_round_summary_with_files "$PHASE_DIR/remediation/qa/round-01" "01" \
+    '  - "docs/other.md"'
+
+  cat > "$PHASE_DIR/remediation/qa/round-01/R01-PLAN.md" <<'PLAN'
+---
+round: 01
+title: Wrong documentation path
+fail_classifications:
+  - {id: "FAIL-01", type: "doc-fix", path: "README.md", rationale: "The README is the product surface"}
+---
+PLAN
+  cat > "$PHASE_DIR/remediation/qa/round-01/R01-VERIFICATION.md" <<'VERIF'
+---
+writer: write-verification.sh
+result: PASS
+plans_verified:
+  - R01
+---
+## Checks
+| ID | Category | Description | Status | Evidence |
+|----|----------|-------------|--------|----------|
+| MH-01 | must_have | Documentation content corrected | PASS | Done |
+VERIF
+
+  run bash "$SCRIPT" "$PHASE_DIR"
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"qa_gate_doc_fix_evidence_missing=true"* ]]
+  [[ "$output" == *"qa_gate_routing=REMEDIATION_REQUIRED"* ]]
+}
+
+@test "absolute documentation and repo-hygiene paths do not satisfy code-fix evidence" {
   mkdir -p "$TEST_DIR/docs"
   : > "$TEST_DIR/README.md"
   : > "$TEST_DIR/docs/remediation-notes.md"
@@ -4617,7 +4696,7 @@ VERIF
   [[ "$gate_extract_body" != *"while IFS= read -r item"* ]]
   [[ "$gate_extract_body" != *"printf '%s' \"\$item\" | jq"* ]]
   [[ "$gate_extract_body" == *"jq -Rsc"* ]]
-  [[ "$gate_cover_body" == *"@json"* ]]
+  [[ "$gate_cover_body" == *"group_by([.test, .file])"* ]]
   [[ "$gate_disposition_body" == *"@json"* ]]
 }
 
@@ -5269,6 +5348,18 @@ VERIF
 
   [ "$status" -eq 0 ]
   [[ "$output" == *"qa_gate_routing=REMEDIATION_REQUIRED"* ]]
+}
+
+@test "known-issue coverage accepts one raw error variant per test and file pair" {
+  run bash -c 'source "$1"; json_object_array_covers_full_issue_objects '"'"'[{"test":"KnownIssueTests","file":"Tests/KnownIssueTests.swift","error":"first wording"},{"test":"KnownIssueTests","file":"Tests/KnownIssueTests.swift","error":"normalized wording"}]'"'"' '"'"'[{"test":"KnownIssueTests","file":"Tests/KnownIssueTests.swift","error":"first wording"}]'"'"'' _ "$REPO_ROOT/scripts/lib/qa-result-gate-known-issues.sh"
+
+  [ "$status" -eq 0 ]
+}
+
+@test "known-issue coverage rejects an error variant outside the carried pair" {
+  run bash -c 'source "$1"; json_object_array_covers_full_issue_objects '"'"'[{"test":"KnownIssueTests","file":"Tests/KnownIssueTests.swift","error":"first wording"},{"test":"KnownIssueTests","file":"Tests/KnownIssueTests.swift","error":"normalized wording"}]'"'"' '"'"'[{"test":"KnownIssueTests","file":"Tests/KnownIssueTests.swift","error":"wrong wording"}]'"'"'' _ "$REPO_ROOT/scripts/lib/qa-result-gate-known-issues.sh"
+
+  [ "$status" -eq 1 ]
 }
 
 @test "metadata-only round with partial fail classification coverage → REMEDIATION_REQUIRED" {

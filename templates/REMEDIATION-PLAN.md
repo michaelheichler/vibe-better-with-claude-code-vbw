@@ -11,6 +11,7 @@ files_modified: [{path}]
 forbidden_commands: []
 fail_classifications:
   - {id: "FAIL-ID", type: "code-fix|process-exception", rationale: "why this classification applies"}
+  - {id: "FAIL-ID", type: "doc-fix", path: "docs/file.md", rationale: "why this documentation path is the product surface"}
   - {id: "FAIL-ID", type: "plan-amendment", rationale: "why this classification applies", source_plan: "01-01-PLAN.md"}
 known_issues_input:
   - '{"test":"{test-name}","file":"{file-path}","error":"{error-message}"}'

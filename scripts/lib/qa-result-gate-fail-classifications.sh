@@ -57,6 +57,7 @@ extract_fail_classification_field() {
 
 extract_fail_classification_types() { extract_fail_classification_field "${1:-}" type; }
 extract_fail_classification_ids() { extract_fail_classification_field "${1:-}" id; }
+extract_fail_classification_paths() { extract_fail_classification_field "${1:-}" path; }
 extract_fail_classification_source_plans() { extract_fail_classification_field "${1:-}" source_plan; }
 
 collect_fail_classification_types_in_dir() {
@@ -74,6 +75,15 @@ collect_fail_classification_ids_in_dir() {
   while IFS= read -r _cfc_plan; do
     [ -f "$_cfc_plan" ] || continue
     extract_fail_classification_ids "$_cfc_plan"
+  done < <(find "$scan_dir" -maxdepth 1 ! -name '.*' \( -name '*-PLAN.md' -o -name 'PLAN.md' \) 2>/dev/null | (sort -V 2>/dev/null || sort))
+}
+
+collect_fail_classification_paths_in_dir() {
+  local scan_dir="${1:-}"
+  [ -d "$scan_dir" ] || return 0
+  while IFS= read -r _cfc_plan; do
+    [ -f "$_cfc_plan" ] || continue
+    extract_fail_classification_paths "$_cfc_plan"
   done < <(find "$scan_dir" -maxdepth 1 ! -name '.*' \( -name '*-PLAN.md' -o -name 'PLAN.md' \) 2>/dev/null | (sort -V 2>/dev/null || sort))
 }
 
@@ -136,7 +146,7 @@ fail_classification_types_are_valid() {
     [ -n "$classification_type" ] || continue
     saw_type=true
     case "$classification_type" in
-      code-fix|plan-amendment|process-exception) ;;
+      code-fix|doc-fix|plan-amendment|process-exception) ;;
       *) return 1 ;;
     esac
   done
