@@ -69,13 +69,6 @@ for assignment in "$@"; do
   fi
 done
 
-if [ "$ROLE" = "lead" ] && [ "${VALUES[TOOLS]+set}" = set ]; then
-  VALUES[TOOLS]="${VALUES[TOOLS]//Task(vbw-dev)/Task}"
-fi
-if [ "$ROLE" = "docs" ] && [ "${VALUES[TOOLS]+set}" = set ] && [[ ",${VALUES[TOOLS]}," != *,TaskGet,* ]]; then
-  VALUES[TOOLS]="${VALUES[TOOLS]}, TaskGet"
-fi
-
 for required in NAME MODEL DESCRIPTION JOB; do
   [ "${VALUES[$required]+set}" = set ] && [ -n "${VALUES[$required]}" ] || fail "missing required field $required"
 done
