@@ -255,29 +255,6 @@ esac
 [ -z "$PROJECT_ROOT" ] && exit 0
 [ ! -d "$PHASES_DIR" ] && exit 0
 
-_FG_STATUS_LIB="${_FG_SCRIPT_DIR}/summary-utils.sh"
-if [ -f "$_FG_STATUS_LIB" ]; then
-  is_plan_finalized() {
-    bash -c '. "$1"; is_summary_terminal "$2"' _ "$_FG_STATUS_LIB" "$1"
-  }
-else
-  is_plan_finalized() { return 1; }
-fi
-
-phase_has_active_plan() {
-  local plan_file summary_file
-  ACTIVE_PLAN=""
-  for plan_file in "$PHASES_DIR"/*/*-PLAN.md; do
-    [ ! -f "$plan_file" ] && continue
-    summary_file="${plan_file%-PLAN.md}-SUMMARY.md"
-    if ! is_plan_finalized "$summary_file"; then
-      ACTIVE_PLAN="$plan_file"
-      return 0
-    fi
-  done
-  return 1
-}
-
 normalize_path() {
   local input_path="$1"
   local absolute_path absolute_root

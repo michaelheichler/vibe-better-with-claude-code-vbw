@@ -10,8 +10,6 @@ SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
 [ -f "$SCRIPT_DIR/lib/guard-enforcement.sh" ] || exit 0
 . "$SCRIPT_DIR/lib/active-agent-state.sh" || exit 0
 . "$SCRIPT_DIR/lib/guard-enforcement.sh" || exit 0
-[ -f "$SCRIPT_DIR/summary-utils.sh" ] || exit 0
-. "$SCRIPT_DIR/summary-utils.sh" || exit 0
 
 TOOL_NAME=$(printf '%s' "$INPUT" | jq -r '.tool_name // ""' 2>/dev/null) || exit 0
 case "$TOOL_NAME" in
@@ -36,26 +34,8 @@ done
 PROJECT_ROOT=$(vbw_guard_project_root "$PWD" 2>/dev/null) || exit 0
 PHASES_DIR="$PROJECT_ROOT/.vbw-planning/phases"
 
-is_plan_finalized() {
-  is_summary_terminal "$1"
-}
-
-phase_has_active_plan() {
-  local plan_file summary_file
-  ACTIVE_PLAN=""
-  for plan_file in "$PHASES_DIR"/*/*-PLAN.md; do
-    [ ! -f "$plan_file" ] && continue
-    summary_file="${plan_file%-PLAN.md}-SUMMARY.md"
-    if ! is_plan_finalized "$summary_file"; then
-      ACTIVE_PLAN="$plan_file"
-      return 0
-    fi
-  done
-  return 1
-}
-
 _ACTIVE_PLAN=false
-if phase_has_active_plan && [ -n "$ACTIVE_PLAN" ]; then
+if phase_has_active_plan "$PHASES_DIR"; then
   _ACTIVE_PLAN=true
 fi
 _STATE_ACTIVE=false
@@ -65,9 +45,7 @@ if [ -f "$STATE_FILE" ]; then
   if [ "$EXEC_STATUS" = "running" ]; then
     CURRENT_SESSION=$(vbw_active_agent_session_id "$INPUT" 2>/dev/null) || CURRENT_SESSION="${CLAUDE_SESSION_ID:-}"
     STATE_SESSION=$(jq -r '.session_id // ""' "$STATE_FILE" 2>/dev/null) || STATE_SESSION=""
-    if [ -n "$STATE_SESSION" ] && [ -n "$CURRENT_SESSION" ] && [ "$STATE_SESSION" != "$CURRENT_SESSION" ]; then
-      [ "$_ACTIVE_PLAN" = true ] || exit 0
-    else
+    if [ -z "$STATE_SESSION" ] || [ -z "$CURRENT_SESSION" ] || [ "$STATE_SESSION" = "$CURRENT_SESSION" ]; then
       NOW=$(date +%s 2>/dev/null || true)
       if [ "$(uname)" = "Darwin" ]; then
         MTIME=$(stat -f %m "$STATE_FILE" 2>/dev/null || true)

@@ -147,6 +147,24 @@ test_active_plan_blocks_product_writes_without_live_execution_state() { # @test
   done
 }
 
+test_all_terminal_summaries_allow_product_writes() { # @test
+  local input
+  write_active_plan
+  cat > "$TEST_TEMP_DIR/.vbw-planning/phases/01-test/01-01-SUMMARY.md" <<'EOF'
+---
+status: complete
+---
+EOF
+  write_execution_state complete
+  input=$(jq -n --arg path "$TEST_TEMP_DIR/src/app.js" \
+    '{session_id:"session-main",tool_name:"Write",tool_input:{file_path:$path}}')
+
+  run run_hook "$input"
+
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
 test_subagent_payload_is_noop() { # @test
   local input
   input=$(jq -n --arg path "$TEST_TEMP_DIR/src/app.js" \
