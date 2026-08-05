@@ -156,11 +156,19 @@ push_if_configured() {
 }
 
 if [ -z "$COMMAND" ]; then
-  echo "Usage: planning-git.sh sync-ignore [CONFIG_FILE] | commit-boundary <action> [CONFIG_FILE] | push-after-phase [CONFIG_FILE]" >&2
+  echo "Usage: planning-git.sh sync-ignore [CONFIG_FILE] | ensure-generated-agent-ignore | commit-boundary <action> [CONFIG_FILE] | push-after-phase [CONFIG_FILE]" >&2
   exit 1
 fi
 
 case "$COMMAND" in
+  ensure-generated-agent-ignore)
+    if ! is_git_repo; then
+      exit 0
+    fi
+
+    ensure_generated_agent_ignore
+    ;;
+
   sync-ignore)
     CONFIG_FILE="${ARG2:-.vbw-planning/config.json}"
 
@@ -229,7 +237,7 @@ case "$COMMAND" in
 
   *)
     echo "Unknown command: $COMMAND" >&2
-    echo "Usage: planning-git.sh sync-ignore [CONFIG_FILE] | commit-boundary <action> [CONFIG_FILE] | push-after-phase [CONFIG_FILE]" >&2
+    echo "Usage: planning-git.sh sync-ignore [CONFIG_FILE] | ensure-generated-agent-ignore | commit-boundary <action> [CONFIG_FILE] | push-after-phase [CONFIG_FILE]" >&2
     exit 1
     ;;
 esac
