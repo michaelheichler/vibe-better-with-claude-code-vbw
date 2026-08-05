@@ -449,9 +449,9 @@ For backend, test, or script changes, ask the human to verify a visible effect. 
 - Verifying file existence or structure
 - Any check that can be performed programmatically via Bash, Grep, or Glob
 
-**Skill-aware exclusion:** UI checks that available skills, tools, or MCP servers can automate belong in QA, not UAT. This includes describe-UI, tap or click simulation, accessibility inspection, screenshot capture, and DOM queries. Include only human judgment, subjective quality, visual design assessment, domain data correctness, or hardware-dependent behavior that available tooling cannot automate.
+**Skill-aware exclusion:** UI automation capabilities available through skills, tools, or MCP servers belong in QA, not UAT. This includes describe-UI, tap/click simulation, accessibility inspection, screenshot capture, and DOM querying. Only include scenarios that require true human judgment, subjective quality, visual design assessment, domain data correctness, or hardware-dependent behavior that available tooling cannot automate.
 
-For purely internal work, create one lightweight checkpoint. Ask the user to confirm that the app still works from their perspective. Do not ask them to run automated checks.
+If a plan's work is purely internal (refactor, test infrastructure, script changes) with no user-facing behavior, create one lightweight checkpoint. Ask the user to confirm that the app still works from their perspective, rather than asking them to run automated checks.
 
 Write the initial UAT file at `{phase-dir}/{uat_path}` (using the pre-computed `uat_path` from Step 1) using the `templates/UAT.md` format. If the parent directory doesn't exist (e.g., `remediation/uat/round-01/`), create it first.
 - Populate YAML frontmatter: phase, plan_count, status=in_progress, started=today, total_tests
@@ -609,7 +609,9 @@ Issue recorded (severity: {level}). Final next-step routing shown at UAT summary
 
 ### 7a. Discovered issue handling (observations during passing/skipping tests)
 
-When a user passes or skips a test but also mentions a separate bug, issue, or observation unrelated to the test's expected behavior, capture it as a **discovered issue**.
+When a user passes or skips a test but also mentions a separate bug, issue, or observation unrelated to the test's expected behavior, capture the separate observation as a discovered issue (see Step 7a).
+
+capture the additional text as a discovered issue (see Step 7a). Capture the post-separator observation text as a discovered issue (Step 7a). Infer severity using the same keyword table from Step 7.
 
 Assign a discovered-issue ID: `D{NN}` (D01, D02, ...), sequential across the UAT session. Before appending any discovered issue, scan the current UAT file at `{phase-dir}/{uat_path}` in both initial and resumed sessions for existing `D[0-9]+` headings. Include prefilled summary-deviation review entries and discovered issues already appended earlier in the same session. those IDs are reserved. Allocate the next zero-padded `D{NN}` from highest existing + 1, or `D01` when none exist. Example: if prefilled `D01` and `D02` already exist, the next discovered issue is `D03`. Never renumber existing `D{NN}` entries.
 

@@ -163,7 +163,7 @@ When routed here, skip the standard phase-resolution Steps entirely. Instead:
 
     The QA prompt MUST begin with exactly one skill outcome block. Use `<skill_activation>{For each selected skill: "Call Skill({skill-name})"}</skill_activation>` when skills are preselected. Otherwise use `<skill_no_activation>Evaluated installed skills for this task. No skills were preselected at orchestration time. Reason: {brief task-specific reason}.</skill_no_activation>`. Do not omit both blocks.
 
-    State the skill outcome in your response before spawning the agent. For example, write "Skills: activating {skill-name}" or "Skills: none preselected, {reason}". If the prompt or error mentions SwiftData, include `swiftdata` with relevant test, build, and debug skills. After calling `Skill(...)`, read any referenced files that matter to the task. Do not scan whole skill folders or unrelated references.
+    State the skill outcome in your response before spawning the agent. For example, write "Skills: activating {skill-name}" or "Skills: none preselected, {reason}". This is exactly one explicit skill outcome block. Select the single most direct skill, plus materially helpful adjacent skills. If the prompt or error mentions SwiftData, include `swiftdata` with relevant test, build, and debug skills. After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting. Do not scan entire skill folders or read unrelated references.
 
   If one or more skills were preselected, run `bash "{plugin-root}/scripts/extract-skill-follow-up-files.sh" "{all preselected skill names from the activation block}" 2>/dev/null || true` before spawning the debug-session QA agent. If the helper prints a `<skill_follow_up_files>` block, paste it immediately after the follow-up-read sentence in the spawned payload. Otherwise omit that block.
 
@@ -296,7 +296,7 @@ Note: Continuous verification handled by hooks. This command is for deep, on-dem
 
       The QA prompt MUST begin with exactly one skill outcome block. Use `<skill_activation>{For each selected skill: "Call Skill({skill-name})"}</skill_activation>` when skills are preselected. Otherwise use `<skill_no_activation>Evaluated installed skills for this task. No skills were preselected at orchestration time. Reason: {brief task-specific reason}.</skill_no_activation>`. Do not omit both blocks.
 
-      State the skill outcome in your response before spawning the agent. After calling `Skill(...)`, read any referenced files that matter to the task. Do not scan whole skill folders or unrelated references.
+      State the skill outcome in your response before spawning the agent. This is exactly one explicit skill outcome block. Select the single most direct skill, plus materially helpful adjacent skills. After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting. Do not scan entire skill folders or read unrelated references.
 
       If the prompt or error mentions SwiftData, include `swiftdata` with relevant test, build, and debug skills.
 
@@ -405,7 +405,7 @@ Note: Continuous verification handled by hooks. This command is for deep, on-dem
     ⚠ testName (path/to/file): error message
   Registry: {phase-dir}/known-issues.json
 ```
-This display is supplemental to the phase registry. After `VERIFICATION.md` is written, the orchestrator must sync these issues into `{phase-dir}/known-issues.json` before reading the deterministic gate. Do NOT create todos automatically or enter an interactive loop here. If no discovered issues: omit the section entirely. After displaying discovered issues, STOP. Do not take further action.
+This display is supplemental to the phase registry. After `VERIFICATION.md` is written, the orchestrator must sync these issues into `{phase-dir}/known-issues.json` before reading the deterministic gate. Do NOT create todos automatically or enter an interactive loop here. If no discovered issues: omit the section entirely. Cap the list at 20 entries. After displaying discovered issues, STOP. Do not take further action.
 
 Run:
 ```text

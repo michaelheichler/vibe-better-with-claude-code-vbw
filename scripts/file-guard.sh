@@ -372,10 +372,22 @@ path_matches_pattern() {
 path_matches_declared_scope() {
   local target="$1" declared="$2" declared_dir
   path_matches_pattern "$target" "$declared" && return 0
+  case "$declared" in
+    */|*'*'*|*'?'*|*'['*) ;;
+    *) return 1 ;;
+  esac
   declared_dir=$(dirname "$declared")
   if [ "$declared_dir" = "." ] || [ -z "$declared_dir" ]; then
     return 1
   fi
+  path_matches_pattern "$target" "${declared_dir%/}/**"
+}
+
+path_matches_files_modified_scope() {
+  local target="$1" declared="$2" declared_dir
+  path_matches_pattern "$target" "$declared" && return 0
+  declared_dir=$(dirname "$declared")
+  [ "$declared_dir" != "." ] || return 1
   path_matches_pattern "$target" "${declared_dir%/}/**"
 }
 
@@ -441,7 +453,7 @@ if [ -d "$CONTRACT_DIR" ]; then
             NORM_FORBIDDEN="${forbidden#./}"
             NORM_FORBIDDEN="${NORM_FORBIDDEN%/}"
             if [ "$NORM_TARGET" = "$NORM_FORBIDDEN" ] || [[ "$NORM_TARGET" == "$NORM_FORBIDDEN"/* ]]; then
-              guard_block "Blocked: $NORM_TARGET is a forbidden path in contract (${CONTRACT_FILE})"
+              guard_block_always "Blocked: $NORM_TARGET is a forbidden path in contract (${CONTRACT_FILE})"
             fi
           done <<< "$FORBIDDEN"
         fi
@@ -457,7 +469,7 @@ if [ -d "$CONTRACT_DIR" ]; then
             fi
           done <<< "$ALLOWED"
           if [ "$IN_SCOPE" = "false" ]; then
-            guard_block "Blocked: $NORM_TARGET not in contract allowed_paths (${CONTRACT_FILE})"
+            guard_block_always "Blocked: $NORM_TARGET not in contract allowed_paths (${CONTRACT_FILE})"
           fi
         fi
       fi
@@ -606,7 +618,7 @@ DECLARED_FILES=$(awk '
 while IFS= read -r declared; do
   [ -z "$declared" ] && continue
   NORM_DECLARED=$(normalize_path "$declared")
-  if path_matches_declared_scope "$NORM_TARGET" "$NORM_DECLARED"; then
+  if path_matches_files_modified_scope "$NORM_TARGET" "$NORM_DECLARED"; then
     exit 0
   fi
 done <<< "$DECLARED_FILES"
