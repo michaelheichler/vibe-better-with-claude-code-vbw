@@ -1,0 +1,72 @@
+config/agent-generator-adjectives.txt
+  s_58849211a94dc9::t_cd82b9c8663e6a 1-8
+scripts/resolve-agent-reasoning.sh
+  s_58849211a94dc9::t_8f1808dd280429 46
+  s_58849211a94dc9::t_37f4c06e48c352 49
+scripts/agent-dev-generator.sh
+  s_58849211a94dc9::t_e2d95a58c1b80a 1-4
+config/model-profiles.json
+  s_58849211a94dc9::t_8e6a867319bc31 19-20
+  s_58849211a94dc9::t_0feb44b4c6cc3f 29-30
+  s_58849211a94dc9::t_a7c81f93fd5ced 9-10
+scripts/agent-scout-generator.sh
+  s_58849211a94dc9::t_651b0abdd23d28 1-4
+tests/agent-generator.bats
+  s_58849211a94dc9::t_31d8cf7672831b 34
+  s_58849211a94dc9::t_ab838d7cc38088 1-33,35-53,56-108
+  s_58849211a94dc9::t_b6aad5983d8887 54
+  s_58849211a94dc9::t_2abef1daede258 55
+templates/agent-roles/defaults.json
+  s_58849211a94dc9::t_0ac46c456059fb 48
+  s_58849211a94dc9::t_51ba2f0d0e492a 18
+  s_58849211a94dc9::t_94f2d0d0f24ec7 3
+  s_58849211a94dc9::t_db4a600a063fea 26
+  s_58849211a94dc9::t_feea9ffe6c0bc8 55
+  s_58849211a94dc9::t_5363038a0a295c 41
+  s_58849211a94dc9::t_245d6f4ac8d284 10
+  s_58849211a94dc9::t_2e42e37f17e3f5 33
+scripts/resolve-agent-max-turns.sh
+  s_58849211a94dc9::t_84544a88b3a2db 15
+  s_58849211a94dc9::t_27e94639771248 18
+  s_58849211a94dc9::t_abf3c70b4059c4 27
+scripts/agent-qa-author-generator.sh
+  s_58849211a94dc9::t_6b563e30918a04 1-4
+scripts/agent-docs-generator.sh
+  s_58849211a94dc9::t_e27d17e3572c29 1-4
+scripts/agent-qa-generator.sh
+  s_58849211a94dc9::t_1d3e56a719736a 1-4
+scripts/agent-debugger-generator.sh
+  s_58849211a94dc9::t_6d07704d90a6cf 1-4
+scripts/agent-generator.sh
+  s_58849211a94dc9::t_f44bc9a929839b 1-82,84,87-90,93-117,135-141,143-193,201-226
+  s_58849211a94dc9::t_599099abfc0bcf 83,85-86
+  s_58849211a94dc9::t_57f377d7000f9d 118-134,142
+  s_58849211a94dc9::t_2109af8d539e6e 194-200
+  s_58849211a94dc9::t_8c810f701cf7e5 91-92
+scripts/resolve-agent-model.sh
+  s_58849211a94dc9::t_c37d0f2e77dce1 36
+  s_58849211a94dc9::t_7d75449cece0af 184
+  s_58849211a94dc9::t_dd54047a9a89a7 39
+scripts/agent-architect-generator.sh
+  s_58849211a94dc9::t_2081635043c117 1-4
+config/agent-generator-nouns.txt
+  s_58849211a94dc9::t_7764c4138e4190 1-8
+scripts/agent-lead-generator.sh
+  s_58849211a94dc9::t_a283b6128da73e 1-4
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "68f98db627354e8ad93f827c4f3e1c475fe78beb",
+  "prompts": {},
+  "sessions": {
+    "s_58849211a94dc9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a93b1e36-c511-4112-8e32-e0fbdf710600",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
