@@ -181,6 +181,7 @@ done
 
 for agent_file in "${AGENT_SKILL_CONTRACT_FILES[@]}"; do
   agent_name=$(basename "$agent_file")
+  [ "$agent_name" = "qa-author.md.tpl" ] && continue
   if grep -qi 'do not scan entire skill folders or read unrelated references' "$agent_file"; then
     pass "$agent_name: has skill follow-up read nudge (top-level)"
   else
@@ -199,8 +200,9 @@ done
 
 for agent_file in "${AGENT_SKILL_CONTRACT_FILES[@]}"; do
   agent_name=$(basename "$agent_file")
+  [ "$agent_name" = "qa-author.md.tpl" ] && continue
   required_count=2
-  [ "$agent_name" = "vbw-architect.md" ] && required_count=1
+  [ "$agent_name" = "architect.md.tpl" ] && required_count=1
   if [ "$(grep -F "$SKILL_FOLLOW_UP_PREFIX" "$agent_file" | grep -Fi "$SKILL_FOLLOW_UP_SUFFIX" | grep -Ec "$SKILL_FOLLOW_UP_SEPARATOR_RE")" -ge "$required_count" ]; then
     pass "$agent_name: has runtime-local follow-up read nudge"
   else

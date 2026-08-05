@@ -1,5 +1,6 @@
 
 PROTOCOL="$ROOT/references/execute-protocol.md"
+DEFAULTS="$ROOT/templates/agent-roles/defaults.json"
 
 if grep -q 'plan-driven' "$PROTOCOL"; then
   pass "execute-protocol.md: documents plan-driven architecture"
@@ -44,7 +45,7 @@ else
 fi
 
 
-QA_AGENT="$ROOT/agents/vbw-qa.md"
+QA_AGENT="$ROOT/templates/agent-roles/qa.md.tpl"
 
 if grep -q 'skills_used' "$QA_AGENT"; then
   pass "vbw-qa.md: references skills_used for plan-driven activation"
@@ -70,7 +71,7 @@ else
   fail "vbw-qa.md: missing available_skills reference for ad-hoc fallback"
 fi
 
-SCOUT_AGENT="$ROOT/agents/vbw-scout.md"
+SCOUT_AGENT="$ROOT/templates/agent-roles/scout.md.tpl"
 
 if grep -q 'skills_used' "$SCOUT_AGENT"; then
   pass "vbw-scout.md: references skills_used for plan-driven path"
@@ -102,7 +103,7 @@ else
   fail "vbw-scout.md: missing mandatory skills_used preservation on no-activation path"
 fi
 
-DEBUGGER_AGENT="$ROOT/agents/vbw-debugger.md"
+DEBUGGER_AGENT="$ROOT/templates/agent-roles/debugger.md.tpl"
 
 if grep -q 'available_skills' "$DEBUGGER_AGENT"; then
   pass "vbw-debugger.md: references available_skills for ad-hoc activation"
@@ -128,7 +129,7 @@ else
   fail "vbw-debugger.md: missing starting-set additive wording"
 fi
 
-ARCHITECT_AGENT="$ROOT/agents/vbw-architect.md"
+ARCHITECT_AGENT="$ROOT/templates/agent-roles/architect.md.tpl"
 
 if grep -q 'available_skills' "$ARCHITECT_AGENT"; then
   pass "vbw-architect.md: references available_skills for ad-hoc activation"
@@ -154,7 +155,7 @@ else
   fail "vbw-architect.md: missing starting-set additive wording"
 fi
 
-DOCS_AGENT="$ROOT/agents/vbw-docs.md"
+DOCS_AGENT="$ROOT/templates/agent-roles/docs.md.tpl"
 
 if grep -q 'skills_used' "$DOCS_AGENT"; then
   pass "vbw-docs.md: references skills_used for plan-driven activation"
@@ -274,13 +275,11 @@ else
 fi
 
 
-for agent_file in vbw-dev.md vbw-qa.md vbw-docs.md vbw-lead.md vbw-scout.md vbw-architect.md vbw-debugger.md; do
-  AGENT_PATH="$ROOT/agents/$agent_file"
-  FRONTMATTER=$(sed -n '/^---$/,/^---$/p' "$AGENT_PATH")
-  if grep -q '^maxTurns:' <<< "$FRONTMATTER"; then
-    fail "$agent_file: maxTurns still in YAML frontmatter (should be removed)"
+for role in dev qa docs lead scout architect debugger qa-author; do
+  if jq -e --arg role "$role" '.[$role] | has("maxTurns")' "$DEFAULTS" >/dev/null; then
+    fail "$role: maxTurns still in role defaults"
   else
-    pass "$agent_file: no maxTurns in YAML frontmatter"
+    pass "$role: no maxTurns in role defaults"
   fi
 done
 
@@ -292,8 +291,8 @@ else
 fi
 
 
-for agent_file in vbw-dev.md vbw-qa.md vbw-docs.md vbw-lead.md vbw-scout.md vbw-architect.md vbw-debugger.md; do
-  AGENT_PATH="$ROOT/agents/$agent_file"
+for agent_file in dev.md.tpl qa.md.tpl docs.md.tpl lead.md.tpl scout.md.tpl architect.md.tpl debugger.md.tpl qa-author.md.tpl; do
+  AGENT_PATH="$ROOT/templates/agent-roles/$agent_file"
   if grep -q 'available_skills' "$AGENT_PATH"; then
     pass "$agent_file: references <available_skills>"
   else

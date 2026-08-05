@@ -18,27 +18,27 @@ teardown() {
 # =============================================================================
 
 @test "debugger agent references codebase mapping in investigation protocol" {
-  grep -q '.vbw-planning/codebase/' "$PROJECT_ROOT/agents/vbw-debugger.md"
+  grep -q '.vbw-planning/codebase/' "$PROJECT_ROOT/templates/agent-roles/debugger.md.tpl"
 }
 
 @test "debugger agent checks META.md for mapping existence" {
-  grep -q 'META.md' "$PROJECT_ROOT/agents/vbw-debugger.md"
+  grep -q 'META.md' "$PROJECT_ROOT/templates/agent-roles/debugger.md.tpl"
 }
 
 @test "debugger agent references ARCHITECTURE.md" {
-  grep -q 'ARCHITECTURE.md' "$PROJECT_ROOT/agents/vbw-debugger.md"
+  grep -q 'ARCHITECTURE.md' "$PROJECT_ROOT/templates/agent-roles/debugger.md.tpl"
 }
 
 @test "debugger agent references CONCERNS.md" {
-  grep -q 'CONCERNS.md' "$PROJECT_ROOT/agents/vbw-debugger.md"
+  grep -q 'CONCERNS.md' "$PROJECT_ROOT/templates/agent-roles/debugger.md.tpl"
 }
 
 @test "debugger agent references PATTERNS.md" {
-  grep -q 'PATTERNS.md' "$PROJECT_ROOT/agents/vbw-debugger.md"
+  grep -q 'PATTERNS.md' "$PROJECT_ROOT/templates/agent-roles/debugger.md.tpl"
 }
 
 @test "debugger agent references DEPENDENCIES.md" {
-  grep -q 'DEPENDENCIES.md' "$PROJECT_ROOT/agents/vbw-debugger.md"
+  grep -q 'DEPENDENCIES.md' "$PROJECT_ROOT/templates/agent-roles/debugger.md.tpl"
 }
 
 # =============================================================================
@@ -46,23 +46,23 @@ teardown() {
 # =============================================================================
 
 @test "dev agent references codebase mapping in execution protocol" {
-  grep -q '.vbw-planning/codebase/' "$PROJECT_ROOT/agents/vbw-dev.md"
+  grep -q '.vbw-planning/codebase/' "$PROJECT_ROOT/templates/agent-roles/dev.md.tpl"
 }
 
 @test "dev agent references CONVENTIONS.md" {
-  grep -q 'CONVENTIONS.md' "$PROJECT_ROOT/agents/vbw-dev.md"
+  grep -q 'CONVENTIONS.md' "$PROJECT_ROOT/templates/agent-roles/dev.md.tpl"
 }
 
 @test "dev agent references PATTERNS.md" {
-  grep -q 'PATTERNS.md' "$PROJECT_ROOT/agents/vbw-dev.md"
+  grep -q 'PATTERNS.md' "$PROJECT_ROOT/templates/agent-roles/dev.md.tpl"
 }
 
 @test "dev agent references STRUCTURE.md" {
-  grep -q 'STRUCTURE.md' "$PROJECT_ROOT/agents/vbw-dev.md"
+  grep -q 'STRUCTURE.md' "$PROJECT_ROOT/templates/agent-roles/dev.md.tpl"
 }
 
 @test "dev agent references DEPENDENCIES.md" {
-  grep -q 'DEPENDENCIES.md' "$PROJECT_ROOT/agents/vbw-dev.md"
+  grep -q 'DEPENDENCIES.md' "$PROJECT_ROOT/templates/agent-roles/dev.md.tpl"
 }
 
 # =============================================================================
@@ -70,19 +70,19 @@ teardown() {
 # =============================================================================
 
 @test "qa agent references codebase mapping in verification protocol" {
-  grep -q '.vbw-planning/codebase/' "$PROJECT_ROOT/agents/vbw-qa.md"
+  grep -q '.vbw-planning/codebase/' "$PROJECT_ROOT/templates/agent-roles/qa.md.tpl"
 }
 
 @test "qa agent references TESTING.md" {
-  grep -q 'TESTING.md' "$PROJECT_ROOT/agents/vbw-qa.md"
+  grep -q 'TESTING.md' "$PROJECT_ROOT/templates/agent-roles/qa.md.tpl"
 }
 
 @test "qa agent references CONCERNS.md" {
-  grep -q 'CONCERNS.md' "$PROJECT_ROOT/agents/vbw-qa.md"
+  grep -q 'CONCERNS.md' "$PROJECT_ROOT/templates/agent-roles/qa.md.tpl"
 }
 
 @test "qa agent references ARCHITECTURE.md" {
-  grep -q 'ARCHITECTURE.md' "$PROJECT_ROOT/agents/vbw-qa.md"
+  grep -q 'ARCHITECTURE.md' "$PROJECT_ROOT/templates/agent-roles/qa.md.tpl"
 }
 
 # =============================================================================
@@ -90,19 +90,19 @@ teardown() {
 # =============================================================================
 
 @test "lead agent references codebase mapping in research stage" {
-  grep -q '.vbw-planning/codebase/' "$PROJECT_ROOT/agents/vbw-lead.md"
+  grep -q '.vbw-planning/codebase/' "$PROJECT_ROOT/templates/agent-roles/lead.md.tpl"
 }
 
 @test "lead agent references ARCHITECTURE.md" {
-  grep -q 'ARCHITECTURE.md' "$PROJECT_ROOT/agents/vbw-lead.md"
+  grep -q 'ARCHITECTURE.md' "$PROJECT_ROOT/templates/agent-roles/lead.md.tpl"
 }
 
 @test "lead agent references CONCERNS.md" {
-  grep -q 'CONCERNS.md' "$PROJECT_ROOT/agents/vbw-lead.md"
+  grep -q 'CONCERNS.md' "$PROJECT_ROOT/templates/agent-roles/lead.md.tpl"
 }
 
 @test "lead agent references STRUCTURE.md" {
-  grep -q 'STRUCTURE.md' "$PROJECT_ROOT/agents/vbw-lead.md"
+  grep -q 'STRUCTURE.md' "$PROJECT_ROOT/templates/agent-roles/lead.md.tpl"
 }
 
 # =============================================================================
@@ -110,15 +110,15 @@ teardown() {
 # =============================================================================
 
 @test "architect agent references codebase mapping in core protocol" {
-  grep -q '.vbw-planning/codebase/' "$PROJECT_ROOT/agents/vbw-architect.md"
+  grep -q '.vbw-planning/codebase/' "$PROJECT_ROOT/templates/agent-roles/architect.md.tpl"
 }
 
 @test "architect agent references ARCHITECTURE.md" {
-  grep -q 'ARCHITECTURE.md' "$PROJECT_ROOT/agents/vbw-architect.md"
+  grep -q 'ARCHITECTURE.md' "$PROJECT_ROOT/templates/agent-roles/architect.md.tpl"
 }
 
 @test "architect agent references STACK.md" {
-  grep -q 'STACK.md' "$PROJECT_ROOT/agents/vbw-architect.md"
+  grep -q 'STACK.md' "$PROJECT_ROOT/templates/agent-roles/architect.md.tpl"
 }
 
 # =============================================================================
@@ -585,15 +585,15 @@ STATE
 
 @test "dev agent has standalone Codebase Bootstrap section" {
   # Codebase Bootstrap should be a top-level ## section, not ### inside Execution Protocol
-  grep -q '^## Codebase Bootstrap' "$PROJECT_ROOT/agents/vbw-dev.md"
+  grep -q '^## Codebase Bootstrap' "$PROJECT_ROOT/templates/agent-roles/dev.md.tpl"
 }
 
 @test "dev agent codebase bootstrap qualifies files with existence check" {
-  grep -q 'whichever.*exist\|Skip any' "$PROJECT_ROOT/agents/vbw-dev.md"
+  grep -q 'whichever.*exist\|Skip any' "$PROJECT_ROOT/templates/agent-roles/dev.md.tpl"
 }
 
 @test "dev agent codebase bootstrap mentions compaction re-read" {
-  grep -q 'compaction.*re-read\|re-read.*compaction' "$PROJECT_ROOT/agents/vbw-dev.md"
+  grep -q 'compaction.*re-read\|re-read.*compaction' "$PROJECT_ROOT/templates/agent-roles/dev.md.tpl"
 }
 
 # =============================================================================
@@ -697,19 +697,19 @@ STATE
 # =============================================================================
 
 @test "debugger agent bootstrap qualifies files with existence check" {
-  grep -qE 'whichever.*exist|Skip any' "$PROJECT_ROOT/agents/vbw-debugger.md"
+  grep -qE 'whichever.*exist|Skip any' "$PROJECT_ROOT/templates/agent-roles/debugger.md.tpl"
 }
 
 @test "qa agent bootstrap qualifies files with existence check" {
-  grep -qE 'whichever.*exist|Skip any' "$PROJECT_ROOT/agents/vbw-qa.md"
+  grep -qE 'whichever.*exist|Skip any' "$PROJECT_ROOT/templates/agent-roles/qa.md.tpl"
 }
 
 @test "lead agent bootstrap qualifies files with existence check" {
-  grep -qE 'whichever.*exist|Skip any' "$PROJECT_ROOT/agents/vbw-lead.md"
+  grep -qE 'whichever.*exist|Skip any' "$PROJECT_ROOT/templates/agent-roles/lead.md.tpl"
 }
 
 @test "architect agent bootstrap qualifies files with existence check" {
-  grep -qE 'whichever.*exist|Skip any' "$PROJECT_ROOT/agents/vbw-architect.md"
+  grep -qE 'whichever.*exist|Skip any' "$PROJECT_ROOT/templates/agent-roles/architect.md.tpl"
 }
 
 # =============================================================================

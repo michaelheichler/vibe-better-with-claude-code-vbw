@@ -29,27 +29,27 @@ teardown() {
 # =============================================================================
 
 @test "vbw-dev has Shutdown Handling section" {
-  grep -q '^## Shutdown Handling$' "$PROJECT_ROOT/agents/vbw-dev.md"
+  grep -q '^## Shutdown Handling$' "$PROJECT_ROOT/templates/agent-roles/dev.md.tpl"
 }
 
 @test "vbw-qa has Shutdown Handling section" {
-  grep -q '^## Shutdown Handling$' "$PROJECT_ROOT/agents/vbw-qa.md"
+  grep -q '^## Shutdown Handling$' "$PROJECT_ROOT/templates/agent-roles/qa.md.tpl"
 }
 
 @test "vbw-scout has Shutdown Handling section" {
-  grep -q '^## Shutdown Handling$' "$PROJECT_ROOT/agents/vbw-scout.md"
+  grep -q '^## Shutdown Handling$' "$PROJECT_ROOT/templates/agent-roles/scout.md.tpl"
 }
 
 @test "vbw-lead has Shutdown Handling section" {
-  grep -q '^## Shutdown Handling$' "$PROJECT_ROOT/agents/vbw-lead.md"
+  grep -q '^## Shutdown Handling$' "$PROJECT_ROOT/templates/agent-roles/lead.md.tpl"
 }
 
 @test "vbw-debugger has Shutdown Handling section" {
-  grep -q '^## Shutdown Handling$' "$PROJECT_ROOT/agents/vbw-debugger.md"
+  grep -q '^## Shutdown Handling$' "$PROJECT_ROOT/templates/agent-roles/debugger.md.tpl"
 }
 
 @test "vbw-docs has Shutdown Handling section" {
-  grep -q '^## Shutdown Handling$' "$PROJECT_ROOT/agents/vbw-docs.md"
+  grep -q '^## Shutdown Handling$' "$PROJECT_ROOT/templates/agent-roles/docs.md.tpl"
 }
 
 # =============================================================================
@@ -58,7 +58,7 @@ teardown() {
 
 @test "all agent handlers reference shutdown_request" {
   for agent in dev qa scout lead debugger docs; do
-    grep -q 'shutdown_request' "$PROJECT_ROOT/agents/vbw-${agent}.md" || {
+    grep -q 'shutdown_request' "$PROJECT_ROOT/templates/agent-roles/${agent}.md.tpl" || {
       echo "vbw-${agent}.md missing shutdown_request reference"
       return 1
     }
@@ -67,7 +67,7 @@ teardown() {
 
 @test "all agent handlers reference shutdown_response" {
   for agent in dev qa scout lead debugger docs; do
-    grep -q 'shutdown_response' "$PROJECT_ROOT/agents/vbw-${agent}.md" || {
+    grep -q 'shutdown_response' "$PROJECT_ROOT/templates/agent-roles/${agent}.md.tpl" || {
       echo "vbw-${agent}.md missing shutdown_response reference"
       return 1
     }
@@ -81,7 +81,7 @@ teardown() {
 @test "all agent shutdown handlers instruct to STOP" {
   for agent in dev qa scout lead debugger docs; do
     # Each handler must contain a STOP instruction
-    sed -n '/^## Shutdown Handling$/,/^## /p' "$PROJECT_ROOT/agents/vbw-${agent}.md" | grep -qi 'STOP' || {
+    sed -n '/^## Shutdown Handling$/,/^## /p' "$PROJECT_ROOT/templates/agent-roles/${agent}.md.tpl" | grep -qi 'STOP' || {
       echo "vbw-${agent}.md Shutdown Handling section missing STOP instruction"
       return 1
     }
@@ -89,7 +89,7 @@ teardown() {
 }
 
 @test "debugger handler includes checkpoint instruction" {
-  sed -n '/^## Shutdown Handling$/,/^## /p' "$PROJECT_ROOT/agents/vbw-debugger.md" | grep -qi 'checkpoint'
+  sed -n '/^## Shutdown Handling$/,/^## /p' "$PROJECT_ROOT/templates/agent-roles/debugger.md.tpl" | grep -qi 'checkpoint'
 }
 
 # =============================================================================
@@ -98,7 +98,7 @@ teardown() {
 
 @test "shutdown handling section order: after Effort, before Circuit Breaker" {
   for agent in dev qa scout lead debugger docs; do
-    local file="$PROJECT_ROOT/agents/vbw-${agent}.md"
+    local file="$PROJECT_ROOT/templates/agent-roles/${agent}.md.tpl"
     local effort_line shutdown_line breaker_line
     effort_line=$(grep -n '^## Effort' "$file" | head -1 | cut -d: -f1)
     shutdown_line=$(grep -n '^## Shutdown Handling' "$file" | head -1 | cut -d: -f1)
@@ -446,8 +446,8 @@ teardown() {
 }
 
 @test "architect agent documents shutdown exemption" {
-  grep -q '## Shutdown Handling' "$PROJECT_ROOT/agents/vbw-architect.md"
-  sed -n '/^## Shutdown Handling$/,/^## /p' "$PROJECT_ROOT/agents/vbw-architect.md" | grep -qi 'planning-only'
+  grep -q '## Shutdown Handling' "$PROJECT_ROOT/templates/agent-roles/architect.md.tpl"
+  sed -n '/^## Shutdown Handling$/,/^## /p' "$PROJECT_ROOT/templates/agent-roles/architect.md.tpl" | grep -qi 'planning-only'
 }
 
 # =============================================================================
@@ -455,7 +455,7 @@ teardown() {
 # =============================================================================
 
 @test "architect shutdown handling section order: after Effort, before Circuit Breaker" {
-  local file="$PROJECT_ROOT/agents/vbw-architect.md"
+  local file="$PROJECT_ROOT/templates/agent-roles/architect.md.tpl"
   local effort_line shutdown_line breaker_line
   effort_line=$(grep -n '^## Effort' "$file" | head -1 | cut -d: -f1)
   shutdown_line=$(grep -n '^## Shutdown Handling' "$file" | head -1 | cut -d: -f1)
@@ -497,7 +497,7 @@ teardown() {
 @test "all agent shutdown handlers require calling SendMessage tool" {
   for agent in dev qa scout lead debugger docs; do
     local section
-    section=$(sed -n '/^## Shutdown Handling$/,/^## /p' "$PROJECT_ROOT/agents/vbw-${agent}.md")
+    section=$(sed -n '/^## Shutdown Handling$/,/^## /p' "$PROJECT_ROOT/templates/agent-roles/${agent}.md.tpl")
     echo "$section" | grep -qi 'call.*SendMessage tool' || {
       echo "vbw-${agent}.md Shutdown Handling missing 'call the SendMessage tool' instruction"
       return 1
@@ -508,7 +508,7 @@ teardown() {
 @test "all agent shutdown handlers warn plain text is NOT sufficient" {
   for agent in dev qa scout lead debugger docs; do
     local section
-    section=$(sed -n '/^## Shutdown Handling$/,/^## /p' "$PROJECT_ROOT/agents/vbw-${agent}.md")
+    section=$(sed -n '/^## Shutdown Handling$/,/^## /p' "$PROJECT_ROOT/templates/agent-roles/${agent}.md.tpl")
     echo "$section" | grep -qi 'NOT sufficient' || {
       echo "vbw-${agent}.md Shutdown Handling missing 'NOT sufficient' warning"
       return 1
@@ -519,7 +519,7 @@ teardown() {
 @test "all agent shutdown handlers specify approved (not approve) field" {
   for agent in dev qa scout lead debugger docs; do
     local section
-    section=$(sed -n '/^## Shutdown Handling$/,/^## /p' "$PROJECT_ROOT/agents/vbw-${agent}.md")
+    section=$(sed -n '/^## Shutdown Handling$/,/^## /p' "$PROJECT_ROOT/templates/agent-roles/${agent}.md.tpl")
     echo "$section" | grep -q '"approved"' || {
       echo "vbw-${agent}.md Shutdown Handling uses wrong field name (should be \"approved\", not \"approve\")"
       return 1
@@ -530,7 +530,7 @@ teardown() {
 @test "all agent shutdown handlers include request_id in template" {
   for agent in dev qa scout lead debugger docs; do
     local section
-    section=$(sed -n '/^## Shutdown Handling$/,/^## /p' "$PROJECT_ROOT/agents/vbw-${agent}.md")
+    section=$(sed -n '/^## Shutdown Handling$/,/^## /p' "$PROJECT_ROOT/templates/agent-roles/${agent}.md.tpl")
     echo "$section" | grep -q 'request_id' || {
       echo "vbw-${agent}.md Shutdown Handling missing request_id in JSON template"
       return 1
@@ -545,7 +545,7 @@ teardown() {
   for agent in dev qa scout lead debugger docs; do
     # Extract only the fenced JSON block from the Shutdown Handling section
     local json_block
-    json_block=$(sed -n '/^## Shutdown Handling$/,/^## /p' "$PROJECT_ROOT/agents/vbw-${agent}.md" | sed -n '/```json$/,/```$/p')
+    json_block=$(sed -n '/^## Shutdown Handling$/,/^## /p' "$PROJECT_ROOT/templates/agent-roles/${agent}.md.tpl" | sed -n '/```json$/,/```$/p')
     [ -n "$json_block" ] || {
       echo "vbw-${agent}.md Shutdown Handling missing fenced JSON code block"
       return 1
@@ -562,7 +562,7 @@ teardown() {
 @test "all agent shutdown handlers specify shutdown_response type" {
   for agent in dev qa scout lead debugger docs; do
     local section
-    section=$(sed -n '/^## Shutdown Handling$/,/^## /p' "$PROJECT_ROOT/agents/vbw-${agent}.md")
+    section=$(sed -n '/^## Shutdown Handling$/,/^## /p' "$PROJECT_ROOT/templates/agent-roles/${agent}.md.tpl")
     echo "$section" | grep -q 'shutdown_response' || {
       echo "vbw-${agent}.md Shutdown Handling missing shutdown_response type"
       return 1
@@ -761,7 +761,7 @@ teardown() {
   # Verify ALL 6 team agents have the canonical final_status trio
   for agent in dev lead qa scout debugger docs; do
     local agent_statuses
-    agent_statuses=$(grep -o '"complete".*"idle".*"in_progress"' "$PROJECT_ROOT/agents/vbw-${agent}.md" || true)
+    agent_statuses=$(grep -o '"complete".*"idle".*"in_progress"' "$PROJECT_ROOT/templates/agent-roles/${agent}.md.tpl" || true)
     [ -n "$agent_statuses" ] || {
       echo "FAIL: vbw-${agent}.md missing final_status values"
       return 1

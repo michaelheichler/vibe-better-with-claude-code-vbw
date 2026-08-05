@@ -20,7 +20,7 @@ fail() {
 
 echo "=== Lead Agent Research-Conditional Stage 1 Verification ==="
 
-LEAD="$ROOT/agents/vbw-lead.md"
+LEAD="$ROOT/templates/agent-roles/lead.md.tpl"
 VIBE="$ROOT/references/vibe-mode-plan.md"
 COMPILE="$ROOT/scripts/compile-context.sh"
 CACHE="$ROOT/scripts/cache-context.sh"

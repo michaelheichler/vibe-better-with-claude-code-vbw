@@ -12,7 +12,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 EXEC_PROTO="$ROOT/references/execute-protocol.md"
-SCOUT_FILE="$ROOT/agents/vbw-scout.md"
+SCOUT_FILE="$ROOT/templates/agent-roles/scout.md.tpl"
 SCOUT_POLICY_FILE="$ROOT/references/scout-live-validation-policy.md"
 VIBE_FILE="$ROOT/references/vibe-mode-plan.md"
 VIBE_UAT_REF="$ROOT/references/vibe-uat-remediation.md"

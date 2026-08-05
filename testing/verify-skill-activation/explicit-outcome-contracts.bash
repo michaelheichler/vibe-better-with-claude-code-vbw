@@ -79,8 +79,8 @@ else
   fail "vibe-mode-insert-phase.md: Scout contract still relies on Add Phase shorthand"
 fi
 
-for agent_file in vbw-lead.md vbw-dev.md vbw-qa.md vbw-scout.md vbw-debugger.md vbw-architect.md vbw-docs.md; do
-  AGENT_PATH="$ROOT/agents/$agent_file"
+for agent_file in lead.md.tpl dev.md.tpl qa.md.tpl scout.md.tpl debugger.md.tpl architect.md.tpl docs.md.tpl qa-author.md.tpl; do
+  AGENT_PATH="$ROOT/templates/agent-roles/$agent_file"
   if grep -q '## Skill Activation' "$AGENT_PATH"; then
     pass "$agent_file: has ## Skill Activation section"
   else
@@ -90,9 +90,10 @@ done
 
 echo ""
 echo "=== MCP Tool Usage Section (disallowedTools agents) ==="
-for agent_file in "$ROOT"/agents/vbw-*.md; do
+for agent_file in "$ROOT"/templates/agent-roles/*.md.tpl; do
   agent_name=$(basename "$agent_file")
-  if grep -q '^disallowedTools:' "$agent_file"; then
+  role="${agent_name%.md.tpl}"
+  if jq -e --arg role "$role" '.[$role].disallowedTools // empty' "$ROOT/templates/agent-roles/defaults.json" >/dev/null; then
     if grep -q '## MCP Tool Usage' "$agent_file"; then
       pass "$agent_name: has ## MCP Tool Usage section (uses disallowedTools denylist)"
     else
@@ -211,13 +212,13 @@ else
   fail "skill activation prompts: weak conditional phrasing present in skill-instruction lines"
 fi
 
-if ! grep -rq 'clearly relevant' "$ROOT/agents/"; then
+if ! grep -rq 'clearly relevant' "$ROOT/templates/agent-roles/"; then
   pass "agent prompts: no 'clearly relevant' conditional phrasing"
 else
   fail "agent prompts: 'clearly relevant' still present,use direct imperative language"
 fi
 
-if ! grep -rq 'STATE.md.*Installed\|Installed.*STATE.md' "$ROOT/agents/"; then
+if ! grep -rq 'STATE.md.*Installed\|Installed.*STATE.md' "$ROOT/templates/agent-roles/"; then
   pass "agent prompts: no STATE.md Installed fallback (removed,skills surfaced via available_skills)"
 else
   fail "agent prompts: STATE.md Installed fallback still present in agents"

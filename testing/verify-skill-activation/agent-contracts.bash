@@ -1,7 +1,8 @@
 echo "=== Skill Activation Pipeline Verification (plan-driven model) ==="
 
 
-DEV_AGENT="$ROOT/agents/vbw-dev.md"
+DEV_AGENT="$ROOT/templates/agent-roles/dev.md.tpl"
+DEFAULTS="$ROOT/templates/agent-roles/defaults.json"
 FIX_COMMAND="$ROOT/commands/fix.md"
 VIBE_COMMAND="$RUNTIME_HELPER_TEST_ROOT/vibe-skill-effective.md"
 EXECUTE_PROTOCOL="$ROOT/references/execute-protocol.md"
@@ -21,9 +22,11 @@ cat \
   "$ROOT/references/vibe-mode-remove-phase.md" \
   "$ROOT/references/vibe-mode-archive.md" \
   "$ROOT/references/vbw-brand-essentials.md" > "$VIBE_COMMAND"
-DEV_TOOLS=$(sed -n '/^---$/,/^---$/p' "$DEV_AGENT" | grep '^tools:' || true)
-DEV_DISALLOWED=$(sed -n '/^---$/,/^---$/p' "$DEV_AGENT" | grep '^disallowedTools:' || true)
-DEV_MEMORY=$(sed -n '/^---$/,/^---$/p' "$DEV_AGENT" | grep '^memory:' || true)
+DEV_TOOLS=$(jq -r '.dev.tools // empty' "$DEFAULTS")
+DEV_DISALLOWED=$(jq -r '.dev.disallowedTools // empty' "$DEFAULTS")
+DEV_MEMORY=$(jq -r '.dev.memory // empty' "$DEFAULTS")
+DEV_MEMORY="memory: $DEV_MEMORY"
+DEV_DISALLOWED="disallowedTools: $DEV_DISALLOWED"
 DEV_BODY=$(awk '
   NR == 1 && /^---$/ { in_frontmatter = 1; next }
   in_frontmatter && /^---$/ { in_frontmatter = 0; next }
@@ -196,8 +199,8 @@ else
 fi
 
 
-LEAD_AGENT="$ROOT/agents/vbw-lead.md"
-LEAD_TOOLS=$(sed -n '/^---$/,/^---$/p' "$LEAD_AGENT" | grep '^tools:' || true)
+LEAD_AGENT="$ROOT/templates/agent-roles/lead.md.tpl"
+LEAD_TOOLS="tools: $(jq -r '.lead.tools // empty' "$DEFAULTS")"
 
 if grep -q 'Skill' <<< "$LEAD_TOOLS"; then
   pass "vbw-lead.md: Skill in tools allowlist"
@@ -252,10 +255,10 @@ else
 fi
 
 
-for agent_file in vbw-qa.md vbw-scout.md vbw-debugger.md vbw-architect.md vbw-docs.md; do
-  AGENT_PATH="$ROOT/agents/$agent_file"
-  AGENT_TOOLS=$(sed -n '/^---$/,/^---$/p' "$AGENT_PATH" | grep '^tools:' || true)
-  AGENT_DISALLOWED=$(sed -n '/^---$/,/^---$/p' "$AGENT_PATH" | grep '^disallowedTools:' || true)
+for agent_file in qa scout debugger architect docs qa-author; do
+  AGENT_PATH="$ROOT/templates/agent-roles/${agent_file}.md.tpl"
+  AGENT_TOOLS="$(jq -r --arg role "$agent_file" '.[$role].tools // empty' "$DEFAULTS")"
+  AGENT_DISALLOWED="$(jq -r --arg role "$agent_file" '.[$role].disallowedTools // empty' "$DEFAULTS")"
   if [ -n "$AGENT_TOOLS" ]; then
     if grep -q 'Skill' <<< "$AGENT_TOOLS"; then
       pass "$agent_file: Skill in tools allowlist"

@@ -1235,7 +1235,7 @@ EOF
 }
 
 @test "vbw-qa.md does NOT have AskUserQuestion in tools" {
-  local qa="$BATS_TEST_DIRNAME/../agents/vbw-qa.md"
+  local qa="$BATS_TEST_DIRNAME/../templates/agent-roles/qa.md.tpl"
   # QA agent must NOT have AskUserQuestion — it cannot interact with the user
   # This is the architectural reason UAT cannot be delegated to QA
   ! grep -q "AskUserQuestion" "$qa"

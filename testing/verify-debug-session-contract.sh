@@ -515,7 +515,7 @@ else
 fi
 
 
-DEBUGGER_AGENT="$ROOT/agents/vbw-debugger.md"
+DEBUGGER_AGENT="$ROOT/templates/agent-roles/debugger.md.tpl"
 if grep -q "Standalone Debug Session" "$DEBUGGER_AGENT" 2>/dev/null; then
   pass "vbw-debugger.md has standalone debug session section"
 else
@@ -560,7 +560,7 @@ else
   fail "vbw-debugger.md teammate mode missing fresh post-synthesis ownership boundary"
 fi
 
-QA_AGENT="$ROOT/agents/vbw-qa.md"
+QA_AGENT="$ROOT/templates/agent-roles/qa.md.tpl"
 if grep -q "Debug Session QA" "$QA_AGENT" 2>/dev/null; then
   pass "vbw-qa.md has debug session QA section"
 else
@@ -812,14 +812,14 @@ else
 fi
 
 
-if grep -q 'Phase-Scoped QA' "$ROOT/agents/vbw-qa.md" 2>/dev/null; then
+if grep -q 'Phase-Scoped QA' "$ROOT/templates/agent-roles/qa.md.tpl" 2>/dev/null; then
   pass "vbw-qa.md persistence section scoped to phase QA"
 else
   fail "vbw-qa.md persistence section not scoped to phase QA"
 fi
 
-if grep -q 'Debug-session QA exception' "$ROOT/agents/vbw-qa.md" 2>/dev/null || \
-   grep -q 'debug-session QA.*do NOT use.*write-verification' "$ROOT/agents/vbw-qa.md" 2>/dev/null; then
+if grep -q 'Debug-session QA exception' "$ROOT/templates/agent-roles/qa.md.tpl" 2>/dev/null || \
+   grep -q 'debug-session QA.*do NOT use.*write-verification' "$ROOT/templates/agent-roles/qa.md.tpl" 2>/dev/null; then
   pass "vbw-qa.md explicitly exempts debug-session QA from write-verification.sh"
 else
   fail "vbw-qa.md missing debug-session QA exception from write-verification.sh"

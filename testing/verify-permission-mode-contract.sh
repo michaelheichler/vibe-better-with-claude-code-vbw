@@ -1,27 +1,23 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# verify-permission-mode-contract.sh, Verify agent permissionMode declarations
-#
-# Checks:
-# - Plan-mode agents (Scout, QA) declare permissionMode: plan
-# - Edit agents (Dev, Lead, Architect, Debugger, Docs) declare permissionMode: acceptEdits
-# - Every agent has an explicit permissionMode in frontmatter
-
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+DEFAULTS_FILE="$ROOT/templates/agent-roles/defaults.json"
 README_FILE="$ROOT/README.md"
 
 PASS=0
 FAIL=0
 
 pass() {
-  echo "PASS  $1"
-  PASS=$((PASS + 1))
+  local message="$1"
+  echo "PASS  $message"
+  printf -v PASS '%d' "$((PASS + 1))"
 }
 
 fail() {
-  echo "FAIL  $1"
-  FAIL=$((FAIL + 1))
+  local message="$1"
+  echo "FAIL  $message"
+  printf -v FAIL '%d' "$((FAIL + 1))"
 }
 
 check_contains() {
@@ -86,8 +82,7 @@ compare_tool_lists() {
 
 echo "=== Agent permissionMode Contract Verification ==="
 
-# Define expected permission modes (bash 3.2 compatible, no associative arrays)
-AGENTS="vbw-scout vbw-qa vbw-dev vbw-lead vbw-architect vbw-debugger vbw-docs"
+AGENTS="vbw-scout vbw-qa vbw-dev vbw-lead vbw-architect vbw-debugger vbw-docs vbw-qa-author"
 
 get_expected_mode() {
   case "$1" in
@@ -97,20 +92,18 @@ get_expected_mode() {
 }
 
 for agent in $AGENTS; do
-  AGENT_FILE="$ROOT/agents/${agent}.md"
-  SHORT_NAME="${agent#vbw-}"
+  role="${agent#vbw-}"
+  AGENT_FILE="$ROOT/templates/agent-roles/${role}.md.tpl"
+  SHORT_NAME="$role"
   EXPECTED="$(get_expected_mode "$agent")"
 
-  if [[ ! -f "$AGENT_FILE" ]]; then
-    fail "${SHORT_NAME}: agent file missing"
+  if [[ ! -f "$AGENT_FILE" ]] || ! jq -e --arg role "$role" '.[$role].permissionMode // empty' "$DEFAULTS_FILE" >/dev/null; then
+    fail "${SHORT_NAME}: role template or permissionMode default missing"
     continue
   fi
 
-  # Check that permissionMode is declared in frontmatter (first 15 lines)
-  ACTUAL=$(head -15 "$AGENT_FILE" | grep "^permissionMode:" | sed 's/^permissionMode: *//' | tr -d '[:space:]')
-  if [[ -z "$ACTUAL" ]]; then
-    fail "${SHORT_NAME}: permissionMode not declared in frontmatter (expected: ${EXPECTED})"
-  elif [[ "$ACTUAL" == "$EXPECTED" ]]; then
+  ACTUAL="$(jq -r --arg role "$role" '.[$role].permissionMode' "$DEFAULTS_FILE")"
+  if [[ "$ACTUAL" == "$EXPECTED" ]]; then
     pass "${SHORT_NAME}: permissionMode is ${ACTUAL}"
   else
     fail "${SHORT_NAME}: permissionMode is ${ACTUAL} (expected: ${EXPECTED})"
@@ -120,9 +113,9 @@ done
 README_DEV_ROW=$(grep -F '| **Dev** |' "$README_FILE" || true)
 README_SCOUT_ROW=$(grep -F '| **Scout** |' "$README_FILE" || true)
 README_PERMISSION_LEGEND=$(grep -F '**Denied / Omitted**' "$README_FILE" || true)
-DEV_DESCRIPTION=$(head -15 "$ROOT/agents/vbw-dev.md" | grep '^description:' || true)
-DEV_DISALLOWED_FRONTMATTER=$(head -15 "$ROOT/agents/vbw-dev.md" | awk '/^disallowedTools:/ { sub(/^disallowedTools:[[:space:]]*/, ""); print }')
-SCOUT_DISALLOWED_FRONTMATTER=$(head -15 "$ROOT/agents/vbw-scout.md" | awk '/^disallowedTools:/ { sub(/^disallowedTools:[[:space:]]*/, ""); print }')
+DEV_DESCRIPTION=$(jq -r '.dev.description' "$DEFAULTS_FILE")
+DEV_DISALLOWED_FRONTMATTER=$(jq -r '.dev.disallowedTools // empty' "$DEFAULTS_FILE")
+SCOUT_DISALLOWED_FRONTMATTER=$(jq -r '.scout.disallowedTools // empty' "$DEFAULTS_FILE")
 README_DEV_DENIED_CELL=$(markdown_table_cell "$README_DEV_ROW" 5)
 README_SCOUT_TOOLS_CELL=$(markdown_table_cell "$README_SCOUT_ROW" 4)
 README_SCOUT_DENIED_CELL=$(markdown_table_cell "$README_SCOUT_ROW" 5)
@@ -158,7 +151,7 @@ fi
 check_not_contains "vbw-dev.md: description no longer says explicit allowlist" "$DEV_DESCRIPTION" "explicit implementation tool allowlist"
 check_contains "vbw-dev.md: description mentions denylist-controlled tool access" "$DEV_DESCRIPTION" "denylist-controlled"
 
-if head -15 "$ROOT/agents/vbw-dev.md" | grep -q '^tools:'; then
+if jq -e '.dev | has("tools")' "$DEFAULTS_FILE" >/dev/null; then
   fail "vbw-dev.md: frontmatter must not use a tools allowlist (use disallowedTools denylist for forward compatibility)"
 else
   pass "vbw-dev.md: frontmatter does not use a tools allowlist"
