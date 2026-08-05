@@ -1,0 +1,112 @@
+testing/verify-commands-contract/qa-gating.bash
+  s_58849211a94dc9::t_d0b53e6ce66702 322-323
+  s_58849211a94dc9::t_b962bbcabac4a8 191-192,217-218
+references/execute-qa-result-gating.md
+  s_58849211a94dc9::t_e74a185e8f9d12 86
+  s_5d1a1531b7679b::t_3022ba09484326 98,123
+testing/verify-commands-contract/base-contracts.bash
+  s_58849211a94dc9::t_fc653f9dfba5d1 110
+  s_58849211a94dc9::t_aee6d5f6dc7370 115-118
+  s_58849211a94dc9::t_027384b6e73633 92
+commands/debug.md
+  s_58849211a94dc9::t_46b113ffb5db73 31-32
+  s_58849211a94dc9::t_5cdb7497213283 293
+  s_58849211a94dc9::t_759267fa4cae41 219,281
+  s_58849211a94dc9::t_8e8378dd1bfb73 263
+  s_58849211a94dc9::t_f674a42405995c 464
+  s_58849211a94dc9::t_e80f0db37a5170 221-224
+  s_58849211a94dc9::t_516021589f3427 331-333
+  s_58849211a94dc9::t_4819a1910b14af 620-621
+  s_58849211a94dc9::t_ed389f9916c0cb 258
+  s_58849211a94dc9::t_69d14a3c20ea49 220
+  s_58849211a94dc9::t_654c8c1af5c852 225-239
+  s_58849211a94dc9::t_1e8a694747a14b 245-251
+  s_58849211a94dc9::t_9a02a18a506ac7 470-472
+  s_58849211a94dc9::t_48106795ea65b3 252-255
+  s_58849211a94dc9::t_1044f689c8d294 256-257
+references/vibe-input-parsing.md
+  s_58849211a94dc9::t_cd3fffecb04216 301
+  s_5d1a1531b7679b::t_d6bedb18eec4f6 313
+testing/verify-debug-session-contract.sh
+  s_58849211a94dc9::t_af914a2f72a15a 326
+  s_58849211a94dc9::t_f84f9502b24abc 334
+  s_58849211a94dc9::t_54e8f9e72419e1 262-264
+  s_58849211a94dc9::t_a68f57c058d6e9 352
+  s_58849211a94dc9::t_47b43d88f7eb32 256
+  s_58849211a94dc9::t_e921f39a388109 290
+  s_58849211a94dc9::t_d24c62a8fc0cc2 11-13,17-19
+  s_58849211a94dc9::t_0a3cefb833b751 292
+  s_58849211a94dc9::t_592b613c880758 327-328
+  s_58849211a94dc9::t_af6385c58dca73 289
+  s_58849211a94dc9::t_1f1dda2349ea96 291
+  s_5d1a1531b7679b::t_7991d9b26903cf 287
+commands/fix.md
+  s_58849211a94dc9::t_aeddda4d58c02b 76
+  s_58849211a94dc9::t_0ecbdd77a9b7c6 5
+  s_58849211a94dc9::t_1779eaea439dfb 86-88
+references/vibe-uat-remediation.md
+  s_58849211a94dc9::t_6e70196425468e 108-111
+  s_5d1a1531b7679b::t_9dd96efda47d2c 173,224
+commands/qa.md
+  s_58849211a94dc9::t_8b30140d8e8700 158,311
+  s_58849211a94dc9::t_c1a27afa589084 27-28
+references/execute-protocol.md
+  s_58849211a94dc9::t_90e96a399936f9 351
+  s_58849211a94dc9::t_7b245a78dec67f 25
+  s_58849211a94dc9::t_f4c6b96f2c623d 369
+  s_58849211a94dc9::t_7b7a6db8663e54 364
+  s_58849211a94dc9::t_c1b2cab4f3c0ea 350
+  s_58849211a94dc9::t_72ef92ee95c282 160
+  s_58849211a94dc9::t_d586167e1fa597 370
+  s_58849211a94dc9::t_b9a778009ca9c8 367
+  s_58849211a94dc9::t_4946fdfe3600a9 363
+commands/research.md
+  s_58849211a94dc9::t_ec9be69f3f4da4 87
+  s_58849211a94dc9::t_567ef7fc746d31 109
+  s_58849211a94dc9::t_343f076cdfb183 27-28
+commands/map.md
+  s_58849211a94dc9::t_2296d0e10b666b 220
+  s_58849211a94dc9::t_1a7db9e6a287be 27-28
+  s_58849211a94dc9::t_d077f84b4cfbf9 172
+references/execute-post-build-qa.md
+  s_58849211a94dc9::t_fc506d36a25b04 144
+  s_58849211a94dc9::t_b573c8efb25d65 143
+testing/verify-execute-delegation-routing.sh
+  s_58849211a94dc9::t_abc73f1b373f5e 73
+  s_58849211a94dc9::t_52b685c931a7fc 773-774
+  s_58849211a94dc9::t_e3737add247221 20-22,26-28
+  s_58849211a94dc9::t_909be1a041b29f 542
+  s_58849211a94dc9::t_1af2c23f4bc36e 705-706,762
+references/vibe-mode-add-phase.md
+  s_58849211a94dc9::t_c4d3d80547daa7 25
+references/vibe-mode-bootstrap.md
+  s_58849211a94dc9::t_287a391218c17d 55
+references/vibe-mode-insert-phase.md
+  s_58849211a94dc9::t_d201fa29e2f091 12
+references/vibe-mode-plan.md
+  s_58849211a94dc9::t_cb899aea8d9ac4 40,46,87
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "a844e038bc42f9bf7df984e1171d2726fc4a10bf",
+  "prompts": {},
+  "sessions": {
+    "s_58849211a94dc9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a93b1e36-c511-4112-8e32-e0fbdf710600",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    },
+    "s_5d1a1531b7679b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-avbw-dev-04-dfab416b386c1222",
+        "model": "unknown"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
