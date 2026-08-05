@@ -212,7 +212,7 @@
 
 ### Fixed
 
-- **`hooks`** -- guarded the pre-push hook's `--verify` invocation with a plugin-name check, mirroring `validate-commit.sh`'s existing guard. Without this, third-party repos shipping their own `scripts/bump-version.sh` (e.g., SWT v2.3.5's in-tree version bumper) had every `package.json` `version` field silently overwritten with the literal string `"--verify"` on every push. The new guard verifies `.claude-plugin/plugin.json` exists and reports `name == "vbw"` before invoking `--verify`; non-VBW repos now skip the check silently. (Issue #635, PR #636)
+- **`hooks`** -- guarded the pre-push hook's `--verify` invocation with a plugin-name check, mirroring `validate-commit.sh`'s existing guard. Without this, third-party repos shipping their own `scripts/bump-version.sh` (e.g., SWT v2.3.5's in-tree version bumper) had every `package.json` `version` field silently overwritten with the literal string `"--verify"` on every push. The new guard verifies `.claude-plugin/plugin.json` exists and reports `name == "vbw"` before invoking `--verify`, non-VBW repos now skip the check silently. (Issue #635, PR #636)
 
 ## [1.37.0] - 2026-05-11
 
@@ -258,7 +258,7 @@
 ### Fixed
 
 - **`guards`** -- resolved Claude Code internal sidechains at `.claude/worktrees/agent-*` to host repository root for hook state, blocking accidental writes into unmanaged sidechain copies. (PR #558)
-- **`state`** -- added deterministic shell-side `STATE.md` reconciliation for UAT/remediation artifacts, fixing drift caused by Bash scripts mutating authoritative files outside PostToolUse hooks; also suppressed invalid SubagentStart/SubagentStop `hookSpecificOutput` JSON. (PR #560)
+- **`state`** -- added deterministic shell-side `STATE.md` reconciliation for UAT/remediation artifacts, fixing drift caused by Bash scripts mutating authoritative files outside PostToolUse hooks, also suppressed invalid SubagentStart/SubagentStop `hookSpecificOutput` JSON. (PR #560)
 - **`hooks`** -- reverted non-PDF `Read.pages` sanitizer addition after runtime evidence showed Claude Code validates `Read.pages: ""` before firing `PreToolUse:Read`, making the hook-seam fix insufficient for the observed validation-before-hook path. (PR #562, PR #563)
 
 ## [1.36.0] - 2026-05-01
@@ -407,7 +407,7 @@ All notable changes to VBW will be documented in this file.
 - **`known-issues`** -- Persist phase known-issues lifecycle through QA remediation. (PR #352)
 - **`execute`** -- Enforce real team semantics in /vbw:vibe. (PR #351)
 - **`research`** -- Use phase-wide RESEARCH.md naming for Plan mode. (PR #350)
-- **`report`** -- Always auto-file issues; remove --file-issue flag. (PR #346)
+- **`report`** -- Always auto-file issues, remove --file-issue flag. (PR #346)
 - **`report`** -- Add scope guardrails to prevent unauthorized side effects. (PR #343)
 - **`vibe`** -- Clarify routing prohibition to require AskUserQuestion tool call. (PR #342)
 - **`testing`** -- Ungate verify-vibe.sh and add to CI. (PR #334)
@@ -498,7 +498,7 @@ All notable changes to VBW will be documented in this file.
 ### Changed
 
 - **`qa`** -- QA now persists `VERIFICATION.md` through `write-verification.sh` directly instead of relying on a heredoc escape hatch or parent-command passthrough. (PR #231)
-- **`skills`** -- Fix forced skill evaluation for spawned agents by moving skill injection to `SubagentStart`, so team and subagent workflows reliably receive the skills they need; also stop accidental YAML turn ceilings from capping agents that should be unlimited. (PR #197)
+- **`skills`** -- Fix forced skill evaluation for spawned agents by moving skill injection to `SubagentStart`, so team and subagent workflows reliably receive the skills they need, also stop accidental YAML turn ceilings from capping agents that should be unlimited. (PR #197)
 - **`session-start`** -- Warn when GSD is co-installed to reduce cross-wired `/gsd:*` versus `/vbw:*` workflows in VBW sessions. (PR #197)
 - **`remediation`** -- Make remediation planning and execution self-contained and sequential so remediation no longer inherits normal execute-mode wave/team behavior or creates unnecessary worktrees. (PR #236)
 - **`todo`** -- Make `/vbw:todo` and `/vbw:list-todos` fail cleanly in restricted permission modes with actionable guidance. (PR #227)
@@ -545,7 +545,7 @@ All notable changes to VBW will be documented in this file.
 ### Fixed
 
 - **`release`** -- Correct git date format placeholders (`%cd --date=short` instead of `%Y-%m-%d`) and clarify tag existence checks to test stdout content rather than exit code. (PR #175)
-- **`release`** -- Robust grep pattern eliminates false positives from `[Unreleased]` section indirection; changelog entries now target versioned headers directly. (PR #173)
+- **`release`** -- Robust grep pattern eliminates false positives from `[Unreleased]` section indirection, changelog entries now target versioned headers directly. (PR #173)
 - **`release`** -- Auto-create versioned changelog section and populate from merged PRs and commits when section is missing. (PR #170)
 - **`release`** -- Two-phase prepare/finalize workflow respects branch protection rules by using draft PRs instead of direct pushes to main. (PR #163)
 - **`commands`** -- Add symlink fallback and robust grep pattern for plugin root resolution when `CLAUDE_PLUGIN_ROOT` is unset. (PR #168)
@@ -560,7 +560,7 @@ All notable changes to VBW will be documented in this file.
 
 - **`auto-uat`** -- Auto UAT detection and routing for unverified phases. New `auto_uat` config flag runs `/vbw:verify` inline after QA instead of only suggesting it. Config controls whether UAT runs inline or is merely suggested. (PR #135)
 - **`require-phase-discussion`** -- New `require_phase_discussion` config flag gates plan execution behind a mandatory discussion step per phase. Undiscussed phases route to `needs_discussion` instead of jumping to `needs_plan_and_execute`. (PR #123)
-- **`deterministic-verification`** -- Deterministic VERIFICATION.md generation via `write-verification.sh`. Per-category 6-col verification tables derived from §4–§7 semantics. Replaces ad-hoc QA agent output with structured, reproducible verification artifacts. (PR #138)
+- **`deterministic-verification`** -- Deterministic VERIFICATION.md generation via `write-verification.sh`. Per-category 6-col verification tables derived from §4-§7 semantics. Replaces ad-hoc QA agent output with structured, reproducible verification artifacts. (PR #138)
 - **`remediation`** -- Seeding of ROADMAP.md and STATE.md for remediation phases. Pre-seed CONTEXT.md with UAT report for in-phase remediation. Pre-seeded discussion annotations in Next Up hints. Skip discuss step for in-phase UAT remediation.
 - **`config`** -- Multi-location `CLAUDE_CONFIG_DIR` fallback across all scripts and commands. Removes hardcoded `$HOME/.claude` assumptions. (PR #116 by @halindrome)
 - **`context`** -- Pre-flight context guard to prevent mid-workflow compaction from disrupting agent execution.
@@ -598,7 +598,7 @@ All notable changes to VBW will be documented in this file.
 - **`session-start`** -- Bridge local dev plugin root into marketplace cache. Remove unused `PHASES_DIR` assignment.
 - **`verify`** -- Add trailing newline to CHECKPOINT expected line. Use bash builtins for cross-platform portability. Enhance user interaction by adding AskUserQuestion for checkpoint responses.
 - **`lint`** -- Resolve SC2034 warnings in `extract-verified-items.sh`.
-- **`tests`** -- Hardened for BATS 1.10 compatibility — avoid backtick escaping incompatible with bats 1.10. Harden stale cache test against SIGINT from bats runner. Plugin root resolver safety and callsite checks. 6 rounds of QA on test suite. Regression tests for deterministic path pattern.
+- **`tests`** -- Hardened for BATS 1.10 compatibility, avoid backtick escaping incompatible with bats 1.10. Harden stale cache test against SIGINT from bats runner. Plugin root resolver safety and callsite checks. 6 rounds of QA on test suite. Regression tests for deterministic path pattern.
 - **`docs`** -- Update defaults for lease locks and event recovery settings. Fix all markdown lint errors in README. Remove `.markdownlint.json` configuration file. Update plugin root resolution documentation.
 
 ## [1.30.1] - 2026-02-20
@@ -611,7 +611,7 @@ All notable changes to VBW will be documented in this file.
 ### Changed
 
 - **`milestone`** -- Removed ACTIVE-file milestone indirection. Slug derivation and decision/todo extraction enhanced in milestone scripts.
-- **`flags`** -- Partially reverted flag graduation — restored 9 flags as configurable. Legacy key fallback added to all consumer scripts. Runtime defaults aligned with legacy fallback behavior.
+- **`flags`** -- Partially reverted flag graduation, restored 9 flags as configurable. Legacy key fallback added to all consumer scripts. Runtime defaults aligned with legacy fallback behavior.
 - **`suggest-compact`** -- Replaced eval jq with safe direct assignment. Dynamic token cost from actual file sizes.
 - **`worktree`** -- Defaults to off. Fixed merge args, normalized boundary paths, added branch-exists fallback.
 
@@ -635,7 +635,7 @@ All notable changes to VBW will be documented in this file.
 - **`agent-restrictions`** -- Native `Task(agent_type)` spawn restrictions added to all 7 agents. Lead can only spawn Dev. Debugger can only spawn Debugger (competing hypotheses). Dev, architect, docs cannot spawn agents. Scout and QA already lacked Task capability.
 - **`cc-version-table`** -- Claude Code version requirements table added to README with minimum versions for key features (hooks, teams, classifier, memory).
 - **`token-analysis`** -- v1.30.0 token analysis document covering CC Alignment + Worktree Isolation impact: 85 scripts, 57 test files, 825 BATS tests. Per-request +12% (enforcement content), 73% reduction vs stock teams.
-- **`worktree-isolation`** — Git worktree-per-plan isolation for Dev agents
+- **`worktree-isolation`** -- Git worktree-per-plan isolation for Dev agents
   (6 scripts, enabled by default via `worktree_isolation` config, set `"off"` to disable).
 
 ### Changed
@@ -652,7 +652,7 @@ All notable changes to VBW will be documented in this file.
 
 ### Removed
 
-- **`lock-lite`** — Deprecated script removed (replaced by lease-lock.sh).
+- **`lock-lite`** -- Deprecated script removed (replaced by lease-lock.sh).
 
 ## [1.21.31] - 2026-02-19
 
@@ -683,7 +683,7 @@ All notable changes to VBW will be documented in this file.
 ### Added
 
 - **`rolling-summary`** -- New `scripts/compile-rolling-summary.sh` compiles prior SUMMARY.md files into a condensed `ROLLING-CONTEXT.md` (<200 lines). Integrated into `compile-context.sh` and `cache-context.sh` hash. Feature-flagged via `v3_rolling_summary` config. Archive and execute modes call it automatically.
-- **`correlation-id`** -- `scripts/log-event.sh` auto-resolves `correlation_id` from `VBW_CORRELATION_ID` env var or `.execution-state.json`. Execute protocol generates UUID at phase start. Zero caller changes required — all shell callers get correlation threading for free.
+- **`correlation-id`** -- `scripts/log-event.sh` auto-resolves `correlation_id` from `VBW_CORRELATION_ID` env var or `.execution-state.json`. Execute protocol generates UUID at phase start. Zero caller changes required, all shell callers get correlation threading for free.
 
 ### Changed
 
@@ -740,7 +740,7 @@ All notable changes to VBW will be documented in this file.
 
 ### Changed
 
-- **`vibe`** -- Bootstrap B2 now delegates to the discussion engine instead of 6-round rigid questioning. Plan mode no longer auto-asks 1-3 questions; users run `/vbw:discuss` explicitly if they want context. Discuss mode replaced with a 5-line engine delegation.
+- **`vibe`** -- Bootstrap B2 now delegates to the discussion engine instead of 6-round rigid questioning. Plan mode no longer auto-asks 1-3 questions, users run `/vbw:discuss` explicitly if they want context. Discuss mode replaced with a 5-line engine delegation.
 - **`bootstrap-requirements`** -- Removed tier-based annotation (table_stakes/differentiators/anti_features) and research cross-referencing. Reads simplified `discovery.json` schema directly.
 - **`readme`** -- Updated all counts (31k lines, 81 scripts, 23 commands, 7 agents, 461 tests). Added `/vbw:discuss` command, Docs agent, agent health monitoring, discussion engine references.
 
@@ -765,7 +765,7 @@ All notable changes to VBW will be documented in this file.
 
 ### Fixed
 
-- **`planning-git`** -- Add 24 missing transient runtime artifacts to `ensure_transient_ignore()` — session tracking, metrics, caching, events, snapshots, logging, watchdog, and codebase mapping files are now excluded from `planning_tracking=commit` commits. Contributed by [@dpearson2699](https://github.com/dpearson2699) (#69, fixes #66).
+- **`planning-git`** -- Add 24 missing transient runtime artifacts to `ensure_transient_ignore()`, session tracking, metrics, caching, events, snapshots, logging, watchdog, and codebase mapping files are now excluded from `planning_tracking=commit` commits. Contributed by [@dpearson2699](https://github.com/dpearson2699) (#69, fixes #66).
 
 ## [1.21.16] - 2026-02-15
 
@@ -822,7 +822,7 @@ All notable changes to VBW will be documented in this file.
 
 ### Fixed
 
-- **`commands`** -- Plugin root preamble dual-fallback. When `CLAUDE_PLUGIN_ROOT` is empty (observed in some marketplace installs), the backtick preamble now resolves via the plugin cache using the same `sort -V | tail -1` pattern established by PR #54 for hooks. Zero regression when `CLAUDE_PLUGIN_ROOT` is set — the fallback never fires. 15 command preambles + 4 backtick bash calls updated. Extends PR #50's preamble architecture with PR #54's dual-fallback philosophy.
+- **`commands`** -- Plugin root preamble dual-fallback. When `CLAUDE_PLUGIN_ROOT` is empty (observed in some marketplace installs), the backtick preamble now resolves via the plugin cache using the same `sort -V | tail -1` pattern established by PR #54 for hooks. Zero regression when `CLAUDE_PLUGIN_ROOT` is set, the fallback never fires. 15 command preambles + 4 backtick bash calls updated. Extends PR #50's preamble architecture with PR #54's dual-fallback philosophy.
 - **`testing`** -- `verify-plugin-root-resolution.sh` updated to recognize both simple and dual-fallback preamble forms.
 
 ---
@@ -836,7 +836,7 @@ All notable changes to VBW will be documented in this file.
 - **`agents`** -- `## Database Safety` prompt sections added to vbw-qa, vbw-dev, vbw-debugger, and vbw-lead agents.
 - **`contracts`** -- `forbidden_commands` gate type in `hard-gate.sh` for per-plan command restrictions.
 - **`templates`** -- `forbidden_commands: []` field added to PLAN.md template.
-- **`docs`** -- `docs/database-safety-guard.md` — full design document with flowchart, pattern table, override guide, and architecture decisions.
+- **`docs`** -- `docs/database-safety-guard.md`, full design document with flowchart, pattern table, override guide, and architecture decisions.
 - **`readme`** -- Database safety guard in Features section, Settings Reference (`bash_guard`), Security hook diagram updated.
 
 ---
@@ -858,8 +858,8 @@ All notable changes to VBW will be documented in this file.
 
 ### Added
 
-- **`planning_tracking` + `auto_push` config** — Control how VBW planning artifacts are tracked in git. Three modes: `manual` (default), `ignore` (auto-gitignore `.vbw-planning/`), `commit` (auto-commit at lifecycle boundaries: bootstrap, plan, execute, archive). Push behavior: `never`/`after_phase`/`always`. New `scripts/planning-git.sh` with sync-ignore, commit-boundary, and push-after-phase subcommands. `/vbw:init` asks preference during setup. (PR #59, @dpearson2699)
-- **Contributors section in README** — Added [@dpearson2699](https://github.com/dpearson2699), [@halindrome](https://github.com/halindrome), and [@navin-moorthy](https://github.com/navin-moorthy).
+- **`planning_tracking` + `auto_push` config** -- Control how VBW planning artifacts are tracked in git. Three modes: `manual` (default), `ignore` (auto-gitignore `.vbw-planning/`), `commit` (auto-commit at lifecycle boundaries: bootstrap, plan, execute, archive). Push behavior: `never`/`after_phase`/`always`. New `scripts/planning-git.sh` with sync-ignore, commit-boundary, and push-after-phase subcommands. `/vbw:init` asks preference during setup. (PR #59, @dpearson2699)
+- **Contributors section in README** -- Added [@dpearson2699](https://github.com/dpearson2699), [@halindrome](https://github.com/halindrome), and [@navin-moorthy](https://github.com/navin-moorthy).
 
 ---
 
@@ -867,11 +867,11 @@ All notable changes to VBW will be documented in this file.
 
 ### Fixed
 
-- **`scripts/migrate-config.sh`** — Brownfield config migration extracted into shared script. SessionStart hook and `/vbw:config` both run migration, ensuring missing v2/v3 flags are backfilled even when hooks didn't fire. Legacy `agent_teams` key renamed to `prefer_teams` and cleaned up. (PR #57, @dpearson2699)
+- **`scripts/migrate-config.sh`** -- Brownfield config migration extracted into shared script. SessionStart hook and `/vbw:config` both run migration, ensuring missing v2/v3 flags are backfilled even when hooks didn't fire. Legacy `agent_teams` key renamed to `prefer_teams` and cleaned up. (PR #57, @dpearson2699)
 
 ### Added
 
-- **`scripts/migrate-config.sh --print-added`** — Generic defaults merge from `config/defaults.json`. Future config keys auto-backfill without code changes. `/vbw:config` now shows a notice when settings were added. (PR #58, @dpearson2699)
+- **`scripts/migrate-config.sh --print-added`** -- Generic defaults merge from `config/defaults.json`. Future config keys auto-backfill without code changes. `/vbw:config` now shows a notice when settings were added. (PR #58, @dpearson2699)
 
 ---
 
@@ -879,7 +879,7 @@ All notable changes to VBW will be documented in this file.
 
 ### Fixed
 
-- **`hooks.json` + `hook-wrapper.sh`** — Hooks now resolve `CLAUDE_PLUGIN_ROOT` via dual fallback: cache path first, then `--plugin-dir` path. Previously, `--plugin-dir` installs had no `CLAUDE_PLUGIN_ROOT` set, causing all hook scripts to silently fail. New `resolve-claude-dir.bats` and `sessionstart-compact-hooks.bats` tests added. (PR #54, @dpearson2699)
+- **`hooks.json` + `hook-wrapper.sh`** -- Hooks now resolve `CLAUDE_PLUGIN_ROOT` via dual fallback: cache path first, then `--plugin-dir` path. Previously, `--plugin-dir` installs had no `CLAUDE_PLUGIN_ROOT` set, causing all hook scripts to silently fail. New `resolve-claude-dir.bats` and `sessionstart-compact-hooks.bats` tests added. (PR #54, @dpearson2699)
 
 ---
 
@@ -887,14 +887,14 @@ All notable changes to VBW will be documented in this file.
 
 ### Fixed
 
-- **`statusline-cache-isolation.bats`** — CI runners now have git identity configured in test setup(), fixing "Author identity unknown" failures on GitHub Actions. Default branch detection is now dynamic instead of hardcoding "main". Statusline also renders repo label on detached HEAD. (PR #46, @dpearson2699)
-- **`commands/*.md`** — 15 commands now include `Plugin root: !` backtick preamble so `${CLAUDE_PLUGIN_ROOT}` resolves correctly in model-executed Bash blocks. Previously the variable expanded to empty string, silently breaking all path references. Regression test added. (PR #50, @dpearson2699)
-- **`research-persistence.bats`** — Tests now use tracked `templates/RESEARCH.md` as fixture instead of gitignored `.vbw-planning/` runtime state. CI no longer depends on local development artifacts existing at repo root. (PR #56, @dpearson2699)
+- **`statusline-cache-isolation.bats`** -- CI runners now have git identity configured in test setup(), fixing "Author identity unknown" failures on GitHub Actions. Default branch detection is now dynamic instead of hardcoding "main". Statusline also renders repo label on detached HEAD. (PR #46, @dpearson2699)
+- **`commands/*.md`** -- 15 commands now include `Plugin root: !` backtick preamble so `${CLAUDE_PLUGIN_ROOT}` resolves correctly in model-executed Bash blocks. Previously the variable expanded to empty string, silently breaking all path references. Regression test added. (PR #50, @dpearson2699)
+- **`research-persistence.bats`** -- Tests now use tracked `templates/RESEARCH.md` as fixture instead of gitignored `.vbw-planning/` runtime state. CI no longer depends on local development artifacts existing at repo root. (PR #56, @dpearson2699)
 
 ### Added
 
-- **`.github/CODEOWNERS`** — `* @yidakee` ensures all PRs auto-request code owner review.
-- **Branch protection** — main branch now requires passing CI and PR review before merge.
+- **`.github/CODEOWNERS`** -- `* @yidakee` ensures all PRs auto-request code owner review.
+- **Branch protection** -- main branch now requires passing CI and PR review before merge.
 
 ---
 
@@ -902,19 +902,19 @@ All notable changes to VBW will be documented in this file.
 
 ### Fixed
 
-- **`session-start.sh`** — Config migration now backfills `prefer_teams` for users who initialized before v1.20.8, defaulting to `"always"`. Previously these users had the old boolean `agent_teams` but no `prefer_teams` enum, causing silent config drift.
-- **`session-start.sh`** — jq migration failures now log a warning to stderr instead of failing silently. Users see a clear message when config migration encounters malformed JSON.
+- **`session-start.sh`** -- Config migration now backfills `prefer_teams` for users who initialized before v1.20.8, defaulting to `"always"`. Previously these users had the old boolean `agent_teams` but no `prefer_teams` enum, causing silent config drift.
+- **`session-start.sh`** -- jq migration failures now log a warning to stderr instead of failing silently. Users see a clear message when config migration encounters malformed JSON.
 
 ### Testing
 
 - **16 new tests** across 2 new test files:
-  - `tests/config-migration.bats` (9 tests) — empty config, partial config, full config no-op, idempotent migration, malformed JSON handling, EXPECTED_FLAG_COUNT sync validation, prefer_teams migration, prefer_teams preservation, count=23 validation
-  - `tests/research-persistence.bats` (7 tests) — Phase 1 RESEARCH.md section format, research-warn.sh JSON schema (4 cases), compile-context RESEARCH.md inclusion, flag-disabled path verification
+  - `tests/config-migration.bats` (9 tests), empty config, partial config, full config no-op, idempotent migration, malformed JSON handling, EXPECTED_FLAG_COUNT sync validation, prefer_teams migration, prefer_teams preservation, count=23 validation
+  - `tests/research-persistence.bats` (7 tests), Phase 1 RESEARCH.md section format, research-warn.sh JSON schema (4 cases), compile-context RESEARCH.md inclusion, flag-disabled path verification
 - Test suite: 383 → 397 total tests (zero regressions)
 
 ### Documentation
 
-- **`research-persistence`** — Documented Scout write path, test coverage, and known hook isolation limitation for RESEARCH.md creation
+- **`research-persistence`** -- Documented Scout write path, test coverage, and known hook isolation limitation for RESEARCH.md creation
 
 ---
 
@@ -922,7 +922,7 @@ All notable changes to VBW will be documented in this file.
 
 ### Fixed
 
-- **`/vbw:config`** — Feature flags (`v3_*`, `v2_*`) now displayed in config output. Previously these flags existed in `config.json` but were invisible to users — the only way to discover or toggle them was manual JSON editing. Now shown as a dedicated "Feature Flags" section with descriptions and toggle hint. (Reported by @dpearson2699)
+- **`/vbw:config`** -- Feature flags (`v3_*`, `v2_*`) now displayed in config output. Previously these flags existed in `config.json` but were invisible to users, the only way to discover or toggle them was manual JSON editing. Now shown as a dedicated "Feature Flags" section with descriptions and toggle hint. (Reported by @dpearson2699)
 
 ---
 
@@ -930,11 +930,11 @@ All notable changes to VBW will be documented in this file.
 
 ### Fixed
 
-- **`vbw-debugger`** — Increased maxTurns from 40 to 80. The scientific method protocol (reproduce + hypothesize + evidence + diagnose + fix + verify) legitimately needs more turns for complex bugs in large codebases. (Reported by @dpearson2699, #43)
+- **`vbw-debugger`** -- Increased maxTurns from 40 to 80. The scientific method protocol (reproduce + hypothesize + evidence + diagnose + fix + verify) legitimately needs more turns for complex bugs in large codebases. (Reported by @dpearson2699, #43)
 
 ### Added
 
-- **`vbw-debugger`** — Turn budget awareness: debugger now proactively checkpoints its state (hypotheses, evidence, files examined, next steps) when running long, preventing context loss on turn exhaustion. (Proposed by @dpearson2699, #44)
+- **`vbw-debugger`** -- Turn budget awareness: debugger now proactively checkpoints its state (hypotheses, evidence, files examined, next steps) when running long, preventing context loss on turn exhaustion. (Proposed by @dpearson2699, #44)
 
 ---
 
@@ -942,22 +942,22 @@ All notable changes to VBW will be documented in this file.
 
 ### Community Contributions
 
-- **PR #41** (@halindrome) — Statusline cache isolation: per-repo cache key with cross-platform hash
-- **PR #36** (@dpearson2699) — CI consolidation, contributor workflow improvements, ShellCheck fixes
+- **PR #41** (@halindrome), Statusline cache isolation: per-repo cache key with cross-platform hash
+- **PR #36** (@dpearson2699), CI consolidation, contributor workflow improvements, ShellCheck fixes
 
 ### Fixed
 
-- **`vbw-statusline.sh`** — Statusline cache key now includes a hash of `git rev-parse --show-toplevel`, preventing cross-repo cache leakage when running Claude Code in multiple repos. Cross-platform hash: `md5sum` (Linux) -> `md5` (macOS) -> `cksum` (fallback). Local-only repos (no remote) display directory name instead of leaking another repo's data. (Thanks @halindrome)
-- **`pre-push-hook.sh`** — Relaxed to consistency-only checks: verifies 4 version files match but no longer requires VERSION to change on every push. Removes ~30 lines of false-positive-prone enforcement. (Thanks @dpearson2699)
-- **`resolve-claude-dir.sh`** — Added `export` to `CLAUDE_DIR` assignment so sourcing scripts can access it. (Thanks @dpearson2699)
-- **`bootstrap-project.sh`** — Removed unused `CREATED` variable (ShellCheck SC2034). (Thanks @dpearson2699)
-- **`bootstrap-requirements.sh`** — Removed unused `COMPETITORS` and `ANSWERED_COUNT` variables (ShellCheck SC2034). (Thanks @dpearson2699)
+- **`vbw-statusline.sh`** -- Statusline cache key now includes a hash of `git rev-parse --show-toplevel`, preventing cross-repo cache leakage when running Claude Code in multiple repos. Cross-platform hash: `md5sum` (Linux) -> `md5` (macOS) -> `cksum` (fallback). Local-only repos (no remote) display directory name instead of leaking another repo's data. (Thanks @halindrome)
+- **`pre-push-hook.sh`** -- Relaxed to consistency-only checks: verifies 4 version files match but no longer requires VERSION to change on every push. Removes ~30 lines of false-positive-prone enforcement. (Thanks @dpearson2699)
+- **`resolve-claude-dir.sh`** -- Added `export` to `CLAUDE_DIR` assignment so sourcing scripts can access it. (Thanks @dpearson2699)
+- **`bootstrap-project.sh`** -- Removed unused `CREATED` variable (ShellCheck SC2034). (Thanks @dpearson2699)
+- **`bootstrap-requirements.sh`** -- Removed unused `COMPETITORS` and `ANSWERED_COUNT` variables (ShellCheck SC2034). (Thanks @dpearson2699)
 
 ### Changed
 
-- **CI workflows** — Consolidated `.github/workflows/verification.yml` into `ci.yml`: shell syntax check + 4 contract verification steps now run as part of the test job. One workflow instead of two overlapping ones. (Thanks @dpearson2699)
-- **`CLAUDE.md`** — Removed version bump instruction (contributor concern, not end-user relevant); push guard retained. (Thanks @dpearson2699)
-- **`CONTRIBUTING.md`** — Rewritten Version Management section: describes manual merge-time bumping, no release-please references. (Thanks @dpearson2699)
+- **CI workflows** -- Consolidated `.github/workflows/verification.yml` into `ci.yml`: shell syntax check + 4 contract verification steps now run as part of the test job. One workflow instead of two overlapping ones. (Thanks @dpearson2699)
+- **`CLAUDE.md`** -- Removed version bump instruction (contributor concern, not end-user relevant), push guard retained. (Thanks @dpearson2699)
+- **`CONTRIBUTING.md`** -- Rewritten Version Management section: describes manual merge-time bumping, no release-please references. (Thanks @dpearson2699)
 
 ### Testing
 
@@ -969,16 +969,16 @@ All notable changes to VBW will be documented in this file.
 
 ### Community Contributions
 
-- **PR #35** (@dpearson2699) — Security filter bypass fix: `hook-wrapper.sh` exit code 2 passthrough
-- **PR #32** (@dpearson2699) — Progress dashboard fix: `state-updater.sh` milestone-aware path resolution
+- **PR #35** (@dpearson2699), Security filter bypass fix: `hook-wrapper.sh` exit code 2 passthrough
+- **PR #32** (@dpearson2699), Progress dashboard fix: `state-updater.sh` milestone-aware path resolution
 
 ### Fixed
 
-- **`hook-wrapper.sh`** — exit code 2 (Claude Code's "block tool call" signal) was silently converted to exit 0, disabling the security filter for `.env`, `.pem`, `.key` files. Now passes exit 2 through correctly. (Thanks @dpearson2699)
-- **`session-start.sh`** — compaction-marker check prevents error output during compaction cycles. (Thanks @dpearson2699)
-- **`map-staleness.sh`** — compaction-marker skip and `_diag()` stderr helper for hook mode. (Thanks @dpearson2699)
-- **`post-compact.sh`** — `.compaction-marker` added to cleanup. (Thanks @dpearson2699)
-- **`state-updater.sh`** — three bugs fixed: missing `.execution-state.json` no longer skips STATE.md/ROADMAP.md updates; reads `.plans[]` (current schema) instead of only `.phases{}` (old schema); `planning_root_from_phase_dir()` resolves milestone-aware paths instead of hardcoded `.vbw-planning/`. (Thanks @dpearson2699)
+- **`hook-wrapper.sh`** -- exit code 2 (Claude Code's "block tool call" signal) was silently converted to exit 0, disabling the security filter for `.env`, `.pem`, `.key` files. Now passes exit 2 through correctly. (Thanks @dpearson2699)
+- **`session-start.sh`** -- compaction-marker check prevents error output during compaction cycles. (Thanks @dpearson2699)
+- **`map-staleness.sh`** -- compaction-marker skip and `_diag()` stderr helper for hook mode. (Thanks @dpearson2699)
+- **`post-compact.sh`** -- `.compaction-marker` added to cleanup. (Thanks @dpearson2699)
+- **`state-updater.sh`** -- three bugs fixed: missing `.execution-state.json` no longer skips STATE.md/ROADMAP.md updates, reads `.plans[]` (current schema) instead of only `.phases{}` (old schema), `planning_root_from_phase_dir()` resolves milestone-aware paths instead of hardcoded `.vbw-planning/`. (Thanks @dpearson2699)
 
 ### Testing
 
@@ -992,8 +992,8 @@ All notable changes to VBW will be documented in this file.
 ### Added
 
 - **`config`** -- New `prefer_teams` config option (`always`|`when_parallel`|`auto`) replaces boolean `agent_teams`. Default `always` creates Agent Teams for all operations, maximizing color-coded UI visibility
-- **`vibe.md`** -- Plan mode respects `prefer_teams` — creates team even for Lead-only when set to `always`
-- **`debug.md`** -- Debug mode respects `prefer_teams` — uses team path for all bugs when set to `always`
+- **`vibe.md`** -- Plan mode respects `prefer_teams`, creates team even for Lead-only when set to `always`
+- **`debug.md`** -- Debug mode respects `prefer_teams`, uses team path for all bugs when set to `always`
 
 ### Fixed
 
@@ -1090,7 +1090,7 @@ All notable changes to VBW will be documented in this file.
 
 ### Community Contributions
 
-Merges 10 pull requests from **[@dpearson2699](https://github.com/dpearson2699)** (Derek Pearson). These contributions identified bugs, proposed fixes, and directly influenced the v1.20.0 architecture. Previously closed without proper merge credit — now properly merged and attributed.
+Merges 10 pull requests from **[@dpearson2699](https://github.com/dpearson2699)** (Derek Pearson). These contributions identified bugs, proposed fixes, and directly influenced the v1.20.0 architecture. Previously closed without proper merge credit, now properly merged and attributed.
 
 ### Merged
 
@@ -1251,7 +1251,7 @@ Merges 10 pull requests from **[@dpearson2699](https://github.com/dpearson2699)*
 
 ### Fixed
 
-- **`init`** -- preserve existing `CLAUDE.md` in brownfield projects. `/vbw:init` Step 3.5 was blindly overwriting the user's root `CLAUDE.md`. Now reads first — if it exists, appends VBW sections to the end instead of clobbering. Same brownfield-awareness added to `/vbw:vibe` Bootstrap B6 and Archive Step 8.
+- **`init`** -- preserve existing `CLAUDE.md` in brownfield projects. `/vbw:init` Step 3.5 was blindly overwriting the user's root `CLAUDE.md`. Now reads first, if it exists, appends VBW sections to the end instead of clobbering. Same brownfield-awareness added to `/vbw:vibe` Bootstrap B6 and Archive Step 8.
 
 ---
 
@@ -1259,7 +1259,7 @@ Merges 10 pull requests from **[@dpearson2699](https://github.com/dpearson2699)*
 
 ### Fixed
 
-- **`config`** -- respect `CLAUDE_CONFIG_DIR` env var across all scripts and commands. Users who set `CLAUDE_CONFIG_DIR` to relocate their Claude config directory were hitting hardcoded `~/.claude/` paths. All 9 affected files now resolve via `${CLAUDE_CONFIG_DIR:-$HOME/.claude}` fallback pattern — zero breakage for existing users.
+- **`config`** -- respect `CLAUDE_CONFIG_DIR` env var across all scripts and commands. Users who set `CLAUDE_CONFIG_DIR` to relocate their Claude config directory were hitting hardcoded `~/.claude/` paths. All 9 affected files now resolve via `${CLAUDE_CONFIG_DIR:-$HOME/.claude}` fallback pattern, zero breakage for existing users.
 
 ---
 
@@ -1276,7 +1276,7 @@ Merges 10 pull requests from **[@dpearson2699](https://github.com/dpearson2699)*
 
 ### Fixed
 
-- **`hooks`** -- `qa-gate.sh` tiered SUMMARY.md gate: commit format match now only grants a 1-plan grace period; 2+ missing summaries block regardless. Replaces `||` logic where format match bypassed missing summaries entirely.
+- **`hooks`** -- `qa-gate.sh` tiered SUMMARY.md gate: commit format match now only grants a 1-plan grace period, 2+ missing summaries block regardless. Replaces `||` logic where format match bypassed missing summaries entirely.
 - **`references`** -- `execute-protocol.md` Step 3b hardened to mandatory 4-step verification gate. No plan marked complete without verified SUMMARY.md.
 - **`docs`** -- README TeammateIdle hook description updated to reflect tiered gate. CHANGELOG execute.md references corrected to execute-protocol.md. qa-gate.sh comments fixed (GSD → conventional).
 
@@ -1305,7 +1305,7 @@ Merges 10 pull requests from **[@dpearson2699](https://github.com/dpearson2699)*
 ### Fixed
 
 - **`hooks`** -- `pre-push-hook.sh` restored to actual validation logic (was replaced by delegator wrapper causing infinite recursion).
-- **`hooks`** -- `qa-gate.sh` tightened to tiered SUMMARY.md gate. Commit format match now only grants a 1-plan grace period; 2+ missing summaries block regardless. Replaces previous `||` logic where format match could bypass missing summaries entirely.
+- **`hooks`** -- `qa-gate.sh` tightened to tiered SUMMARY.md gate. Commit format match now only grants a 1-plan grace period, 2+ missing summaries block regardless. Replaces previous `||` logic where format match could bypass missing summaries entirely.
 - **`references`** -- `execute-protocol.md` Step 3b hardened: SUMMARY.md verification gate is now a mandatory 4-step checkpoint after Dev completion. No plan marked complete without verified SUMMARY.md.
 
 ### Removed
@@ -1389,7 +1389,7 @@ Merges 10 pull requests from **[@dpearson2699](https://github.com/dpearson2699)*
 - **`session-stop.sh` cost persistence** -- session stop hook now reads `.cost-ledger.json` and appends a cost summary line to `.session-log.jsonl` before cleanup.
 - **`post-compact.sh` cost cleanup** -- compaction hook resets cost-tracking temp files (`.active-agent`, stale cache entries) to prevent attribution drift after context compaction.
 - **README statusline documentation** -- updated hook counts (18/10 to 20/11), added SubagentStart to hook diagram, documented economy line in statusline description.
-- **`/vbw:init` GSD detection** -- Step 1.7 checks `~/.claude/commands/gsd/` and `.planning/` to detect GSD. Prompts for isolation consent only when GSD is present; silent skip otherwise.
+- **`/vbw:init` GSD detection** -- Step 1.7 checks `~/.claude/commands/gsd/` and `.planning/` to detect GSD. Prompts for isolation consent only when GSD is present, silent skip otherwise.
 
 ---
 
@@ -1397,7 +1397,7 @@ Merges 10 pull requests from **[@dpearson2699](https://github.com/dpearson2699)*
 
 ### Added
 
-- **`suggest-next.sh`** -- context-aware Next Up suggestions (ADP-03). New script reads project state (phases, QA results, map existence, milestone context) and returns ranked suggestions. 12 commands updated to call it instead of hardcoded static blocks. After QA fail, suggests `/vbw:fix` instead of `/vbw:archive`; when codebase map is missing, injects `/vbw:map` hint.
+- **`suggest-next.sh`** -- context-aware Next Up suggestions (ADP-03). New script reads project state (phases, QA results, map existence, milestone context) and returns ranked suggestions. 12 commands updated to call it instead of hardcoded static blocks. After QA fail, suggests `/vbw:fix` instead of `/vbw:archive`, when codebase map is missing, injects `/vbw:map` hint.
 
 ### Changed
 
@@ -1486,8 +1486,8 @@ Merges 10 pull requests from **[@dpearson2699](https://github.com/dpearson2699)*
 
 ### Fixed
 
-- **`/vbw:release` GitHub auth** — `gh release create` now extracts `GH_TOKEN` from the git remote URL when `gh auth` is not configured, instead of failing silently.
-- **Statusline layout** — moved Diff (`+N -M`) from Line 4 to Line 1 after repo:branch. Added `Files:` and `Commits:` labels to the staged/modified and ahead-of-upstream indicators.
+- **`/vbw:release` GitHub auth** -- `gh release create` now extracts `GH_TOKEN` from the git remote URL when `gh auth` is not configured, instead of failing silently.
+- **Statusline layout** -- moved Diff (`+N -M`) from Line 4 to Line 1 after repo:branch. Added `Files:` and `Commits:` labels to the staged/modified and ahead-of-upstream indicators.
 
 ---
 
@@ -1495,19 +1495,19 @@ Merges 10 pull requests from **[@dpearson2699](https://github.com/dpearson2699)*
 
 ### Changed
 
-- **Context Diet: `disable-model-invocation` on 13 commands** — manual-only commands (add-phase, assumptions, audit, discuss, insert-phase, map, pause, qa, release, resume, skills, todo, whats-new) no longer load descriptions into always-on context. ~7,500+ tokens/session savings.
-- **Context Diet: brand reference consolidation** — `vbw-brand-essentials.md` made self-contained (~50 lines), removing 329-line `vbw-brand.md` injection from 27 command references.
-- **Context Diet: effort profile lazy-loading** — monolithic `effort-profiles.md` split into index + 4 individual profile files. Commands load only the active profile (~270 tokens/execution savings).
-- **Context Diet: initialization guard consolidation** — `plan.md` guard deduplicated to shared-patterns reference.
-- **Script Offloading: `phase-detect.sh`** — new script pre-computes 22 key=value pairs for project state, replacing 7 inline bash substitutions in `implement.md` (~800 tokens/invocation savings).
-- **Script Offloading: SessionStart rich state injection** — `session-start.sh` now injects milestone, phase position, config values, and next-action hint via `additionalContext` (~100-200 tokens/command savings).
-- **Script Offloading: compaction instructions** — CLAUDE.md Compact Instructions section + enhanced `compaction-instructions.sh` with main session detection guide context preservation during auto-compact.
-- **Script Offloading: inline substitution cleanup** — 10 inline `config.json` cats removed from 6 commands (plan, execute, status, qa, fix, implement). Config pre-injected by SessionStart.
-- **Agent Cost Controls: model routing** — Scout→haiku, QA→sonnet (40-60% cost reduction). Lead/Dev/Debugger/Architect inherit session model.
-- **Agent Cost Controls: `maxTurns` caps** — all 6 agents capped (Scout: 15, QA: 25, Lead: 50, Dev: 50, Debugger: 75, Architect: 30). Prevents runaway spending.
-- **Agent Cost Controls: reference deduplication** — 3 redundant `@` references removed from agent files (~1,600 tokens/agent spawn savings).
-- **Agent Cost Controls: `state-updater.sh` enhancement** — auto-updates STATE.md plan counts when PLAN.md or SUMMARY.md files are written (PostToolUse hook, no LLM involvement).
-- **Agent Cost Controls: effort-profiles and model-cost docs** — updated for consistency with new Scout/QA frontmatter model fields.
+- **Context Diet: `disable-model-invocation` on 13 commands** -- manual-only commands (add-phase, assumptions, audit, discuss, insert-phase, map, pause, qa, release, resume, skills, todo, whats-new) no longer load descriptions into always-on context. ~7,500+ tokens/session savings.
+- **Context Diet: brand reference consolidation** -- `vbw-brand-essentials.md` made self-contained (~50 lines), removing 329-line `vbw-brand.md` injection from 27 command references.
+- **Context Diet: effort profile lazy-loading** -- monolithic `effort-profiles.md` split into index + 4 individual profile files. Commands load only the active profile (~270 tokens/execution savings).
+- **Context Diet: initialization guard consolidation** -- `plan.md` guard deduplicated to shared-patterns reference.
+- **Script Offloading: `phase-detect.sh`** -- new script pre-computes 22 key=value pairs for project state, replacing 7 inline bash substitutions in `implement.md` (~800 tokens/invocation savings).
+- **Script Offloading: SessionStart rich state injection** -- `session-start.sh` now injects milestone, phase position, config values, and next-action hint via `additionalContext` (~100-200 tokens/command savings).
+- **Script Offloading: compaction instructions** -- CLAUDE.md Compact Instructions section + enhanced `compaction-instructions.sh` with main session detection guide context preservation during auto-compact.
+- **Script Offloading: inline substitution cleanup** -- 10 inline `config.json` cats removed from 6 commands (plan, execute, status, qa, fix, implement). Config pre-injected by SessionStart.
+- **Agent Cost Controls: model routing** -- Scout→haiku, QA→sonnet (40-60% cost reduction). Lead/Dev/Debugger/Architect inherit session model.
+- **Agent Cost Controls: `maxTurns` caps** -- all 6 agents capped (Scout: 15, QA: 25, Lead: 50, Dev: 50, Debugger: 75, Architect: 30). Prevents runaway spending.
+- **Agent Cost Controls: reference deduplication** -- 3 redundant `@` references removed from agent files (~1,600 tokens/agent spawn savings).
+- **Agent Cost Controls: `state-updater.sh` enhancement** -- auto-updates STATE.md plan counts when PLAN.md or SUMMARY.md files are written (PostToolUse hook, no LLM involvement).
+- **Agent Cost Controls: effort-profiles and model-cost docs** -- updated for consistency with new Scout/QA frontmatter model fields.
 
 ---
 
@@ -1515,16 +1515,16 @@ Merges 10 pull requests from **[@dpearson2699](https://github.com/dpearson2699)*
 
 ### Added
 
-- **`/vbw:release` pre-release audit** — new audit section runs after guards but before mutations. Finds commits since last release, checks changelog coverage against them, detects stale README counts (command count, hook count), presents branded findings with `✓`/`⚠` symbols, and offers to generate missing changelog entries or fix README numbers. Skippable with `--skip-audit`. Respects `--dry-run`.
-- **`/vbw:release` git tagging** — creates annotated git tag `v{version}` on the release commit.
-- **`/vbw:release` GitHub release** — creates a GitHub release via `gh release create` with changelog notes extracted from the versioned section. Gracefully warns if `gh` is unavailable. Skipped when `--no-push`.
-- **Statusline local commit count** — `↑N` indicator (cyan) on Line 1 shows commits ahead of upstream.
+- **`/vbw:release` pre-release audit** -- new audit section runs after guards but before mutations. Finds commits since last release, checks changelog coverage against them, detects stale README counts (command count, hook count), presents branded findings with `✓`/`⚠` symbols, and offers to generate missing changelog entries or fix README numbers. Skippable with `--skip-audit`. Respects `--dry-run`.
+- **`/vbw:release` git tagging** -- creates annotated git tag `v{version}` on the release commit.
+- **`/vbw:release` GitHub release** -- creates a GitHub release via `gh release create` with changelog notes extracted from the versioned section. Gracefully warns if `gh` is unavailable. Skipped when `--no-push`.
+- **Statusline local commit count** -- `↑N` indicator (cyan) on Line 1 shows commits ahead of upstream.
 
 ### Changed
 
-- **Statusline Line 1 consolidates all git/GitHub info** — clickable `repo:branch` link moved from Line 4 to Line 1, replacing the duplicate `Branch: X` field. Staged, modified, and ahead-of-upstream indicators all on Line 1.
-- **Statusline Line 4 cleaned up** — removed duplicate GitHub link (now on Line 1).
-- **Statusline progress bars fixed and unified** — all usage bars (Session, Weekly, Sonnet, Extra) now width 20, matching the Context bar. Previously Sonnet was width 10 and Extra was width 5, causing bars to render empty at low percentages (e.g., 7% × 10 = 0 filled blocks). Added minimum-1-block guarantee for any non-zero percentage.
+- **Statusline Line 1 consolidates all git/GitHub info** -- clickable `repo:branch` link moved from Line 4 to Line 1, replacing the duplicate `Branch: X` field. Staged, modified, and ahead-of-upstream indicators all on Line 1.
+- **Statusline Line 4 cleaned up** -- removed duplicate GitHub link (now on Line 1).
+- **Statusline progress bars fixed and unified** -- all usage bars (Session, Weekly, Sonnet, Extra) now width 20, matching the Context bar. Previously Sonnet was width 10 and Extra was width 5, causing bars to render empty at low percentages (e.g., 7% × 10 = 0 filled blocks). Added minimum-1-block guarantee for any non-zero percentage.
 
 ---
 
