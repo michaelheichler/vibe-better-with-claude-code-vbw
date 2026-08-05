@@ -58,12 +58,23 @@ AGE=$((NOW - MTIME))
 
 TARGET_PATH=$(printf '%s' "$INPUT" | jq -r '.tool_input.file_path // .tool_input.notebook_path // ""' 2>/dev/null) || exit 0
 [ -n "$TARGET_PATH" ] || exit 0
+
+deny_product_write() {
+  jq -cn --arg reason "VBW vibe execution locks main-session product writes. Delegate this change to a spawned agent." \
+    '{hookSpecificOutput:{hookEventName:"PreToolUse",permissionDecision:"deny",permissionDecisionReason:$reason}}'
+  exit 0
+}
+
+case "$TARGET_PATH" in
+  ..|../*|*/..|*/../*)
+    deny_product_write
+    ;;
+esac
 case "$TARGET_PATH" in
   *.md|.vbw-planning|.vbw-planning/*|*/.vbw-planning|*/.vbw-planning/*|.claude/agents|.claude/agents/*|*/.claude/agents|*/.claude/agents/*)
     exit 0
     ;;
 esac
 
-jq -cn --arg reason "VBW vibe execution locks main-session product writes. Delegate this change to a spawned agent." \
-  '{hookSpecificOutput:{hookEventName:"PreToolUse",permissionDecision:"deny",permissionDecisionReason:$reason}}'
+deny_product_write
 exit 0

@@ -71,6 +71,18 @@ test_denies_product_writes() { # @test
   [[ "$output" == *"Delegate this change to a spawned agent"* ]]
 }
 
+test_denies_product_path_traversal() { # @test
+  local input
+  input=$(jq -n --arg path "$TEST_TEMP_DIR/.vbw-planning/../src/app.js" \
+    '{session_id:"session-main",tool_name:"Write",tool_input:{file_path:$path}}')
+
+  run run_hook "$input"
+
+  [ "$status" -eq 0 ]
+  [ "$(printf '%s' "$output" | jq -r '.hookSpecificOutput.permissionDecision')" = "deny" ]
+}
+
+
 test_inactive_vibe_execution_is_noop() { # @test
   local input
   write_execution_state complete
