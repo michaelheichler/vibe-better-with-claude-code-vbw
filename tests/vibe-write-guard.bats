@@ -126,7 +126,7 @@ test_denies_symlink_cycle_in_exempt_path() { # @test
   input=$(jq -n --arg path "$TEST_TEMP_DIR/.vbw-planning/loop-a/state.json" \
     '{session_id:"session-main",tool_name:"Write",tool_input:{file_path:$path}}')
 
-  run timeout 10 bash -c 'printf %s "$2" | bash "$1"' _ "$SCRIPTS_DIR/vibe-write-guard.sh" "$input"
+  run run_hook "$input"
 
   [ "$status" -eq 0 ]
   [ "$(printf '%s' "$output" | jq -r '.hookSpecificOutput.permissionDecision')" = "deny" ]
