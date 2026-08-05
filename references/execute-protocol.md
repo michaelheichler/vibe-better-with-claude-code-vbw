@@ -283,17 +283,25 @@ If a plan task contains validation requirements, the validation result is a hard
 2. **Operator fallback:** If automated respawn after a blocker is not possible, surface a message to the user: "Validation gate failed for task {N}. Restart `/vbw:vibe` from current plan state to retry."
 
 
-**Model resolution:** Resolve models for Dev and QA agents. The PreToolUse guard enforces the resolved model on `vbw:*` agent spawns and wins on conflicts. Keep the explicit `model:` parameter as redundancy:
+**Model and reasoning resolution:** Resolve Dev and QA agent settings. The PreToolUse guard enforces the resolved model and reasoning on `vbw:*` agent spawns and wins on conflicts. Keep the explicit `model:` parameter as redundancy:
 ```bash
-DEV_MODEL=$(bash "${VBW_PLUGIN_ROOT}/scripts/resolve-agent-model.sh" dev .vbw-planning/config.json "${VBW_PLUGIN_ROOT}/config/model-profiles.json")
-if [ $? -ne 0 ]; then echo "$DEV_MODEL" >&2; exit 1; fi
-DEV_MAX_TURNS=$(bash "${VBW_PLUGIN_ROOT}/scripts/resolve-agent-max-turns.sh" dev .vbw-planning/config.json "{effort}")
-if [ $? -ne 0 ]; then echo "$DEV_MAX_TURNS" >&2; exit 1; fi
+if ! DEV_SETTINGS=$(bash "${VBW_PLUGIN_ROOT}/scripts/resolve-agent-settings.sh" dev .vbw-planning/config.json "${VBW_PLUGIN_ROOT}/config/model-profiles.json" "{effort}"); then
+  echo "$DEV_SETTINGS" >&2
+  exit 1
+fi
+eval "$DEV_SETTINGS"
+DEV_MODEL="$RESOLVED_MODEL"
+DEV_MAX_TURNS="$RESOLVED_MAX_TURNS"
+DEV_REASONING="$RESOLVED_REASONING"
 
-QA_MODEL=$(bash "${VBW_PLUGIN_ROOT}/scripts/resolve-agent-model.sh" qa .vbw-planning/config.json "${VBW_PLUGIN_ROOT}/config/model-profiles.json")
-if [ $? -ne 0 ]; then echo "$QA_MODEL" >&2; exit 1; fi
-QA_MAX_TURNS=$(bash "${VBW_PLUGIN_ROOT}/scripts/resolve-agent-max-turns.sh" qa .vbw-planning/config.json "{effort}")
-if [ $? -ne 0 ]; then echo "$QA_MAX_TURNS" >&2; exit 1; fi
+if ! QA_SETTINGS=$(bash "${VBW_PLUGIN_ROOT}/scripts/resolve-agent-settings.sh" qa .vbw-planning/config.json "${VBW_PLUGIN_ROOT}/config/model-profiles.json" "{effort}"); then
+  echo "$QA_SETTINGS" >&2
+  exit 1
+fi
+eval "$QA_SETTINGS"
+QA_MODEL="$RESOLVED_MODEL"
+QA_MAX_TURNS="$RESOLVED_MAX_TURNS"
+QA_REASONING="$RESOLVED_REASONING"
 ```
 
 **Skill activation for Dev/QA tasks:** Before composing task descriptions, evaluate installed skills visible in your system context. Read each skill's description and select all materially helpful skills for the tasks, including adjacent support skills surfaced by the prompt, logs, errors, related files, or stack context, not just the single most direct skill.

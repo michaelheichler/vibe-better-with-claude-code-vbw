@@ -58,12 +58,21 @@ echo ""
 echo "Model Profile: $PROFILE"
 echo "Agent Models:"
 # Resolve each agent model
-LEAD=$(bash "{plugin-root}/scripts/resolve-agent-model.sh" lead .vbw-planning/config.json "{plugin-root}/config/model-profiles.json")
-DEV=$(bash "{plugin-root}/scripts/resolve-agent-model.sh" dev .vbw-planning/config.json "{plugin-root}/config/model-profiles.json")
-QA=$(bash "{plugin-root}/scripts/resolve-agent-model.sh" qa .vbw-planning/config.json "{plugin-root}/config/model-profiles.json")
-SCOUT=$(bash "{plugin-root}/scripts/resolve-agent-model.sh" scout .vbw-planning/config.json "{plugin-root}/config/model-profiles.json")
-DEBUGGER=$(bash "{plugin-root}/scripts/resolve-agent-model.sh" debugger .vbw-planning/config.json "{plugin-root}/config/model-profiles.json")
-ARCHITECT=$(bash "{plugin-root}/scripts/resolve-agent-model.sh" architect .vbw-planning/config.json "{plugin-root}/config/model-profiles.json")
+resolve_model() {
+  local settings
+  if ! settings=$(bash "{plugin-root}/scripts/resolve-agent-settings.sh" "$1" .vbw-planning/config.json "{plugin-root}/config/model-profiles.json"); then
+    echo "$settings" >&2
+    exit 1
+  fi
+  eval "$settings"
+  printf '%s' "$RESOLVED_MODEL"
+}
+LEAD=$(resolve_model lead)
+DEV=$(resolve_model dev)
+QA=$(resolve_model qa)
+SCOUT=$(resolve_model scout)
+DEBUGGER=$(resolve_model debugger)
+ARCHITECT=$(resolve_model architect)
 # Check for overrides and mark with asterisk
 LEAD_DISPLAY=$LEAD
 DEV_DISPLAY=$DEV
@@ -187,17 +196,17 @@ Alongside the model matrix, propose a `reasoning_matrix` over the same agents an
 
 Confirm via AskUserQuestion (single select): "Use this model matrix?" with options `Use matrix` / `Edit` / `Cancel`.
 
-**Edit loop:** if the user selects `Edit`, or supplies freeform text through the built-in `Other` path, apply the requested changes to the proposed matrix (rejecting any id not in the detected list), re-render the revised table and legend, and immediately call AskUserQuestion again with the same three options. Repeat for every further `Edit` or freeform reply. Never end this flow in plain prose. Every revision round MUST end with a new AskUserQuestion call. The only exits are `Use matrix` and `Cancel`.
+**Edit loop:** if the user selects `Edit` or supplies freeform text through the built-in `Other` path, apply the requested changes to the proposed matrix. Reject any id not in the detected list. Re-render the revised table and legend, then call AskUserQuestion again with the same three options. Repeat for every further `Edit` or freeform reply. Never end this flow in plain prose. Every revision round MUST end with a new AskUserQuestion call. The only exits are `Use matrix` and `Cancel`.
 
 On `Use matrix`, write `model_matrix`, `reasoning_matrix`, `model_catalog`, and `model_catalog_detected_at` to `.vbw-planning/config.json` with the same jq pattern as init Step 1.8, where `model_catalog` is an id-only array built from the id column alone (`cut -f1`). Display `✓ Model matrix written (N models detected)` and continue to Step 4.
 
 On `Cancel`, display `○ Model matrix unchanged` and return to the Step 2.7 question.
 
-**Individual Configuration - Round 1 (4 agents):**
+**Individual Configuration (Round 1, 4 agents):**
 
 Run `bash "{plugin-root}/scripts/detect-models.sh" --labeled` once and store the `id<TAB>description` lines as the detected catalog. Read `{plugin-root}/references/model-profiles.md` and follow its "Choosing models per role" section when ranking candidates.
 
-For every per-agent question in Round 1 and Round 2 below, build the options from that catalog: offer the 3 most suitable detected ids for that role, list the agent's current model first and mark it `(current)`, and put the id's description text in the option description. Never offer an id that is not in the detected id column. Only when the catalog is empty, fall back to the tier names `opus` / `sonnet` / `haiku`. Any other detected id can be given via the built-in `Other` path.
+For every per-agent question in Round 1 and Round 2 below, build the options from that catalog. Offer the 3 most suitable detected ids for that role. List the agent's current model first and mark it `(current)`. Put the id's description text in the option description. Never offer an id that is not in the detected id column. Only when the catalog is empty, fall back to the tier names `opus` / `sonnet` / `haiku`. Any other detected id can be given via the built-in `Other` path.
 
 Calculate OLD_COST before making changes (cost weights: opus=100, sonnet=20, haiku=2):
 ```bash
@@ -205,12 +214,21 @@ CURRENT_PROFILE=$(jq -r '.model_profile // "quality"' .vbw-planning/config.json)
 PROFILES_PATH="{plugin-root}/config/model-profiles.json"
 
 # Get current models (before changes)
-LEAD_OLD=$(bash "{plugin-root}/scripts/resolve-agent-model.sh" lead .vbw-planning/config.json "{plugin-root}/config/model-profiles.json")
-DEV_OLD=$(bash "{plugin-root}/scripts/resolve-agent-model.sh" dev .vbw-planning/config.json "{plugin-root}/config/model-profiles.json")
-QA_OLD=$(bash "{plugin-root}/scripts/resolve-agent-model.sh" qa .vbw-planning/config.json "{plugin-root}/config/model-profiles.json")
-SCOUT_OLD=$(bash "{plugin-root}/scripts/resolve-agent-model.sh" scout .vbw-planning/config.json "{plugin-root}/config/model-profiles.json")
-DEBUGGER_OLD=$(bash "{plugin-root}/scripts/resolve-agent-model.sh" debugger .vbw-planning/config.json "{plugin-root}/config/model-profiles.json")
-ARCHITECT_OLD=$(bash "{plugin-root}/scripts/resolve-agent-model.sh" architect .vbw-planning/config.json "{plugin-root}/config/model-profiles.json")
+resolve_model() {
+  local settings
+  if ! settings=$(bash "{plugin-root}/scripts/resolve-agent-settings.sh" "$1" .vbw-planning/config.json "{plugin-root}/config/model-profiles.json"); then
+    echo "$settings" >&2
+    exit 1
+  fi
+  eval "$settings"
+  printf '%s' "$RESOLVED_MODEL"
+}
+LEAD_OLD=$(resolve_model lead)
+DEV_OLD=$(resolve_model dev)
+QA_OLD=$(resolve_model qa)
+SCOUT_OLD=$(resolve_model scout)
+DEBUGGER_OLD=$(resolve_model debugger)
+ARCHITECT_OLD=$(resolve_model architect)
 
 # Calculate cost based on model
 get_model_cost() {
@@ -227,10 +245,19 @@ OLD_COST=$(( $(get_model_cost "$LEAD_OLD") + $(get_model_cost "$DEV_OLD") + $(ge
 
 Get current models for Lead, Dev, QA, Scout:
 ```bash
-CURRENT_LEAD=$(bash "{plugin-root}/scripts/resolve-agent-model.sh" lead .vbw-planning/config.json "{plugin-root}/config/model-profiles.json")
-CURRENT_DEV=$(bash "{plugin-root}/scripts/resolve-agent-model.sh" dev .vbw-planning/config.json "{plugin-root}/config/model-profiles.json")
-CURRENT_QA=$(bash "{plugin-root}/scripts/resolve-agent-model.sh" qa .vbw-planning/config.json "{plugin-root}/config/model-profiles.json")
-CURRENT_SCOUT=$(bash "{plugin-root}/scripts/resolve-agent-model.sh" scout .vbw-planning/config.json "{plugin-root}/config/model-profiles.json")
+resolve_model() {
+  local settings
+  if ! settings=$(bash "{plugin-root}/scripts/resolve-agent-settings.sh" "$1" .vbw-planning/config.json "{plugin-root}/config/model-profiles.json"); then
+    echo "$settings" >&2
+    exit 1
+  fi
+  eval "$settings"
+  printf '%s' "$RESOLVED_MODEL"
+}
+CURRENT_LEAD=$(resolve_model lead)
+CURRENT_DEV=$(resolve_model dev)
+CURRENT_QA=$(resolve_model qa)
+CURRENT_SCOUT=$(resolve_model scout)
 ```
 
 AskUserQuestion with 4 questions:
@@ -241,12 +268,21 @@ AskUserQuestion with 4 questions:
 
 Store selections in variables `LEAD_MODEL`, `DEV_MODEL`, `QA_MODEL`, `SCOUT_MODEL`.
 
-**Individual Configuration - Round 2 (2 agents):**
+**Individual Configuration (Round 2, 2 agents):**
 
 Get current models for Debugger and Architect:
 ```bash
-CURRENT_DEBUGGER=$(bash "{plugin-root}/scripts/resolve-agent-model.sh" debugger .vbw-planning/config.json "{plugin-root}/config/model-profiles.json")
-CURRENT_ARCHITECT=$(bash "{plugin-root}/scripts/resolve-agent-model.sh" architect .vbw-planning/config.json "{plugin-root}/config/model-profiles.json")
+resolve_model() {
+  local settings
+  if ! settings=$(bash "{plugin-root}/scripts/resolve-agent-settings.sh" "$1" .vbw-planning/config.json "{plugin-root}/config/model-profiles.json"); then
+    echo "$settings" >&2
+    exit 1
+  fi
+  eval "$settings"
+  printf '%s' "$RESOLVED_MODEL"
+}
+CURRENT_DEBUGGER=$(resolve_model debugger)
+CURRENT_ARCHITECT=$(resolve_model architect)
 ```
 
 AskUserQuestion with 2 questions:
@@ -457,7 +493,12 @@ case "$MODEL" in
 esac
 
 # Get current model for this agent
-OLD_MODEL=$(bash "{plugin-root}/scripts/resolve-agent-model.sh" "$AGENT" .vbw-planning/config.json "{plugin-root}/config/model-profiles.json")
+if ! AGENT_SETTINGS=$(bash "{plugin-root}/scripts/resolve-agent-settings.sh" "$AGENT" .vbw-planning/config.json "{plugin-root}/config/model-profiles.json"); then
+  echo "$AGENT_SETTINGS" >&2
+  exit 1
+fi
+eval "$AGENT_SETTINGS"
+OLD_MODEL="$RESOLVED_MODEL"
 
 echo "Set $AGENT model override: $MODEL (was: $OLD_MODEL)"
 
