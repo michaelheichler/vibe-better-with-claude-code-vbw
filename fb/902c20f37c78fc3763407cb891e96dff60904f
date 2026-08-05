@@ -1,0 +1,23 @@
+scripts/render-agent-template.sh
+  s_58849211a94dc9::t_dc2d26de4543c1 84-92,101-106,108-110,113-125,127-138,140-142,144-146
+  s_58849211a94dc9::t_c9685fea12c57b 72-78
+  s_58849211a94dc9::t_aa8a2fffdfa77b 47,51-55,63-69
+tests/render-agent-template.bats
+  s_58849211a94dc9::t_74b99bb678a2b4 40-68
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "fb902c20f37c78fc3763407cb891e96dff60904f",
+  "prompts": {},
+  "sessions": {
+    "s_58849211a94dc9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a93b1e36-c511-4112-8e32-e0fbdf710600",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
