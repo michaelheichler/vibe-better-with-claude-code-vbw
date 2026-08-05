@@ -1,0 +1,27 @@
+scripts/suggest-compact.sh
+  s_e8b702480499cf::t_7a7b7e2a8324c7 101,162
+  s_e8b702480499cf::t_bc99af34cede8e 100
+  s_e8b702480499cf::t_ef958aff0976b8 127
+tests/suggest-compact.bats
+  s_e8b702480499cf::t_37ba598a38b416 15-16
+  s_e8b702480499cf::t_5eeed6509f5d3f 7
+  s_e8b702480499cf::t_463ddcae98f9e5 19
+commands/doctor.md
+  s_e8b702480499cf::t_146208a955c063 47-48
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "b360501b80ca671537742b60e3351e6d3b6639e8",
+  "prompts": {},
+  "sessions": {
+    "s_e8b702480499cf": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b86dd062-285e-44f0-9749-b1a13364f007",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
