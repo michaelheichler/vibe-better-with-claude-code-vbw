@@ -1,0 +1,19 @@
+testing/gate-agent-generation.sh
+  s_58849211a94dc9::t_b5dc5060b5acac 91
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "67a5a43875f46b139de2a6e37459a106322a7845",
+  "prompts": {},
+  "sessions": {
+    "s_58849211a94dc9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a93b1e36-c511-4112-8e32-e0fbdf710600",
+        "model": "claude-fable-5"
+      },
+      "human_author": null
+    }
+  }
+}
