@@ -1,0 +1,46 @@
+scripts/rtk-manager.sh
+  s_86d58b85ce2aee::t_0fbcd353cf0496 1407
+scripts/lib/claude-md-vbw-sections.sh
+  s_86d58b85ce2aee::t_98f9fe61b6340f 45
+  s_86d58b85ce2aee::t_485273bb928432 5-6
+  s_86d58b85ce2aee::t_e332c6dabbf1db 163
+  s_86d58b85ce2aee::t_4383eb1d183809 50
+scripts/lib/list-todos-functions.inc
+  s_86d58b85ce2aee::t_aa771b7b7fcb5f 66,149,174
+  s_86d58b85ce2aee::t_09b6f5625807a0 68,151,176
+  s_86d58b85ce2aee::t_0167fedbf6a005 104-112
+  s_86d58b85ce2aee::t_89b2fe20df4008 5-6
+  s_86d58b85ce2aee::t_3e60bdd4da610a 9-13,18-32
+  s_86d58b85ce2aee::t_ae3077102478e4 33
+scripts/file-guard.sh
+  s_86d58b85ce2aee::t_fce90bd411f1ae 621
+  s_86d58b85ce2aee::t_62aa96b4572cb1 373,375-380,382-383
+  s_86d58b85ce2aee::t_1dce57241c68b7 465
+scripts/bootstrap/bootstrap-claude.sh
+  s_86d58b85ce2aee::t_c56f32a081bf40 137
+scripts/lib/claude-md-strip-legacy.awk
+  s_86d58b85ce2aee::t_70171fd37ebe0d 36
+  s_86d58b85ce2aee::t_fc1b5ecbe63ffa 50,55,60
+  s_86d58b85ce2aee::t_7001550a19cbbb 43-44
+  s_86d58b85ce2aee::t_019307652444ed 54,59
+  s_86d58b85ce2aee::t_7f646b8a8777cc 28-35,37-42,45-46,48-49,51-53,56-58,61-66,84-85,92-100,115-117
+  s_86d58b85ce2aee::t_2341a5343c5c0a 47
+scripts/list-todos.sh
+  s_86d58b85ce2aee::t_1750ce383afbdf 46,48
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "73d9141e1aa4e4c08a4ef14eca0158a781659948",
+  "prompts": {},
+  "sessions": {
+    "s_86d58b85ce2aee": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "07d7797e-6c7f-4c9c-bdd0-a2660d0d8697",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
