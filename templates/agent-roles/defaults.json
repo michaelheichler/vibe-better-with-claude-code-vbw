@@ -25,7 +25,7 @@
   "docs": {
     "description": "Documentation agent for READMEs, changelogs, inline API docs, and guides. Use for standalone documentation tasks and for doc-only plans or tasks a Lead has scoped out of a phase. Documentation changes bundled inside a feature implementation task stay with vbw-dev under its plan contract. Read access to the full codebase, write access limited to documentation files only.",
     "model": "claude-sonnet-5",
-    "tools": "Read, Grep, Glob, Bash, Write, Edit, LSP, Skill, SendMessage",
+    "tools": "Read, Grep, Glob, Bash, Write, Edit, LSP, Skill, TaskGet, SendMessage",
     "memory": "project",
     "permissionMode": "acceptEdits"
   },
@@ -35,7 +35,7 @@
     "effort": "medium",
     "memory": "project",
     "permissionMode": "acceptEdits",
-    "tools": "Read, Glob, Grep, Write, Bash, WebFetch, LSP, Skill, Task(vbw-dev), SendMessage"
+    "tools": "Read, Glob, Grep, Write, Bash, WebFetch, LSP, Skill, Task, SendMessage"
   },
   "qa-author": {
     "description": "Test author for the red stage of opt-in TDD execution. Writes and commits failing tests from plan must_haves without modifying product code.",
