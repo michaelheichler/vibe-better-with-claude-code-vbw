@@ -1,0 +1,42 @@
+scripts/render-agent-template.sh
+  s_58849211a94dc9::t_82da4f294c0390 1-68,75-104
+  s_58849211a94dc9::t_acaac597c00f98 69-74
+tests/render-agent-template.bats
+  s_58849211a94dc9::t_7b974efa777926 19
+  s_58849211a94dc9::t_a7e0c7d7058568 1-5,7-18,20-39
+  s_58849211a94dc9::t_c6bbb67a55ec12 6
+templates/agent-roles/defaults.json
+  s_58849211a94dc9::t_1e4c3c27c8e8d0 1-54
+templates/agent-roles/architect.md.tpl
+  s_58849211a94dc9::t_23d05653a47947 1-82
+templates/agent-roles/debugger.md.tpl
+  s_58849211a94dc9::t_dbcdfbc898f423 1-139
+templates/agent-roles/dev.md.tpl
+  s_58849211a94dc9::t_485ad6d665d85b 1-186
+templates/agent-roles/docs.md.tpl
+  s_58849211a94dc9::t_9385fafe842091 1-143
+templates/agent-roles/lead.md.tpl
+  s_58849211a94dc9::t_9a5f70f057167a 1-151
+templates/agent-roles/qa-author.md.tpl
+  s_58849211a94dc9::t_60f3cd60974cd3 1-84
+templates/agent-roles/qa.md.tpl
+  s_58849211a94dc9::t_0ea1734ebcb061 1-214
+templates/agent-roles/scout.md.tpl
+  s_58849211a94dc9::t_485b17e4b50b69 1-130
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "cb5dab5819876d1f3cc78af02afff5fa6aa755a7",
+  "prompts": {},
+  "sessions": {
+    "s_58849211a94dc9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a93b1e36-c511-4112-8e32-e0fbdf710600",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
