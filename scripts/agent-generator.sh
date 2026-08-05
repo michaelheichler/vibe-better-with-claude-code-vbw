@@ -218,7 +218,7 @@ if ! register_manifest_entry "$MANIFEST" "$OVERRIDES_JSON"; then
   fail "could not register generated agent in manifest"
 fi
 printf 'Agent-call parameters:\n'
-printf '  subagent_type: vbw:%s\n' "$ROLE"
+printf '  subagent_type: %s\n' "$NAME"
 printf '  name: %s\n' "$NAME"
 printf '  model: %s\n' "$MODEL"
 [ -n "$MAX_TURNS" ] && printf '  maxTurns: %s\n' "$MAX_TURNS"

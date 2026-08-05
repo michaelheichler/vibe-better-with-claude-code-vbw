@@ -43,6 +43,7 @@ EOF
   [ "$status" -eq 0 ]
   name=$(sed -n 's/^SPAWN_READY //p' <<< "$output")
   [ -n "$name" ]
+  [[ "$output" == *"subagent_type: $name"* ]]
   [ -f "$TEST_TEMP_DIR/.claude/agents/$name.md" ]
   jq -e --arg name "$name" '.agents[$name].state == "registered" and .agents[$name].role == "dev"' "$TEST_TEMP_DIR/.vbw-planning/.agent-manifest.json" >/dev/null
 }
