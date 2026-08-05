@@ -1,0 +1,90 @@
+testing/verify-dev-recovery-guidance.sh
+  s_e8b702480499cf::t_70e2326871db6d 12
+testing/verify-skill-activation.sh
+  s_e8b702480499cf::t_01dcb45a7231c6 44
+  s_e8b702480499cf::t_70e2326871db6d 37-43
+testing/verify-qa-persistence-contract.sh
+  s_e8b702480499cf::t_0c8dd9df8d3c60 6
+  s_e8b702480499cf::t_45d92c6118fada 13-15,19-21
+  s_e8b702480499cf::t_70e2326871db6d 24
+  s_e8b702480499cf::t_1c173cd1de3e13 38-40
+testing/verify-lead-research-conditional.sh
+  s_e8b702480499cf::t_70e2326871db6d 23
+testing/verify-debug-session-contract.sh
+  s_e8b702480499cf::t_70e2326871db6d 518,563,815,821-822
+tests/shutdown-protocol.bats
+  s_e8b702480499cf::t_05a5a1c8e0fb86 61,70,84,101,500,511,522,533,548,565,764
+  s_e8b702480499cf::t_70e2326871db6d 32,36,40,44,48,52,92,449-450,458
+tests/debugger-codebase-mapping.bats
+  s_e8b702480499cf::t_70e2326871db6d 21,25,29,33,37,41,49,53,57,61,65,73,77,81,85,93,97,101,105,113,117,121,588,592,596,700,704,708,712
+testing/verify-live-validation-policy.sh
+  s_e8b702480499cf::t_70e2326871db6d 15
+testing/verify-lsp-first-policy.sh
+  s_e8b702480499cf::t_f40e234869726a 6
+  s_e8b702480499cf::t_6f92a925e4c30d 68,70-71
+  s_e8b702480499cf::t_70e2326871db6d 107
+  s_e8b702480499cf::t_27cabf8b9e0a4d 59-61
+  s_e8b702480499cf::t_1b89719fffbaec 12-14,18-20
+testing/verify-agent-sendmessage-contract.sh
+  s_e8b702480499cf::t_1af2e4e22ad738 6
+  s_e8b702480499cf::t_05a5a1c8e0fb86 11
+  s_e8b702480499cf::t_31c018cb6a52a7 19-21,24,28-30
+testing/verify-skill-activation/explicit-outcome-contracts.bash
+  s_e8b702480499cf::t_7b646acc49a657 215
+  s_e8b702480499cf::t_a6a03614547c94 82-83,95-96
+  s_e8b702480499cf::t_05a5a1c8e0fb86 93
+  s_e8b702480499cf::t_85c85018336c03 221
+tests/auto-uat.bats
+  s_e8b702480499cf::t_70e2326871db6d 1238
+testing/verify-skill-activation/execute-agent-contracts.bash
+  s_e8b702480499cf::t_90857156a79670 3
+  s_e8b702480499cf::t_960e7d7b86686d 278-280,282
+  s_e8b702480499cf::t_70e2326871db6d 48,74,106,132,158
+  s_e8b702480499cf::t_635e3234dd9066 294-295
+testing/verify-permission-mode-contract.sh
+  s_e8b702480499cf::t_4f6a008b0fc5a7 12-14,18-20
+  s_e8b702480499cf::t_d3bdba3203b080 116-118
+  s_e8b702480499cf::t_9dc7311f4ea57e 85,95-97,100-101,105-106
+  s_e8b702480499cf::t_ba75fa698164dc 154
+  s_90f5501b2f72c9::t_617eb39e6f66bf 5
+tests/resolve-artifact-path.bats
+  s_e8b702480499cf::t_70e2326871db6d 332
+testing/verify-skill-activation/agent-contracts.bash
+  s_e8b702480499cf::t_70e2326871db6d 4,202
+  s_e8b702480499cf::t_c5d06733229299 5
+  s_e8b702480499cf::t_c9dd70fbbc8863 258-259
+  s_e8b702480499cf::t_9af06d8963a11a 25-29
+  s_e8b702480499cf::t_53e1b61f0eb86d 203
+  s_e8b702480499cf::t_ff4822e6c2fc17 260-261
+tests/discovered-issues-surfacing.bats
+  s_e8b702480499cf::t_70e2326871db6d 21,25,29,34,38,43,48,53,150,154,158,162,166,170-171,175,179,184,253,257,265,269,273,278-280,284,288,292,296,298,302,310,314,318,322,326,334,338,342,346,350,366,370,424,490,494,710,807,811,813
+tests/role-isolation.bats
+  s_e8b702480499cf::t_70e2326871db6d 154,159,164,169,174,179
+testing/verify-skill-activation/subagent-hook-contracts.bash
+  s_e8b702480499cf::t_fae41d1cfd8863 203,205
+  s_e8b702480499cf::t_3d72698f156b73 184
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "f6ee15bc58f57c5fb6d8ec3f1214704309271e00",
+  "prompts": {},
+  "sessions": {
+    "s_90f5501b2f72c9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-avbw-dev-4b7008d988a2b669",
+        "model": "unknown"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    },
+    "s_e8b702480499cf": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b86dd062-285e-44f0-9749-b1a13364f007",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
