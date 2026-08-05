@@ -1,0 +1,21 @@
+scripts/vibe-write-guard.sh
+  s_58849211a94dc9::t_3228c405a26a89 61-72,79
+tests/vibe-write-guard.bats
+  s_58849211a94dc9::t_8d17766f1f1a72 74-85
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "8b59ab655f29451f97234f53885bf94428d034d9",
+  "prompts": {},
+  "sessions": {
+    "s_58849211a94dc9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a93b1e36-c511-4112-8e32-e0fbdf710600",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
