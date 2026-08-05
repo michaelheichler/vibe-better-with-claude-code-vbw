@@ -6,11 +6,24 @@ RESULT="$ROOT/testing/.gate-agent-generation-result.json"
 SANDBOX_ROOT=""
 RUN_ROOT=""
 CONFIG_DIR=""
+PROJECT_LOG_DIR=""
 SANDBOX=""
+HOOK_FIRED_FILE=""
+REAL_CONFIG=false
+MODE="isolated"
 PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$ROOT}"
 STARTED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 CLAUDE_VERSION="$(claude --version 2>/dev/null || true)"
 ERRORS_FILE=""
+
+if [ "$#" -gt 1 ] || { [ "$#" -eq 1 ] && [ "$1" != "--real-config" ]; }; then
+  printf 'usage: %s [--real-config]\n' "$0" >&2
+  exit 2
+fi
+if [ "${1:-}" = "--real-config" ]; then
+  REAL_CONFIG=true
+  MODE="real-config"
+fi
 
 progress() {
   printf '[gate] %s\n' "$*" >&2
@@ -49,7 +62,11 @@ find_main_transcript() {
   if [ -z "$session_id" ]; then
     return 0
   fi
-  find "$CONFIG_DIR/projects" -type f -name "${session_id}.jsonl" -print 2>/dev/null | sort | head -1
+  if [ "$REAL_CONFIG" = true ]; then
+    find "$CONFIG_DIR/projects" -type f -name "${session_id}.jsonl" -print 2>/dev/null | sort | head -1
+  else
+    find "$PROJECT_LOG_DIR" -type f -name "${session_id}.jsonl" -print 2>/dev/null | sort | head -1
+  fi
 }
 
 find_agent_transcripts() {
@@ -57,7 +74,7 @@ find_agent_transcripts() {
   if [ -z "$session_id" ]; then
     return 0
   fi
-  find "$CONFIG_DIR/projects" -type f -path "*/${session_id}/subagents/agent-*.jsonl" -print 2>/dev/null | sort
+  find "$PROJECT_LOG_DIR" -type f -path "*/${session_id}/subagents/agent-*.jsonl" -print 2>/dev/null | sort
 }
 
 invoke_claude() {
@@ -68,7 +85,11 @@ invoke_claude() {
   local error_file="$5"
   local -a args
 
-  args=(-p "$prompt" --output-format json --model claude-haiku-4-5-20251001 --dangerously-skip-permissions)
+  if [ "$REAL_CONFIG" = true ]; then
+    args=(-p "$prompt" --output-format json --model haiku --dangerously-skip-permissions)
+  else
+    args=(-p "$prompt" --output-format json --model claude-haiku-4-5-20251001 --dangerously-skip-permissions)
+  fi
   if [ -n "$plugin_root" ]; then
     args+=(--plugin-dir "$plugin_root")
   fi
@@ -76,7 +97,11 @@ invoke_claude() {
     cd "$repo"
     unset CLAUDE_CODE_SUBAGENT_MODEL CLAUDE_CODE_EFFORT_LEVEL CLAUDE_CODE_MODEL
     unset ANTHROPIC_MODEL ANTHROPIC_SMALL_FAST_MODEL
-    CLAUDE_CONFIG_DIR="$CONFIG_DIR" claude "${args[@]}"
+    if [ "$REAL_CONFIG" = true ]; then
+      claude "${args[@]}"
+    else
+      CLAUDE_CONFIG_DIR="$CONFIG_DIR" claude "${args[@]}"
+    fi
   ) > "$output_file" 2> "$error_file"; then
     return 0
   fi
@@ -103,7 +128,11 @@ run_session() {
   fi
   session_id=$(jq -r '.session_id // empty' "$output_file" 2>/dev/null || true)
   main_file=$(find_main_transcript "$session_id" || true)
+  if [ "$REAL_CONFIG" = true ] && [ -n "$main_file" ]; then
+    PROJECT_LOG_DIR=$(dirname "$main_file")
+  fi
   find_agent_transcripts "$session_id" > "$files_file" || true
+  printf '%s\n' "$main_file" > "$RUN_ROOT/${label}.main"
   record_error "$label" "$status" "$output_file" "$error_file"
   progress "${label} exited ${status}, session ${session_id:-unavailable}"
   printf '%s\n' "$main_file"
@@ -143,9 +172,14 @@ marker_records() {
     printf '[]\n'
     return 0
   fi
-  jq -s --arg marker "$marker" \
-    '[.[] | select(.type == "assistant") | select(any(.. | strings; contains($marker))) | {model:(.message.model // null),effort:(.effort // null)}] | unique' \
-    "${files[@]}" 2>/dev/null || printf '[]\n'
+  jq -s --arg marker "$marker" '
+    def field($name): [paths(scalars) as $path | select($path[-1] == $name) | getpath($path)] | first // null;
+    [.[]
+      | select(.type == "assistant")
+      | select(any(.. | strings; contains($marker)))
+      | {model: field("model"), effort: field("effort")}
+    ] | unique
+  ' "${files[@]}" 2>/dev/null || printf '[]\n'
 }
 
 marker_seen() {
@@ -165,7 +199,7 @@ transcript_has_marker() {
   fi
   mapfile -t files < "$files_file"
   [ "${#files[@]}" -gt 0 ] || return 1
-  jq -s --arg marker "$marker" '[.[] | select(any(.. | strings; contains($marker)))] | length > 0' "${files[@]}" 2>/dev/null
+  jq -s --arg marker "$marker" '[.[] | select(any(.. | strings; contains($marker)))] | length > 0' "${files[@]}" >/dev/null 2>/dev/null
 }
 
 marker_models() {
@@ -183,10 +217,38 @@ marker_efforts() {
 verdict_for_marker() {
   if marker_seen "$1" "$2"; then
     printf 'true'
-  elif [ -s "$RUN_ROOT/$1.files" ]; then
+  elif [ -s "$RUN_ROOT/$1.files" ] || [ -s "$RUN_ROOT/$1.main" ]; then
     printf 'false'
   else
     printf 'indeterminate'
+  fi
+}
+
+verdict_for_marker_value() {
+  local label="$1"
+  local marker="$2"
+  local field="$3"
+  local expected="$4"
+  local values
+  if [ ! -s "$RUN_ROOT/$label.files" ]; then
+    [ -s "$RUN_ROOT/$label.main" ] && printf 'false' || printf 'indeterminate'
+    return 0
+  fi
+  if ! marker_seen "$label" "$marker"; then
+    printf 'false'
+    return 0
+  fi
+  if [ "$field" = model ]; then
+    values=$(marker_models "$label" "$marker")
+  else
+    values=$(marker_efforts "$label" "$marker")
+  fi
+  if [ "$(jq 'length' <<< "$values")" -eq 0 ]; then
+    printf 'indeterminate'
+  elif jq -e --arg expected "$expected" 'index($expected) != null' <<< "$values" >/dev/null; then
+    printf 'true'
+  else
+    printf 'false'
   fi
 }
 
@@ -202,7 +264,7 @@ verdict_for_transcript_marker() {
 
 discover_evidence_paths() {
   local -a files=()
-  mapfile -t files < <(find "$CONFIG_DIR/projects" -type f -path '*/subagents/agent-*.jsonl' -print 2>/dev/null | sort)
+  mapfile -t files < <(find "$PROJECT_LOG_DIR" -type f -path '*/subagents/agent-*.jsonl' -print 2>/dev/null | sort)
   if [ "${#files[@]}" -eq 0 ]; then
     printf '[]\n'
     return 0
@@ -229,9 +291,14 @@ task_inputs_for_agent() {
 
 write_hook() {
   local hook="$SANDBOX_ROOT/rewrite-hook.sh"
-  cat > "$hook" <<'EOF'
+  local marker="$SANDBOX_ROOT/rewrite-hook-fired"
+  local marker_q
+  printf -v marker_q '%q' "$marker"
+  HOOK_FIRED_FILE="$marker"
+  cat > "$hook" <<EOF
 #!/usr/bin/env bash
 set -euo pipefail
+: > $marker_q
 jq -c '.tool_input + {subagent_type:"probe-rewrite"} | {hookSpecificOutput:{hookEventName:"PreToolUse",updatedInput:.}}'
 EOF
   chmod +x "$hook"
@@ -240,20 +307,47 @@ EOF
     > "$SANDBOX/.claude/settings.json"
 }
 
+hook_fired_verdict() {
+  if [ -f "$HOOK_FIRED_FILE" ]; then
+    printf 'true'
+  else
+    printf 'indeterminate'
+  fi
+}
+
+rewrite_verdict() {
+  local hook_fired="$1"
+  if [ "$hook_fired" = true ]; then
+    verdict_for_marker "rewrite-ordering" "GATE_REWRITE_OK"
+  else
+    printf 'indeterminate'
+  fi
+}
+
 make_sandbox() {
-  local sandbox_root run_root config_dir sandbox errors_file
+  local sandbox_root run_root config_dir sandbox errors_file encoded_sandbox
 
   sandbox_root=$(mktemp -d)
   run_root="$sandbox_root/run"
-  config_dir="$sandbox_root/config"
+  if [ "$REAL_CONFIG" = true ]; then
+    source "$ROOT/scripts/resolve-claude-dir.sh"
+    config_dir="$CLAUDE_DIR"
+  else
+    config_dir="$sandbox_root/config"
+  fi
   sandbox="$sandbox_root/repo"
-  mkdir -p "$run_root" "$config_dir" "$sandbox/.claude/agents"
+  mkdir -p "$run_root" "$sandbox/.claude/agents"
+  if [ "$REAL_CONFIG" != true ]; then
+    mkdir -p "$config_dir"
+  fi
   errors_file="$run_root/errors.jsonl"
   : > "$errors_file"
   git -C "$sandbox" init -q
+  encoded_sandbox="${sandbox//\//-}"
   printf -v SANDBOX_ROOT '%s' "$sandbox_root"
   printf -v RUN_ROOT '%s' "$run_root"
   printf -v CONFIG_DIR '%s' "$config_dir"
+  printf -v PROJECT_LOG_DIR '%s' "$config_dir/projects/$encoded_sandbox"
   printf -v SANDBOX '%s' "$sandbox"
   printf -v ERRORS_FILE '%s' "$errors_file"
 }
@@ -270,7 +364,7 @@ write_agent \
   "GATE_PRELOADED_OK"
 
 load_prompt=$(cat <<'EOF'
-Use Bash to create .claude/agents/probe-mid.md with exactly this content:
+Use Bash to create "$PWD/.claude/agents/probe-mid.md" with exactly this content:
 ---
 name: probe-mid
 description: A deterministic gate probe agent.
@@ -279,13 +373,13 @@ model: claude-haiku-4-5-20251001
 effort: low
 ---
 Reply with exactly GATE_MID_OK.
-Then immediately call Task exactly once with subagent_type probe-mid and prompt Reply exactly GATE_MID_OK. Do not answer until the Task call returns.
+Then immediately use the Agent tool exactly once with subagent_type probe-mid and prompt Reply exactly GATE_MID_OK. Do not answer until the Agent call returns.
 EOF
 )
 run_session "load-mid" "$SANDBOX" "$load_prompt" >/dev/null
 load_mid_verdict=$(verdict_for_marker "load-mid" "GATE_MID_OK")
 
-fallback_prompt='Call Task exactly once with subagent_type probe-preloaded and prompt Reply exactly GATE_PRELOADED_OK. Do not answer until the Task call returns.'
+fallback_prompt='Use the Agent tool exactly once with subagent_type probe-preloaded and prompt Reply exactly GATE_PRELOADED_OK. Do not answer until the Agent call returns.'
 run_session "load-preloaded" "$SANDBOX" "$fallback_prompt" >/dev/null
 load_preloaded_verdict=$(verdict_for_marker "load-preloaded" "GATE_PRELOADED_OK")
 
@@ -309,17 +403,17 @@ write_agent \
   "GATE_TOOL_EFFORT_OK"
 
 frontmatter_prompt=$(cat <<'EOF'
-Call Task exactly three times, sequentially, with these inputs and no other Task calls:
+Use the Agent tool exactly three times, sequentially, with these inputs and no other Agent calls:
 1. subagent_type probe-model, prompt Reply exactly GATE_MODEL_OK.
 2. subagent_type probe-effort-low, prompt Reply exactly GATE_EFFORT_LOW_OK.
 3. subagent_type probe-tool-effort, effort high, prompt Reply exactly GATE_TOOL_EFFORT_OK.
-Do not answer until all three Task calls return.
+Do not answer until all three Agent calls return.
 EOF
 )
 frontmatter_main=$(run_session "frontmatter" "$SANDBOX" "$frontmatter_prompt")
-model_verdict=$(verdict_for_marker "frontmatter" "GATE_MODEL_OK")
+model_verdict=$(verdict_for_marker_value "frontmatter" "GATE_MODEL_OK" model "claude-haiku-4-5-20251001")
 model_values=$(marker_models "frontmatter" "GATE_MODEL_OK")
-effort_verdict=$(verdict_for_marker "frontmatter" "GATE_EFFORT_LOW_OK")
+effort_verdict=$(verdict_for_marker_value "frontmatter" "GATE_EFFORT_LOW_OK" effort low)
 effort_values=$(marker_efforts "frontmatter" "GATE_EFFORT_LOW_OK")
 tool_effort_verdict="indeterminate"
 tool_effort_inputs=$(task_inputs_for_agent "$frontmatter_main" "probe-tool-effort")
@@ -343,10 +437,10 @@ write_agent \
   "GATE_BARE_NAME_OK"
 
 names_prompt=$(cat <<'EOF'
-Call Task exactly twice, sequentially, with these inputs:
+Use the Agent tool exactly twice, sequentially, with these inputs:
 1. subagent_type vbw-dev-probe, prompt Reply exactly GATE_BARE_NAME_OK.
 2. subagent_type vbw:vbw-dev, prompt Reply exactly GATE_NAMESPACED_OK.
-Do not answer until both Task calls return.
+Do not answer until both Agent calls return.
 EOF
 )
 run_session "bare-names" "$SANDBOX" "$names_prompt" "$PLUGIN_ROOT" >/dev/null
@@ -360,18 +454,21 @@ write_agent \
   "low" \
   "GATE_REWRITE_OK"
 write_hook
-rewrite_prompt='Call Task exactly once with subagent_type decoy-probe and prompt Reply exactly GATE_REWRITE_OK. Do not answer until the Task call returns.'
+rewrite_prompt='Use the Agent tool exactly once with subagent_type decoy-probe and prompt Reply exactly GATE_REWRITE_OK. Do not answer until the Agent call returns.'
 rewrite_main=$(run_session "rewrite-ordering" "$SANDBOX" "$rewrite_prompt")
-rewrite_verdict=$(verdict_for_marker "rewrite-ordering" "GATE_REWRITE_OK")
+rewrite_hook_fired=$(hook_fired_verdict)
+rewrite_verdict=$(rewrite_verdict "$rewrite_hook_fired")
 rewrite_inputs=$(task_inputs_for_agent "$rewrite_main" "decoy-probe")
 rewrite_real_inputs=$(task_inputs_for_agent "$rewrite_main" "probe-rewrite")
 evidence_field_paths=$(discover_evidence_paths)
 
 jq -n \
   --arg schema_version "1" \
+  --arg mode "$MODE" \
   --arg claude_version "$CLAUDE_VERSION" \
   --arg started_at "$STARTED_AT" \
   --arg finished_at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+  --arg project_log_dir "$PROJECT_LOG_DIR" \
   --arg sandbox_removed "true" \
   --arg mid_session_loaded "$load_mid_verdict" \
   --arg pre_session_loaded "$load_preloaded_verdict" \
@@ -381,9 +478,13 @@ jq -n \
   --arg bare_name_ok "$bare_verdict" \
   --arg namespaced_ok "$namespaced_verdict" \
   --arg updated_input_rewrite_effective "$rewrite_verdict" \
+  --arg rewrite_hook_fired "$rewrite_hook_fired" \
+  --arg hook_marker "$HOOK_FIRED_FILE" \
+  --argjson real_config "$REAL_CONFIG" \
   --argjson model_values "$model_values" \
   --argjson effort_values "$effort_values" \
   --arg tool_input_effort_value "$tool_effort_input_value" \
+  --argjson tool_effort_inputs "$tool_effort_inputs" \
   --argjson tool_effort_values "$tool_effort_values" \
   --argjson rewrite_decoy_inputs "$rewrite_inputs" \
   --argjson rewrite_real_inputs "$rewrite_real_inputs" \
@@ -391,39 +492,62 @@ jq -n \
   --argjson evidence_field_paths "$evidence_field_paths" \
   '{
     schema_version: ($schema_version | tonumber),
+    mode: $mode,
     claude_version: $claude_version,
     started_at: $started_at,
     finished_at: $finished_at,
     sandbox_removed: ($sandbox_removed == "true"),
+    transcript_project_dir: $project_log_dir,
+    caveats: {
+      global_user_hooks: $real_config,
+      note: (if $real_config then "Real-config mode runs with global user hooks, including rtk rewriting." else null end)
+    },
     probes: {
       load_timing: {
+        mode: $mode,
         mid_session_loaded: $mid_session_loaded,
         pre_session_loaded: $pre_session_loaded
       },
       frontmatter_honored: {
+        mode: $mode,
         frontmatter_model_honored: $frontmatter_model_honored,
         frontmatter_effort_honored: $frontmatter_effort_honored,
         tool_input_effort_honored: $tool_input_effort_honored,
         observed_model_values: $model_values,
         observed_effort_values: $effort_values,
         tool_input_effort_value: ($tool_input_effort_value | if length > 0 then . else null end),
+        tool_input_task_inputs: $tool_effort_inputs,
         observed_tool_effort_values: $tool_effort_values
       },
       bare_name_spawn: {
+        mode: $mode,
         bare_name_ok: $bare_name_ok,
         namespaced_ok: $namespaced_ok
       },
       rewrite_ordering: {
+        mode: $mode,
         updated_input_rewrite_effective: $updated_input_rewrite_effective,
+        hook_fired: $rewrite_hook_fired,
+        hook_marker: $hook_marker,
         decoy_task_inputs: $rewrite_decoy_inputs,
         rewritten_task_inputs: $rewrite_real_inputs
       }
     },
+    verdict_modes: {
+      "load_timing.mid_session_loaded": $mode,
+      "load_timing.pre_session_loaded": $mode,
+      "frontmatter_honored.frontmatter_model_honored": $mode,
+      "frontmatter_honored.frontmatter_effort_honored": $mode,
+      "frontmatter_honored.tool_input_effort_honored": $mode,
+      "bare_name_spawn.bare_name_ok": $mode,
+      "bare_name_spawn.namespaced_ok": $mode,
+      "rewrite_ordering.updated_input_rewrite_effective": $mode
+    },
     evidence: {
       jq_field_paths: $evidence_field_paths,
-      candidate_jq_field_paths: [".effort", ".message.model"],
-      model_path: (if ($evidence_field_paths | index(".message.model")) then ".message.model" else null end),
-      effort_path: (if ($evidence_field_paths | index(".effort")) then ".effort" else null end)
+      candidate_jq_field_paths: [".effort", ".message.effort", ".message.model", ".model"],
+      model_path: ([$evidence_field_paths[] | select(endswith(".model"))] | first // null),
+      effort_path: ([$evidence_field_paths[] | select(endswith(".effort"))] | first // null)
     },
     errors: $errors
   }' | tee "$RESULT"
