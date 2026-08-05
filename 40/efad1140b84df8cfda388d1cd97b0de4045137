@@ -1,0 +1,29 @@
+references/execute-protocol.md
+  s_58849211a94dc9::t_9d875ad50f1fa7 25
+scripts/lib/agent-manifest.sh
+  s_58849211a94dc9::t_3b126011931b31 25
+scripts/vibe-write-guard.sh
+  s_58849211a94dc9::t_044f24f63246cf 85,87-88
+scripts/agent-spawn-guard.sh
+  s_58849211a94dc9::t_9b3ae8dfdf5fd5 147
+tests/vibe-write-guard.bats
+  s_58849211a94dc9::t_e9c2eb1a5faa5c 121-134
+references/vibe-mode-bootstrap.md
+  s_58849211a94dc9::t_2e286f3dc21331 59
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "40efad1140b84df8cfda388d1cd97b0de4045137",
+  "prompts": {},
+  "sessions": {
+    "s_58849211a94dc9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a93b1e36-c511-4112-8e32-e0fbdf710600",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
