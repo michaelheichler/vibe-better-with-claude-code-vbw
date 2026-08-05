@@ -64,9 +64,9 @@ write_manifest() {
 }
 
 @test "agent-spawn-guard rewrites and claims registered generated names" {
-  write_manifest '{"agents":{"generated":{"state":"registered","model":"manifest-model","effort":"manifest-effort","description":"manifest description"}}}'
+  write_manifest '{"agents":{"generated":{"state":"registered","model":"manifest-model","effort":"manifest-effort","description":"manifest description","max_turns":17}}}'
   local input
-  input=$(spawn_input | jq '.tool_input.subagent_type = "generated" | .tool_input.model = "caller-model" | .tool_input.effort = "caller-effort"')
+  input=$(spawn_input | jq '.tool_input.subagent_type = "generated" | .tool_input.model = "caller-model" | .tool_input.effort = "caller-effort" | .tool_input.maxTurns = 99')
 
   run_spawn_guard "$input"
 
@@ -74,6 +74,8 @@ write_manifest() {
   [ "$(printf '%s' "$output" | jq -r '.hookSpecificOutput.updatedInput.model')" = "manifest-model" ]
   [ "$(printf '%s' "$output" | jq -r '.hookSpecificOutput.updatedInput.effort')" = "manifest-effort" ]
   [ "$(printf '%s' "$output" | jq -r '.hookSpecificOutput.updatedInput.description')" = "manifest description" ]
+  [ "$(printf '%s' "$output" | jq -r '.hookSpecificOutput.updatedInput.maxTurns')" = "17" ]
+  [ "$(printf '%s' "$output" | jq -r '.hookSpecificOutput.updatedInput | has("max_turns")')" = "false" ]
   [ "$(jq -r '.agents.generated.state' "$TEST_TEMP_DIR/.vbw-planning/.agent-manifest.json")" = "running" ]
 }
 
@@ -84,6 +86,18 @@ write_manifest() {
   rm -f "$TEST_TEMP_DIR/.vbw-planning/.delegated-workflow.json"
   local input
   input=$(spawn_input | jq '.tool_input.subagent_type = "generated" | .tool_input.model = "caller-model"')
+
+  run_spawn_guard "$input"
+
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+  [ "$(jq -r '.agents.generated.state' "$TEST_TEMP_DIR/.vbw-planning/.agent-manifest.json")" = "registered" ]
+}
+
+@test "agent-spawn-guard does not trust a live marker from another input session" {
+  write_manifest '{"agents":{"generated":{"state":"registered","model":"manifest-model"}}}'
+  local input
+  input=$(spawn_input | jq '.tool_input.subagent_type = "unregistered" | .session_id = "session-B"')
 
   run_spawn_guard "$input"
 
@@ -231,6 +245,25 @@ write_manifest() {
 
   [ "$status" -eq 0 ]
   [ "$(printf '%s' "$output" | jq -r '.hookSpecificOutput.updatedInput.model')" = "resolved-qa" ]
+}
+
+@test "agent-spawn-guard serializes generated-agent claims" {
+  write_manifest '{"agents":{"generated":{"state":"registered","model":"manifest-model"}}}'
+  local input first second
+  local output_one="$TEST_TEMP_DIR/guard-one.out" output_two="$TEST_TEMP_DIR/guard-two.out"
+  input=$(spawn_input | jq '.tool_input.subagent_type = "generated"')
+  (printf '%s\n' "$input" | CLAUDE_SESSION_ID=session-A bash "$SCRIPTS_DIR/agent-spawn-guard.sh" > "$output_one" 2>/dev/null) &
+  local first_pid=$!
+  (printf '%s\n' "$input" | CLAUDE_SESSION_ID=session-A bash "$SCRIPTS_DIR/agent-spawn-guard.sh" > "$output_two" 2>/dev/null) &
+  local second_pid=$!
+  first=0
+  second=0
+  wait "$first_pid" || first=$?
+  wait "$second_pid" || second=$?
+
+  [ "$first" -eq 0 ] || [ "$second" -eq 0 ]
+  [ "$first" -eq 2 ] || [ "$second" -eq 2 ]
+  [ "$(jq -r '.agents.generated.state' "$TEST_TEMP_DIR/.vbw-planning/.agent-manifest.json")" = "running" ]
 }
 
 @test "agent-spawn-guard injects configured reasoning effort" {

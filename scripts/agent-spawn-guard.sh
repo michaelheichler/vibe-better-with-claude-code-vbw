@@ -114,7 +114,11 @@ if [ "$VIBE_ACTIVE" = true ]; then
   STATE_SESSION=$(jq -r '.session_id // ""' "$EXEC_STATE_FILE" 2>/dev/null) || STATE_SESSION=""
   CURRENT_SESSION=$(vbw_active_agent_session_id "$INPUT" 2>/dev/null || true)
   if [ -n "$STATE_SESSION" ] && [ -n "$CURRENT_SESSION" ] && [ "$STATE_SESSION" != "$CURRENT_SESSION" ]; then
+    EXEC_ACTIVE=false
     VIBE_ACTIVE=false
+    MARKER_LIVE=false
+    MODE=""
+    DELEGATION_MODE=""
   fi
 fi
 MANIFEST_PATH=""
@@ -136,6 +140,8 @@ manifest_spawn_fields() {
     | (.agents[$name].spawn // .agents[$name] // {})
     | with_entries(select(.key as $key | $fields | index($key)))
     | with_entries(select(.value != null))
+    | if has("max_turns") then .maxTurns = .max_turns else . end
+    | del(.max_turns)
   ' <<< "$manifest" 2>/dev/null
 }
 
@@ -149,8 +155,9 @@ manifest_model_value() {
   printf '%s\n' "${alias:-$model}"
 }
 
-claim_manifest_spawn() {
+_claim_manifest_spawn_locked() {
   local name="$1" entry state now updated spawn current model
+  MANIFEST=$(agent_manifest_read "$PROJECT_ROOT/.vbw-planning" 2>/dev/null) || return 1
   entry=$(jq -c --arg name "$name" '.agents[$name] // empty' <<< "$MANIFEST" 2>/dev/null) || return 1
   [ -n "$entry" ] || return 2
   state=$(jq -r '.state // ""' <<< "$entry" 2>/dev/null) || return 1
@@ -165,7 +172,7 @@ claim_manifest_spawn() {
   fi
   current="${STRIPPED_INPUT:-}"
   [ -n "$current" ] && [ "$current" != null ] || current=$(echo "$INPUT" | jq '.tool_input' 2>/dev/null) || return 1
-  STRIPPED_INPUT=$(jq --argjson spawn "$spawn" '. * $spawn' <<< "$current") || return 1
+  STRIPPED_INPUT=$(jq --argjson spawn "$spawn" 'del(.max_turns, .maxTurns) * $spawn' <<< "$current") || return 1
   now=$(date -u +"%Y-%m-%dT%H:%M:%SZ" 2>/dev/null || true)
   [ -n "$now" ] || return 1
   updated=$(jq --arg name "$name" --arg now "$now" '.agents[$name].state = "running" | .agents[$name].started_at = $now | .agents[$name].last_activity_at = $now' <<< "$MANIFEST") || return 1
@@ -173,6 +180,10 @@ claim_manifest_spawn() {
   MANIFEST="$updated"
   STRIP_REASON="enforced registered agent manifest for $name"
   return 0
+}
+
+claim_manifest_spawn() {
+  agent_manifest_with_lock "$PROJECT_ROOT/.vbw-planning" _claim_manifest_spawn_locked "$1"
 }
 
 manifest_guard() {
