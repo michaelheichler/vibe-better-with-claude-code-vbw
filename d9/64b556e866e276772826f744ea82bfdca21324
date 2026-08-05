@@ -1,0 +1,26 @@
+scripts/agent-generator.sh
+  s_58849211a94dc9::t_c0414a50431c9a 148-149
+  s_58849211a94dc9::t_d91a137813cc30 259-265
+scripts/agent-lifecycle.sh
+  s_58849211a94dc9::t_9ddb074ed8c064 107,115-118,122
+scripts/planning-git.sh
+  s_58849211a94dc9::t_4edc15c0c86f0c 110-113
+tests/agent-lifecycle.bats
+  s_58849211a94dc9::t_04817a5fd2483c 49-77
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "d964b556e866e276772826f744ea82bfdca21324",
+  "prompts": {},
+  "sessions": {
+    "s_58849211a94dc9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a93b1e36-c511-4112-8e32-e0fbdf710600",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
