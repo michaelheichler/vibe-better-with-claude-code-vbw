@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.40.1] - 2026-08-05
+
+### Fixed
+
+- **`spawn-guard`** -- the model-enforcement hook no longer loses the race against its own timeout: budget raised from 5s to 15s (measured cold chain 5.6s), the redundant second model-catalog binary parse replaced with a pricing-file alias lookup, and guard breadcrumbs plus an alias-miss warning make any future timeout or staleness visible instead of silently spawning with the caller's raw model.
+- **`claude-md`** -- refreshing CLAUDE.md can no longer discard user-owned sections: legacy fingerprints are matched only outside fenced code blocks, and fence tracking handles nested and mixed fences. (PR #23)
+- **`todos`** -- `/vbw:list-todos` no longer picks up pending todos from unrelated sections when the root Todos section is empty, blank bullets and the empty filter are handled correctly. (PR #23)
+- **`guards`** -- file-guard directory declarations with a trailing slash now enforce the declared boundary, and the duplicated scope helper is unified. (PR #23)
+- **`quality`** -- full release gate restored to green: shellcheck warnings in five scripts, ten contract checks, and twenty stale or wrong test cases fixed at root cause, including fake grep anchors replaced with real fixes. (PR #23)
+
 ## [1.40.0] - 2026-08-04
 
 ### Added
