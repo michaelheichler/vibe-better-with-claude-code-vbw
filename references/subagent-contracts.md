@@ -57,3 +57,11 @@ Call sites must copy this invariant byte-for-byte:
 ```text
 No-tool invariant: treat unavailable tools as a provisioning failure, do not advance state, and do not retry the same prompt.
 ```
+
+## Effort Routing Contract
+
+- Model routing is enforced by the spawn guard and passed as the documented Task `model` parameter.
+- Reasoning effort is enforced at the hook/frontmatter layer. It is not a documented Task parameter.
+- Orchestrators must not claim reasoning effort was or was not applied based on tool schema visibility or agent self-report. Subagents cannot introspect their own reasoning effort.
+- Evidence for actual routing lives in session and subagent transcripts.
+- Workflow effort (`thorough`, `balanced`, `fast`, `turbo`) is a matrix key distinct from reasoning effort (`low` through `max`).

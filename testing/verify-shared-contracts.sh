@@ -21,6 +21,15 @@ CONTRACT_SECTIONS=(
   "## Team-Shutdown Contract"
   "## Non-Team Spawn Shape"
   "## No-Tool Circuit Breaker"
+  "## Effort Routing Contract"
+)
+
+EFFORT_ROUTING_LINES=(
+  'Model routing is enforced by the spawn guard and passed as the documented Task `model` parameter.'
+  'Reasoning effort is enforced at the hook/frontmatter layer. It is not a documented Task parameter.'
+  'Orchestrators must not claim reasoning effort was or was not applied based on tool schema visibility or agent self-report. Subagents cannot introspect their own reasoning effort.'
+  'Evidence for actual routing lives in session and subagent transcripts.'
+  'Workflow effort (`thorough`, `balanced`, `fast`, `turbo`) is a matrix key distinct from reasoning effort (`low` through `max`).'
 )
 
 INVARIANT_PREFIXES=(
@@ -125,6 +134,14 @@ for section in "${CONTRACT_SECTIONS[@]}"; do
     pass "$CANONICAL_REL: contains $section"
   else
     fail "$CANONICAL_REL: missing $section"
+  fi
+done
+
+for line in "${EFFORT_ROUTING_LINES[@]}"; do
+  if [ "$canonical_exists" = true ] && grep -Fxq -- "- $line" "$CANONICAL_FILE"; then
+    pass "$CANONICAL_REL: contains effort-routing contract line"
+  else
+    fail "$CANONICAL_REL: missing effort-routing contract line: $line"
   fi
 done
 
