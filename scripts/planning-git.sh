@@ -23,12 +23,8 @@ read_config() {
   fi
 }
 
-ensure_transient_ignore() {
-  local planning_dir=".vbw-planning"
-  local ignore_file="$planning_dir/.gitignore"
-
-  [ -d "$planning_dir" ] || return 0
-
+write_transient_ignore_runtime() {
+  local ignore_file="$1"
   cat > "$ignore_file" <<EOF
 ${MD_HASH} VBW transient runtime artifacts
 .execution-state.json
@@ -38,6 +34,12 @@ ${MD_HASH} VBW transient runtime artifacts
 .contracts/
 .locks/
 .token-state/
+EOF
+}
+
+write_transient_ignore_tracking() {
+  local ignore_file="$1"
+  cat >> "$ignore_file" <<EOF
 
 ${MD_HASH} Session & agent tracking
 .vbw-context
@@ -62,6 +64,12 @@ ${MD_HASH} Artifacts & events (v2/v3 feature-gated)
 .artifacts/
 .events/
 .event-log.jsonl
+EOF
+}
+
+write_transient_ignore_recovery() {
+  local ignore_file="$1"
+  cat >> "$ignore_file" <<EOF
 
 ${MD_HASH} Snapshots & recovery
 .snapshots/
@@ -86,6 +94,30 @@ ${MD_HASH} Baselines
 ${MD_HASH} Codebase mapping
 codebase/
 EOF
+}
+
+ensure_transient_ignore() {
+  local planning_dir=".vbw-planning"
+  local ignore_file="$planning_dir/.gitignore"
+  [ -d "$planning_dir" ] || return 0
+  write_transient_ignore_runtime "$ignore_file"
+  write_transient_ignore_tracking "$ignore_file"
+  write_transient_ignore_recovery "$ignore_file"
+}
+
+
+ensure_generated_agent_ignore() {
+  local root_ignore=".gitignore"
+  local pattern=".claude/agents/vbw-*-*-*-*.md"
+
+  if [ ! -f "$root_ignore" ]; then
+    printf '%s\n' "$pattern" > "$root_ignore"
+    return 0
+  fi
+
+  if ! grep -Fxq "$pattern" "$root_ignore"; then
+    printf '\n%s\n' "$pattern" >> "$root_ignore"
+  fi
 }
 
 sync_root_ignore() {
@@ -138,6 +170,7 @@ case "$COMMAND" in
 
     read_config "$CONFIG_FILE"
     sync_root_ignore "$CFG_PLANNING_TRACKING"
+    ensure_generated_agent_ignore
     ensure_transient_ignore
     ;;
 
