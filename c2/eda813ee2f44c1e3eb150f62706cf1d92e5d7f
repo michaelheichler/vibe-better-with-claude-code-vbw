@@ -1,0 +1,20 @@
+CHANGELOG.md
+  s_58849211a94dc9::t_8f719feeafd909 563,601,614,638,655,686,768,825,839,861-862,870,874,882,890-892,896-897,905-906,911-912,917,925,933,937,945-946,950-954,958-960,972-973,977-981,995-996,1093,1254,1262,1489-1490,1498-1510,1518-1521,1525-1527
+  s_58849211a94dc9::t_5758761adda810 215,261,410,501,548,743,1279,1308,1392,1400
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "c2eda813ee2f44c1e3eb150f62706cf1d92e5d7f",
+  "prompts": {},
+  "sessions": {
+    "s_58849211a94dc9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a93b1e36-c511-4112-8e32-e0fbdf710600",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
