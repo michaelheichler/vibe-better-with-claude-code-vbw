@@ -1,0 +1,21 @@
+tests/template-nesting.bats
+  s_e8b702480499cf::t_956b5c78333339 16
+testing/verify-skill-activation/additive-contracts.bash
+  s_e8b702480499cf::t_f2d95b4822f40f 3-4
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "7124902a9e400562521ca9bc6dca26ec59fadd45",
+  "prompts": {},
+  "sessions": {
+    "s_e8b702480499cf": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b86dd062-285e-44f0-9749-b1a13364f007",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
