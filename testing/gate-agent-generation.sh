@@ -88,7 +88,7 @@ invoke_claude() {
   if [ "$REAL_CONFIG" = true ]; then
     args=(-p "$prompt" --output-format json --model sonnet --dangerously-skip-permissions)
   else
-    args=(-p "$prompt" --output-format json --model sonnet --dangerously-skip-permissions)
+    args=(-p "$prompt" --output-format json --model claude-sonnet-5 --dangerously-skip-permissions)
   fi
   if [ -n "$plugin_root" ]; then
     args+=(--plugin-dir "$plugin_root")
