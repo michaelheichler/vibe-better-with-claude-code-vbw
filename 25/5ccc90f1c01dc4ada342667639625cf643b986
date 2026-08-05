@@ -1,0 +1,24 @@
+tests/agent-routing-evidence.bats
+  s_58849211a94dc9::t_96d47db71f2778 112
+  s_58849211a94dc9::t_4b16427d0b0ccb 75-111,113
+scripts/agent-routing-evidence.sh
+  s_58849211a94dc9::t_b3429df9171ad7 41-51
+  s_58849211a94dc9::t_f3051c06b7f00c 152
+  s_58849211a94dc9::t_107bab06065c0f 87-93,95,118-119
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "255ccc90f1c01dc4ada342667639625cf643b986",
+  "prompts": {},
+  "sessions": {
+    "s_58849211a94dc9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a93b1e36-c511-4112-8e32-e0fbdf710600",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
