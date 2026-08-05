@@ -22,6 +22,7 @@ CONTRACT_SECTIONS=(
   "## Non-Team Spawn Shape"
   "## No-Tool Circuit Breaker"
   "## Effort Routing Contract"
+  "## Generated Agent Lifecycle"
 )
 
 EFFORT_ROUTING_LINES=(
@@ -30,6 +31,12 @@ EFFORT_ROUTING_LINES=(
   'Orchestrators must not claim reasoning effort was or was not applied based on tool schema visibility or agent self-report. Subagents cannot introspect their own reasoning effort.'
   'Evidence for actual routing lives in session and subagent transcripts.'
   'Workflow effort (`thorough`, `balanced`, `fast`, `turbo`) is a matrix key distinct from reasoning effort (`low` through `max`).'
+)
+
+GENERATED_AGENT_LINES=(
+  'During vibe execution, spawn only names returned by the role generator and registered in the manifest. The spawn guard denies unregistered names.'
+  'The manifest allows at most four live generated agents. Each generated name is single-use. Generated definition files are ephemeral and the lifecycle manager cleans them after use or expiry.'
+  'The generator flow is the source of model, max-turn, and effort parameters. Use the printed values and the exact `SPAWN_READY` name on the spawn call.'
 )
 
 INVARIANT_PREFIXES=(
@@ -142,6 +149,14 @@ for line in "${EFFORT_ROUTING_LINES[@]}"; do
     pass "$CANONICAL_REL: contains effort-routing contract line"
   else
     fail "$CANONICAL_REL: missing effort-routing contract line: $line"
+  fi
+done
+
+for line in "${GENERATED_AGENT_LINES[@]}"; do
+  if [ "$canonical_exists" = true ] && grep -Fxq -- "$line" "$CANONICAL_FILE"; then
+    pass "$CANONICAL_REL: contains generated-agent contract line"
+  else
+    fail "$CANONICAL_REL: missing generated-agent contract line: $line"
   fi
 done
 

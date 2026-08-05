@@ -46,7 +46,7 @@ Call sites must copy this invariant byte-for-byte:
 Non-team invariant: omit `team_name`, `run_in_background`, `isolation`, and all worktree cwd fields.
 ```
 
-For VBW agents, set `subagent_type` to `<plugin>:<agent-name>`. For example, `vbw:vbw-dev` is correct. Bare `vbw-dev` is wrong.
+For generated VBW agents, run `scripts/agent-{role}-generator.sh --job "{job}"` first and capture the final `SPAWN_READY <name>` line. Use that exact generated name as both `subagent_type` and `name` on the spawn call. Do not invent a role-based or namespaced value such as `vbw:vbw-dev`. The spawn guard accepts only the registered generated name.
 
 ## No-Tool Circuit Breaker
 
@@ -65,3 +65,13 @@ No-tool invariant: treat unavailable tools as a provisioning failure, do not adv
 - Orchestrators must not claim reasoning effort was or was not applied based on tool schema visibility or agent self-report. Subagents cannot introspect their own reasoning effort.
 - Evidence for actual routing lives in session and subagent transcripts.
 - Workflow effort (`thorough`, `balanced`, `fast`, `turbo`) is a matrix key distinct from reasoning effort (`low` through `max`).
+
+## Generated Agent Lifecycle
+
+During vibe execution, spawn only names returned by the role generator and registered in the manifest. The spawn guard denies unregistered names.
+
+The manifest allows at most four live generated agents. Each generated name is single-use. Generated definition files are ephemeral and the lifecycle manager cleans them after use or expiry.
+
+Reused or missing generated names require a fresh generator invocation. Do not bypass the manifest with a role-based or namespaced `subagent_type`.
+
+The generator flow is the source of model, max-turn, and effort parameters. Use the printed values and the exact `SPAWN_READY` name on the spawn call.
