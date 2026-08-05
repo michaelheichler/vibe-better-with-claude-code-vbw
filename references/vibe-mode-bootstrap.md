@@ -56,7 +56,7 @@
        SCOUT_GENERATOR_OUTPUT=$(bash /tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}/scripts/agent-scout-generator.sh --job "{domain}")
        SCOUT_AGENT_NAME=$(printf '%s\n' "$SCOUT_GENERATOR_OUTPUT" | awk '/^SPAWN_READY / {name=$2} END {print name}')
        ```
-       If `SCOUT_AGENT_NAME` is empty, stop and report that Scout generation failed. Use this exact generated name for both `subagent_type` and `name`.
+       If `SCOUT_AGENT_NAME` is empty, log warning "Domain research unavailable, proceeding with general questions", set `RESEARCH_AVAILABLE=false`, and continue to Step 9. Use this exact generated name for both `subagent_type` and `name`.
     **Step 6:** Spawn Scout agent via Agent tool with prompt: "Research the {domain} domain. Write your findings directly to the output path. <output_path>.vbw-planning/domain-research.md</output_path> Structure as four sections: ## Table Stakes (features every {domain} app has), ## Common Pitfalls (what projects get wrong), ## Architecture Patterns (how similar apps are structured), ## Competitor Landscape (existing products). Use WebSearch (or relevant MCP tools if available). Be concise (2-3 bullets per section)."
     **Step 7:** Set `subagent_type: "${SCOUT_AGENT_NAME}"`, `name: "${SCOUT_AGENT_NAME}"`, and `timeout: 120000` in the Agent tool invocation. If `SCOUT_MODEL` is non-empty, also pass `model: "${SCOUT_MODEL}"`. If `SCOUT_MODEL` is empty, omit model so the default applies. If `SCOUT_MAX_TURNS` is non-empty, also pass `maxTurns: ${SCOUT_MAX_TURNS}`. If `SCOUT_MAX_TURNS` is empty, do NOT include maxTurns (omitting it = unlimited).
 

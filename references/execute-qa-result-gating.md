@@ -121,7 +121,18 @@ No-tool invariant: treat unavailable tools as a provisioning failure, do not adv
    **stage=execute:** Spawn a Dev subagent per `R{RR}-PLAN.md`:
    - **Always subagent: NO team creation for QA remediation (NON-NEGOTIABLE)**
    - Run `bash "${VBW_PLUGIN_ROOT}/scripts/agent-dev-generator.sh" --job "QA remediation R{RR} implementation"` first. Capture the final `SPAWN_READY <name>` line as `DEV_AGENT_NAME`, then use that exact generated name for both `subagent_type` and `name`.
-   - Set `subagent_type: "${DEV_AGENT_NAME}"`, `name: "${DEV_AGENT_NAME}"`, and `model: "${DEV_MODEL}"`
+   - Resolve Dev settings before composing the Dev task:
+     ```bash
+     if ! AGENT_SETTINGS=$(bash "${VBW_PLUGIN_ROOT}/scripts/resolve-agent-settings.sh" dev .vbw-planning/config.json "${VBW_PLUGIN_ROOT}/config/model-profiles.json" "{effort}"); then
+       echo "$AGENT_SETTINGS" >&2
+       exit 1
+     fi
+     eval "$AGENT_SETTINGS"
+     DEV_MODEL="$RESOLVED_MODEL"
+     DEV_MAX_TURNS="$RESOLVED_MAX_TURNS"
+     DEV_REASONING="$RESOLVED_REASONING"
+     ```
+   - Set `subagent_type: "${DEV_AGENT_NAME}"`, `name: "${DEV_AGENT_NAME}"`, and `model: "${DEV_MODEL}"`. If `DEV_MAX_TURNS` is non-empty, also pass `maxTurns: ${DEV_MAX_TURNS}`. If `DEV_MAX_TURNS` is empty, do NOT include maxTurns (omitting it = unlimited). If `DEV_REASONING` is non-empty, also pass `effort: "${DEV_REASONING}"`. If `DEV_REASONING` is empty, do NOT include effort (the resolved model rejects the parameter).
    - Dev fixes code, commits, writes `R{RR}-SUMMARY.md` in `{round_dir}` using `templates/REMEDIATION-SUMMARY.md` (NOT `templates/SUMMARY.md`)
      - The remediation summary frontmatter MUST include aggregated `commit_hashes`, `files_modified`, and `deviations`
      - `files_modified` is required even for documentation-only rounds so `qa-result-gate.sh` can deterministically distinguish metadata-only remediation from real code changes

@@ -106,7 +106,7 @@ Write your complete findings to the output_path file.
 </output_format>
 ```
     - If save path is unknown yet (user hasn't confirmed), omit `<output_path>`. Scout returns findings in response, and the orchestrator writes them after user confirms a path.
-    - Parallel: split the topic into no more than 4 facets. Run the Scout generator once for each facet, capture each final `SPAWN_READY <name>` line as `SCOUT_AGENT_NAME_1` through `SCOUT_AGENT_NAME_N`, and launch up to 4 simultaneous Tasks. Each facet's Task must use its corresponding generated name for both `subagent_type` and `name`, with the same `model: "${SCOUT_MODEL}"` and maxTurns conditional (pass when non-empty, omit when empty). Never use one `SCOUT_AGENT_NAME` value for multiple facets.
+    - Parallel: split the topic into no more than 4 facets. Run the Scout generator once for each facet, capture each final `SPAWN_READY <name>` line as `SCOUT_AGENT_NAME_1` through `SCOUT_AGENT_NAME_N`, and launch up to 4 simultaneous Tasks. Each facet's Task must use its corresponding generated name for both `subagent_type` and `name`, with the same `model: "${SCOUT_MODEL}"` and maxTurns conditional (pass when non-empty, omit when empty). If `SCOUT_REASONING` is non-empty, also pass `effort: "${SCOUT_REASONING}"` on each Task. If `SCOUT_REASONING` is empty, omit effort. Never use one `SCOUT_AGENT_NAME` value for multiple facets.
 4. **Synthesize:** Single: present directly. Parallel: merge, note contradictions, rank by confidence.
 5. **Persist:** Ask "Save findings? (y/n)". If yes, determine save path:
    - **Phase-scoped** (an active VBW phase exists in `.vbw-planning/phases/`): default to `.vbw-planning/phases/{phase-dir}/RESEARCH.md` (existing behavior, unchanged).
