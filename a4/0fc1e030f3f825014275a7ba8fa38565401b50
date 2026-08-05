@@ -1,0 +1,39 @@
+testing/verify-issue-159-agent-settings-contract.sh
+  s_58849211a94dc9::t_e86c0d563c68e6 10-12,16-18
+  s_58849211a94dc9::t_3237c9f84e82e3 86-88,90
+  s_58849211a94dc9::t_7c426ae5e5ebee 85
+references/execute-protocol.md
+  s_58849211a94dc9::t_42b579d23980b2 286,288-304
+testing/verify-issue-157-migration-contract.sh
+  s_58849211a94dc9::t_e060e88f28b21b 10-12,16-18
+  s_58849211a94dc9::t_145395c508dd83 75
+commands/config.md
+  s_58849211a94dc9::t_ffbc800b742562 61-75
+  s_58849211a94dc9::t_96121dbfdd5520 199
+  s_58849211a94dc9::t_87b2f8145a6a67 248-260
+  s_58849211a94dc9::t_5668e4ba212f58 271
+  s_58849211a94dc9::t_edb8f1c2140d20 275-285
+  s_58849211a94dc9::t_ed5d3b79d913fa 496-501
+  s_58849211a94dc9::t_deae37a3557f95 209
+  s_58849211a94dc9::t_26ed61b04ade5f 205
+  s_58849211a94dc9::t_07b67eb91b5262 217-231
+commands/map.md
+  s_58849211a94dc9::t_a6453ebc610e57 196-205
+  s_58849211a94dc9::t_ef5cb4c36816b2 5
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "a40fc1e030f3f825014275a7ba8fa38565401b50",
+  "prompts": {},
+  "sessions": {
+    "s_58849211a94dc9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a93b1e36-c511-4112-8e32-e0fbdf710600",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
