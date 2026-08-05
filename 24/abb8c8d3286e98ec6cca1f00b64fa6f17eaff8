@@ -1,0 +1,29 @@
+scripts/agent-generator.sh
+  s_58849211a94dc9::t_16c04dc4cb6a6d 99
+  s_58849211a94dc9::t_825049c24c6128 47
+  s_58849211a94dc9::t_5a00c79af5a523 232-234
+  s_58849211a94dc9::t_afa208a1fcf033 144-153
+  s_58849211a94dc9::t_7604d6d959db0b 172-174,187,189-219,239-246,253-256,258-264
+tests/agent-generator.bats
+  s_58849211a94dc9::t_7ac13075b0b782 41
+  s_58849211a94dc9::t_5891336e2a57ca 140-141
+  s_58849211a94dc9::t_c6e02362431907 74-112
+  s_58849211a94dc9::t_15125acbffc918 130
+  s_58849211a94dc9::t_f0f7c7373ccb1d 45
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "24abb8c8d3286e98ec6cca1f00b64fa6f17eaff8",
+  "prompts": {},
+  "sessions": {
+    "s_58849211a94dc9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a93b1e36-c511-4112-8e32-e0fbdf710600",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
