@@ -1,0 +1,21 @@
+tests/agent-generator.bats
+  s_58849211a94dc9::t_b2c12ee6665b61 46
+scripts/agent-generator.sh
+  s_58849211a94dc9::t_e1d533d3b7be4e 221
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "438ede1c5e9c02eedfffd62359fb3ec058875d24",
+  "prompts": {},
+  "sessions": {
+    "s_58849211a94dc9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a93b1e36-c511-4112-8e32-e0fbdf710600",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
