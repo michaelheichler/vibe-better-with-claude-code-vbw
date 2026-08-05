@@ -1,5 +1,7 @@
 #!/bin/bash
 
+: 'The status-counting hot path stays in bash without external process dependencies. Deviation extraction helpers intentionally use awk, find plus path filters, and sort/sort -V.'
+
 trim_summary_value() {
   local value="$1"
   value="${value#"${value%%[![:space:]]*}"}"
