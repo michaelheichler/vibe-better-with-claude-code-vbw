@@ -1,0 +1,24 @@
+scripts/lib/agent-manifest.sh
+  s_58849211a94dc9::t_77b337b06f064d 28-36
+  s_58849211a94dc9::t_8939f8edcedc9b 8-27,37-59,69-70
+tests/agent-manifest.bats
+  s_58849211a94dc9::t_334cea3065dd21 54
+  s_58849211a94dc9::t_0898877bbc3fd1 1-53,55-75,79-80,82-83
+  s_58849211a94dc9::t_d80f10ef5be6e5 76-78,81
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "3c6a0bfaa08840871eab5e550fba8e25be37eb6b",
+  "prompts": {},
+  "sessions": {
+    "s_58849211a94dc9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a93b1e36-c511-4112-8e32-e0fbdf710600",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
