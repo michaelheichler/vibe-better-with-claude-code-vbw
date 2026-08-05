@@ -35,6 +35,88 @@ spawn_input() {
   jq -n '{tool_name:"TaskCreate",tool_input:{name:"next",description:"spawn",subagent_type:"vbw-dev"}}'
 }
 
+write_manifest() {
+  printf '%s\n' "$1" > "$TEST_TEMP_DIR/.vbw-planning/.agent-manifest.json"
+}
+
+@test "agent-spawn-guard denies unregistered generated names" {
+  write_manifest '{"agents":{"generated":{"state":"registered","model":"manifest-model"}}}'
+  local input
+  input=$(spawn_input | jq '.tool_input.subagent_type = "unregistered"')
+
+  run_spawn_guard "$input"
+
+  [ "$status" -eq 2 ]
+  [[ "$stderr" == *"agent generator flow"* ]]
+}
+
+@test "agent-spawn-guard denies generated names outside registered state" {
+  local state input
+  for state in running used expired; do
+    write_manifest "{\"agents\":{\"generated\":{\"state\":\"$state\",\"model\":\"manifest-model\"}}}"
+    input=$(spawn_input | jq '.tool_input.subagent_type = "generated"')
+
+    run_spawn_guard "$input"
+
+    [ "$status" -eq 2 ]
+    [[ "$stderr" == *"$state"* ]]
+  done
+}
+
+@test "agent-spawn-guard rewrites and claims registered generated names" {
+  write_manifest '{"agents":{"generated":{"state":"registered","model":"manifest-model","effort":"manifest-effort","description":"manifest description"}}}'
+  local input
+  input=$(spawn_input | jq '.tool_input.subagent_type = "generated" | .tool_input.model = "caller-model" | .tool_input.effort = "caller-effort"')
+
+  run_spawn_guard "$input"
+
+  [ "$status" -eq 0 ]
+  [ "$(printf '%s' "$output" | jq -r '.hookSpecificOutput.updatedInput.model')" = "manifest-model" ]
+  [ "$(printf '%s' "$output" | jq -r '.hookSpecificOutput.updatedInput.effort')" = "manifest-effort" ]
+  [ "$(printf '%s' "$output" | jq -r '.hookSpecificOutput.updatedInput.description')" = "manifest description" ]
+  [ "$(jq -r '.agents.generated.state' "$TEST_TEMP_DIR/.vbw-planning/.agent-manifest.json")" = "running" ]
+}
+
+@test "agent-spawn-guard keeps legacy behavior when vibe is inactive" {
+  write_manifest '{"agents":{"generated":{"state":"registered","model":"manifest-model"}}}'
+  jq '.status = "complete"' "$TEST_TEMP_DIR/.vbw-planning/.execution-state.json" > "$TEST_TEMP_DIR/.vbw-planning/.execution-state.json.tmp"
+  mv "$TEST_TEMP_DIR/.vbw-planning/.execution-state.json.tmp" "$TEST_TEMP_DIR/.vbw-planning/.execution-state.json"
+  rm -f "$TEST_TEMP_DIR/.vbw-planning/.delegated-workflow.json"
+  local input
+  input=$(spawn_input | jq '.tool_input.subagent_type = "generated" | .tool_input.model = "caller-model"')
+
+  run_spawn_guard "$input"
+
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+  [ "$(jq -r '.agents.generated.state' "$TEST_TEMP_DIR/.vbw-planning/.agent-manifest.json")" = "registered" ]
+}
+
+@test "agent-spawn-guard preserves tier aliases for registered generated names" {
+  write_manifest '{"agents":{"generated":{"state":"registered","model":"claude-sonnet-5"}}}'
+  local input
+  input=$(spawn_input | jq '.tool_input.subagent_type = "generated"')
+
+  run_spawn_guard "$input"
+
+  [ "$status" -eq 0 ]
+  [ "$(printf '%s' "$output" | jq -r '.hookSpecificOutput.updatedInput.model')" = "sonnet" ]
+}
+
+@test "agent-spawn-guard ignores a manifest when vibe is inactive" {
+  write_manifest '{"agents":{"generated":{"state":"registered","model":"manifest-model"}}}'
+  jq '.status = "complete"' "$TEST_TEMP_DIR/.vbw-planning/.execution-state.json" > "$TEST_TEMP_DIR/.vbw-planning/.execution-state.json.tmp"
+  mv "$TEST_TEMP_DIR/.vbw-planning/.execution-state.json.tmp" "$TEST_TEMP_DIR/.vbw-planning/.execution-state.json"
+  rm -f "$TEST_TEMP_DIR/.vbw-planning/.delegated-workflow.json"
+  local input
+  input=$(spawn_input | jq '.tool_input.subagent_type = "unregistered"')
+
+  run_spawn_guard "$input"
+
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
 @test "agent-spawn-guard blocks when session id is unresolvable" {
   printf '0\n' > "$TEST_TEMP_DIR/.vbw-planning/.active-agent-count"
   local input
