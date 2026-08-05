@@ -1,0 +1,37 @@
+tests/agent-spawn-guard.bats
+  s_58849211a94dc9::t_3653e703164c2d 38-119
+scripts/lib/active-agent-state.sh
+  s_58849211a94dc9::t_dda2e128f85d13 41-47
+  s_58849211a94dc9::t_d72438294f79a3 38-40
+  s_58849211a94dc9::t_97264701281923 33
+tests/qa-bash-guard.bats
+  s_58849211a94dc9::t_6cb3976129bdd6 443
+tests/active-agent-state.bats
+  s_58849211a94dc9::t_b56b66fb62f10c 16,27-31,36-40,43,49-53,58-60
+  s_58849211a94dc9::t_d59210407fb8ee 61-62
+scripts/agent-spawn-guard.sh
+  s_58849211a94dc9::t_790781a706c302 137
+  s_58849211a94dc9::t_b3c0379d59b93a 234
+  s_58849211a94dc9::t_ca125ab6838f77 112-136,138-152,154-159,163-193
+  s_58849211a94dc9::t_b8b3324fcac653 160-162
+  s_58849211a94dc9::t_c73a028ae400c0 15-17
+  s_58849211a94dc9::t_a08db06556fa8d 153
+scripts/bash-guard.sh
+  s_58849211a94dc9::t_255edce0f3e441 103
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "9c6f704b424f854997c424aeb0fd10c1643fb557",
+  "prompts": {},
+  "sessions": {
+    "s_58849211a94dc9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a93b1e36-c511-4112-8e32-e0fbdf710600",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
