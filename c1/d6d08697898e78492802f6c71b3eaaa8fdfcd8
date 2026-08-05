@@ -1,0 +1,19 @@
+testing/verify-human-only-uat-contract.sh
+  s_86d58b85ce2aee::t_4f6060a69065d5 233-234
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "c1d6d08697898e78492802f6c71b3eaaa8fdfcd8",
+  "prompts": {},
+  "sessions": {
+    "s_86d58b85ce2aee": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "07d7797e-6c7f-4c9c-bdd0-a2660d0d8697",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
