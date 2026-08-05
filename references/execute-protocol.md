@@ -22,7 +22,7 @@ VBW_PLUGIN_ROOT=$(bash "$RESOLVER") || exit 1
 
 All runtime script invocations below assume `VBW_PLUGIN_ROOT` is set.
 
-Before spawning any subagent, read `${VBW_PLUGIN_ROOT}/references/subagent-contracts.md` for the canonical subagent contracts. Run the matching role generator once per teammate with the required `--job "{plan title and task scope}"` argument, then capture each final `SPAWN_READY <name>` line into the role-specific variable (`DEV_AGENT_NAME`, `QA_AGENT_NAME`, `SCOUT_AGENT_NAME`, or `QA_AUTHOR_AGENT_NAME`) before the spawn call. Use that exact generated name for both `subagent_type` and `name`.
+Before spawning any subagent, read `${VBW_PLUGIN_ROOT}/references/subagent-contracts.md` for the canonical subagent contracts. Run the matching role generator once per teammate with the required `--job "{plan title and task scope}"` argument (exception: the cross-phase research Scout uses `--job "{phase N+1 research scope}"` as specified in its own section below), then capture each final `SPAWN_READY <name>` line into the role-specific variable (`DEV_AGENT_NAME`, `QA_AGENT_NAME`, `SCOUT_AGENT_NAME`, or `QA_AUTHOR_AGENT_NAME`) before the spawn call. Use that exact generated name for both `subagent_type` and `name`.
 
 ### Step 2: Load plans and detect resume state
 

@@ -82,8 +82,10 @@ canonicalize_target_input() {
 }
 
 resolve_target_symlinks() {
-  local link parent base
+  local link parent base hops=0
   while [ -L "$CANONICAL_PATH" ]; do
+    hops=$((hops + 1))
+    [ "$hops" -gt 40 ] && return 1
     link=$(readlink "$CANONICAL_PATH" 2>/dev/null) || return 1
     if [[ "$link" = /* ]]; then
       CANONICAL_PATH="$link"

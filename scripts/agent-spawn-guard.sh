@@ -144,7 +144,7 @@ manifest_spawn_fields() {
     | del(.max_turns)
     | if has("maxTurns") then
         .maxTurns = (try (.maxTurns | tonumber) catch null)
-        | if (.maxTurns | type) == "number" and .maxTurns > 0 then . else del(.maxTurns) end
+        | if (.maxTurns | type) == "number" and .maxTurns > 0 and (.maxTurns == (.maxTurns | floor)) then . else del(.maxTurns) end
       else . end
   ' <<< "$manifest" 2>/dev/null
 }

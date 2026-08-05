@@ -22,7 +22,7 @@ agent_manifest_lock_owner_alive() {
   local lock_dir="$1" owner
   owner=$(cat "$lock_dir/pid" 2>/dev/null || true)
   case "$owner" in
-    ''|*[!0-9]*) return 1 ;;
+    ''|*[!0-9]*|0) return 1 ;;
   esac
   kill -0 "$owner" 2>/dev/null
 }

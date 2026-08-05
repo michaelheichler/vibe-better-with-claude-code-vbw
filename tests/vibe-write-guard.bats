@@ -118,3 +118,17 @@ test_subagent_payload_is_noop() { # @test
   [ "$status" -eq 0 ]
   [ -z "$output" ]
 }
+
+test_denies_symlink_cycle_in_exempt_path() { # @test
+  local input
+  ln -s "$TEST_TEMP_DIR/.vbw-planning/loop-b" "$TEST_TEMP_DIR/.vbw-planning/loop-a"
+  ln -s "$TEST_TEMP_DIR/.vbw-planning/loop-a" "$TEST_TEMP_DIR/.vbw-planning/loop-b"
+  input=$(jq -n --arg path "$TEST_TEMP_DIR/.vbw-planning/loop-a/state.json" \
+    '{session_id:"session-main",tool_name:"Write",tool_input:{file_path:$path}}')
+
+  run timeout 10 bash -c 'printf %s "$2" | bash "$1"' _ "$SCRIPTS_DIR/vibe-write-guard.sh" "$input"
+
+  [ "$status" -eq 0 ]
+  [ "$(printf '%s' "$output" | jq -r '.hookSpecificOutput.permissionDecision')" = "deny" ]
+  [[ "$output" == *"Delegate this change to a spawned agent"* ]]
+}
