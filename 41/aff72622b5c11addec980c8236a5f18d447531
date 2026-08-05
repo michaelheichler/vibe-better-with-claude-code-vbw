@@ -1,0 +1,44 @@
+scripts/file-guard.sh
+  s_e8b702480499cf::t_9b8020f2e11046 608
+  s_e8b702480499cf::t_d852d556f168ae 267-280
+  s_e8b702480499cf::t_77dc0a95116f82 579-581
+  s_e8b702480499cf::t_77aa73d241c66c 569-572
+tests/vibe-write-guard.bats
+  s_e8b702480499cf::t_00399f199ebec2 25-34
+  s_e8b702480499cf::t_9b59c2db030e3f 72-82
+  s_e8b702480499cf::t_0e9fe76cbaa454 132-149
+scripts/vibe-write-guard.sh
+  s_e8b702480499cf::t_d5cfa68c168f28 169
+  s_e8b702480499cf::t_8c3e09f1f0cd80 13-14
+  s_e8b702480499cf::t_0b6c18ab0c89c4 58-59
+  s_e8b702480499cf::t_615e7a1a127c4a 37,39-41,43-55,57,61-89
+tests/file-guard-orchestrator.bats
+  s_e8b702480499cf::t_953e06ed2384b2 195-248
+  s_e8b702480499cf::t_7fa12a878fc98a 16,20-32
+  s_e8b702480499cf::t_48f587908b6e71 33,249
+  s_9b8fc87c25fd86::t_eac7cf02f3eba6 34
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "41aff72622b5c11addec980c8236a5f18d447531",
+  "prompts": {},
+  "sessions": {
+    "s_9b8fc87c25fd86": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5410a1e8-4bc2-47f6-9349-39e0ca6bd07d",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    },
+    "s_e8b702480499cf": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b86dd062-285e-44f0-9749-b1a13364f007",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
