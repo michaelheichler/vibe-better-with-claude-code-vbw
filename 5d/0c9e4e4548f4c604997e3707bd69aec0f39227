@@ -1,0 +1,30 @@
+scripts/rtk-manager.sh
+  s_86d58b85ce2aee::t_ea11724c7bbef0 1407,1409-1412
+  s_86d58b85ce2aee::t_1fe50c4383df4e 523
+scripts/agent-spawn-guard.sh
+  s_86d58b85ce2aee::t_c2f70e054dd675 47
+  s_86d58b85ce2aee::t_d9ca8c02fa0907 165-169
+scripts/detect-models.sh
+  s_86d58b85ce2aee::t_9858ebf9d284ab 77,80-81
+  s_86d58b85ce2aee::t_52c8392a800bbf 9
+  s_86d58b85ce2aee::t_2dd732b11e96b1 38
+  s_86d58b85ce2aee::t_c196270fc7672c 46
+tests/agent-spawn-guard.bats
+  s_86d58b85ce2aee::t_f421854c773899 107-108
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "5d0c9e4e4548f4c604997e3707bd69aec0f39227",
+  "prompts": {},
+  "sessions": {
+    "s_86d58b85ce2aee": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "07d7797e-6c7f-4c9c-bdd0-a2660d0d8697",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
