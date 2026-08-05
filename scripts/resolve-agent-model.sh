@@ -33,10 +33,10 @@ CONFIG_PATH="$2"
 PROFILES_PATH="$3"
 
 case "$AGENT" in
-  lead|dev|qa|scout|debugger|architect|docs)
+  lead|dev|qa|qa-author|scout|debugger|architect|docs)
     ;;
   *)
-    echo "Invalid agent name '$AGENT'. Valid: lead, dev, qa, scout, debugger, architect, docs" >&2
+    echo "Invalid agent name '$AGENT'. Valid: lead, dev, qa, qa-author, scout, debugger, architect, docs" >&2
     exit 1
     ;;
 esac
@@ -181,7 +181,7 @@ if [ -z "$MODEL" ]; then
     echo "Invalid model_profile '$PROFILE'. Valid: quality, balanced, budget" >&2
     exit 1
   fi
-  MODEL=$(resolve_alias "$(jq -r ".$PROFILE.$AGENT" "$PROFILES_PATH")")
+  MODEL=$(resolve_alias "$(jq -r --arg profile "$PROFILE" --arg agent "$AGENT" '.[$profile][$agent] // empty' "$PROFILES_PATH")")
 fi
 
 if [[ "$MODEL" =~ $MODEL_SHAPE ]]; then

@@ -12,6 +12,9 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 if [ -f "$SCRIPT_DIR/lib/active-agent-state.sh" ]; then
   . "$SCRIPT_DIR/lib/active-agent-state.sh"
 fi
+if [ -f "$SCRIPT_DIR/lib/agent-manifest.sh" ]; then
+  . "$SCRIPT_DIR/lib/agent-manifest.sh"
+fi
 
 find_project_root() {
   local dir="$PWD"
@@ -106,6 +109,103 @@ if [ -f "$EXEC_STATE_FILE" ] && jq empty "$EXEC_STATE_FILE" >/dev/null 2>&1; the
     fi
   fi
 fi
+VIBE_ACTIVE="$EXEC_ACTIVE"
+if [ "$VIBE_ACTIVE" = true ]; then
+  STATE_SESSION=$(jq -r '.session_id // ""' "$EXEC_STATE_FILE" 2>/dev/null) || STATE_SESSION=""
+  CURRENT_SESSION=$(vbw_active_agent_session_id "$INPUT" 2>/dev/null || true)
+  if [ -n "$STATE_SESSION" ] && [ -n "$CURRENT_SESSION" ] && [ "$STATE_SESSION" != "$CURRENT_SESSION" ]; then
+    EXEC_ACTIVE=false
+    VIBE_ACTIVE=false
+    MARKER_LIVE=false
+    MODE=""
+    DELEGATION_MODE=""
+  fi
+fi
+MANIFEST_PATH=""
+if command -v agent_manifest_path >/dev/null 2>&1; then
+  MANIFEST_PATH=$(agent_manifest_path "$PROJECT_ROOT/.vbw-planning" 2>/dev/null || true)
+fi
+MANIFEST_ACTIVE=false
+[ "$VIBE_ACTIVE" = true ] && [ -n "$MANIFEST_PATH" ] && [ -f "$MANIFEST_PATH" ] && MANIFEST_ACTIVE=true
+MANIFEST=""
+if [ "$MANIFEST_ACTIVE" = true ] && ! MANIFEST=$(agent_manifest_read "$PROJECT_ROOT/.vbw-planning" 2>/dev/null); then
+  echo "Blocked: the agent manifest is invalid. Use the agent generator flow to repair it before spawning." >&2
+  exit 2
+fi
+
+manifest_spawn_fields() {
+  local manifest="$1" name="$2"
+  jq -c --arg name "$name" '
+    ["name", "description", "prompt", "model", "effort", "run_in_background", "isolation", "mode", "max_turns", "maxTurns", "permissionMode", "team_name", "subject", "activeForm", "metadata"] as $fields
+    | (.agents[$name].spawn // .agents[$name] // {})
+    | with_entries(select(.key as $key | $fields | index($key)))
+    | with_entries(select(.value != null))
+    | if has("max_turns") then .maxTurns = .max_turns else . end
+    | del(.max_turns)
+    | if has("maxTurns") then
+        .maxTurns = (try (.maxTurns | tonumber) catch null)
+        | if (.maxTurns | type) == "number" and .maxTurns > 0 and (.maxTurns == (.maxTurns | floor)) then . else del(.maxTurns) end
+      else . end
+  ' <<< "$manifest" 2>/dev/null
+}
+
+manifest_model_value() {
+  local model="$1" alias
+  [ -n "$model" ] || return 0
+  [ "$model" != inherit ] || return 0
+  alias=$(jq -r --arg id "$model" \
+    '.aliases // {} | to_entries[] | select(.key | test("^(opus|sonnet|haiku|fable)$")) | select(.value == $id) | .key' \
+    "$SCRIPT_DIR/../config/model-pricing.json" 2>/dev/null | head -1)
+  printf '%s\n' "${alias:-$model}"
+}
+
+_claim_manifest_spawn_locked() {
+  local name="$1" entry state now updated spawn current model
+  MANIFEST=$(agent_manifest_read "$PROJECT_ROOT/.vbw-planning" 2>/dev/null) || return 1
+  entry=$(jq -c --arg name "$name" '.agents[$name] // empty' <<< "$MANIFEST" 2>/dev/null) || return 1
+  [ -n "$entry" ] || return 2
+  state=$(jq -r '.state // ""' <<< "$entry" 2>/dev/null) || return 1
+  [ "$state" = registered ] || return 3
+  spawn=$(manifest_spawn_fields "$MANIFEST" "$name") || return 1
+  model=$(jq -r '.model // empty' <<< "$spawn" 2>/dev/null) || model=""
+  if [ "$model" = inherit ]; then
+    spawn=$(jq 'del(.model)' <<< "$spawn") || return 1
+  elif [ -n "$model" ]; then
+    model=$(manifest_model_value "$model") || return 1
+    spawn=$(jq --arg model "$model" '.model = $model' <<< "$spawn") || return 1
+  fi
+  current="${STRIPPED_INPUT:-}"
+  [ -n "$current" ] && [ "$current" != null ] || current=$(echo "$INPUT" | jq '.tool_input' 2>/dev/null) || return 1
+  STRIPPED_INPUT=$(jq --argjson spawn "$spawn" 'del(.max_turns, .maxTurns) * $spawn' <<< "$current") || return 1
+  now=$(date -u +"%Y-%m-%dT%H:%M:%SZ" 2>/dev/null || true)
+  [ -n "$now" ] || return 1
+  updated=$(jq --arg name "$name" --arg now "$now" '.agents[$name].state = "running" | .agents[$name].started_at = $now | .agents[$name].last_activity_at = $now' <<< "$MANIFEST") || return 1
+  agent_manifest_write "$PROJECT_ROOT/.vbw-planning" "$updated" >/dev/null 2>&1 || return 1
+  MANIFEST="$updated"
+  STRIP_REASON="enforced registered agent manifest for $name"
+  return 0
+}
+
+claim_manifest_spawn() {
+  agent_manifest_with_lock "$PROJECT_ROOT/.vbw-planning" _claim_manifest_spawn_locked "$1"
+}
+
+manifest_guard() {
+  local state
+  [ "$MANIFEST_ACTIVE" = true ] || return 0
+  if claim_manifest_spawn "$SUBAGENT_TYPE"; then
+    return 0
+  fi
+  state=$(jq -r --arg name "$SUBAGENT_TYPE" '.agents[$name].state // "unregistered"' <<< "$MANIFEST" 2>/dev/null || printf 'unregistered')
+  if [ "$state" = registered ]; then
+    echo "Blocked: registered agent '$SUBAGENT_TYPE' could not be claimed. Use the agent generator flow and retry." >&2
+  elif [ "$state" = running ] || [ "$state" = used ] || [ "$state" = expired ]; then
+    echo "Blocked: generated agent '$SUBAGENT_TYPE' is already $state and cannot be spawned again. Use the agent generator flow to register a fresh agent." >&2
+  else
+    echo "Blocked: agent '$SUBAGENT_TYPE' is not registered for this project. Use the agent generator flow to create and register it." >&2
+  fi
+  exit 2
+}
 
 if [ "$EXEC_ACTIVE" = true ] && { [ "$MARKER_LIVE" != "true" ] || [ "$MODE" != "execute" ] || [ -z "$DELEGATION_MODE" ]; }; then
   echo "Blocked: active execute run is missing live runtime delegation state (reason=${MARKER_REASON:-missing_marker}). Initialize execute delegation before spawning teammates." >&2
@@ -146,6 +246,7 @@ if is_teammate_spawn_tool; then
   fi
 
   SUBAGENT_TYPE=$(echo "$INPUT" | jq -r '.tool_input.subagent_type // ""' 2>/dev/null) || exit 0
+  manifest_guard
   MODEL_ROLE=""
   case "$SUBAGENT_TYPE" in
     vbw:vbw-dev|vbw-dev) MODEL_ROLE="dev" ;;

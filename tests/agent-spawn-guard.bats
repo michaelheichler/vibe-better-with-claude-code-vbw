@@ -35,6 +35,114 @@ spawn_input() {
   jq -n '{tool_name:"TaskCreate",tool_input:{name:"next",description:"spawn",subagent_type:"vbw-dev"}}'
 }
 
+write_manifest() {
+  printf '%s\n' "$1" > "$TEST_TEMP_DIR/.vbw-planning/.agent-manifest.json"
+}
+
+@test "agent-spawn-guard denies unregistered generated names" {
+  write_manifest '{"agents":{"generated":{"state":"registered","model":"manifest-model"}}}'
+  local input
+  input=$(spawn_input | jq '.tool_input.subagent_type = "unregistered"')
+
+  run_spawn_guard "$input"
+
+  [ "$status" -eq 2 ]
+  [[ "$stderr" == *"agent generator flow"* ]]
+}
+
+@test "agent-spawn-guard denies generated names outside registered state" {
+  local state input
+  for state in running used expired; do
+    write_manifest "{\"agents\":{\"generated\":{\"state\":\"$state\",\"model\":\"manifest-model\"}}}"
+    input=$(spawn_input | jq '.tool_input.subagent_type = "generated"')
+
+    run_spawn_guard "$input"
+
+    [ "$status" -eq 2 ]
+    [[ "$stderr" == *"$state"* ]]
+  done
+}
+
+@test "agent-spawn-guard rewrites and claims registered generated names" {
+  write_manifest '{"agents":{"generated":{"state":"registered","model":"manifest-model","effort":"manifest-effort","description":"manifest description","max_turns":17}}}'
+  local input
+  input=$(spawn_input | jq '.tool_input.subagent_type = "generated" | .tool_input.model = "caller-model" | .tool_input.effort = "caller-effort" | .tool_input.maxTurns = 99')
+
+  run_spawn_guard "$input"
+
+  [ "$status" -eq 0 ]
+  [ "$(printf '%s' "$output" | jq -r '.hookSpecificOutput.updatedInput.model')" = "manifest-model" ]
+  [ "$(printf '%s' "$output" | jq -r '.hookSpecificOutput.updatedInput.effort')" = "manifest-effort" ]
+  [ "$(printf '%s' "$output" | jq -r '.hookSpecificOutput.updatedInput.description')" = "manifest description" ]
+  [ "$(printf '%s' "$output" | jq -r '.hookSpecificOutput.updatedInput.maxTurns')" = "17" ]
+  [ "$(printf '%s' "$output" | jq -r '.hookSpecificOutput.updatedInput.maxTurns | type')" = "number" ]
+  [ "$(printf '%s' "$output" | jq -r '.hookSpecificOutput.updatedInput | has("max_turns")')" = "false" ]
+  [ "$(jq -r '.agents.generated.state' "$TEST_TEMP_DIR/.vbw-planning/.agent-manifest.json")" = "running" ]
+}
+
+@test "agent-spawn-guard omits unlimited max turns" {
+  write_manifest '{"agents":{"generated":{"state":"registered","model":"manifest-model","max_turns":""}}}'
+  local input
+  input=$(spawn_input | jq '.tool_input.subagent_type = "generated"')
+
+  run_spawn_guard "$input"
+
+  [ "$status" -eq 0 ]
+  [ "$(printf '%s' "$output" | jq -r '.hookSpecificOutput.updatedInput | has("maxTurns")')" = "false" ]
+}
+
+@test "agent-spawn-guard keeps legacy behavior when vibe is inactive" {
+  write_manifest '{"agents":{"generated":{"state":"registered","model":"manifest-model"}}}'
+  jq '.status = "complete"' "$TEST_TEMP_DIR/.vbw-planning/.execution-state.json" > "$TEST_TEMP_DIR/.vbw-planning/.execution-state.json.tmp"
+  mv "$TEST_TEMP_DIR/.vbw-planning/.execution-state.json.tmp" "$TEST_TEMP_DIR/.vbw-planning/.execution-state.json"
+  rm -f "$TEST_TEMP_DIR/.vbw-planning/.delegated-workflow.json"
+  local input
+  input=$(spawn_input | jq '.tool_input.subagent_type = "generated" | .tool_input.model = "caller-model"')
+
+  run_spawn_guard "$input"
+
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+  [ "$(jq -r '.agents.generated.state' "$TEST_TEMP_DIR/.vbw-planning/.agent-manifest.json")" = "registered" ]
+}
+
+@test "agent-spawn-guard does not trust a live marker from another input session" {
+  write_manifest '{"agents":{"generated":{"state":"registered","model":"manifest-model"}}}'
+  local input
+  input=$(spawn_input | jq '.tool_input.subagent_type = "generated" | .session_id = "session-B"')
+
+  run_spawn_guard "$input"
+
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+  [ "$(jq -r '.agents.generated.state' "$TEST_TEMP_DIR/.vbw-planning/.agent-manifest.json")" = "registered" ]
+}
+
+@test "agent-spawn-guard preserves tier aliases for registered generated names" {
+  write_manifest '{"agents":{"generated":{"state":"registered","model":"claude-sonnet-5"}}}'
+  local input
+  input=$(spawn_input | jq '.tool_input.subagent_type = "generated"')
+
+  run_spawn_guard "$input"
+
+  [ "$status" -eq 0 ]
+  [ "$(printf '%s' "$output" | jq -r '.hookSpecificOutput.updatedInput.model')" = "sonnet" ]
+}
+
+@test "agent-spawn-guard ignores a manifest when vibe is inactive" {
+  write_manifest '{"agents":{"generated":{"state":"registered","model":"manifest-model"}}}'
+  jq '.status = "complete"' "$TEST_TEMP_DIR/.vbw-planning/.execution-state.json" > "$TEST_TEMP_DIR/.vbw-planning/.execution-state.json.tmp"
+  mv "$TEST_TEMP_DIR/.vbw-planning/.execution-state.json.tmp" "$TEST_TEMP_DIR/.vbw-planning/.execution-state.json"
+  rm -f "$TEST_TEMP_DIR/.vbw-planning/.delegated-workflow.json"
+  local input
+  input=$(spawn_input | jq '.tool_input.subagent_type = "unregistered"')
+
+  run_spawn_guard "$input"
+
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
 @test "agent-spawn-guard blocks when session id is unresolvable" {
   printf '0\n' > "$TEST_TEMP_DIR/.vbw-planning/.active-agent-count"
   local input
@@ -149,6 +257,25 @@ spawn_input() {
 
   [ "$status" -eq 0 ]
   [ "$(printf '%s' "$output" | jq -r '.hookSpecificOutput.updatedInput.model')" = "resolved-qa" ]
+}
+
+@test "agent-spawn-guard serializes generated-agent claims" {
+  write_manifest '{"agents":{"generated":{"state":"registered","model":"manifest-model"}}}'
+  local input first second
+  local output_one="$TEST_TEMP_DIR/guard-one.out" output_two="$TEST_TEMP_DIR/guard-two.out"
+  input=$(spawn_input | jq '.tool_input.subagent_type = "generated"')
+  (printf '%s\n' "$input" | CLAUDE_SESSION_ID=session-A bash "$SCRIPTS_DIR/agent-spawn-guard.sh" > "$output_one" 2>/dev/null) &
+  local first_pid=$!
+  (printf '%s\n' "$input" | CLAUDE_SESSION_ID=session-A bash "$SCRIPTS_DIR/agent-spawn-guard.sh" > "$output_two" 2>/dev/null) &
+  local second_pid=$!
+  first=0
+  second=0
+  wait "$first_pid" || first=$?
+  wait "$second_pid" || second=$?
+
+  [ "$first" -eq 0 ] || [ "$second" -eq 0 ]
+  [ "$first" -eq 2 ] || [ "$second" -eq 2 ]
+  [ "$(jq -r '.agents.generated.state' "$TEST_TEMP_DIR/.vbw-planning/.agent-manifest.json")" = "running" ]
 }
 
 @test "agent-spawn-guard injects configured reasoning effort" {

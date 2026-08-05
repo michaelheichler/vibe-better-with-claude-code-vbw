@@ -6,7 +6,8 @@
     "scout": "sonnet",
     "debugger": "opus",
     "architect": "opus",
-    "docs": "sonnet"
+    "docs": "sonnet",
+    "qa-author": "sonnet"
   },
   "balanced": {
     "lead": "sonnet",
@@ -15,7 +16,8 @@
     "scout": "sonnet",
     "debugger": "sonnet",
     "architect": "sonnet",
-    "docs": "sonnet"
+    "docs": "sonnet",
+    "qa-author": "sonnet"
   },
   "budget": {
     "lead": "sonnet",
@@ -24,6 +26,7 @@
     "scout": "sonnet",
     "debugger": "sonnet",
     "architect": "sonnet",
-    "docs": "haiku"
+    "docs": "haiku",
+    "qa-author": "haiku"
   }
 }

@@ -111,7 +111,7 @@ path_b_debug_block() {
 
 @test "debug command Path A needs_change spawns a fresh vbw-debugger implementation owner" {
   path_a_debug_block | grep -q 'fresh post-synthesis implementation owner'
-  path_a_debug_block | grep -q 'subagent_type: "vbw:vbw-debugger"'
+  path_a_debug_block | grep -q 'subagent_type: "${DEBUGGER_AGENT_NAME}"'
 }
 
 @test "debug command Path A removes winning hypothesis apply shortcut" {

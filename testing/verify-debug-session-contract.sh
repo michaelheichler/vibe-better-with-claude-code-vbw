@@ -8,13 +8,15 @@ PASS=0
 FAIL=0
 
 pass() {
-  echo "PASS  $1"
-  PASS=$((PASS + 1))
+  local message="$1"
+  echo "PASS  $message"
+  printf -v PASS '%d' "$((PASS + 1))"
 }
 
 fail() {
-  echo "FAIL  $1"
-  FAIL=$((FAIL + 1))
+  local message="$1"
+  echo "FAIL  $message"
+  printf -v FAIL '%d' "$((FAIL + 1))"
 }
 
 contains_literal() {
@@ -251,17 +253,15 @@ else
 fi
 
 if contains_literal "$DEBUG_PATH_A_BLOCK" '<accepted_exception_debug_semantics>' \
-  && contains_literal "$DEBUG_PATH_A_BLOCK" 'hypothesis investigator prompts' \
-  && contains_literal "$DEBUG_PATH_A_BLOCK" 'post-synthesis implementation owner prompt' \
-  && contains_literal "$DEBUG_PATH_A_BLOCK" 'immediately after the Path A payload prefix'; then
+  && contains_literal "$DEBUG_PATH_A_BLOCK" 'Include the accepted-exception debug semantics block before the task context.'; then
   pass "debug.md Path A injects accepted-exception semantics into investigator and implementation-owner prompts"
 else
   fail "debug.md Path A missing accepted-exception semantics injection"
 fi
 
-if contains_literal "$DEBUG_PATH_A_BLOCK" 'accepted-process-exception/backlog metadata alone is not enough for `already_fixed`' \
-  && contains_literal "$DEBUG_PATH_A_BLOCK" 'fresh current evidence that the underlying issue no longer reproduces or the branch contains a real fix' \
-  && contains_literal "$DEBUG_PATH_A_BLOCK" 'If any teammate finds the selected item still reproducible or actionable, choose `needs_change`'; then
+if contains_literal "$DEBUG_PATH_A_BLOCK" 'accepted metadata alone cannot establish `already_fixed`' \
+  && contains_literal "$DEBUG_PATH_A_BLOCK" 'Require fresh evidence' \
+  && contains_literal "$DEBUG_PATH_A_BLOCK" 'Use `needs_change` when remediation remains'; then
   pass "debug.md Path A synthesis protects accepted exceptions from already_fixed closure"
 else
   fail "debug.md Path A synthesis can still treat accepted exceptions as already_fixed"
@@ -284,12 +284,12 @@ else
   pass "debug.md Path B accepted-exception template avoids nested XML tags"
 fi
 
-if contains_literal "$DEBUG_STEP5_BLOCK" 'Before mapping `RESOLUTION_OBSERVATION=already_fixed` to `INVESTIGATION_OUTCOME=already_fixed`' \
+if contains_literal "$DEBUG_STEP5_BLOCK" 'Before mapping `already_fixed` to `INVESTIGATION_OUTCOME=already_fixed`' \
   && contains_literal "$DEBUG_STEP5_BLOCK" 'fresh current evidence of actual resolution' \
-  && contains_literal "$DEBUG_STEP5_BLOCK" 'accepted disposition only' \
-  && contains_literal "$DEBUG_STEP5_BLOCK" 'normalize away from `already_fixed`' \
-  && contains_literal "$DEBUG_STEP5_BLOCK" 'use `needs_change` when actionable remediation remains' \
-  && contains_literal "$DEBUG_STEP5_BLOCK" 'use `inconclusive` when the blocker is genuine' \
+  && contains_literal "$DEBUG_STEP5_BLOCK" 'accepted disposition alone is insufficient' \
+  && contains_literal "$DEBUG_STEP5_BLOCK" 'A no-commit session may still complete as `already_fixed`' \
+  && contains_literal "$DEBUG_STEP5_BLOCK" 'Use `needs_change` when remediation remains' \
+  && contains_literal "$DEBUG_STEP5_BLOCK" '`inconclusive` when no safe fix can be applied' \
   && contains_literal "$DEBUG_STEP5_BLOCK" 'RESOLUTION_OBSERVATION=needs_change|inconclusive` → `INVESTIGATION_OUTCOME=no_fix_yet`'; then
   pass "debug.md Step 5 validates already_fixed against fresh evidence for accepted exceptions"
 else
@@ -323,9 +323,9 @@ else
   fail "debug.md Path B missing resolution_observation contract"
 fi
 
-if grep -Fq 'You are a hypothesis investigator, not the implementation owner.' <<< "$DEBUG_PATH_A_BLOCK" \
-  && grep -Fq 'Do NOT edit files, apply fixes, run mutating Bash, commit, request implementation approval, or claim ownership of the final session outcome.' <<< "$DEBUG_PATH_A_BLOCK" \
-  && grep -Fq 'Stop after diagnosis plus evidence reporting via `debugger_report`.' <<< "$DEBUG_PATH_A_BLOCK"; then
+if grep -Fq 'Keep the task report-only.' <<< "$DEBUG_PATH_A_BLOCK" \
+  && grep -Fq 'Do not edit, mutate, commit, request implementation approval, or claim the final outcome.' <<< "$DEBUG_PATH_A_BLOCK" \
+  && grep -Fq 'debugger_report' <<< "$DEBUG_PATH_A_BLOCK"; then
   pass "debug.md Path A investigator prompts are explicitly report-only"
 else
   fail "debug.md Path A investigator prompts missing explicit report-only contract"
@@ -349,7 +349,7 @@ else
   fail "debug.md Path A missing already_fixed/inconclusive no-implementation-owner guard"
 fi
 
-if grep -Fq 'If `RESOLUTION_OBSERVATION=needs_change`: spawn ONE fresh post-synthesis implementation owner via TaskCreate with `subagent_type: "vbw:vbw-debugger"` and `model: "${DEBUGGER_MODEL}"`.' <<< "$DEBUG_PATH_A_BLOCK" \
+if grep -Fq 'If `RESOLUTION_OBSERVATION=needs_change`: spawn ONE fresh post-synthesis implementation owner via TaskCreate with `subagent_type: "${DEBUGGER_AGENT_NAME}"` and `model: "${DEBUGGER_MODEL}"`.' <<< "$DEBUG_PATH_A_BLOCK" \
   && grep -Fq 'This is a new debugger instance, not one of the earlier hypothesis investigators.' <<< "$DEBUG_PATH_A_BLOCK"; then
   pass "debug.md Path A uses a fresh vbw-debugger as the sole post-synthesis implementation owner"
 else

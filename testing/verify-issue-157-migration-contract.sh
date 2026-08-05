@@ -1,22 +1,21 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# verify-issue-157-migration-contract.sh, targeted contract coverage for
-# command markdown migrated off embedded inline/path `!` spans.
-
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 
 PASS=0
 FAIL=0
 
 pass() {
-  echo "PASS  $1"
-  PASS=$((PASS + 1))
+  local message="$1"
+  printf 'PASS  %s\n' "$message"
+  declare -g PASS=$((PASS + 1))
 }
 
 fail() {
-  echo "FAIL  $1"
-  FAIL=$((FAIL + 1))
+  local message="$1"
+  printf 'FAIL  %s\n' "$message"
+  declare -g FAIL=$((FAIL + 1))
 }
 
 contains() {
@@ -73,7 +72,7 @@ for file in "${PLUGIN_ROOT_FILES[@]}"; do
 done
 
 if contains "$CONFIG_FILE" 'bash "{plugin-root}/scripts/migrate-config.sh"' \
-  && contains "$CONFIG_FILE" 'bash "{plugin-root}/scripts/resolve-agent-model.sh"' \
+  && contains "$CONFIG_FILE" 'bash "{plugin-root}/scripts/resolve-agent-settings.sh"' \
   && contains "$CONFIG_FILE" 'PG_SCRIPT="/tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}/scripts/planning-git.sh"'; then
   pass "config: uses safe {plugin-root} lookups plus deterministic planning-git path"
 else

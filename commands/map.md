@@ -2,7 +2,7 @@
 name: vbw:map
 category: advanced
 disable-model-invocation: true
-description: Analyze existing codebase with adaptive Scout teammates to produce structured mapping documents.
+description: Produce structured codebase mapping with adaptive Scout teammates.
 argument-hint: [--incremental] [--package=name] [--tier=solo|duo|quad]
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, WebFetch, Agent, TaskCreate, SendMessage, Skill, LSP
 ---
@@ -23,6 +23,8 @@ Plugin root:
 Store the plugin root path output above as `{plugin-root}` for use in script invocations below. Replace `{plugin-root}` with the literal `Plugin root` value from Context whenever a step below references a script or reference file.
 
 @${CLAUDE_PLUGIN_ROOT}/references/subagent-contracts.md
+
+Before every Scout spawn, run `bash "{plugin-root}/scripts/agent-scout-generator.sh" --job "{mapping job}"` and capture the final `SPAWN_READY <name>` line. Use each generated name for both `subagent_type` and `name`.
 
 Existing mapping:
 ```text
@@ -167,7 +169,7 @@ Display ✓ per domain. After all 7 docs written, skip Step 3.5, go to Step 4.
 
 ---
 
-**Step 3-duo:** **Pre-spawn stale-team cleanup:** `bash "{plugin-root}/scripts/clean-stale-teams.sh" 2>/dev/null || true`. Agent teams are experimental (CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1). The team forms when the first teammate is spawned via the Agent tool. There is no TeamCreate setup step. Spawn the team (`description="Codebase Map (duo)"`) with 2 Scouts via TaskCreate. **Set `subagent_type: "vbw:vbw-scout"` on each Scout TaskCreate.** Do not pass `isolation`, `cwd`, `working_dir`, `workingDirectory`, or `workdir` on any TaskCreate.
+**Step 3-duo:** **Pre-spawn stale-team cleanup:** `bash "{plugin-root}/scripts/clean-stale-teams.sh" 2>/dev/null || true`. Agent teams are experimental (CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1). The team forms when the first teammate is spawned via the Agent tool. There is no TeamCreate setup step. Spawn the team (`description="Codebase Map (duo)"`) with 2 generated Scout agents via TaskCreate. **Set `subagent_type: "${SCOUT_AGENT_NAME}"` on each Scout TaskCreate.** Do not pass `isolation`, `cwd`, `working_dir`, `workingDirectory`, or `workdir` on any TaskCreate.
 
 Scout A (Tech + Architecture): analyze tech stack, deps, architecture, structure. Write findings directly to the output paths. Include in prompt:
 ```
@@ -193,7 +195,16 @@ Read `{plugin-root}/commands/map.md` and follow its Map Document Format contract
 Mode: {MAPPING_MODE}. After writing all 3 files, send a `scout_findings` message (domain: "quality-and-concerns") with `cross_cutting` findings only. Schema ref: `{plugin-root}/references/handoff-schemas.md`
 
 **Scout model (effort-gated):** Fast/Turbo: `Model: haiku`. Thorough/Balanced: inherit session model.
-**Scout turn budget (effort-gated):** Resolve with `bash "{plugin-root}/scripts/resolve-agent-max-turns.sh" scout .vbw-planning/config.json "{effort}"`. If `SCOUT_MAX_TURNS` is non-empty, pass `maxTurns: ${SCOUT_MAX_TURNS}` to each Scout TaskCreate. If `SCOUT_MAX_TURNS` is empty, do NOT include maxTurns (omitting it = unlimited).
+**Scout settings (effort-gated):**
+```bash
+if ! SCOUT_SETTINGS=$(bash "{plugin-root}/scripts/resolve-agent-settings.sh" scout .vbw-planning/config.json "{plugin-root}/config/model-profiles.json" "{effort}"); then
+  echo "$SCOUT_SETTINGS" >&2
+  exit 1
+fi
+eval "$SCOUT_SETTINGS"
+SCOUT_MAX_TURNS="$RESOLVED_MAX_TURNS"
+```
+If `SCOUT_MAX_TURNS` is non-empty, pass `maxTurns: ${SCOUT_MAX_TURNS}` to each Scout TaskCreate. If `SCOUT_MAX_TURNS` is empty, do NOT include maxTurns (omitting it = unlimited).
 **Skill pre-evaluation:** Before composing Scout task descriptions, evaluate installed skills visible in your system context. Read each skill's description and select all materially helpful installed skills for codebase mapping, including adjacent/supporting domain skills surfaced by the prompt, logs, error text, related files, or stack context. Do not select only the single most direct skill. The spawned prompt MUST begin with exactly one explicit skill outcome block: use `<skill_activation>{For each selected skill: "Call Skill({skill-name})"}</skill_activation>` when one or more installed skills are preselected at orchestration time, or `<skill_no_activation>Evaluated installed skills for this task. No skills were preselected at orchestration time. Reason: {brief task-specific reason}.</skill_no_activation>` when none are preselected. Silent omission of both blocks is invalid. After evaluating, state the skill outcome in your response (e.g., "Skills: activating {skill-name}" or "Skills: none preselected, {reason}") so the user has visibility before the agent is spawned. Example: if the prompt or error mentions SwiftData, include `swiftdata` alongside relevant test/build/debug skills. After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting. Do not scan entire skill folders or read unrelated references.
 
 If one or more skills were preselected, run `bash "{plugin-root}/scripts/extract-skill-follow-up-files.sh" "{all preselected skill names from the activation block}" 2>/dev/null || true` before spawning each duo-mode Scout. If the helper prints a `<skill_follow_up_files>` block, paste it immediately after the follow-up-read sentence in the spawned payload. Otherwise omit that block.
@@ -206,7 +217,7 @@ Wait for all findings. Proceed to Step 3.5.
 
 ---
 
-**Step 3-quad:** **Pre-spawn stale-team cleanup:** `bash "{plugin-root}/scripts/clean-stale-teams.sh" 2>/dev/null || true`. Agent teams are experimental (CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1). The team forms when the first teammate is spawned via the Agent tool. There is no TeamCreate setup step. Spawn the team (`description="Codebase Map (quad)"`) with 4 Scouts via TaskCreate. **Set `subagent_type: "vbw:vbw-scout"` on each Scout TaskCreate.** Do not pass `isolation`, `cwd`, `working_dir`, `workingDirectory`, or `workdir` on any TaskCreate. Each Scout writes its domain files directly via `<output_paths>`, then sends a `scout_findings` message with `cross_cutting` findings only (file contents already written). Schema ref: `{plugin-root}/references/handoff-schemas.md`
+**Step 3-quad:** **Pre-spawn stale-team cleanup:** `bash "{plugin-root}/scripts/clean-stale-teams.sh" 2>/dev/null || true`. Agent teams are experimental (CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1). The team forms when the first teammate is spawned via the Agent tool. There is no TeamCreate setup step. Spawn the team (`description="Codebase Map (quad)"`) with 4 Scouts via TaskCreate. **Set `subagent_type: "${SCOUT_AGENT_NAME}"` on each Scout TaskCreate.** Do not pass `isolation`, `cwd`, `working_dir`, `workingDirectory`, or `workdir` on any TaskCreate. Each Scout writes its domain files directly via `<output_paths>`, then sends a `scout_findings` message with `cross_cutting` findings only (file contents already written). Schema ref: `{plugin-root}/references/handoff-schemas.md`
 - Scout 1 (Tech Stack): `<output_paths>` = `.vbw-planning/codebase/STACK.md`, `.vbw-planning/codebase/DEPENDENCIES.md`. Include this sentence in the payload: "Read {plugin-root}/commands/map.md and follow its Map Document Format contract for every output file."
 - Scout 2 (Architecture): `<output_paths>` = `.vbw-planning/codebase/ARCHITECTURE.md`, `.vbw-planning/codebase/STRUCTURE.md`. Include this sentence in the payload: "Read {plugin-root}/commands/map.md and follow its Map Document Format contract for every output file."
 - Scout 3 (Quality): `<output_paths>` = `.vbw-planning/codebase/CONVENTIONS.md`, `.vbw-planning/codebase/TESTING.md`. Include this sentence in the payload: "Read {plugin-root}/commands/map.md and follow its Map Document Format contract for every output file."

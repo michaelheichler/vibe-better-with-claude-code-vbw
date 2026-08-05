@@ -24,6 +24,8 @@ Store the plugin root path output above as `{plugin-root}` for use in script inv
 
 @${CLAUDE_PLUGIN_ROOT}/references/subagent-contracts.md
 
+Before every Scout spawn, run `bash "{plugin-root}/scripts/agent-scout-generator.sh" --job "{research job}"` and capture the final `SPAWN_READY <name>` line. For a single Scout, bind it as `SCOUT_AGENT_NAME`. For parallel research, run the generator once per facet and bind each result as `SCOUT_AGENT_NAME_1` through `SCOUT_AGENT_NAME_N` (N must be no more than 4). Use each generated name for both `subagent_type` and `name`, and never reuse a generated name for another agent.
+
 Current project:
 ```
 !`cat .vbw-planning/PROJECT.md 2>/dev/null || echo "No project found"`
@@ -82,7 +84,7 @@ Current project:
      - If one or more skills were preselected, run `bash "{plugin-root}/scripts/extract-skill-follow-up-files.sh" "{all preselected skill names from the activation block}" 2>/dev/null || true` before spawning the Scout. If the helper prints a `<skill_follow_up_files>` block, paste it immediately after the follow-up-read sentence in the spawned payload. Otherwise omit that block.
    - Also evaluate available MCP tools in your system context. If any MCP servers provide documentation, search, or data retrieval capabilities relevant to this research topic (e.g., Apple Docs for Apple APIs, web search MCPs for multi-source queries), note them in the Scout's task context so it prioritizes those tools over generic WebSearch/WebFetch where applicable.
     - Include the live-validation policy in the Scout task context when external data may matter. Public/anonymous HTTP validation uses WebFetch. Authenticated/private read-only checks use verified-safe Bash helper scripts or curl wrappers after preflight. Unsafe or mutating checks are deferred to Dev/Debugger. When Scout runs or defers live validation, require `## Live Validation Evidence` with `command_shape`, `exit_status`, `redacted_evidence`, `expected_shape`, `confidence`, and `limitations_or_deferred_reason`.
-    - Spawn vbw-scout as subagent(s) via Task tool. **Set `subagent_type: "vbw:vbw-scout"` and `model: "${SCOUT_MODEL}"` in the Task tool invocation. If `SCOUT_MAX_TURNS` is non-empty, also pass `maxTurns: ${SCOUT_MAX_TURNS}`. If `SCOUT_MAX_TURNS` is empty, do NOT include maxTurns (omitting it = unlimited).**
+    - For the single-Scout path, run the generator before the Task call and capture the final `SPAWN_READY <name>` line as `SCOUT_AGENT_NAME`. Spawn the generated Scout via Task tool. **Set `subagent_type: "${SCOUT_AGENT_NAME}"`, `name: "${SCOUT_AGENT_NAME}"`, and `model: "${SCOUT_MODEL}"` in the Task tool invocation. If `SCOUT_MAX_TURNS` is non-empty, also pass `maxTurns: ${SCOUT_MAX_TURNS}`. If `SCOUT_MAX_TURNS` is empty, do NOT include maxTurns (omitting it = unlimited).**
 
       Non-team invariant: omit `team_name`, `run_in_background`, `isolation`, and all worktree cwd fields.
 
@@ -104,7 +106,7 @@ Write your complete findings to the output_path file.
 </output_format>
 ```
     - If save path is unknown yet (user hasn't confirmed), omit `<output_path>`. Scout returns findings in response, and the orchestrator writes them after user confirms a path.
-    - Parallel: up to 4 simultaneous Tasks, each with `subagent_type: "vbw:vbw-scout"`, same `model: "${SCOUT_MODEL}"` and the same maxTurns conditional (pass when non-empty, omit when empty).
+    - Parallel: split the topic into no more than 4 facets. Run the Scout generator once for each facet, capture each final `SPAWN_READY <name>` line as `SCOUT_AGENT_NAME_1` through `SCOUT_AGENT_NAME_N`, and launch up to 4 simultaneous Tasks. Each facet's Task must use its corresponding generated name for both `subagent_type` and `name`, with the same `model: "${SCOUT_MODEL}"` and maxTurns conditional (pass when non-empty, omit when empty). If `SCOUT_REASONING` is non-empty, also pass `effort: "${SCOUT_REASONING}"` on each Task. If `SCOUT_REASONING` is empty, omit effort. Never use one `SCOUT_AGENT_NAME` value for multiple facets.
 4. **Synthesize:** Single: present directly. Parallel: merge, note contradictions, rank by confidence.
 5. **Persist:** Ask "Save findings? (y/n)". If yes, determine save path:
    - **Phase-scoped** (an active VBW phase exists in `.vbw-planning/phases/`): default to `.vbw-planning/phases/{phase-dir}/RESEARCH.md` (existing behavior, unchanged).

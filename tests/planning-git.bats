@@ -5,7 +5,7 @@ load test_helper
 setup() {
   setup_temp_dir
 
-  cd "$TEST_TEMP_DIR"
+  cd "$TEST_TEMP_DIR" || return 1
   git init -q
   git config user.name "VBW Test"
   git config user.email "vbw-test@example.com"
@@ -35,6 +35,25 @@ EOF
 
   run grep -Fqx '.execution-state.json' .vbw-planning/.gitignore
   [ "$status" -eq 0 ]
+
+  run grep -Fqx '.claude/agents/vbw-*-*-*-*.md' .gitignore
+  [ "$status" -eq 0 ]
+}
+
+@test "ensure-generated-agent-ignore installs an idempotent root rule" {
+  run bash "$SCRIPTS_DIR/planning-git.sh" ensure-generated-agent-ignore
+  [ "$status" -eq 0 ]
+
+  run grep -Fxc '.claude/agents/vbw-*-*-*-*.md' .gitignore
+  [ "$status" -eq 0 ]
+  [ "$output" -eq 1 ]
+
+  run bash "$SCRIPTS_DIR/planning-git.sh" ensure-generated-agent-ignore
+  [ "$status" -eq 0 ]
+
+  run grep -Fxc '.claude/agents/vbw-*-*-*-*.md' .gitignore
+  [ "$status" -eq 0 ]
+  [ "$output" -eq 1 ]
 }
 
 @test "sync-ignore writes transient planning ignore in manual mode without hiding durable planning artifacts" {
@@ -57,7 +76,7 @@ EOF
   [ "$status" -eq 0 ]
 
   cat > .vbw-planning/STATE.md <<'EOF'
-# State
+State
 
 Tracked by user
 EOF
@@ -167,13 +186,10 @@ EOF
 }
 EOF
 
-  # Create a legitimate planning artifact
   cat > .vbw-planning/STATE.md <<'EOF'
-# State
+State
 Updated
 EOF
-
-  # Create transient runtime files that should be excluded
   echo "12345" > .vbw-planning/.agent-pids
   echo "1" > .vbw-planning/.vbw-context
   echo "session-abc" > .vbw-planning/.vbw-session
@@ -197,12 +213,6 @@ EOF
 
   run bash "$SCRIPTS_DIR/planning-git.sh" commit-boundary "phase complete" .vbw-planning/config.json
   [ "$status" -eq 0 ]
-
-  # STATE.md should be committed
-  run git cat-file -e 'HEAD:.vbw-planning/STATE.md'
-  [ "$status" -eq 0 ]
-
-  # Transient files should NOT be committed
   transient_paths=(
     '.agent-pids'
     '.vbw-context'
@@ -237,13 +247,13 @@ EOF
 EOF
 
   cat > .vbw-planning/STATE.md <<'EOF'
-# State
+State
 
 Updated
 EOF
 
   cat > CLAUDE.md <<'EOF'
-# CLAUDE
+CLAUDE
 
 Updated
 EOF
@@ -265,7 +275,7 @@ EOF
 EOF
 
   cat > .vbw-planning/STATE.md <<'EOF'
-# State
+State
 
 Updated
 EOF

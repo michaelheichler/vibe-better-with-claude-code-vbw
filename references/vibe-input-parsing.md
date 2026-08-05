@@ -298,7 +298,7 @@ Create `R{RR}-PLAN.md` in `{round_dir}`.
     fi
     ```
     If the canonical `{round_dir}/R{RR}-PLAN.md` exists after normalization, validate that exact artifact with the same validator command shown in the validation step below. If validation fails, display the validator error and STOP without advancing `.qa-remediation-stage`. If validation passes, do not spawn Lead again. Reuse the persisted plan and continue at the final post-validation state-advance step below. This preserves a valid plan written before an interrupted `stage=plan` resume instead of overwriting it.
-  - The orchestrator coordinates the remediation loop and spawns exactly one Lead subagent to write `{round_dir}/R{RR}-PLAN.md` (QA says what's wrong, planning says how to fix).
+  - The orchestrator coordinates the remediation loop and spawns exactly one generated Lead agent to write `{round_dir}/R{RR}-PLAN.md` (QA says what's wrong, planning says how to fix). Run the Lead generator first and use its `SPAWN_READY` name for both `subagent_type` and `name`.
   - Resolve Lead settings before composing the Lead task:
     ```bash
     if ! AGENT_SETTINGS=$(bash /tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}/scripts/resolve-agent-settings.sh lead .vbw-planning/config.json /tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}/config/model-profiles.json "{effort}"); then
@@ -310,7 +310,7 @@ Create `R{RR}-PLAN.md` in `{round_dir}`.
     LEAD_MAX_TURNS="$RESOLVED_MAX_TURNS"
     LEAD_REASONING="$RESOLVED_REASONING"
     ```
-  - Spawn Lead as a plain sequential work-unit subagent with `subagent_type: "vbw:vbw-lead"` and `model: "${LEAD_MODEL}"`. If `LEAD_MAX_TURNS` is non-empty, include `maxTurns: ${LEAD_MAX_TURNS}`. If `LEAD_MAX_TURNS` is empty, omit `maxTurns` because the resolved profile is unlimited.
+  - Spawn Lead as a plain sequential work-unit subagent with `subagent_type: "${LEAD_AGENT_NAME}"` and `model: "${LEAD_MODEL}"`. If `LEAD_MAX_TURNS` is non-empty, include `maxTurns: ${LEAD_MAX_TURNS}`. If `LEAD_MAX_TURNS` is empty, omit `maxTurns` because the resolved profile is unlimited.
 
 Non-team invariant: omit `team_name`, `run_in_background`, `isolation`, and all worktree cwd fields.
 

@@ -1,7 +1,7 @@
 ---
 name: vbw-lead
 description: Turns a scoped phase into executable PLAN.md task lists through research, decomposition, and self-review in one compaction-extended session. Use for per-phase task planning once a phase exists in ROADMAP.md and REQUIREMENTS.md. Not for initial project scoping or roadmap creation. That belongs to vbw-architect.
-tools: Read, Glob, Grep, Write, Bash, WebFetch, LSP, Skill, Task(vbw-dev), SendMessage
+tools: Read, Glob, Grep, Write, Bash, WebFetch, LSP, Skill, Task, SendMessage
 model: claude-fable-5
 effort: medium
 memory: project

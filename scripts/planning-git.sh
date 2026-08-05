@@ -23,12 +23,8 @@ read_config() {
   fi
 }
 
-ensure_transient_ignore() {
-  local planning_dir=".vbw-planning"
-  local ignore_file="$planning_dir/.gitignore"
-
-  [ -d "$planning_dir" ] || return 0
-
+write_transient_ignore_runtime() {
+  local ignore_file="$1"
   cat > "$ignore_file" <<EOF
 ${MD_HASH} VBW transient runtime artifacts
 .execution-state.json
@@ -38,6 +34,12 @@ ${MD_HASH} VBW transient runtime artifacts
 .contracts/
 .locks/
 .token-state/
+EOF
+}
+
+write_transient_ignore_tracking() {
+  local ignore_file="$1"
+  cat >> "$ignore_file" <<EOF
 
 ${MD_HASH} Session & agent tracking
 .vbw-context
@@ -62,6 +64,12 @@ ${MD_HASH} Artifacts & events (v2/v3 feature-gated)
 .artifacts/
 .events/
 .event-log.jsonl
+EOF
+}
+
+write_transient_ignore_recovery() {
+  local ignore_file="$1"
+  cat >> "$ignore_file" <<EOF
 
 ${MD_HASH} Snapshots & recovery
 .snapshots/
@@ -86,6 +94,32 @@ ${MD_HASH} Baselines
 ${MD_HASH} Codebase mapping
 codebase/
 EOF
+}
+
+ensure_transient_ignore() {
+  local planning_dir=".vbw-planning"
+  local ignore_file="$planning_dir/.gitignore"
+  [ -d "$planning_dir" ] || return 0
+  write_transient_ignore_runtime "$ignore_file"
+  write_transient_ignore_tracking "$ignore_file"
+  write_transient_ignore_recovery "$ignore_file"
+}
+
+
+ensure_generated_agent_ignore() {
+  local repo_root root_ignore pattern
+  repo_root=$(git rev-parse --show-toplevel 2>/dev/null) || return 1
+  root_ignore="$repo_root/.gitignore"
+  pattern=".claude/agents/vbw-*-*-*-*.md"
+
+  if [ ! -f "$root_ignore" ]; then
+    printf '%s\n' "$pattern" > "$root_ignore"
+    return 0
+  fi
+
+  if ! grep -Fxq "$pattern" "$root_ignore"; then
+    printf '\n%s\n' "$pattern" >> "$root_ignore"
+  fi
 }
 
 sync_root_ignore() {
@@ -124,11 +158,19 @@ push_if_configured() {
 }
 
 if [ -z "$COMMAND" ]; then
-  echo "Usage: planning-git.sh sync-ignore [CONFIG_FILE] | commit-boundary <action> [CONFIG_FILE] | push-after-phase [CONFIG_FILE]" >&2
+  echo "Usage: planning-git.sh sync-ignore [CONFIG_FILE] | ensure-generated-agent-ignore | commit-boundary <action> [CONFIG_FILE] | push-after-phase [CONFIG_FILE]" >&2
   exit 1
 fi
 
 case "$COMMAND" in
+  ensure-generated-agent-ignore)
+    if ! is_git_repo; then
+      exit 0
+    fi
+
+    ensure_generated_agent_ignore
+    ;;
+
   sync-ignore)
     CONFIG_FILE="${ARG2:-.vbw-planning/config.json}"
 
@@ -138,6 +180,7 @@ case "$COMMAND" in
 
     read_config "$CONFIG_FILE"
     sync_root_ignore "$CFG_PLANNING_TRACKING"
+    ensure_generated_agent_ignore
     ensure_transient_ignore
     ;;
 
@@ -196,7 +239,7 @@ case "$COMMAND" in
 
   *)
     echo "Unknown command: $COMMAND" >&2
-    echo "Usage: planning-git.sh sync-ignore [CONFIG_FILE] | commit-boundary <action> [CONFIG_FILE] | push-after-phase [CONFIG_FILE]" >&2
+    echo "Usage: planning-git.sh sync-ignore [CONFIG_FILE] | ensure-generated-agent-ignore | commit-boundary <action> [CONFIG_FILE] | push-after-phase [CONFIG_FILE]" >&2
     exit 1
     ;;
 esac

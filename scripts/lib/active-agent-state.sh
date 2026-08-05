@@ -30,12 +30,21 @@ vbw_active_agent_has_safe_session() { vbw_active_agent_session_id "${1:-}" >/dev
 
 vbw_active_agent_normalize_strict_role() {
   local lower="${1:-}" role suffix
-  for role in lead dev qa qa-author scout debugger architect docs; do
+  for role in lead dev qa-author qa scout debugger architect docs; do
     case "$lower" in
       "vbw-$role") printf '%s' "$role"; return 0 ;;
       "vbw-$role-"*)
         suffix="${lower#vbw-$role-}"
-        case "$suffix" in ''|*[!0-9]*) continue ;; esac
+        case "$role:$suffix" in
+          qa:author|qa:author-*) continue ;;
+        esac
+        case "$suffix" in
+          ''|*[!a-z0-9-]*|*-|-*|*--*) continue ;;
+        esac
+        case "$suffix" in
+          *-*) printf '%s' "$role"; return 0 ;;
+        esac
+        case "$suffix" in *[!0-9]*) continue ;; esac
         printf '%s' "$role"
         return 0
         ;;

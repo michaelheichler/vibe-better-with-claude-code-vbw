@@ -43,10 +43,10 @@ MODEL="${4:-}"
 PRICING_PATH="${5:-$(dirname "$PROFILES_PATH")/model-pricing.json}"
 
 case "$AGENT" in
-  lead|dev|qa|scout|debugger|architect|docs)
+  lead|dev|qa|qa-author|scout|debugger|architect|docs)
     ;;
   *)
-    echo "Invalid agent name '$AGENT'. Valid: lead, dev, qa, scout, debugger, architect, docs" >&2
+    echo "Invalid agent name '$AGENT'. Valid: lead, dev, qa, qa-author, scout, debugger, architect, docs" >&2
     exit 1
     ;;
 esac

@@ -7,13 +7,15 @@ PASS=0
 FAIL=0
 
 pass() {
-  echo "PASS  $1"
-  PASS=$((PASS + 1))
+  local message="$1"
+  printf 'PASS  %s\n' "$message"
+  declare -g PASS=$((PASS + 1))
 }
 
 fail() {
-  echo "FAIL  $1"
-  FAIL=$((FAIL + 1))
+  local message="$1"
+  printf 'FAIL  %s\n' "$message"
+  declare -g FAIL=$((FAIL + 1))
 }
 
 contains() {
@@ -80,25 +82,12 @@ else
   fail "debug: missing consolidated debugger/qa agent settings helper"
 fi
 
-if contains "$VIBE_FILE" 'SCOUT_MODEL=""' \
-  && contains "$VIBE_FILE" 'SCOUT_MAX_TURNS=""' \
-  && contains "$VIBE_FILE" 'Warning: failed to resolve Scout agent settings; continuing without explicit Scout model/maxTurns.' \
-  && contains "$VIBE_FILE" 'if ! SCOUT_SETTINGS=$(bash /tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}/scripts/resolve-agent-settings.sh scout .vbw-planning/config.json /tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}/config/model-profiles.json); then' \
-  && contains "$VIBE_FILE" 'SCOUT_MODEL="$RESOLVED_MODEL"' \
-  && contains "$VIBE_FILE" 'SCOUT_MAX_TURNS="$RESOLVED_MAX_TURNS"' \
-  && contains "$VIBE_FILE" 'If `SCOUT_MODEL` is non-empty, also pass `model: "${SCOUT_MODEL}"`. If `SCOUT_MODEL` is empty, omit model so the default applies.' \
-  && contains "$VIBE_FILE" 'If `SCOUT_MAX_TURNS` is non-empty, also pass `maxTurns: ${SCOUT_MAX_TURNS}`. If `SCOUT_MAX_TURNS` is empty, omit maxTurns.' \
-  && contains "$VIBE_FILE" 'resolve-agent-settings.sh lead .vbw-planning/config.json /tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}/config/model-profiles.json "{effort}"' \
-  && contains "$VIBE_FILE" 'resolve-agent-settings.sh dev .vbw-planning/config.json /tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}/config/model-profiles.json "{effort}"' \
-  && omits "$VIBE_FILE" 'resolve-agent-model.sh lead' \
-  && omits "$VIBE_FILE" 'resolve-agent-max-turns.sh lead' \
-  && omits "$VIBE_FILE" 'resolve-agent-model.sh dev' \
-  && omits "$VIBE_FILE" 'resolve-agent-max-turns.sh dev' \
-  && omits "$VIBE_FILE" 'resolve-agent-model.sh scout' \
-  && omits "$VIBE_FILE" 'resolve-agent-max-turns.sh scout'; then
-  pass "vibe: uses consolidated helper with graceful scout fallback"
+if contains "$VIBE_FILE" 'Read `{LINK}/references/vibe-mode-execute.md` and follow it.' \
+  && omits "$VIBE_FILE" 'resolve-agent-model.sh' \
+  && omits "$VIBE_FILE" 'resolve-agent-max-turns.sh'; then
+  pass "vibe: delegates execution settings to the mode reference"
 else
-  fail "vibe: missing graceful consolidated scout settings wiring"
+  fail "vibe: missing mode-reference execution delegation"
 fi
 
 echo ""

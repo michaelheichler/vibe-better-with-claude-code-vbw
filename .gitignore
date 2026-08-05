@@ -4,7 +4,7 @@
 #   - .hook-errors.log (hook and cleanup logs, doctor-cleanup.sh runtime logs)
 #   - .watchdog-pid (tmux watchdog PID)
 #   - .watchdog.log (tmux watchdog logs)
-#   - .snapshots/ — agent state snapshots (covered by .vbw-planning/ exclusion)
+#   - .snapshots/: agent state snapshots (covered by .vbw-planning/ exclusion)
 .vbw-planning/
 .planning/
 
@@ -23,6 +23,7 @@ node_modules/
 # Includes GitNexus-regenerated skill docs, whose auto-generated prose
 # keeps reintroducing dashes the punctuation guard rejects.
 .claude/
+.claude/agents/vbw-*-*-*-*.md
 .agents/
 
 # OS

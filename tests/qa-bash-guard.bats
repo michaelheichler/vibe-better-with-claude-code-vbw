@@ -440,7 +440,7 @@ EOF
   [ "$status" -eq 2 ]
   [[ "$output" == *"Respawn the worker with a recognized VBW role name such as vbw-dev."* ]]
   [[ "$output" == *"The guard checks agent_type and agent_id, not subagent_type."* ]]
-  [[ "$output" == *"Use vbw-<role> or vbw-<role>-<digits>."* ]]
+  [[ "$output" == *"Use vbw-<role>, vbw-<role>-<digits>, or vbw-<role>-<word>-<word>."* ]]
 }
 
 @test "bash-guard classifies explicit Scout payload" {

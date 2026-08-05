@@ -13,7 +13,7 @@ teardown() {
   teardown_temp_dir
 }
 
-@test "role normalization accepts QA Author roles and numeric suffixes only" {
+@test "role normalization accepts generated word suffixes and rejects junk" {
   run bash -c 'source "$1"; vbw_active_agent_normalize_role "$2"' _ \
     "$SCRIPTS_DIR/lib/active-agent-state.sh" "vbw-qa-author"
   [ "$status" -eq 0 ]
@@ -25,19 +25,39 @@ teardown() {
   [ "$output" = "qa-author" ]
 
   run bash -c 'source "$1"; vbw_active_agent_normalize_role "$2"' _ \
+    "$SCRIPTS_DIR/lib/active-agent-state.sh" "vbw-qa-author-cat-spaghetti-devil"
+  [ "$status" -eq 0 ]
+  [ "$output" = "qa-author" ]
+
+  run bash -c 'source "$1"; vbw_active_agent_normalize_role "$2"' _ \
     "$SCRIPTS_DIR/lib/active-agent-state.sh" "vbw-qa-author-2x"
+  [ "$status" -eq 1 ]
+  [ -z "$output" ]
+
+  run bash -c 'source "$1"; vbw_active_agent_normalize_role "$2"' _ \
+    "$SCRIPTS_DIR/lib/active-agent-state.sh" "vbw-qa-author-cat--dog"
   [ "$status" -eq 1 ]
   [ -z "$output" ]
 }
 
-@test "payload role grammar accepts numeric team suffixes only" {
+@test "payload role grammar accepts generated word suffixes and numeric suffixes" {
   run bash -c 'source "$1"; vbw_active_agent_normalize_payload_role "$2"' _ \
     "$SCRIPTS_DIR/lib/active-agent-state.sh" "team-dev-2"
   [ "$status" -eq 0 ]
   [ "$output" = "dev" ]
 
   run bash -c 'source "$1"; vbw_active_agent_normalize_payload_role "$2"' _ \
+    "$SCRIPTS_DIR/lib/active-agent-state.sh" "vbw:vbw-dev-cat-spaghetti-devil"
+  [ "$status" -eq 0 ]
+  [ "$output" = "dev" ]
+
+  run bash -c 'source "$1"; vbw_active_agent_normalize_payload_role "$2"' _ \
     "$SCRIPTS_DIR/lib/active-agent-state.sh" "team-dev-helper"
+  [ "$status" -eq 1 ]
+  [ -z "$output" ]
+
+  run bash -c 'source "$1"; vbw_active_agent_normalize_payload_role "$2"' _ \
+    "$SCRIPTS_DIR/lib/active-agent-state.sh" "vbw:vbw-dev-cat--dog"
   [ "$status" -eq 1 ]
   [ -z "$output" ]
 }

@@ -188,8 +188,8 @@ else
   pass "vibe: QA remediation plan stage removes ambiguous orchestrator-authored wording"
 fi
 
-if grep -Fq 'spawns exactly one Lead subagent to write `{round_dir}/R{RR}-PLAN.md`' <<< "$qa_remediation_plan_block" \
-  && grep -Fq 'subagent_type: "vbw:vbw-lead"' <<< "$qa_remediation_plan_block" \
+if grep -Fq 'spawns exactly one generated Lead agent to write `{round_dir}/R{RR}-PLAN.md`' <<< "$qa_remediation_plan_block" \
+  && grep -Fq 'subagent_type: "${LEAD_AGENT_NAME}"' <<< "$qa_remediation_plan_block" \
   && grep -Fq 'resolve-agent-settings.sh lead' <<< "$qa_remediation_plan_block" \
   && grep -Fq '.vbw-planning/config.json' <<< "$qa_remediation_plan_block" \
   && grep -Fq 'config/model-profiles.json' <<< "$qa_remediation_plan_block" \
@@ -214,8 +214,8 @@ else
   fail "vibe: QA remediation missing existing-plan recovery before Lead respawn"
 fi
 check_literal_before_literal "vibe: QA existing-plan recovery normalizes before canonical probe" "$qa_remediation_plan_block" 'normalize-plan-filenames.sh' 'If the canonical `{round_dir}/R{RR}-PLAN.md` exists after normalization'
-check_literal_before_literal "vibe: QA existing-plan recovery appears before Lead spawn" "$qa_remediation_plan_block" 'Plan recovery and Lead spawn' 'spawns exactly one Lead subagent to write `{round_dir}/R{RR}-PLAN.md`'
-check_literal_before_literal "vibe: QA plan Lead spawn appears before Lead return breaker" "$qa_remediation_plan_block" 'spawns exactly one Lead subagent to write `{round_dir}/R{RR}-PLAN.md`' 'After Lead returns, apply the no-tool circuit breaker in `references/subagent-contracts.md`'
+check_literal_before_literal "vibe: QA existing-plan recovery appears before Lead spawn" "$qa_remediation_plan_block" 'Plan recovery and Lead spawn' 'spawns exactly one generated Lead agent to write `{round_dir}/R{RR}-PLAN.md`'
+check_literal_before_literal "vibe: QA plan Lead spawn appears before Lead return breaker" "$qa_remediation_plan_block" 'spawns exactly one generated Lead agent to write `{round_dir}/R{RR}-PLAN.md`' 'After Lead returns, apply the no-tool circuit breaker in `references/subagent-contracts.md`'
 
 if grep -Fq 'Normalize plan filenames before validation' <<< "$qa_remediation_plan_block" \
   && grep -Fq 'normalize-plan-filenames.sh' <<< "$qa_remediation_plan_block" \
@@ -319,8 +319,8 @@ if grep -Fq 'resolve-execute-delegation-mode.sh' "$ROOT/references/execute-proto
   && grep -Fq "prefer_teams='auto'" "$ROOT/references/execute-protocol.md" \
   && grep -Fq 'max_parallel_width > 1' "$ROOT/references/execute-protocol.md" \
   && ! grep -Fq "prefer_teams='auto': request team mode only when 2+ uncompleted plans remain" "$ROOT/references/execute-protocol.md" \
-  && grep -Fq 'When true team mode is active, pass `team_name: "vbw-phase-{NN}"` and `name: "dev-{MM}"`' "$ROOT/references/execute-protocol.md" \
-  && grep -Fq 'When true team mode is active, pass `team_name: "vbw-phase-{NN}"` and `name: "qa"' "$EXECUTE_POST_BUILD_QA_REF"; then
+  && grep -Fq 'When true team mode is active, pass `team_name: "vbw-phase-{NN}"` and the generated `SPAWN_READY` name' "$ROOT/references/execute-protocol.md" \
+  && grep -Fq 'When true team mode is active, pass `team_name: "vbw-phase-{NN}"` and the generated `SPAWN_READY` name' "$EXECUTE_POST_BUILD_QA_REF"; then
   pass "execute-protocol: dependency-aware routing uses consistent true-team metadata wording"
 else
   fail "execute-protocol: dependency-aware routing wording is inconsistent or still references stale 2+ plan team creation"
