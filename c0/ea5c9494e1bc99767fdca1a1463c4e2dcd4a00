@@ -1,0 +1,52 @@
+testing/gate-agent-generation.sh
+  s_58849211a94dc9::t_f5d4cb3c7f981d 382
+  s_58849211a94dc9::t_d78fa0ae2bd4f9 440,443
+  s_58849211a94dc9::t_4ac8741d7a9bb0 234
+  s_58849211a94dc9::t_3f0881637af378 406,410
+  s_58849211a94dc9::t_4e660385ace924 459-460
+  s_58849211a94dc9::t_a06a2f1e5428c3 9,11-13,19-26
+  s_58849211a94dc9::t_e9f9dea384fc86 267
+  s_58849211a94dc9::t_785d8db866ea4b 414,416
+  s_58849211a94dc9::t_5f0905a65ac02f 220
+  s_58849211a94dc9::t_fde03a057609ef 519
+  s_58849211a94dc9::t_771ff26a78994a 77
+  s_58849211a94dc9::t_fc7de57a9735c3 457
+  s_58849211a94dc9::t_f5fe88fff0a095 328,332-337,339,346,350
+  s_58849211a94dc9::t_9e6b69db914c44 467,471,481-483,495,500-504,507,512,523,528,530-531,536-545,548-550
+  s_58849211a94dc9::t_87a25dca903b02 69,252,340-342
+  s_58849211a94dc9::t_67a4ba13fc520f 135
+  s_58849211a94dc9::t_f9ff4e71b694d0 487
+  s_58849211a94dc9::t_ac02e95cab46aa 367,376
+  s_58849211a94dc9::t_faf54ddf68cbc9 175-182
+  s_58849211a94dc9::t_75d9f0a21a6284 88-92,100-104
+  s_58849211a94dc9::t_d17eba22abf636 131-133
+  s_58849211a94dc9::t_c3d1a84e9da73f 202
+  s_58849211a94dc9::t_cb14c411e916a1 253,294-298,301,310-325
+  s_58849211a94dc9::t_2bc2a150f3043a 65-68
+  s_58849211a94dc9::t_1da0700697cbb7 227-233,235-251
+  s_9b8fc87c25fd86::t_b33eca144ad018 27,254,326
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "c0ea5c9494e1bc99767fdca1a1463c4e2dcd4a00",
+  "prompts": {},
+  "sessions": {
+    "s_58849211a94dc9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a93b1e36-c511-4112-8e32-e0fbdf710600",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    },
+    "s_9b8fc87c25fd86": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5410a1e8-4bc2-47f6-9349-39e0ca6bd07d",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
