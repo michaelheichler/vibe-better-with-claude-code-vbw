@@ -1,0 +1,30 @@
+scripts/planning-git.sh
+  s_58849211a94dc9::t_e10d8ee885fe40 109-120
+  s_58849211a94dc9::t_3647028be79226 173
+  s_58849211a94dc9::t_9af63a1b68164c 26-27,37-42,67-72,99-107,121
+  s_58849211a94dc9::t_1d52e1d4538799 108
+  s_58849211a94dc9::t_6bdef913c9e6f1 122
+tests/planning-git.bats
+  s_58849211a94dc9::t_7eedbb245fab90 8
+  s_58849211a94dc9::t_5570bc938a66de 38-40
+  s_58849211a94dc9::t_ae14f0c528f07f 63,174,236,242,264
+.gitignore
+  s_58849211a94dc9::t_6bdc9e8ca7d051 26
+  s_58849211a94dc9::t_0eb1b47fe03977 7
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "0ca1c39a59291bd75136a120882b25337fa7b700",
+  "prompts": {},
+  "sessions": {
+    "s_58849211a94dc9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a93b1e36-c511-4112-8e32-e0fbdf710600",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
