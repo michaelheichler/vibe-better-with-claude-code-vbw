@@ -38,6 +38,7 @@ get_mtime() {
 
 NOW=$(date +%s)
 
+# Pass 1: remove configless VBW teams.
 for team_dir in "$TEAMS_DIR"/*; do
   [ ! -d "$team_dir" ] && continue
 
@@ -60,6 +61,7 @@ for team_dir in "$TEAMS_DIR"/*; do
   fi
 done
 
+# Pass 2: remove stale VBW teams with inboxes.
 for team_dir in "$TEAMS_DIR"/*; do
   [ ! -d "$team_dir" ] && continue
 

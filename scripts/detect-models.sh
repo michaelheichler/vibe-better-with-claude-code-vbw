@@ -6,12 +6,9 @@
 # detection works offline with zero credentials and zero third-party calls.
 # Patched binaries advertise injected models in the same structures.
 #
-# Usage: detect-models.sh [--labeled|--alias-map]
+# Usage: detect-models.sh [--labeled]
 #   default      stdout = model ids, one per line
 #   --labeled    stdout = id<TAB>description lines (for matrix proposals)
-#   --alias-map  stdout = full-id<TAB>tier-alias lines, built-in tiers only
-#                (opus/sonnet/haiku/fable). Spawn tools accept only the tier
-#                alias for built-in models, not the full catalog id.
 #
 # Always exit 0. Empty output means "no catalog available" and callers fall
 # back to static tier names.
@@ -36,11 +33,9 @@ hash_path() {
 
 LABELED=""
 [ "${1:-}" = "--labeled" ] && LABELED="1"
-ALIAS_MAP=""
-[ "${1:-}" = "--alias-map" ] && ALIAS_MAP="1"
 
 if [ -n "${VBW_MODEL_CATALOG_FILE:-}" ]; then
-  [ -n "$ALIAS_MAP" ] || cat "$VBW_MODEL_CATALOG_FILE" 2>/dev/null || true
+  cat "$VBW_MODEL_CATALOG_FILE" 2>/dev/null || true
   exit 0
 fi
 
@@ -48,7 +43,7 @@ CLAUDE_BIN="${CLAUDE_CODE_EXECPATH:-$(command -v claude || true)}"
 [ -f "$CLAUDE_BIN" ] || CLAUDE_BIN=""
 
 SRC="$(bash -c '. "$1"; vbw_model_cache_source "$2" "$3"' _ "$CACHE_KEY_LIB" "$CLAUDE_BIN" "$PRICING_PATH")"
-CACHE_SUFFIX="${LABELED:+-labeled}${ALIAS_MAP:+-aliasmap}"
+CACHE_SUFFIX="${LABELED:+-labeled}"
 CACHE="/tmp/vbw-models-$(hash_path "$SRC")${CACHE_SUFFIX}"
 if [ -f "$CACHE" ] && [ -n "$(find "$CACHE" -mmin -60 2>/dev/null)" ]; then
   cat "$CACHE"
@@ -68,11 +63,6 @@ extract_binary() {
     | sed 's/^ *//; s/ = /\t/' | grep -E '^[A-Za-z0-9._:/[-]+(\[1m\])?\t' || true
 }
 
-extract_alias_map() {
-  grep -aoE '(opus|sonnet|haiku|fable):"claude-[a-z0-9-]+"' "$CLAUDE_BIN" 2>/dev/null \
-    | sed -E 's/^([a-z]+):"(.*)"$/\2\t\1/' || true
-}
-
 extract_pricing_aliases() {
   [ -f "$PRICING_PATH" ] || return 0
   if [ -n "$LABELED" ]; then
@@ -84,17 +74,11 @@ extract_pricing_aliases() {
 
 TMP="$(mktemp "${CACHE}.XXXXXX")"
 trap 'rm -f "$TMP" "${TMP}.ids" "${TMP}.labeled"' EXIT
-if [ -n "$CLAUDE_BIN" ] && [ -n "$ALIAS_MAP" ]; then
-  extract_alias_map >> "$TMP"
-elif [ -n "$CLAUDE_BIN" ]; then
+if [ -n "$CLAUDE_BIN" ]; then
   extract_binary >> "$TMP"
 fi
-if [ -z "$ALIAS_MAP" ]; then
-  extract_pricing_aliases >> "$TMP"
-fi
-if [ -n "$ALIAS_MAP" ]; then
-  sort -u "$TMP" -o "$TMP" 2>/dev/null || true
-elif [ -z "$LABELED" ]; then
+extract_pricing_aliases >> "$TMP"
+if [ -z "$LABELED" ]; then
   cut -f1 "$TMP" | sort -u > "${TMP}.ids" && mv "${TMP}.ids" "$TMP"
 else
   awk -F '\t' '!seen[$1]++' "$TMP" | sort -u > "${TMP}.labeled" && mv "${TMP}.labeled" "$TMP"

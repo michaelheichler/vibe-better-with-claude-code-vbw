@@ -44,7 +44,7 @@ resolve_project_root() {
 }
 
 PROJECT_ROOT=$(resolve_project_root) || exit 0
-GUARD_LOG="$PROJECT_ROOT/.vbw-planning/.hook-errors.log"
+GUARD_LOG="$PROJECT_ROOT/.vbw-planning/.agent-spawn-guard.log"
 guard_breadcrumb() {
   local event="$1" timestamp
   timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ" 2>/dev/null || date +"%s")
@@ -162,7 +162,11 @@ if is_teammate_spawn_tool; then
       SPAWN_ALIAS=$(jq -r --arg id "$RESOLVED_MODEL" \
         '.aliases // {} | to_entries[] | select(.key | test("^(opus|sonnet|haiku|fable)$")) | select(.value == $id) | .key' \
         "$SCRIPT_DIR/../config/model-pricing.json" 2>/dev/null | head -1)
-      [ -n "$SPAWN_ALIAS" ] && RESOLVED_MODEL="$SPAWN_ALIAS"
+      if [ -n "$SPAWN_ALIAS" ]; then
+        RESOLVED_MODEL="$SPAWN_ALIAS"
+      elif [[ "$RESOLVED_MODEL" == claude-* ]]; then
+        printf 'VBW guard: pricing alias missing for built-in model %s\n' "$RESOLVED_MODEL" >&2
+      fi
       MODEL_CHANGED=true
       if echo "$INPUT" | jq -e --arg model "$RESOLVED_MODEL" '(.tool_input.model? // null) == $model' >/dev/null 2>&1; then
         MODEL_CHANGED=false

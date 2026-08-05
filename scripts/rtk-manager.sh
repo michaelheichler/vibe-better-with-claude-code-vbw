@@ -1,15 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# rtk-manager.sh — Explicit, opt-in RTK management for VBW.
-#
-# Default status is intentionally read-only and offline. Network access is
-# limited to explicit install/update/check-updates flows. Mutating operations
-# require --yes or --dry-run so VBW never changes global RTK/Claude Code state
-# as an incidental side effect of status, doctor, SessionStart, or normal use.
-
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
-# shellcheck source=resolve-claude-dir.sh
 . "$SCRIPT_DIR/resolve-claude-dir.sh"
 
 RTK_REPO_API="${RTK_REPO_API:-https://api.github.com/repos/rtk-ai/rtk/releases/latest}"
@@ -27,7 +19,6 @@ RTK_INSTALL_DIR_DEFAULT="${RTK_INSTALL_DIR:-$HOME/.local/bin}"
 RTK_LEGACY_CLAUDE_DIR="${RTK_LEGACY_CLAUDE_DIR:-${HOME}/.claude}"
 RTK_CURL_MAX_TIME="${RTK_CURL_MAX_TIME:-15}"
 RTK_TEMP_DIR=""
-# shellcheck source=lib/rtk-manager-environment.sh
 . "$SCRIPT_DIR/lib/rtk-manager-environment.sh"
 
 cleanup_temp_dir() {
@@ -188,7 +179,6 @@ rtk_history_evidence() {
 }
 
 rtk_history_evidence_tail() {
-  # Callers keep full filtered evidence separately for command-count proof.
   tail -n 40 2>/dev/null || true
 }
 
@@ -530,7 +520,7 @@ smoke_start() {
 verify_bash_guard_smoke() {
   local status
   set +e
-  printf '%s\n' '{"tool_input":{"command":"python manage.py flush"}}' | env -u VBW_AGENT_ROLE -u VBW_ACTIVE_AGENT bash "$SCRIPT_DIR/bash-guard.sh" >/dev/null 2>&1
+  printf '%s\n' '{"tool_input":{"command":"python manage.py flush"}}' | env -u VBW_ACTIVE_AGENT VBW_AGENT_ROLE=vbw-dev bash "$SCRIPT_DIR/bash-guard.sh" >/dev/null 2>&1
   status=$?
   set -e
   [ "$status" -eq 2 ]
@@ -1416,10 +1406,10 @@ verify_download_checksum() {
 rtk_archive_member_safe() {
   local member="$1"
   [ -n "$member" ] || return 1
-  case "$member" in
-    /*|..|../*|*/..|*/../*) return 1 ;;
-    *) return 0 ;;
-  esac
+  if [[ "$member" =~ ^/|^\.\.$|^\.\./|/\.\.$|/\.\./ ]]; then
+    return 1
+  fi
+  return 0
 }
 
 validate_rtk_archive_members() {

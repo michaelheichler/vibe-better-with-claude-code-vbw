@@ -10,7 +10,7 @@ if [[ ! -f "$LIB" ]]; then
   exit 1
 fi
 
-source "$LIB"
+source "$SCRIPT_DIR/../lib/claude-md-vbw-sections.sh"
 source "$SCRIPT_DIR/lib/bootstrap-claude-migration.sh"
 
 
@@ -134,10 +134,11 @@ if [[ -n "$EXISTING_PATH" && -f "$EXISTING_PATH" ]]; then
 
   NON_VBW_CONTENT=""
   IN_MANAGED_SECTION=false
-  FOUND_NON_VBW=false
+  export FOUND_NON_VBW=false
   IN_DEPRECATED_SECTION=false
   DEPRECATED_SECTION_BUFFER=""
   DEPRECATED_HAS_USER_CONTENT=false
+  export DEPRECATED_HAS_USER_CONTENT
 
   while IFS= read -r line || [[ -n "$line" ]]; do
     line="${line%"${line##*[![:space:]]}"}"

@@ -9,8 +9,6 @@ LIST_SCRIPT="$REPO_ROOT/testing/list-bats-files.sh"
     tests/a.bats tests/b.bats tests/c.bats tests/d.bats tests/e.bats tests/f.bats
 
   [ "$status" -eq 0 ]
-  # With equal-weight files (nonexistent → 0 tests, +1 baseline each),
-  # greedy packing assigns: a→0, b→1, c→2, d→3, e→0, f→1
   [ "$output" = $'tests/b.bats\ntests/f.bats' ]
 }
 
@@ -36,7 +34,7 @@ LIST_SCRIPT="$REPO_ROOT/testing/list-bats-files.sh"
   [[ "$output" != *"$REPO_ROOT/tests/statusline-cache-isolation.bats"* ]]
 
   first_line=$(printf '%s\n' "$output" | head -1)
-  [ "$first_line" = "$REPO_ROOT/tests/adaptive-governance.bats" ]
+  [ "$first_line" = "$REPO_ROOT/tests/active-agent-lifecycle-edge.bats" ]
 }
 
 @test "list-bats-files serial returns statusline-cache-isolation only" {

@@ -4,14 +4,13 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PLANNING_DIR="${VBW_PLANNING_DIR:-.vbw-planning}"
+export DETAILS_PATH="${PLANNING_DIR}/todo-details.json"
 RAW_SESSION_KEY="${CLAUDE_SESSION_ID:-default}"
 SESSION_KEY="$(printf '%s' "$RAW_SESSION_KEY" | tr -c 'A-Za-z0-9_.-' '_')"
 SESSION_KEY="${SESSION_KEY:-default}"
 SNAPSHOT_PATH="/tmp/.vbw-last-list-view-${SESSION_KEY}.json"
-DETAILS_PATH="${PLANNING_DIR}/todo-details.json"
 CMD="${1:-}"
 shift || true
-DETAILS_CACHE_JSON=""
 
 . "$SCRIPT_DIR/lib/todo-item-metadata.sh"
 . "$SCRIPT_DIR/lib/todo-lifecycle-snapshot.sh"

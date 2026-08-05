@@ -170,9 +170,9 @@ while IFS='|' read -r id severity desc; do
     PAST_ROUNDS=$(grep "^${id} " /tmp/.vbw-uat-round-ids-$$.txt | awk '{print $2}' | sort -n | tr '\n' ',' | sed 's/,$//' || true)
   fi
   if [ -n "$PAST_ROUNDS" ]; then
-    FAILED_IN="${PAST_ROUNDS},${CURRENT_ROUND}"
+    FAILED_IN_ROUNDS="${PAST_ROUNDS},${CURRENT_ROUND}"
   else
-    FAILED_IN="${CURRENT_ROUND}"
+    FAILED_IN_ROUNDS="${CURRENT_ROUND}"
   fi
-  printf '%s|%s|%s|%s\n' "$id" "$severity" "$desc" "$FAILED_IN"
+  printf '%s|%s|%s|%s\n' "$id" "$severity" "$desc" "$FAILED_IN_ROUNDS"
 done < /tmp/.vbw-uat-issues-$$.txt

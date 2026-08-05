@@ -14,6 +14,12 @@ setup() {
 }
 
 teardown() {
+  local attempt
+  for attempt in {1..20}; do
+    rm -rf "$TEST_DIR" 2>/dev/null || true
+    [ ! -e "$TEST_DIR" ] && return 0
+    sleep 0.05
+  done
   rm -rf "$TEST_DIR"
 }
 

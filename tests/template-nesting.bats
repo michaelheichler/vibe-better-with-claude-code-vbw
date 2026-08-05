@@ -31,28 +31,28 @@ _guard_pattern() {
   printf 'while [ ! -L "$L" ] && [ $i -lt 20 ]'
 }
 
-@test "vibe.md has 1 simple guarded symlink template expression" {
+@test "vibe.md has no guarded symlink template expression" {
   local count
-  count=$(grep -cF "$(_guard_pattern)" "$PROJECT_ROOT/commands/vibe.md")
-  [ "$count" -eq 1 ]
+  count=$(grep -cF "$(_guard_pattern)" "$PROJECT_ROOT/commands/vibe.md" || true)
+  [ "$count" -eq 0 ]
 }
 
-@test "qa.md has 1 guarded symlink template expression" {
+@test "qa.md has no guarded symlink template expression" {
   local count
-  count=$(grep -cF "$(_guard_pattern)" "$PROJECT_ROOT/commands/qa.md")
-  [ "$count" -eq 1 ]
+  count=$(grep -cF "$(_guard_pattern)" "$PROJECT_ROOT/commands/qa.md" || true)
+  [ "$count" -eq 0 ]
 }
 
-@test "verify.md has 1 guarded symlink template expression" {
+@test "verify.md has no guarded symlink template expression" {
   local count
-  count=$(grep -cF "$(_guard_pattern)" "$PROJECT_ROOT/commands/verify.md")
-  [ "$count" -eq 1 ]
+  count=$(grep -cF "$(_guard_pattern)" "$PROJECT_ROOT/commands/verify.md" || true)
+  [ "$count" -eq 0 ]
 }
 
-@test "discuss.md has 1 guarded symlink template expression" {
+@test "discuss.md has no guarded symlink template expression" {
   local count
-  count=$(grep -cF "$(_guard_pattern)" "$PROJECT_ROOT/commands/discuss.md")
-  [ "$count" -eq 1 ]
+  count=$(grep -cF "$(_guard_pattern)" "$PROJECT_ROOT/commands/discuss.md" || true)
+  [ "$count" -eq 0 ]
 }
 
 @test "help.md has 1 guarded symlink template expression" {
@@ -79,10 +79,10 @@ _guard_pattern() {
   [ "${count:-0}" -eq 0 ]
 }
 
-@test "total guarded symlink template expressions across commands is 6" {
+@test "total guarded symlink template expressions across commands is 2" {
   local count
   count=$(grep -rcF "$(_guard_pattern)" "$PROJECT_ROOT/commands/" 2>/dev/null | awk -F: '{s+=$NF} END{print s}')
-  [ "$count" -eq 6 ]
+  [ "$count" -eq 2 ]
 }
 
 @test "guarded expressions define and use the L symlink variable" {
