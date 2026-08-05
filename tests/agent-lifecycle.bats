@@ -26,21 +26,31 @@ write_manifest() {
 }
 
 @test_touch_creates_and_updates_entry() { # @test
-  local input
+  local input first_activity
   input='{"name":"alpha","role":"dev"}'
+  printf 'generated\n' > "$TEST_TEMP_DIR/.claude/agents/alpha.md"
 
   run run_lifecycle "$input" touch start
   [ "$status" -eq 0 ]
   [ "$(jq -r '.agents.alpha.state' "$VBW_PLANNING_DIR/.agent-manifest.json")" = "running" ]
   [ "$(jq -r '.agents.alpha.role' "$VBW_PLANNING_DIR/.agent-manifest.json")" = "dev" ]
+  first_activity=$(jq -r '.agents.alpha.last_activity_at' "$VBW_PLANNING_DIR/.agent-manifest.json")
 
   VBW_LIFECYCLE_NOW=1100 run run_lifecycle "$input" touch start
   [ "$status" -eq 0 ]
-  [ "$(jq -r '.agents.alpha.last_activity_at' "$VBW_PLANNING_DIR/.agent-manifest.json")" != "" ]
+  [ "$(jq -r '.agents.alpha.last_activity_at' "$VBW_PLANNING_DIR/.agent-manifest.json")" != "$first_activity" ]
 
   VBW_LIFECYCLE_NOW=1200 run run_lifecycle "$input" touch stop
   [ "$status" -eq 0 ]
   [ "$(jq -r '.agents.alpha.state' "$VBW_PLANNING_DIR/.agent-manifest.json")" = "used" ]
+  [ ! -e "$TEST_TEMP_DIR/.claude/agents/alpha.md" ]
+}
+
+@test "canonical agent type identifies generated entries before labels" {
+  run run_lifecycle '{"agent_type":"generated","name":"display-label","agent_id":"agent-1"}' touch start
+  [ "$status" -eq 0 ]
+  [ "$(jq -r '.agents.generated.state' "$VBW_PLANNING_DIR/.agent-manifest.json")" = "running" ]
+  [ "$(jq -r '.agents | has("display-label")' "$VBW_PLANNING_DIR/.agent-manifest.json")" = "false" ]
 }
 
 @test_warning_ladder_fires_once_per_threshold() { # @test
@@ -64,13 +74,25 @@ write_manifest() {
 
 @test_idle_termination_marks_used_and_removes_definition() { # @test
   printf 'generated\n' > "$TEST_TEMP_DIR/.claude/agents/alpha.md"
-  write_manifest '{"agents":{"alpha":{"name":"alpha","role":"dev","state":"running","created_at":"1970-01-01T00:00:00Z","last_activity_at":"1970-01-01T00:00:00Z","warnings_sent":[]}}}'
+  printf 'generated\n' > "$TEST_TEMP_DIR/.claude/agents/beta.md"
+  write_manifest '{"agents":{"alpha":{"name":"alpha","role":"dev","state":"running","created_at":"1970-01-01T00:00:00Z","last_activity_at":"1970-01-01T00:00:00Z","warnings_sent":[]},"beta":{"name":"beta","role":"dev","state":"running","created_at":"1970-01-01T00:00:00Z","last_activity_at":"1970-01-01T00:00:00Z","warnings_sent":[]}}}'
 
-  VBW_LIFECYCLE_NOW=600 run run_lifecycle '{"name":"alpha"}' check
+  VBW_LIFECYCLE_NOW=600 run run_lifecycle '{"agent_type":"alpha","name":"display-label"}' check
   [ "$status" -eq 0 ]
   [[ "$output" == *"expired"* ]]
   [ "$(jq -r '.agents.alpha.state' "$VBW_PLANNING_DIR/.agent-manifest.json")" = "used" ]
+  [ "$(jq -r '.agents.beta.state' "$VBW_PLANNING_DIR/.agent-manifest.json")" = "running" ]
   [ ! -e "$TEST_TEMP_DIR/.claude/agents/alpha.md" ]
+  [ -e "$TEST_TEMP_DIR/.claude/agents/beta.md" ]
+}
+
+@test "lifecycle update does not bypass the manifest lock" {
+  write_manifest '{"agents":{}}'
+  mkdir "$VBW_PLANNING_DIR/.agent-manifest.lock"
+
+  run bash -c 'printf "%s" "$1" | VBW_AGENT_MANIFEST_LOCK_TIMEOUT=0 VBW_PLANNING_DIR="$2" bash "$3" touch start' _ '{"name":"alpha"}' "$VBW_PLANNING_DIR" "$SCRIPTS_DIR/agent-lifecycle.sh"
+  [ "$status" -eq 0 ]
+  [ "$(jq '.agents | length' "$VBW_PLANNING_DIR/.agent-manifest.json")" -eq 0 ]
 }
 
 @test_sweep_expires_old_registered_and_running_entries() { # @test

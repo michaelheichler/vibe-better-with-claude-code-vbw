@@ -55,7 +55,17 @@ emit_context() {
 }
 
 extract_agent_name() {
-  printf '%s' "$INPUT" | jq -r '.name // .agent_name // .agentName // .teammate_name // .agent_id // .tool_input.name // .tool_input.agent_name // .tool_input.teammate_name // ""' 2>/dev/null
+  printf '%s' "$INPUT" | jq -r '
+    first(
+      .agent_type, .agentType, .subagent_type, .subagentType,
+      .name, .agent_name, .agentName, .teammate_name,
+      .tool_input.agent_type, .tool_input.agentType,
+      .tool_input.subagent_type, .tool_input.subagentType,
+      .tool_input.name, .tool_input.agent_name, .tool_input.teammate_name,
+      .agent_id, .agentId
+      | select(type == "string" and length > 0)
+    ) // ""
+  ' 2>/dev/null
 }
 
 extract_agent_role() {
@@ -93,8 +103,20 @@ stop_manifest_entry() {
   ' <<< "$manifest" 2>/dev/null
 }
 
+touch_manifest_locked() {
+  local action="$1" name="$2" role="$3" now_iso="$4" manifest updated
+  manifest=$(agent_manifest_read "$PLANNING_DIR" 2>/dev/null) || return 1
+  if [ "$action" = "stop" ]; then
+    updated=$(stop_manifest_entry "$manifest" "$name" "$role" "$now_iso") || return 1
+  else
+    updated=$(start_manifest_entry "$manifest" "$name" "$role" "$now_iso") || return 1
+  fi
+  agent_manifest_write "$PLANNING_DIR" "$updated" >/dev/null 2>&1 || return 1
+  TOUCH_TRANSITIONED=1
+}
+
 touch_agent() {
-  local action="${1:-start}" name role now_iso manifest updated
+  local action="${1:-start}" name role now_iso path
   INPUT=$(cat 2>/dev/null) || INPUT=""
   [ -n "$INPUT" ] || exit 0
   name=$(extract_agent_name)
@@ -102,14 +124,13 @@ touch_agent() {
   role=$(extract_agent_role)
   now_iso=$(lifecycle_epoch_iso "$(lifecycle_now_epoch)") || exit 0
   [ -n "$now_iso" ] || exit 0
-  manifest=$(agent_manifest_read "$PLANNING_DIR" 2>/dev/null) || exit 0
-  if [ "$action" = "stop" ]; then
-    updated=$(stop_manifest_entry "$manifest" "$name" "$role" "$now_iso") || exit 0
-  else
-    updated=$(start_manifest_entry "$manifest" "$name" "$role" "$now_iso") || exit 0
+  TOUCH_TRANSITIONED=0
+  agent_manifest_with_lock "$PLANNING_DIR" touch_manifest_locked "$action" "$name" "$role" "$now_iso" || exit 0
+  if [ "$action" = "stop" ] && [ "$TOUCH_TRANSITIONED" -eq 1 ]; then
+    path=$(agent_manifest_definition_path "$PLANNING_DIR" "$name" 2>/dev/null || true)
+    [ -n "$path" ] && rm -f "$path" 2>/dev/null || true
   fi
-  agent_manifest_write "$PLANNING_DIR" "$updated" >/dev/null 2>&1 || true
-}
+} # activity signals: SubagentStart and SubagentStop refresh last_activity_at.
 
 append_check_notice() {
   local notice="$1"
@@ -166,32 +187,38 @@ check_agent_entry() {
   check_warning "$name" 1 540 "$idle"
 }
 
-check_agents() {
-  local now now_iso names name
-  now=$(lifecycle_now_epoch)
-  now_iso=$(lifecycle_epoch_iso "$now") || exit 0
-  [ -n "$now_iso" ] || exit 0
-  CHECK_MANIFEST=$(agent_manifest_read "$PLANNING_DIR" 2>/dev/null) || exit 0
-  CHECK_NOTICES=""
-  CHECK_CHANGED=0
-  names=$(jq -r '.agents | keys[]' <<< "$CHECK_MANIFEST" 2>/dev/null) || exit 0
-  while IFS= read -r name; do
-    [ -n "$name" ] && check_agent_entry "$name" "$now" "$now_iso"
-  done <<< "$names"
-  [ "$CHECK_CHANGED" -eq 1 ] && agent_manifest_write "$PLANNING_DIR" "$CHECK_MANIFEST" >/dev/null 2>&1 || true
-  [ -n "$CHECK_NOTICES" ] && emit_context TeammateIdle "$CHECK_NOTICES"
+check_agents_locked() {
+  local name="$1" now="$2" now_iso="$3"
+  CHECK_MANIFEST=$(agent_manifest_read "$PLANNING_DIR" 2>/dev/null) || return 1
+  check_agent_entry "$name" "$now" "$now_iso"
+  if [ "$CHECK_CHANGED" -eq 1 ]; then
+    agent_manifest_write "$PLANNING_DIR" "$CHECK_MANIFEST" >/dev/null 2>&1 || return 1
+  fi
 }
 
-sweep_agents() {
-  local now now_iso manifest names name entry state created created_epoch age updated path changed=0
+check_agents() {
+  local now now_iso name
+  INPUT=$(cat 2>/dev/null) || INPUT=""
+  [ -n "$INPUT" ] || exit 0
+  name=$(extract_agent_name)
+  agent_manifest_safe_name "$name" || exit 0
   now=$(lifecycle_now_epoch)
   now_iso=$(lifecycle_epoch_iso "$now") || exit 0
   [ -n "$now_iso" ] || exit 0
-  manifest=$(agent_manifest_read "$PLANNING_DIR" 2>/dev/null) || exit 0
-  names=$(jq -r '.agents | keys[]' <<< "$manifest" 2>/dev/null) || exit 0
+  CHECK_NOTICES=""
+  CHECK_CHANGED=0
+  agent_manifest_with_lock "$PLANNING_DIR" check_agents_locked "$name" "$now" "$now_iso" || exit 0
+  [ -n "$CHECK_NOTICES" ] && emit_context TeammateIdle "$CHECK_NOTICES"
+} # TeammateIdle evaluates only the agent reported by that event.
+
+sweep_agents_locked() {
+  local now="$1" now_iso="$2" names name entry state created created_epoch age updated path
+  SWEEP_MANIFEST=$(agent_manifest_read "$PLANNING_DIR" 2>/dev/null) || return 1
+  names=$(jq -r '.agents | keys[]' <<< "$SWEEP_MANIFEST" 2>/dev/null) || return 1
+  SWEEP_CHANGED=0
   while IFS= read -r name; do
     [ -n "$name" ] || continue
-    entry=$(jq -c --arg name "$name" '.agents[$name] // {}' <<< "$manifest" 2>/dev/null) || continue
+    entry=$(jq -c --arg name "$name" '.agents[$name] // {}' <<< "$SWEEP_MANIFEST" 2>/dev/null) || continue
     state=$(jq -r '.state // ""' <<< "$entry" 2>/dev/null) || state=""
     case "$state" in registered|running) ;;
       *) continue ;;
@@ -203,14 +230,24 @@ sweep_agents() {
     updated=$(jq -c --arg name "$name" --arg now "$now_iso" '
       .agents[$name].state = "expired"
       | .agents[$name].expired_at = $now
-    ' <<< "$manifest" 2>/dev/null) || continue
-    manifest="$updated"
-    changed=1
+    ' <<< "$SWEEP_MANIFEST" 2>/dev/null) || continue
+    SWEEP_MANIFEST="$updated"
+    SWEEP_CHANGED=1
     path=$(agent_manifest_definition_path "$PLANNING_DIR" "$name" 2>/dev/null || true)
     [ -n "$path" ] && rm -f "$path" 2>/dev/null || true
   done <<< "$names"
-  [ "$changed" -eq 1 ] && agent_manifest_write "$PLANNING_DIR" "$manifest" >/dev/null 2>&1 || true
+  if [ "$SWEEP_CHANGED" -eq 1 ]; then
+    agent_manifest_write "$PLANNING_DIR" "$SWEEP_MANIFEST" >/dev/null 2>&1 || return 1
+  fi
 }
+
+sweep_agents() {
+  local now now_iso
+  now=$(lifecycle_now_epoch)
+  now_iso=$(lifecycle_epoch_iso "$now") || exit 0
+  [ -n "$now_iso" ] || exit 0
+  agent_manifest_with_lock "$PLANNING_DIR" sweep_agents_locked "$now" "$now_iso" || exit 0
+} # sweep uses the manifest lock for expiry and definition cleanup.
 
 case "$COMMAND" in
   touch) touch_agent "${2:-start}" ;;
