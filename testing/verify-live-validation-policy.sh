@@ -60,28 +60,28 @@ fi
 
 # 4. Public vs authenticated distinction
 if grep -qi 'public.*WebFetch\|anonymous.*WebFetch\|authenticated.*live.*validation\|REQUIRES.*AUTHENTICATED\|private.*API' "$SCOUT_FILE"; then
-  pass "vbw-scout.md: distinguishes public vs authenticated validation"
+  pass "templates/agent-roles/scout.md.tpl: distinguishes public vs authenticated validation"
 else
-  fail "vbw-scout.md: missing public-vs-authenticated distinction"
+  fail "templates/agent-roles/scout.md.tpl: missing public-vs-authenticated distinction"
 fi
 
 if grep -qi 'verified-safe Bash helper scripts\|curl wrappers' "$SCOUT_POLICY_FILE"; then
-  pass "vbw-scout.md: authenticated read-only validation can use Bash helpers"
+  pass "templates/agent-roles/scout.md.tpl: authenticated read-only validation can use Bash helpers"
 else
-  fail "vbw-scout.md: missing verified-safe Bash helper guidance"
+  fail "templates/agent-roles/scout.md.tpl: missing verified-safe Bash helper guidance"
 fi
 
 if grep -qi 'eval' "$SCOUT_POLICY_FILE" && grep -qi 'command.*substitution' "$SCOUT_POLICY_FILE" && grep -qi 'process.*substitution' "$SCOUT_POLICY_FILE" && grep -qi 'nested shell execution' "$SCOUT_POLICY_FILE" && grep -qi 'quoted/absolute\|absolute.*interpreter' "$SCOUT_POLICY_FILE" && grep -qi 'control syntax\|grouping' "$SCOUT_POLICY_FILE"; then
-  pass "vbw-scout.md: blocks shell evaluation containers"
+  pass "templates/agent-roles/scout.md.tpl: blocks shell evaluation containers"
 else
-  fail "vbw-scout.md: missing shell evaluation container guidance"
+  fail "templates/agent-roles/scout.md.tpl: missing shell evaluation container guidance"
 fi
 
 # 5. Empty/contradictory response handling
 if grep -qi 'empty.*response\|empty.*result\|contradictory.*finding\|contradiction.*explicit\|broaden.*query' "$SCOUT_FILE"; then
-  pass "vbw-scout.md: handles empty/contradictory responses"
+  pass "templates/agent-roles/scout.md.tpl: handles empty/contradictory responses"
 else
-  fail "vbw-scout.md: missing empty/contradictory response handling"
+  fail "templates/agent-roles/scout.md.tpl: missing empty/contradictory response handling"
 fi
 
 # --- references/vibe-mode-plan.md checks ---

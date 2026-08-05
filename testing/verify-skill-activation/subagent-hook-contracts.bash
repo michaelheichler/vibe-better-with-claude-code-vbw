@@ -142,9 +142,9 @@ fi
 
 if grep -q 'concrete working files or framework markers' "$DEBUGGER_AGENT" \
   && grep -q 'activate `swiftdata` right away' "$DEBUGGER_AGENT"; then
-  pass "vbw-debugger.md: adds immediate early-evidence fallback rule"
+  pass "templates/agent-roles/debugger.md.tpl: adds immediate early-evidence fallback rule"
 else
-  fail "vbw-debugger.md: missing immediate early-evidence fallback rule"
+  fail "templates/agent-roles/debugger.md.tpl: missing immediate early-evidence fallback rule"
 fi
 
 if grep -q 'bounded sparse-input enrichment' "$PROTOCOL" \
@@ -221,9 +221,9 @@ if awk '/^## File Writing/{found=1; next} found && /^## /{exit} found' "$SCOUT_A
   | grep -F "$SKILL_FOLLOW_UP_PREFIX" \
   | grep -Fi "$SKILL_FOLLOW_UP_SUFFIX" \
   | grep -Eq "$SKILL_FOLLOW_UP_SEPARATOR_RE"; then
-  pass "vbw-scout.md: has runtime-local follow-up read nudge near File Writing"
+  pass "templates/agent-roles/scout.md.tpl: has runtime-local follow-up read nudge near File Writing"
 else
-  fail "vbw-scout.md: missing runtime-local follow-up read nudge near File Writing"
+  fail "templates/agent-roles/scout.md.tpl: missing runtime-local follow-up read nudge near File Writing"
 fi
 
 echo ""

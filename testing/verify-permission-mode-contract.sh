@@ -131,9 +131,9 @@ else
 fi
 
 if [ -n "$DEV_DISALLOWED_FRONTMATTER" ]; then
-  pass "vbw-dev.md: frontmatter declares disallowedTools denylist"
+  pass "templates/agent-roles/dev.md.tpl: frontmatter declares disallowedTools denylist"
 else
-  fail "vbw-dev.md: frontmatter must declare disallowedTools denylist"
+  fail "templates/agent-roles/dev.md.tpl: frontmatter must declare disallowedTools denylist"
 fi
 
 if [[ -n "$README_SCOUT_ROW" ]]; then
@@ -143,33 +143,33 @@ else
 fi
 
 if [ -n "$SCOUT_DISALLOWED_FRONTMATTER" ]; then
-  pass "vbw-scout.md: frontmatter declares disallowedTools denylist"
+  pass "templates/agent-roles/scout.md.tpl: frontmatter declares disallowedTools denylist"
 else
-  fail "vbw-scout.md: frontmatter must declare disallowedTools denylist"
+  fail "templates/agent-roles/scout.md.tpl: frontmatter must declare disallowedTools denylist"
 fi
 
-check_not_contains "vbw-dev.md: description no longer says explicit allowlist" "$DEV_DESCRIPTION" "explicit implementation tool allowlist"
-check_contains "vbw-dev.md: description mentions denylist-controlled tool access" "$DEV_DESCRIPTION" "denylist-controlled"
+check_not_contains "templates/agent-roles/dev.md.tpl: description no longer says explicit allowlist" "$DEV_DESCRIPTION" "explicit implementation tool allowlist"
+check_contains "templates/agent-roles/dev.md.tpl: description mentions denylist-controlled tool access" "$DEV_DESCRIPTION" "denylist-controlled"
 
 if jq -e '.dev | has("tools")' "$DEFAULTS_FILE" >/dev/null; then
-  fail "vbw-dev.md: frontmatter must not use a tools allowlist (use disallowedTools denylist for forward compatibility)"
+  fail "templates/agent-roles/dev.md.tpl: frontmatter must not use a tools allowlist (use disallowedTools denylist for forward compatibility)"
 else
-  pass "vbw-dev.md: frontmatter does not use a tools allowlist"
+  pass "templates/agent-roles/dev.md.tpl: frontmatter does not use a tools allowlist"
 fi
 
 for required_denied in Task TaskCreate Agent AskUserQuestion; do
   if grep -Fxq "$required_denied" <<<"$DEV_DENIED_NORMALIZED"; then
-    pass "vbw-dev.md: disallowedTools bans $required_denied"
+    pass "templates/agent-roles/dev.md.tpl: disallowedTools bans $required_denied"
   else
-    fail "vbw-dev.md: disallowedTools must ban $required_denied"
+    fail "templates/agent-roles/dev.md.tpl: disallowedTools must ban $required_denied"
   fi
 done
 
 for must_not_deny in Bash Read Edit Write Glob Grep LSP Skill WebFetch WebSearch SendMessage TaskGet; do
   if grep -Fxq "$must_not_deny" <<<"$DEV_DENIED_NORMALIZED"; then
-    fail "vbw-dev.md: disallowedTools must not ban $must_not_deny (Dev relies on it)"
+    fail "templates/agent-roles/dev.md.tpl: disallowedTools must not ban $must_not_deny (Dev relies on it)"
   else
-    pass "vbw-dev.md: disallowedTools does not ban $must_not_deny"
+    pass "templates/agent-roles/dev.md.tpl: disallowedTools does not ban $must_not_deny"
   fi
 done
 
@@ -180,17 +180,17 @@ compare_tool_lists "README: Dev denied tokens exactly match disallowedTools fron
 
 for required_denied in Edit NotebookEdit Task TaskCreate Agent; do
   if grep -Fxq "$required_denied" <<<"$SCOUT_DENIED_NORMALIZED"; then
-    pass "vbw-scout.md: disallowedTools bans $required_denied"
+    pass "templates/agent-roles/scout.md.tpl: disallowedTools bans $required_denied"
   else
-    fail "vbw-scout.md: disallowedTools must ban $required_denied"
+    fail "templates/agent-roles/scout.md.tpl: disallowedTools must ban $required_denied"
   fi
 done
 
 for must_not_deny in Bash Read Write Glob Grep LSP Skill WebFetch WebSearch; do
   if grep -Fxq "$must_not_deny" <<<"$SCOUT_DENIED_NORMALIZED"; then
-    fail "vbw-scout.md: disallowedTools must not ban $must_not_deny (Scout relies on it)"
+    fail "templates/agent-roles/scout.md.tpl: disallowedTools must not ban $must_not_deny (Scout relies on it)"
   else
-    pass "vbw-scout.md: disallowedTools does not ban $must_not_deny"
+    pass "templates/agent-roles/scout.md.tpl: disallowedTools does not ban $must_not_deny"
   fi
 done
 

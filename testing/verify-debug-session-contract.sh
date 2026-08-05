@@ -517,9 +517,9 @@ fi
 
 DEBUGGER_AGENT="$ROOT/templates/agent-roles/debugger.md.tpl"
 if grep -q "Standalone Debug Session" "$DEBUGGER_AGENT" 2>/dev/null; then
-  pass "vbw-debugger.md has standalone debug session section"
+  pass "templates/agent-roles/debugger.md.tpl has standalone debug session section"
 else
-  fail "vbw-debugger.md missing standalone debug session section"
+  fail "templates/agent-roles/debugger.md.tpl missing standalone debug session section"
 fi
 
 DEBUGGER_PROTOCOL_BLOCK="$(sed -n '/## Investigation Protocol/,/^## /p' "$DEBUGGER_AGENT" 2>/dev/null || true)"
@@ -528,43 +528,43 @@ DEBUGGER_TEAMMATE_BLOCK="$(sed -n '/## Teammate Mode/,/^## /p' "$DEBUGGER_AGENT"
 if contains_literal "$DEBUGGER_PROTOCOL_BLOCK" 'Historical `accepted-process-exception` or backlog/UAT-deviation metadata is not an `already_fixed` signal.' \
   && contains_literal "$DEBUGGER_PROTOCOL_BLOCK" 'Use `already_fixed` only with fresh current evidence.' \
   && contains_literal "$DEBUGGER_PROTOCOL_BLOCK" 'Report an explicit blocker instead of claiming completion when remediation is impossible.'; then
-  pass "vbw-debugger.md Investigation Protocol rejects historical accepted metadata as already_fixed evidence"
+  pass "templates/agent-roles/debugger.md.tpl Investigation Protocol rejects historical accepted metadata as already_fixed evidence"
 else
-  fail "vbw-debugger.md Investigation Protocol missing accepted-exception already_fixed invariant"
+  fail "templates/agent-roles/debugger.md.tpl Investigation Protocol missing accepted-exception already_fixed invariant"
 fi
 
 if grep -Fq 'When `/vbw:debug` Path A spawns you as a hypothesis investigator' <<< "$DEBUGGER_TEAMMATE_BLOCK" \
   && grep -Fq 'overrides any conflicting implementation language' <<< "$DEBUGGER_TEAMMATE_BLOCK"; then
-  pass "vbw-debugger.md teammate mode explicitly defers to /vbw:debug orchestration"
+  pass "templates/agent-roles/debugger.md.tpl teammate mode explicitly defers to /vbw:debug orchestration"
 else
-  fail "vbw-debugger.md teammate mode missing /vbw:debug orchestration override"
+  fail "templates/agent-roles/debugger.md.tpl teammate mode missing /vbw:debug orchestration override"
 fi
 
 if grep -Fq 'Teammate mode ends at diagnosis plus `debugger_report`.' <<< "$DEBUGGER_TEAMMATE_BLOCK" \
   && grep -Fq '`resolution_observation` does NOT grant fix authority.' <<< "$DEBUGGER_TEAMMATE_BLOCK"; then
-  pass "vbw-debugger.md teammate mode ends at diagnosis and keeps resolution observations analysis-only"
+  pass "templates/agent-roles/debugger.md.tpl teammate mode ends at diagnosis and keeps resolution observations analysis-only"
 else
-  fail "vbw-debugger.md teammate mode missing diagnosis-only boundary or analysis-only resolution language"
+  fail "templates/agent-roles/debugger.md.tpl teammate mode missing diagnosis-only boundary or analysis-only resolution language"
 fi
 
 if grep -Fq 'Historical `accepted-process-exception` or backlog/UAT-deviation metadata alone is not fresh evidence for `already_fixed`.' <<< "$DEBUGGER_TEAMMATE_BLOCK"; then
-  pass "vbw-debugger.md teammate mode rejects accepted metadata alone as already_fixed evidence"
+  pass "templates/agent-roles/debugger.md.tpl teammate mode rejects accepted metadata alone as already_fixed evidence"
 else
-  fail "vbw-debugger.md teammate mode missing accepted-metadata already_fixed guard"
+  fail "templates/agent-roles/debugger.md.tpl teammate mode missing accepted-metadata already_fixed guard"
 fi
 
 if grep -Fq '`/vbw:debug` owns synthesis, session status, teardown, and any later implementation handoff.' <<< "$DEBUGGER_TEAMMATE_BLOCK" \
   && grep -Fq 'That implementation owner is not this teammate.' <<< "$DEBUGGER_TEAMMATE_BLOCK"; then
-  pass "vbw-debugger.md teammate mode reserves implementation ownership for a fresh post-synthesis owner"
+  pass "templates/agent-roles/debugger.md.tpl teammate mode reserves implementation ownership for a fresh post-synthesis owner"
 else
-  fail "vbw-debugger.md teammate mode missing fresh post-synthesis ownership boundary"
+  fail "templates/agent-roles/debugger.md.tpl teammate mode missing fresh post-synthesis ownership boundary"
 fi
 
 QA_AGENT="$ROOT/templates/agent-roles/qa.md.tpl"
 if grep -q "Debug Session QA" "$QA_AGENT" 2>/dev/null; then
-  pass "vbw-qa.md has debug session QA section"
+  pass "templates/agent-roles/qa.md.tpl has debug session QA section"
 else
-  fail "vbw-qa.md missing debug session QA section"
+  fail "templates/agent-roles/qa.md.tpl missing debug session QA section"
 fi
 
 
@@ -589,9 +589,9 @@ fi
 
 
 if grep -q 'qa_pending' "$DEBUGGER_AGENT" 2>/dev/null && ! grep -q 'fix_applied' "$DEBUGGER_AGENT" 2>/dev/null; then
-  pass "vbw-debugger.md uses qa_pending (not fix_applied) for post-fix status"
+  pass "templates/agent-roles/debugger.md.tpl uses qa_pending (not fix_applied) for post-fix status"
 else
-  fail "vbw-debugger.md should use qa_pending for post-fix status, not fix_applied"
+  fail "templates/agent-roles/debugger.md.tpl should use qa_pending for post-fix status, not fix_applied"
 fi
 
 
@@ -813,16 +813,16 @@ fi
 
 
 if grep -q 'Phase-Scoped QA' "$ROOT/templates/agent-roles/qa.md.tpl" 2>/dev/null; then
-  pass "vbw-qa.md persistence section scoped to phase QA"
+  pass "templates/agent-roles/qa.md.tpl persistence section scoped to phase QA"
 else
-  fail "vbw-qa.md persistence section not scoped to phase QA"
+  fail "templates/agent-roles/qa.md.tpl persistence section not scoped to phase QA"
 fi
 
 if grep -q 'Debug-session QA exception' "$ROOT/templates/agent-roles/qa.md.tpl" 2>/dev/null || \
    grep -q 'debug-session QA.*do NOT use.*write-verification' "$ROOT/templates/agent-roles/qa.md.tpl" 2>/dev/null; then
-  pass "vbw-qa.md explicitly exempts debug-session QA from write-verification.sh"
+  pass "templates/agent-roles/qa.md.tpl explicitly exempts debug-session QA from write-verification.sh"
 else
-  fail "vbw-qa.md missing debug-session QA exception from write-verification.sh"
+  fail "templates/agent-roles/qa.md.tpl missing debug-session QA exception from write-verification.sh"
 fi
 
 

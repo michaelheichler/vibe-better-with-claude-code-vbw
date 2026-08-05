@@ -28,44 +28,44 @@ echo "=== Dev Agent Recovery Guidance Verification ==="
 
 # 1. Read-before-edit recovery
 if grep -qi 'read.*before.*edit\|read.*before.*writ\|file has not been read\|read the target file' "$DEV_FILE"; then
-  pass "vbw-dev.md: mentions read-before-edit recovery"
+  pass "templates/agent-roles/dev.md.tpl: mentions read-before-edit recovery"
 else
-  fail "vbw-dev.md: missing read-before-edit recovery guidance"
+  fail "templates/agent-roles/dev.md.tpl: missing read-before-edit recovery guidance"
 fi
 
 # 2. Retry-once-then-escalate pattern
 if grep -qi 'retry.*once\|retry the.*edit\|retry the.*write\|one retry' "$DEV_FILE"; then
-  pass "vbw-dev.md: mentions retry-once pattern for tool precondition errors"
+  pass "templates/agent-roles/dev.md.tpl: mentions retry-once pattern for tool precondition errors"
 else
-  fail "vbw-dev.md: missing retry-once-then-escalate for tool precondition errors"
+  fail "templates/agent-roles/dev.md.tpl: missing retry-once-then-escalate for tool precondition errors"
 fi
 
 # 3. Validation contradiction as blocker
 if grep -qi 'contradicts\|contradiction.*blocker\|contradictory.*validation\|contradictory.*result' "$DEV_FILE"; then
-  pass "vbw-dev.md: mentions validation contradiction as blocker"
+  pass "templates/agent-roles/dev.md.tpl: mentions validation contradiction as blocker"
 else
-  fail "vbw-dev.md: missing validation-contradiction-as-blocker guidance"
+  fail "templates/agent-roles/dev.md.tpl: missing validation-contradiction-as-blocker guidance"
 fi
 
 # 4. Empty results as potential blocker
 if grep -qi 'empty.*result.*blocker\|empty.*response.*blocker\|empty.*result.*escalat\|empty.*validation.*stop\|empty.*result.*not.*success\|empty results are not success' "$DEV_FILE"; then
-  pass "vbw-dev.md: mentions empty validation results as blocker condition"
+  pass "templates/agent-roles/dev.md.tpl: mentions empty validation results as blocker condition"
 else
-  fail "vbw-dev.md: missing empty-result-as-blocker guidance"
+  fail "templates/agent-roles/dev.md.tpl: missing empty-result-as-blocker guidance"
 fi
 
 # 5. Reread/no-progress loop detection
 if grep -qi 'reread.*loop\|no.progress.*loop\|rereading.*same.*file\|read.*loop.*circuit\|no forward progress' "$DEV_FILE"; then
-  pass "vbw-dev.md: mentions reread/no-progress loop detection"
+  pass "templates/agent-roles/dev.md.tpl: mentions reread/no-progress loop detection"
 else
-  fail "vbw-dev.md: missing reread/no-progress loop detection guidance"
+  fail "templates/agent-roles/dev.md.tpl: missing reread/no-progress loop detection guidance"
 fi
 
 # 6. Reread loop counted as circuit-breaker condition
 if grep -qi 'no.progress.*escalat\|reread.*escalat\|no.progress.*blocker\|reread.*blocker\|two consecutive.*no.progress' "$DEV_FILE"; then
-  pass "vbw-dev.md: reread loops trigger escalation"
+  pass "templates/agent-roles/dev.md.tpl: reread loops trigger escalation"
 else
-  fail "vbw-dev.md: reread loops not linked to escalation/blocker"
+  fail "templates/agent-roles/dev.md.tpl: reread loops not linked to escalation/blocker"
 fi
 
 echo ""

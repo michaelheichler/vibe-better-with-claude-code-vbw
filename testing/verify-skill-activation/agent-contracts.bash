@@ -58,36 +58,36 @@ dev_disallowed_has() {
 }
 
 if [ -z "$DEV_TOOLS" ]; then
-  pass "vbw-dev.md: does not pin a tools allowlist (forward-compatible)"
+  pass "templates/agent-roles/dev.md.tpl: does not pin a tools allowlist (forward-compatible)"
 else
-  fail "vbw-dev.md: must not pin a tools allowlist (use disallowedTools denylist for forward compatibility)"
+  fail "templates/agent-roles/dev.md.tpl: must not pin a tools allowlist (use disallowedTools denylist for forward compatibility)"
 fi
 
 if [ -n "$DEV_DISALLOWED" ]; then
-  pass "vbw-dev.md: declares disallowedTools denylist"
+  pass "templates/agent-roles/dev.md.tpl: declares disallowedTools denylist"
 else
-  fail "vbw-dev.md: missing disallowedTools denylist"
+  fail "templates/agent-roles/dev.md.tpl: missing disallowedTools denylist"
 fi
 
 if [ "$DEV_MEMORY" = "memory: project" ]; then
-  pass "vbw-dev.md: preserves project memory"
+  pass "templates/agent-roles/dev.md.tpl: preserves project memory"
 else
-  fail "vbw-dev.md: memory must remain project (found: ${DEV_MEMORY:-missing})"
+  fail "templates/agent-roles/dev.md.tpl: memory must remain project (found: ${DEV_MEMORY:-missing})"
 fi
 
 for required_denied in Task TaskCreate Agent AskUserQuestion; do
   if dev_disallowed_has "$required_denied"; then
-    pass "vbw-dev.md: disallowedTools bans $required_denied"
+    pass "templates/agent-roles/dev.md.tpl: disallowedTools bans $required_denied"
   else
-    fail "vbw-dev.md: disallowedTools must ban $required_denied"
+    fail "templates/agent-roles/dev.md.tpl: disallowedTools must ban $required_denied"
   fi
 done
 
 for must_remain_available in Bash Read Edit Write Glob Grep LSP Skill WebFetch WebSearch SendMessage TaskGet; do
   if dev_disallowed_has "$must_remain_available"; then
-    fail "vbw-dev.md: disallowedTools must not ban $must_remain_available (Dev relies on it)"
+    fail "templates/agent-roles/dev.md.tpl: disallowedTools must not ban $must_remain_available (Dev relies on it)"
   else
-    pass "vbw-dev.md: disallowedTools does not ban $must_remain_available"
+    pass "templates/agent-roles/dev.md.tpl: disallowedTools does not ban $must_remain_available"
   fi
 done
 
@@ -95,18 +95,18 @@ if grep -q 'Your frontmatter denylist explicitly bans recursive delegation' <<< 
   && grep -q 'Use the listed implementation tools directly' <<< "$DEV_CONSTRAINTS_SECTION" \
   && grep -q 'Task`, `TaskCreate`, `Agent`, and `AskUserQuestion`' <<< "$DEV_CONSTRAINTS_SECTION" \
   && grep -q 'Do not form an agent team' <<< "$DEV_CONSTRAINTS_SECTION"; then
-  pass "vbw-dev.md: prompt explains denylist no-subagent tool boundary"
+  pass "templates/agent-roles/dev.md.tpl: prompt explains denylist no-subagent tool boundary"
 else
-  fail "vbw-dev.md: missing denylist no-subagent tool-boundary guidance"
+  fail "templates/agent-roles/dev.md.tpl: missing denylist no-subagent tool-boundary guidance"
 fi
 
 if grep -q 'SendMessage' <<< "$DEV_COMMUNICATION_SECTION" \
   && grep -q 'execution_update' <<< "$DEV_COMMUNICATION_SECTION" \
   && grep -q 'blocker_report' <<< "$DEV_COMMUNICATION_SECTION" \
   && ! dev_disallowed_has SendMessage; then
-  pass "vbw-dev.md: SendMessage guidance available (not in denylist)"
+  pass "templates/agent-roles/dev.md.tpl: SendMessage guidance available (not in denylist)"
 else
-  fail "vbw-dev.md: SendMessage guidance/availability mismatch"
+  fail "templates/agent-roles/dev.md.tpl: SendMessage guidance/availability mismatch"
 fi
 
 if grep -q 'TaskGet' <<< "$DEV_BLOCKED_TASK_SECTION" \
@@ -114,23 +114,23 @@ if grep -q 'TaskGet' <<< "$DEV_BLOCKED_TASK_SECTION" \
   && grep -q 'completed' <<< "$DEV_BLOCKED_TASK_SECTION" \
   && grep -q 'self-start' <<< "$DEV_BLOCKED_TASK_SECTION" \
   && ! dev_disallowed_has TaskGet; then
-  pass "vbw-dev.md: TaskGet guidance available (not in denylist)"
+  pass "templates/agent-roles/dev.md.tpl: TaskGet guidance available (not in denylist)"
 else
-  fail "vbw-dev.md: TaskGet guidance/availability mismatch"
+  fail "templates/agent-roles/dev.md.tpl: TaskGet guidance/availability mismatch"
 fi
 
 if grep -q '^## MCP-Derived Context' "$DEV_AGENT"; then
-  fail "vbw-dev.md: stale '## MCP-Derived Context' section must be removed (subagents may call MCP directly)"
+  fail "templates/agent-roles/dev.md.tpl: stale '## MCP-Derived Context' section must be removed (subagents may call MCP directly)"
 else
-  pass "vbw-dev.md: no stale '## MCP-Derived Context' section"
+  pass "templates/agent-roles/dev.md.tpl: no stale '## MCP-Derived Context' section"
 fi
 
 if grep -q 'explicit `tools:` allowlist' "$DEV_AGENT" \
   || grep -q 'Assume dynamic MCP server tools are unavailable' "$DEV_AGENT" \
   || grep -q 'Do not ask the orchestrator to add MCP' "$DEV_AGENT"; then
-  fail "vbw-dev.md: stale anti-MCP allowlist guidance must be removed"
+  fail "templates/agent-roles/dev.md.tpl: stale anti-MCP allowlist guidance must be removed"
 else
-  pass "vbw-dev.md: no stale anti-MCP allowlist guidance"
+  pass "templates/agent-roles/dev.md.tpl: no stale anti-MCP allowlist guidance"
 fi
 
 if grep -q 'Dev uses an explicit allowlist' "$ROOT/README.md" \
@@ -150,9 +150,9 @@ fi
 if grep -q '## Available Tools' "$DEV_AGENT" \
   && grep -q 'denylist' "$DEV_AGENT" \
   && grep -q '## MCP Tool Usage' "$DEV_AGENT"; then
-  pass "vbw-dev.md: documents denylist tool boundary and MCP availability"
+  pass "templates/agent-roles/dev.md.tpl: documents denylist tool boundary and MCP availability"
 else
-  fail "vbw-dev.md: missing denylist + MCP availability documentation"
+  fail "templates/agent-roles/dev.md.tpl: missing denylist + MCP availability documentation"
 fi
 
 for anti_mcp_target in "$FIX_COMMAND" "$VIBE_COMMAND" "$EXECUTE_PROTOCOL"; do
@@ -175,27 +175,27 @@ else
 fi
 
 if grep -q 'skills_used' "$DEV_AGENT"; then
-  pass "vbw-dev.md: references skills_used frontmatter"
+  pass "templates/agent-roles/dev.md.tpl: references skills_used frontmatter"
 else
-  fail "vbw-dev.md: missing skills_used reference"
+  fail "templates/agent-roles/dev.md.tpl: missing skills_used reference"
 fi
 
 if grep -q 'Skill(skill-name)' "$DEV_AGENT"; then
-  pass "vbw-dev.md: references Skill() activation"
+  pass "templates/agent-roles/dev.md.tpl: references Skill() activation"
 else
-  fail "vbw-dev.md: missing Skill() reference"
+  fail "templates/agent-roles/dev.md.tpl: missing Skill() reference"
 fi
 
 if ! grep -q 'protocol violation' "$DEV_AGENT"; then
-  pass "vbw-dev.md: no enforcement language"
+  pass "templates/agent-roles/dev.md.tpl: no enforcement language"
 else
-  fail "vbw-dev.md: still has 'protocol violation' enforcement language"
+  fail "templates/agent-roles/dev.md.tpl: still has 'protocol violation' enforcement language"
 fi
 
 if grep -q 'skill_activation' "$DEV_AGENT" && grep -q 'skill_no_activation' "$DEV_AGENT"; then
-  pass "vbw-dev.md: has orchestrator-aware conditional in deeper protocol"
+  pass "templates/agent-roles/dev.md.tpl: has orchestrator-aware conditional in deeper protocol"
 else
-  fail "vbw-dev.md: missing orchestrator-aware conditional (must reference both skill_activation and skill_no_activation)"
+  fail "templates/agent-roles/dev.md.tpl: missing orchestrator-aware conditional (must reference both skill_activation and skill_no_activation)"
 fi
 
 
@@ -203,33 +203,33 @@ LEAD_AGENT="$ROOT/templates/agent-roles/lead.md.tpl"
 LEAD_TOOLS="tools: $(jq -r '.lead.tools // empty' "$DEFAULTS")"
 
 if grep -q 'Skill' <<< "$LEAD_TOOLS"; then
-  pass "vbw-lead.md: Skill in tools allowlist"
+  pass "templates/agent-roles/lead.md.tpl: Skill in tools allowlist"
 else
-  fail "vbw-lead.md: Skill NOT in tools allowlist"
+  fail "templates/agent-roles/lead.md.tpl: Skill NOT in tools allowlist"
 fi
 
 if grep -q 'Wire relevant skills into plans' "$LEAD_AGENT"; then
-  pass "vbw-lead.md: emphasizes wiring skills into plans"
+  pass "templates/agent-roles/lead.md.tpl: emphasizes wiring skills into plans"
 else
-  fail "vbw-lead.md: missing plan wiring language"
+  fail "templates/agent-roles/lead.md.tpl: missing plan wiring language"
 fi
 
 if grep -q 'Skill completeness check' "$LEAD_AGENT"; then
-  pass "vbw-lead.md: has skill completeness gate in self-review"
+  pass "templates/agent-roles/lead.md.tpl: has skill completeness gate in self-review"
 else
-  fail "vbw-lead.md: missing skill completeness gate in self-review"
+  fail "templates/agent-roles/lead.md.tpl: missing skill completeness gate in self-review"
 fi
 
 if grep -q 'skill_no_activation' "$LEAD_AGENT"; then
-  pass "vbw-lead.md: recognizes explicit no-activation block"
+  pass "templates/agent-roles/lead.md.tpl: recognizes explicit no-activation block"
 else
-  fail "vbw-lead.md: missing explicit no-activation handling"
+  fail "templates/agent-roles/lead.md.tpl: missing explicit no-activation handling"
 fi
 
 if ! grep -q 'write YES or NO' "$LEAD_AGENT"; then
-  pass "vbw-lead.md: no written YES/NO evaluation"
+  pass "templates/agent-roles/lead.md.tpl: no written YES/NO evaluation"
 else
-  fail "vbw-lead.md: still has written YES/NO evaluation"
+  fail "templates/agent-roles/lead.md.tpl: still has written YES/NO evaluation"
 fi
 
 

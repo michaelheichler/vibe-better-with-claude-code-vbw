@@ -24,34 +24,34 @@ fail() {
 QA_AGENT="$ROOT/templates/agent-roles/qa.md.tpl"
 
 if grep -qi 'heredoc' "$QA_AGENT"; then
-  fail "1: vbw-qa.md still mentions heredoc"
+  fail "1: templates/agent-roles/qa.md.tpl still mentions heredoc"
 else
-  pass "1: vbw-qa.md does not mention heredoc"
+  pass "1: templates/agent-roles/qa.md.tpl does not mention heredoc"
 fi
 
 if grep -q 'write-verification\.sh' "$QA_AGENT"; then
-  pass "2: vbw-qa.md references write-verification.sh"
+  pass "2: templates/agent-roles/qa.md.tpl references write-verification.sh"
 else
-  fail "2: vbw-qa.md does not reference write-verification.sh"
+  fail "2: templates/agent-roles/qa.md.tpl does not reference write-verification.sh"
 fi
 
 DISALLOWED_LINE=$(jq -r '.qa.disallowedTools // empty' "$DEFAULTS")
 TOOLS_LINE=$(jq -r '.qa.tools // empty' "$DEFAULTS")
 PERM_MODE=$(jq -r '.qa.permissionMode // empty' "$DEFAULTS")
 if [ -n "$DISALLOWED_LINE" ] && grep -q 'plan' <<<"$PERM_MODE"; then
-  pass "3: vbw-qa.md uses disallowedTools + permissionMode: plan (Write blocked by platform)"
+  pass "3: templates/agent-roles/qa.md.tpl uses disallowedTools + permissionMode: plan (Write blocked by platform)"
 elif [ -n "$TOOLS_LINE" ] && grep -qv 'Write' <<<"$TOOLS_LINE"; then
-  pass "3: vbw-qa.md tools allowlist omits Write"
+  pass "3: templates/agent-roles/qa.md.tpl tools allowlist omits Write"
 else
-  fail "3: vbw-qa.md: Write access not adequately restricted"
+  fail "3: templates/agent-roles/qa.md.tpl: Write access not adequately restricted"
 fi
 
 if [ -n "$DISALLOWED_LINE" ] && grep -qv 'Bash' <<<"$DISALLOWED_LINE"; then
-  pass "4: vbw-qa.md disallowedTools does not block Bash"
+  pass "4: templates/agent-roles/qa.md.tpl disallowedTools does not block Bash"
 elif [ -n "$TOOLS_LINE" ] && grep -q 'Bash' <<<"$TOOLS_LINE"; then
-  pass "4: vbw-qa.md still has Bash in tools"
+  pass "4: templates/agent-roles/qa.md.tpl still has Bash in tools"
 else
-  fail "4: vbw-qa.md Bash access not available"
+  fail "4: templates/agent-roles/qa.md.tpl Bash access not available"
 fi
 
 QA_CMD="$ROOT/commands/qa.md"
@@ -105,15 +105,15 @@ fi
 
 
 if grep -qi 'teammate.*persist\|sending.*qa_verdict.*persist\|After sending.*persist' "$QA_AGENT"; then
-  pass "11: vbw-qa.md teammate Communication references persistence"
+  pass "11: templates/agent-roles/qa.md.tpl teammate Communication references persistence"
 else
-  fail "11: vbw-qa.md teammate Communication does not reference persistence"
+  fail "11: templates/agent-roles/qa.md.tpl teammate Communication does not reference persistence"
 fi
 
 if grep -qi 'both modes\|teammate and subagent' "$QA_AGENT"; then
-  pass "12: vbw-qa.md Persistence section covers both modes"
+  pass "12: templates/agent-roles/qa.md.tpl Persistence section covers both modes"
 else
-  fail "12: vbw-qa.md Persistence section does not explicitly cover both modes"
+  fail "12: templates/agent-roles/qa.md.tpl Persistence section does not explicitly cover both modes"
 fi
 
 
@@ -156,9 +156,9 @@ else
 fi
 
 if grep -q 'No file modification\.' "$QA_AGENT" && ! grep -q 'No direct file modification' "$QA_AGENT"; then
-  fail "17: vbw-qa.md Constraints has unqualified 'No file modification' contradicting Persistence section"
+  fail "17: templates/agent-roles/qa.md.tpl Constraints has unqualified 'No file modification' contradicting Persistence section"
 else
-  pass "17: vbw-qa.md Constraints properly qualifies file modification prohibition"
+  pass "17: templates/agent-roles/qa.md.tpl Constraints properly qualifies file modification prohibition"
 fi
 
 if grep -q "QA.*Can verify, can't write" "$ROOT/README.md"; then
@@ -168,15 +168,15 @@ else
 fi
 
 if grep -q 'Process-exception.*justification is credible for this specific FAIL' "$QA_AGENT"; then
-  pass "19: vbw-qa.md requires QA to judge process-exception credibility"
+  pass "19: templates/agent-roles/qa.md.tpl requires QA to judge process-exception credibility"
 else
-  fail "19: vbw-qa.md still treats process-exception as documentation-only"
+  fail "19: templates/agent-roles/qa.md.tpl still treats process-exception as documentation-only"
 fi
 
 if grep -q 'documentation alone is insufficient when code-fix or plan-amendment is still realistically available' "$QA_AGENT"; then
-  pass "20: vbw-qa.md keeps fixable FAILs open despite process-exception paperwork"
+  pass "20: templates/agent-roles/qa.md.tpl keeps fixable FAILs open despite process-exception paperwork"
 else
-  fail "20: vbw-qa.md missing guard against laundering fixable FAILs through process-exception paperwork"
+  fail "20: templates/agent-roles/qa.md.tpl missing guard against laundering fixable FAILs through process-exception paperwork"
 fi
 
 if grep -q 'track-known-issues\.sh.*promote-todos' "$VIBE_INPUT_PARSING"; then

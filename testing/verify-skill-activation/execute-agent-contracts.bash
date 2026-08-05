@@ -48,143 +48,143 @@ fi
 QA_AGENT="$ROOT/templates/agent-roles/qa.md.tpl"
 
 if grep -q 'skills_used' "$QA_AGENT"; then
-  pass "vbw-qa.md: references skills_used for plan-driven activation"
+  pass "templates/agent-roles/qa.md.tpl: references skills_used for plan-driven activation"
 else
-  fail "vbw-qa.md: missing skills_used reference"
+  fail "templates/agent-roles/qa.md.tpl: missing skills_used reference"
 fi
 
 if grep -q 'Skill(skill-name)' "$QA_AGENT"; then
-  pass "vbw-qa.md: references Skill() activation"
+  pass "templates/agent-roles/qa.md.tpl: references Skill() activation"
 else
-  fail "vbw-qa.md: missing Skill() reference"
+  fail "templates/agent-roles/qa.md.tpl: missing Skill() reference"
 fi
 
 if grep -q 'skill_no_activation' "$QA_AGENT"; then
-  pass "vbw-qa.md: recognizes explicit no-activation block"
+  pass "templates/agent-roles/qa.md.tpl: recognizes explicit no-activation block"
 else
-  fail "vbw-qa.md: missing explicit no-activation handling"
+  fail "templates/agent-roles/qa.md.tpl: missing explicit no-activation handling"
 fi
 
 if grep -q 'available_skills' "$QA_AGENT"; then
-  pass "vbw-qa.md: references available_skills for ad-hoc fallback"
+  pass "templates/agent-roles/qa.md.tpl: references available_skills for ad-hoc fallback"
 else
-  fail "vbw-qa.md: missing available_skills reference for ad-hoc fallback"
+  fail "templates/agent-roles/qa.md.tpl: missing available_skills reference for ad-hoc fallback"
 fi
 
 SCOUT_AGENT="$ROOT/templates/agent-roles/scout.md.tpl"
 
 if grep -q 'skills_used' "$SCOUT_AGENT"; then
-  pass "vbw-scout.md: references skills_used for plan-driven path"
+  pass "templates/agent-roles/scout.md.tpl: references skills_used for plan-driven path"
 else
-  fail "vbw-scout.md: missing skills_used reference"
+  fail "templates/agent-roles/scout.md.tpl: missing skills_used reference"
 fi
 
 if grep -q 'available_skills' "$SCOUT_AGENT"; then
-  pass "vbw-scout.md: references available_skills for ad-hoc path"
+  pass "templates/agent-roles/scout.md.tpl: references available_skills for ad-hoc path"
 else
-  fail "vbw-scout.md: missing available_skills reference for ad-hoc path"
+  fail "templates/agent-roles/scout.md.tpl: missing available_skills reference for ad-hoc path"
 fi
 
 if grep -q 'skill_no_activation' "$SCOUT_AGENT"; then
-  pass "vbw-scout.md: recognizes explicit no-activation block"
+  pass "templates/agent-roles/scout.md.tpl: recognizes explicit no-activation block"
 else
-  fail "vbw-scout.md: missing explicit no-activation handling"
+  fail "templates/agent-roles/scout.md.tpl: missing explicit no-activation handling"
 fi
 
 if ! grep -q 'may still honor' "$SCOUT_AGENT"; then
-  pass "vbw-scout.md: no permissive may-still-honor wording on no-activation path"
+  pass "templates/agent-roles/scout.md.tpl: no permissive may-still-honor wording on no-activation path"
 else
-  fail "vbw-scout.md: still uses permissive may-still-honor wording on no-activation path"
+  fail "templates/agent-roles/scout.md.tpl: still uses permissive may-still-honor wording on no-activation path"
 fi
 
 if grep -Eq 'still honor( its| any)? `skills_used` frontmatter' "$SCOUT_AGENT"; then
-  pass "vbw-scout.md: preserves plan-driven skills_used behavior on no-activation path"
+  pass "templates/agent-roles/scout.md.tpl: preserves plan-driven skills_used behavior on no-activation path"
 else
-  fail "vbw-scout.md: missing mandatory skills_used preservation on no-activation path"
+  fail "templates/agent-roles/scout.md.tpl: missing mandatory skills_used preservation on no-activation path"
 fi
 
 DEBUGGER_AGENT="$ROOT/templates/agent-roles/debugger.md.tpl"
 
 if grep -q 'available_skills' "$DEBUGGER_AGENT"; then
-  pass "vbw-debugger.md: references available_skills for ad-hoc activation"
+  pass "templates/agent-roles/debugger.md.tpl: references available_skills for ad-hoc activation"
 else
-  fail "vbw-debugger.md: missing available_skills reference"
+  fail "templates/agent-roles/debugger.md.tpl: missing available_skills reference"
 fi
 
 if grep -q 'bounded completeness pass' "$DEBUGGER_AGENT"; then
-  pass "vbw-debugger.md: includes bounded additive completeness pass"
+  pass "templates/agent-roles/debugger.md.tpl: includes bounded additive completeness pass"
 else
-  fail "vbw-debugger.md: missing bounded additive completeness pass"
+  fail "templates/agent-roles/debugger.md.tpl: missing bounded additive completeness pass"
 fi
 
 if grep -q 'skill_no_activation' "$DEBUGGER_AGENT"; then
-  pass "vbw-debugger.md: recognizes explicit no-activation block"
+  pass "templates/agent-roles/debugger.md.tpl: recognizes explicit no-activation block"
 else
-  fail "vbw-debugger.md: missing explicit no-activation handling"
+  fail "templates/agent-roles/debugger.md.tpl: missing explicit no-activation handling"
 fi
 
 if grep -q 'starting set, not a ceiling' "$DEBUGGER_AGENT"; then
-  pass "vbw-debugger.md: treats orchestrator selection as a starting set"
+  pass "templates/agent-roles/debugger.md.tpl: treats orchestrator selection as a starting set"
 else
-  fail "vbw-debugger.md: missing starting-set additive wording"
+  fail "templates/agent-roles/debugger.md.tpl: missing starting-set additive wording"
 fi
 
 ARCHITECT_AGENT="$ROOT/templates/agent-roles/architect.md.tpl"
 
 if grep -q 'available_skills' "$ARCHITECT_AGENT"; then
-  pass "vbw-architect.md: references available_skills for ad-hoc activation"
+  pass "templates/agent-roles/architect.md.tpl: references available_skills for ad-hoc activation"
 else
-  fail "vbw-architect.md: missing available_skills reference"
+  fail "templates/agent-roles/architect.md.tpl: missing available_skills reference"
 fi
 
 if grep -q 'bounded completeness pass' "$ARCHITECT_AGENT"; then
-  pass "vbw-architect.md: includes bounded additive completeness pass"
+  pass "templates/agent-roles/architect.md.tpl: includes bounded additive completeness pass"
 else
-  fail "vbw-architect.md: missing bounded additive completeness pass"
+  fail "templates/agent-roles/architect.md.tpl: missing bounded additive completeness pass"
 fi
 
 if grep -q 'skill_no_activation' "$ARCHITECT_AGENT"; then
-  pass "vbw-architect.md: recognizes explicit no-activation block"
+  pass "templates/agent-roles/architect.md.tpl: recognizes explicit no-activation block"
 else
-  fail "vbw-architect.md: missing explicit no-activation handling"
+  fail "templates/agent-roles/architect.md.tpl: missing explicit no-activation handling"
 fi
 
 if grep -q 'starting set, not a ceiling' "$ARCHITECT_AGENT"; then
-  pass "vbw-architect.md: treats orchestrator selection as a starting set"
+  pass "templates/agent-roles/architect.md.tpl: treats orchestrator selection as a starting set"
 else
-  fail "vbw-architect.md: missing starting-set additive wording"
+  fail "templates/agent-roles/architect.md.tpl: missing starting-set additive wording"
 fi
 
 DOCS_AGENT="$ROOT/templates/agent-roles/docs.md.tpl"
 
 if grep -q 'skills_used' "$DOCS_AGENT"; then
-  pass "vbw-docs.md: references skills_used for plan-driven activation"
+  pass "templates/agent-roles/docs.md.tpl: references skills_used for plan-driven activation"
 else
-  fail "vbw-docs.md: missing skills_used reference"
+  fail "templates/agent-roles/docs.md.tpl: missing skills_used reference"
 fi
 
 if grep -q 'Skill(skill-name)' "$DOCS_AGENT"; then
-  pass "vbw-docs.md: references Skill() activation"
+  pass "templates/agent-roles/docs.md.tpl: references Skill() activation"
 else
-  fail "vbw-docs.md: missing Skill() reference"
+  fail "templates/agent-roles/docs.md.tpl: missing Skill() reference"
 fi
 
 if grep -q 'skill_no_activation' "$DOCS_AGENT"; then
-  pass "vbw-docs.md: recognizes explicit no-activation block"
+  pass "templates/agent-roles/docs.md.tpl: recognizes explicit no-activation block"
 else
-  fail "vbw-docs.md: missing explicit no-activation handling"
+  fail "templates/agent-roles/docs.md.tpl: missing explicit no-activation handling"
 fi
 
 if grep -q 'available_skills' "$DOCS_AGENT"; then
-  pass "vbw-docs.md: references available_skills for ad-hoc fallback"
+  pass "templates/agent-roles/docs.md.tpl: references available_skills for ad-hoc fallback"
 else
-  fail "vbw-docs.md: missing available_skills reference for ad-hoc fallback"
+  fail "templates/agent-roles/docs.md.tpl: missing available_skills reference for ad-hoc fallback"
 fi
 
 if grep -q 'available_skills' "$DEV_AGENT"; then
-  pass "vbw-dev.md: references available_skills for ad-hoc fallback"
+  pass "templates/agent-roles/dev.md.tpl: references available_skills for ad-hoc fallback"
 else
-  fail "vbw-dev.md: missing available_skills reference for ad-hoc fallback"
+  fail "templates/agent-roles/dev.md.tpl: missing available_skills reference for ad-hoc fallback"
 fi
 
 if grep -q 'Dev/QA/Scout/Docs' "$PROTOCOL"; then
