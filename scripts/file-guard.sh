@@ -370,24 +370,21 @@ path_matches_pattern() {
 }
 
 path_matches_declared_scope() {
-  local target="$1" declared="$2" declared_dir
+  local target="$1" declared="$2" files_modified="${3:-false}" declared_dir
   path_matches_pattern "$target" "$declared" && return 0
+  if [ "$files_modified" != true ]; then
+    case "$declared" in
+      */|*'*'*|*'?'*|*'['*) ;;
+      *) return 1 ;;
+    esac
+  fi
   case "$declared" in
-    */|*'*'*|*'?'*|*'['*) ;;
-    *) return 1 ;;
+    */) declared_dir="${declared%/}" ;;
+    *) declared_dir=$(dirname "$declared") ;;
   esac
-  declared_dir=$(dirname "$declared")
   if [ "$declared_dir" = "." ] || [ -z "$declared_dir" ]; then
     return 1
   fi
-  path_matches_pattern "$target" "${declared_dir%/}/**"
-}
-
-path_matches_files_modified_scope() {
-  local target="$1" declared="$2" declared_dir
-  path_matches_pattern "$target" "$declared" && return 0
-  declared_dir=$(dirname "$declared")
-  [ "$declared_dir" != "." ] || return 1
   path_matches_pattern "$target" "${declared_dir%/}/**"
 }
 
@@ -465,7 +462,7 @@ if [ -d "$CONTRACT_DIR" ]; then
             NORM_ALLOWED="${allowed#./}"
             if path_matches_declared_scope "$NORM_TARGET" "$NORM_ALLOWED" || {
               vbw_guard_execution_is_live "$PROJECT_ROOT" &&
-              path_matches_files_modified_scope "$NORM_TARGET" "$NORM_ALLOWED"
+              path_matches_declared_scope "$NORM_TARGET" "$NORM_ALLOWED" true
             }; then
               IN_SCOPE=true
               break
@@ -621,7 +618,7 @@ DECLARED_FILES=$(awk '
 while IFS= read -r declared; do
   [ -z "$declared" ] && continue
   NORM_DECLARED=$(normalize_path "$declared")
-  if path_matches_files_modified_scope "$NORM_TARGET" "$NORM_DECLARED"; then
+  if path_matches_declared_scope "$NORM_TARGET" "$NORM_DECLARED" true; then
     exit 0
   fi
 done <<< "$DECLARED_FILES"

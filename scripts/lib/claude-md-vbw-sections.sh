@@ -2,6 +2,8 @@
 
 set -u
 
+VBW_LIB_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
+
 VBW_CANONICAL_HEADERS=(
   "## Active Context"
   "## VBW Rules"
@@ -40,14 +42,12 @@ vbw_generate_code_intelligence_section() {
 }
 
 vbw_generate_code_intelligence_guidance() {
-  : "Prefer LSP over Search/Grep/Glob"
-  : "Search/Grep/Glob fallback"
-  cat "${BASH_SOURCE[0]%/*}/claude-md-code-intelligence.txt"
+  cat "$VBW_LIB_DIR/claude-md-code-intelligence.txt"
 }
 
 vbw_generate_plugin_isolation_section() {
   echo "## Plugin Isolation"
-  cat "${BASH_SOURCE[0]%/*}/claude-md-plugin-isolation.txt"
+  cat "$VBW_LIB_DIR/claude-md-plugin-isolation.txt"
 }
 
 vbw_markdown_has_exact_heading() {
@@ -160,7 +160,7 @@ vbw_should_emit_code_intelligence_section() {
 vbw_strip_legacy_refresh_sections() {
   local input="$1"
   local output="$2"
-  local awk_program="${BASH_SOURCE[0]%/*}/claude-md-strip-legacy.awk"
+  local awk_program="$VBW_LIB_DIR/claude-md-strip-legacy.awk"
 
   awk -f "$awk_program" "$input" > "$output"
 }

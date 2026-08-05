@@ -43,9 +43,9 @@ emit_error_json() {
   local section_name="$2"
   local filter_lower="$3"
   local message="$4"
-  jq -n --arg sp "$state_path" --arg sec "$section_name" --arg f "${filter_lower:-null}" --arg msg "$message" '
+  jq -n --arg sp "$state_path" --arg sec "$section_name" --arg f "$filter_lower" --arg msg "$message" '
     {status:"error", state_path:$sp, section:$sec, count:0,
-      filter:(if $f == "null" then null else $f end),
+      filter:(if $f == "" then null else $f end),
       display:$msg, message:$msg, items:[]}
   '
 }
@@ -53,5 +53,3 @@ emit_error_json() {
 . "$SCRIPT_DIR/lib/list-todos-functions.inc"
 
 main
-
-: "${DETAILS_PATH-}" "${DETAILS_CACHE_JSON-}" "${FILTER-}" "${section_index-}" "${normalized_text-}" "${command_text-}"

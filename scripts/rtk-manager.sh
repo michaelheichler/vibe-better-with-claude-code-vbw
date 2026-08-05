@@ -1404,7 +1404,7 @@ verify_download_checksum() {
 }
 
 rtk_archive_member_safe() {
-  local member="$1" pattern
+  local member="$1"
   [ -n "$member" ] || return 1
   if [[ "$member" =~ ^/|^\.\.$|^\.\./|/\.\.$|/\.\./ ]]; then
     return 1

@@ -2,18 +2,35 @@ extract_todos() {
   local file="$1"
   local section_name=""
   local lines=""
+  local has_todos_heading
+  has_todos_heading=$(awk '/^## Todos$/{ found=1 } END { print found + 0 }' "$file")
 
   lines=$(awk '
-    /^## Todos$/ { found=1; next }
-    found && /^##/ { exit }
-    found && /^### / { sub_found=1; next }
-    found && sub_found && /^##/ { exit }
-    found && !sub_found && /^- / { print }
+    /^## Todos$/ { in_todos=1; next }
+    in_todos && /^## / { exit }
+    in_todos && /^### Pending Todos$/ { in_pending=1; next }
+    in_todos && /^### / { in_pending=0; next }
+    in_todos && /^- / { print }
   ' "$file")
 
   if [ -n "$lines" ]; then
     section_name="## Todos"
-  else
+  fi
+
+  if [ -z "$lines" ]; then
+    lines=$(awk '
+      /^## Todos$/ { in_todos=1; next }
+      in_todos && /^## / { exit }
+      in_todos && /^### Pending Todos$/ { found=1; next }
+      found && /^### / { exit }
+      found && /^- / { print }
+    ' "$file")
+    if [ -n "$lines" ]; then
+      section_name="### Pending Todos"
+    fi
+  fi
+
+  if [ -z "$lines" ] && [ "$has_todos_heading" -eq 0 ]; then
     lines=$(awk '
       /^### Pending Todos$/ { found=1; next }
       found && /^### Completed Todos$/ { exit }
@@ -46,9 +63,9 @@ main() {
   raw_output=$(extract_todos "$state_path")
 
   if [ -z "$raw_output" ]; then
-    jq -n --arg sp "$state_path" --arg f "${filter_lower:-null}" \
+    jq -n --arg sp "$state_path" --arg f "$filter_lower" \
       '{status:"empty", state_path:$sp, section:null, count:0,
-        filter:(if $f == "null" then null else $f end),
+        filter:(if $f == "" then null else $f end),
         display:"No pending todos.", items:[]}'
     exit 0
   fi
@@ -83,6 +100,15 @@ main() {
       exit 0
     fi
   done <<< "$todo_lines"
+
+  if [ "$section_index" -eq 0 ]; then
+    rm -f "$all_items_ndjson"
+    jq -n --arg sp "$state_path" --arg f "$filter_lower" \
+      '{status:"empty", state_path:$sp, section:null, count:0,
+        filter:(if $f == "" then null else $f end),
+        display:"No pending todos.", items:[]}'
+    exit 0
+  fi
 
   all_items_json=$(jq -sc '.' "$all_items_ndjson" 2>/dev/null) || {
     rm -f "$all_items_ndjson"
@@ -120,9 +146,9 @@ main() {
     fi
     jq -n --arg st "$([ -n "$filter_lower" ] && echo "no-match" || echo "empty")" \
       --arg sp "$state_path" --arg sec "$section_name" \
-      --arg f "${filter_lower:-null}" --arg msg "$msg" \
+      --arg f "$filter_lower" --arg msg "$msg" \
       '{status:$st, state_path:$sp, section:$sec, count:0,
-        filter:(if $f == "null" then null else $f end),
+        filter:(if $f == "" then null else $f end),
         display:$msg, items:[]}'
     exit 0
   fi
@@ -145,9 +171,9 @@ main() {
 
   echo "$items_json" | jq --arg st "ok" --arg sp "$state_path" \
     --arg sec "$section_name" --argjson c "$filtered_count" \
-    --arg f "${filter_lower:-null}" --arg d "$display" \
+    --arg f "$filter_lower" --arg d "$display" \
     '{status:$st, state_path:$sp, section:$sec, count:$c,
-      filter:(if $f == "null" then null else $f end),
+      filter:(if $f == "" then null else $f end),
       display:$d, items:.}' 2>/dev/null || {
     emit_error_json "$state_path" "$section_name" "$filter_lower" "Could not finalize the todo listing. Rerun /vbw:list-todos."
     exit 0
