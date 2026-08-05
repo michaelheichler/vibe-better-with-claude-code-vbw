@@ -137,7 +137,7 @@ cat "$CLAUDE_PROJECT_DIR"/<session-id>/subagents/agent-*.jsonl
 ## Architecture
 
 - **Commands** (`commands/*.md`): Slash commands with YAML frontmatter. Command `name` values are explicitly prefixed (e.g. `name: vbw:init`) so slash commands appear as `/vbw:*`. The frontmatter `description` must be single-line (multi-line breaks plugin discovery).
-- **Agents** (`agents/vbw-{role}.md`): 8 agents (Scout, Architect, Lead, Dev, QA Author, QA, Debugger, Docs) with platform-enforced tool permissions via YAML `tools`/`disallowedTools`. Scout and QA are read-only (`permissionMode: plan`). QA Author writes only red-stage tests for the opt-in TDD pipeline.
+- **Agents** (`templates/agent-roles/{role}.md.tpl` + `templates/agent-roles/defaults.json`): 8 roles (Scout, Architect, Lead, Dev, QA Author, QA, Debugger, Docs) with prose templates and frontmatter defaults rendered by the agent generators. Scout and QA are read-only (`permissionMode: plan`). QA Author writes only red-stage tests for the opt-in TDD pipeline.
 - **Hooks** (`hooks/hooks.json`): 30 handlers across 11 event types (SessionStart, Stop, PreToolUse, PostToolUse, SubagentStart, SubagentStop, Notification, PreCompact, TaskCompleted, TeammateIdle, UserPromptSubmit). All route through `scripts/hook-wrapper.sh` which resolves from plugin cache via `ls | sort -V | tail -1` with a `CLAUDE_PLUGIN_ROOT` fallback for `--plugin-dir` installs, logs failures, and always exits 0 (no hook can break a session).
 - **Scripts** (`scripts/*.sh`): bash scripts for hook handlers, context compilation, state management, bootstrap, metrics, diagnostics, and codebase mapping. Target bash (not POSIX sh). Use `set -euo pipefail` for critical scripts, `set -u` minimum otherwise. Bash 4.4+ is required. Bash 5+ is recommended. macOS's bundled /bin/bash 3.2 is unsupported. Ensure `bash --version` resolves to Bash 4.4 or newer before running VBW or `testing/run-all.sh`.
 - **References** (`references/*.md`): protocol docs loaded on-demand by commands (for example `execute-protocol.md` and `verification-protocol.md`).
@@ -331,11 +331,11 @@ When asked to fix a bug or implement an issue-driven change:
 - **Feature requests** (`.github/ISSUE_TEMPLATE/feature_request.md`): must describe the problem, proposed solution, and alternatives considered.
 
 <!-- gitnexus:start -->
-# GitNexus — Code Intelligence
+# GitNexus Code Intelligence
 
 This project is indexed by GitNexus as **vibe-better-with-claude-code-vbw** (2196 symbols, 2187 relationships, 0 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
-> Index stale? Run `node .gitnexus/run.cjs analyze` from the project root — it auto-selects an available runner. No `.gitnexus/run.cjs` yet? `npx gitnexus analyze` (npm 11 crash → `npm i -g gitnexus`; #1939).
+> Index stale? Run `node .gitnexus/run.cjs analyze` from the project root. It auto-selects an available runner. No `.gitnexus/run.cjs` yet? Run `npx gitnexus analyze` (npm 11 crash, use `npm i -g gitnexus`, #1939).
 
 ## Always Do
 
@@ -343,14 +343,14 @@ This project is indexed by GitNexus as **vibe-better-with-claude-code-vbw** (219
 - **MUST run `detect_changes()` before committing** to verify your changes only affect expected symbols and execution flows. For regression review, compare against the default branch: `detect_changes({scope: "compare", base_ref: "main"})`.
 - **MUST warn the user** if impact analysis returns HIGH or CRITICAL risk before proceeding with edits.
 - When exploring unfamiliar code, use `query({search_query: "concept"})` to find execution flows instead of grepping. It returns process-grouped results ranked by relevance.
-- When you need full context on a specific symbol — callers, callees, which execution flows it participates in — use `context({name: "symbolName"})`.
-- For security review, `explain({target: "fileOrSymbol"})` lists taint findings (source→sink flows; needs `analyze --pdg`).
+- When you need full context on a specific symbol (callers, callees, and execution flows it participates in), use `context({name: "symbolName"})`.
+- For security review, `explain({target: "fileOrSymbol"})` lists taint findings. It needs `analyze --pdg`.
 
 ## Never Do
 
 - NEVER edit a function, class, or method without first running `impact` on it.
 - NEVER ignore HIGH or CRITICAL risk warnings from impact analysis.
-- NEVER rename symbols with find-and-replace — use `rename` which understands the call graph.
+- NEVER rename symbols with find-and-replace. Use `rename`, which understands the call graph.
 - NEVER commit changes without running `detect_changes()` to check affected scope.
 
 ## Resources
