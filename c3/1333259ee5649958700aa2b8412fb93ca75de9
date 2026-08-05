@@ -1,0 +1,43 @@
+templates/agent-roles/dev.md.tpl
+  s_58849211a94dc9::t_cac0eec4c4aba8 21
+templates/agent-roles/qa-author.md.tpl
+  s_58849211a94dc9::t_4280edaf867e40 54,58-71
+templates/agent-roles/lead.md.tpl
+  s_58849211a94dc9::t_b1bca2c3ee0020 115
+templates/agent-roles/debugger.md.tpl
+  s_58849211a94dc9::t_f92915e359baba 60
+commands/research.md
+  s_58849211a94dc9::t_f145e984e716c5 109
+  s_58849211a94dc9::t_9f8ef07dc3b685 27
+  s_58849211a94dc9::t_95f9803dc7c547 87
+templates/agent-roles/docs.md.tpl
+  s_58849211a94dc9::t_9507072b9b1500 46
+references/execute-protocol.md
+  s_58849211a94dc9::t_392fdfb580b62c 365-366
+  s_58849211a94dc9::t_6d92ace400b456 348-349,352
+  s_58849211a94dc9::t_ec3b4b50401dd2 25
+templates/agent-roles/architect.md.tpl
+  s_58849211a94dc9::t_be5026c8b255fd 43-44
+references/vibe-mode-bootstrap.md
+  s_58849211a94dc9::t_ad0bf80574e479 61
+  s_58849211a94dc9::t_fb812997d399a2 54-60
+  s_58849211a94dc9::t_31e2c37bea15ca 66-67
+references/execute-qa-result-gating.md
+  s_58849211a94dc9::t_e38fc2576b3471 123-124
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "c31333259ee5649958700aa2b8412fb93ca75de9",
+  "prompts": {},
+  "sessions": {
+    "s_58849211a94dc9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a93b1e36-c511-4112-8e32-e0fbdf710600",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
