@@ -1,0 +1,22 @@
+references/subagent-contracts.md
+  s_58849211a94dc9::t_1f1acc29858cef 60-67
+testing/verify-shared-contracts.sh
+  s_58849211a94dc9::t_da852627ea4fec 24-32
+  s_58849211a94dc9::t_d0a2680ea128dd 140-147
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "4da41b5683101bf5d53ee6680047c715095caf3c",
+  "prompts": {},
+  "sessions": {
+    "s_58849211a94dc9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a93b1e36-c511-4112-8e32-e0fbdf710600",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
