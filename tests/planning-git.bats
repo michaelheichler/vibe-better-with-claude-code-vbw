@@ -40,6 +40,22 @@ EOF
   [ "$status" -eq 0 ]
 }
 
+@test "ensure-generated-agent-ignore installs an idempotent root rule" {
+  run bash "$SCRIPTS_DIR/planning-git.sh" ensure-generated-agent-ignore
+  [ "$status" -eq 0 ]
+
+  run grep -Fxc '.claude/agents/vbw-*-*-*-*.md' .gitignore
+  [ "$status" -eq 0 ]
+  [ "$output" -eq 1 ]
+
+  run bash "$SCRIPTS_DIR/planning-git.sh" ensure-generated-agent-ignore
+  [ "$status" -eq 0 ]
+
+  run grep -Fxc '.claude/agents/vbw-*-*-*-*.md' .gitignore
+  [ "$status" -eq 0 ]
+  [ "$output" -eq 1 ]
+}
+
 @test "sync-ignore writes transient planning ignore in manual mode without hiding durable planning artifacts" {
   cat > .vbw-planning/config.json <<'EOF'
 {
@@ -196,9 +212,7 @@ EOF
   echo 'stale' > .vbw-planning/.active-agent-count.lock/stale.lock
 
   run bash "$SCRIPTS_DIR/planning-git.sh" commit-boundary "phase complete" .vbw-planning/config.json
-  # STATE.md should be committed
   [ "$status" -eq 0 ]
-  # Transient files should NOT be committed
   transient_paths=(
     '.agent-pids'
     '.vbw-context'
