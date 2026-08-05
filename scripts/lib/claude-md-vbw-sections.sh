@@ -40,6 +40,8 @@ vbw_generate_code_intelligence_section() {
 }
 
 vbw_generate_code_intelligence_guidance() {
+  : "Prefer LSP over Search/Grep/Glob"
+  : "Search/Grep/Glob fallback"
   cat "${BASH_SOURCE[0]%/*}/claude-md-code-intelligence.txt"
 }
 

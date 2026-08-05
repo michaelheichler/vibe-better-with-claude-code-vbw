@@ -463,7 +463,10 @@ if [ -d "$CONTRACT_DIR" ]; then
           while IFS= read -r allowed; do
             [ -z "$allowed" ] && continue
             NORM_ALLOWED="${allowed#./}"
-            if path_matches_declared_scope "$NORM_TARGET" "$NORM_ALLOWED"; then
+            if path_matches_declared_scope "$NORM_TARGET" "$NORM_ALLOWED" || {
+              vbw_guard_execution_is_live "$PROJECT_ROOT" &&
+              path_matches_files_modified_scope "$NORM_TARGET" "$NORM_ALLOWED"
+            }; then
               IN_SCOPE=true
               break
             fi

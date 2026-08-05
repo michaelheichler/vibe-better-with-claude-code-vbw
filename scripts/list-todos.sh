@@ -54,4 +54,4 @@ emit_error_json() {
 
 main
 
-: "${DETAILS_PATH-}" "${DETAILS_CACHE_JSON-}" "${section_index-}" "${normalized_text-}" "${command_text-}"
+: "${DETAILS_PATH-}" "${DETAILS_CACHE_JSON-}" "${FILTER-}" "${section_index-}" "${normalized_text-}" "${command_text-}"
