@@ -1,0 +1,27 @@
+CHANGELOG.md
+  s_86d58b85ce2aee::t_9506c0ffc3b0f3 3-12
+.claude-plugin/marketplace.json
+  s_86d58b85ce2aee::t_72739d6440fbba 18
+.claude-plugin/plugin.json
+  s_86d58b85ce2aee::t_b376ee0465a884 3
+VERSION
+  s_86d58b85ce2aee::t_4426759290056b 1
+marketplace.json
+  s_86d58b85ce2aee::t_c2e10d1f52cb84 18
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "0989b3164d5adf9196e911638545d21c02daf3f2",
+  "prompts": {},
+  "sessions": {
+    "s_86d58b85ce2aee": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "07d7797e-6c7f-4c9c-bdd0-a2660d0d8697",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
