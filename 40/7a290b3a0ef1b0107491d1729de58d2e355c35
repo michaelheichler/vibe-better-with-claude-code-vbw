@@ -1,0 +1,20 @@
+templates/agent-roles/defaults.json
+  s_58849211a94dc9::t_70fb70fb743416 38
+  s_58849211a94dc9::t_accab332c19df6 28
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "407a290b3a0ef1b0107491d1729de58d2e355c35",
+  "prompts": {},
+  "sessions": {
+    "s_58849211a94dc9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a93b1e36-c511-4112-8e32-e0fbdf710600",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
