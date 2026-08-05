@@ -87,6 +87,7 @@ for plan_file in "$PHASE_DIR"/*-PLAN.md; do
   fi
 
   if [ -f "$EVENTS_FILE" ]; then
+    # WHY: the latest valid event overrides stale SUMMARY.md state.
     PLAN_NUM=$(echo "$PLAN_ID" | sed 's/^[0-9]*-//' | sed 's/^0*//')
     [ -z "$PLAN_NUM" ] && PLAN_NUM="0"
     EVENT_STATUS=$(latest_plan_event_status "$EVENTS_FILE" "$PHASE" "$PLAN_NUM") || EVENT_STATUS=""

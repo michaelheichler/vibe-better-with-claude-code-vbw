@@ -227,12 +227,6 @@ verification_writer() {
   ' "$verification_file" 2>/dev/null
 }
 
-qa_gate_routing_for_phase() {
-  local phase_dir="$1"
-  [ -f "$_SCRIPT_DIR_PD/qa-result-gate.sh" ] || return 0
-  bash "$_SCRIPT_DIR_PD/qa-result-gate.sh" "$phase_dir" 2>/dev/null | awk -F= '/^qa_gate_routing=/{print $2; exit}'
-}
-
 restore_known_issues_from_verification_if_needed() {
   local phase_dir="$1"
   local verification_file="$2"

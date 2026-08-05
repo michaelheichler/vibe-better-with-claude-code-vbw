@@ -5,7 +5,7 @@ load test_helper
 setup() {
   setup_temp_dir
   create_test_config
-  cd "$TEST_TEMP_DIR"
+  cd "$TEST_TEMP_DIR" || return
 
   git init -q
   git config user.email "test@test.com"
@@ -13,7 +13,7 @@ setup() {
   echo "init" > init.txt && git add init.txt && git commit -q -m "init"
 
   cat > "$TEST_TEMP_DIR/.vbw-planning/STATE.md" <<'STATE'
-# State
+State
 ## Current Phase
 ## Phase Status
 Phase: 1 of 2 (Setup)
@@ -90,6 +90,27 @@ SUMMARY
   [ "$status" -eq 0 ]
   echo "$output" | jq -e '.status == "pending"' >/dev/null
   echo "$output" | jq -e '.plans[0].status == "pending"' >/dev/null
+}
+
+@test "recover-state: qa_required false allows complete existing state" {
+  cd "$TEST_TEMP_DIR"
+  local tmp
+  tmp=$(mktemp)
+  jq '.event_recovery = true' .vbw-planning/config.json > "$tmp" && mv "$tmp" .vbw-planning/config.json
+
+  cat > .vbw-planning/.execution-state.json <<'STATE'
+{"phase":1,"status":"running","qa_required":false,"plans":[{"id":"01-01","status":"pending"}]}
+STATE
+  cat > .vbw-planning/phases/01-setup/01-01-SUMMARY.md <<'SUMMARY'
+---
+status: complete
+---
+SUMMARY
+
+  run bash "$SCRIPTS_DIR/recover-state.sh" 1 ".vbw-planning/phases"
+  [ "$status" -eq 0 ]
+  echo "$output" | jq -e '.status == "complete"' >/dev/null
+  echo "$output" | jq -e '.qa_required == false' >/dev/null
 }
 
 @test "recover-state: reports complete when every plan finishes via event log only" {
@@ -291,7 +312,7 @@ STATE
   jq '.event_recovery = true' .vbw-planning/config.json > "$tmp" && mv "$tmp" .vbw-planning/config.json
 
   cat > .vbw-planning/STATE.md <<'STATE'
-# State
+State
 ## Current Phase
 ## Phase Status
 Status: in-progress
@@ -325,7 +346,7 @@ SUMMARY
   jq '.event_recovery = true' .vbw-planning/config.json > "$tmp" && mv "$tmp" .vbw-planning/config.json
 
   cat > .vbw-planning/STATE.md <<'STATE'
-# State
+State
 ## Current Phase
 ## Phase Status
 Phase: X of 2 (Setup)
@@ -358,7 +379,7 @@ SUMMARY
   jq '.event_recovery = true' .vbw-planning/config.json > "$tmp" && mv "$tmp" .vbw-planning/config.json
 
   cat > .vbw-planning/STATE.md <<'STATE'
-# State
+State
 ## Current Phase
 ## Phase Status
 Phase: 2 of 2 (Build)
@@ -593,7 +614,7 @@ status: complete
 SUMMARY
 
   cat > .vbw-planning/STATE.md <<'STATE'
-# State
+State
 ## Current Phase
 ## Phase Status
 Phase: 3 of 3 (Core)
@@ -619,7 +640,7 @@ STATE
   jq '.event_recovery = true' .vbw-planning/config.json > "$tmp" && mv "$tmp" .vbw-planning/config.json
 
   cat > .vbw-planning/STATE.md <<'STATE'
-# State
+State
 ## Current Phase
 ## Phase Status
 Phase: X of 2 (Setup)

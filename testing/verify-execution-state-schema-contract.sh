@@ -3,8 +3,8 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 REFERENCE="$ROOT/references/execute-protocol.md"
-SCRIPT="$ROOT/scripts/state-updater.sh"
-KEY='"qa_required"'
+SCRIPT="$ROOT/scripts/phase-state-utils.sh"
+KEY='qa_required'
 FAIL=0
 
 for file in "$REFERENCE" "$SCRIPT"; do

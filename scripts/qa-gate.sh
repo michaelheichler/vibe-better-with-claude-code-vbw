@@ -18,6 +18,7 @@ else
 fi
 
 for _qg_dependency in \
+  phase-state-utils.sh \
   verification-freshness.sh \
   lib/phase-detect-support.sh \
   resolve-verification-path.sh \
@@ -33,7 +34,8 @@ done
 
 if [ "$_QG_SUPPORT_READY" = true ]; then
   _SCRIPT_DIR_PD="$_QG_SCRIPT_DIR"
-  if ! . "$_QG_SCRIPT_DIR/verification-freshness.sh" >/dev/null 2>&1 ||
+  if ! . "$_QG_SCRIPT_DIR/phase-state-utils.sh" >/dev/null 2>&1 ||
+     ! . "$_QG_SCRIPT_DIR/verification-freshness.sh" >/dev/null 2>&1 ||
      ! . "$_QG_SCRIPT_DIR/lib/phase-detect-support.sh" >/dev/null 2>&1; then
     _QG_SUPPORT_READY=false
   else

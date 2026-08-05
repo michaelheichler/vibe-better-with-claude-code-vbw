@@ -6,6 +6,7 @@ if [ -f "$SCRIPT_DIR/uat-utils.sh" ]; then
   source "$SCRIPT_DIR/uat-utils.sh"
 fi
 if [ -f "$SCRIPT_DIR/summary-utils.sh" ]; then
+  # WHY: helper definitions are required. shellcheck source=summary-utils.sh
   source "$SCRIPT_DIR/summary-utils.sh"
 else
   count_complete_summaries() { echo "0"; }
@@ -13,6 +14,7 @@ else
   extract_summary_status() { printf ''; return 1; }
 fi
 if [ -f "$SCRIPT_DIR/phase-state-utils.sh" ]; then
+  # WHY: shared state helpers are required. shellcheck source=phase-state-utils.sh
   source "$SCRIPT_DIR/phase-state-utils.sh"
 else
   list_canonical_phase_dirs() {
@@ -689,6 +691,7 @@ if is_phase_root_artifact "$FILE_PATH" && echo "$FILE_PATH" | grep -qE 'phases/[
     [ "$PLAN" = "$SUMMARY_ID" ] && PLAN="$SUMMARY_ID"
   fi
 
+  # WHY: nonterminal statuses stay ignored so partial writes cannot unlock dependent plans.
   STATUS_RAW="$STATUS"
   if type extract_summary_status >/dev/null 2>&1; then
     _summary_status_raw=$(extract_summary_status "$FILE_PATH" 2>/dev/null || true)
@@ -710,6 +713,7 @@ if is_phase_root_artifact "$FILE_PATH" && echo "$FILE_PATH" | grep -qE 'phases/[
   fi
   QA_GATE_ROUTING=""
   update_roadmap "$PHASE_DIR"
+  QA_GATE_ROUTING=$(qa_gate_routing_for_phase "$PHASE_DIR" "$SCRIPT_DIR")
   QA_REQUIRED_FOR_PHASE=$(qa_required_for_phase "$PHASE_DIR")
 
   if [ -f "$STATE_FILE" ] && [ -n "$PLAN" ] && [ -n "$STATUS" ]; then
