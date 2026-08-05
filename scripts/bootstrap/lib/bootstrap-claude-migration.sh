@@ -161,6 +161,7 @@ flush_deprecated_buffer() {
   fi
   if [[ "$DEPRECATED_HAS_USER_CONTENT" == true ]] && ! migrate_key_decisions_to_state "$DEPRECATED_SECTION_BUFFER"; then
     NON_VBW_CONTENT+="${DEPRECATED_SECTION_BUFFER}"
+    export FOUND_NON_VBW
     FOUND_NON_VBW=true
     IN_DEPRECATED_SECTION=false
     DEPRECATED_SECTION_BUFFER=""
@@ -175,6 +176,7 @@ flush_deprecated_buffer() {
   if [[ -n "${preserved//[[:space:]]/}" ]]; then
     preserved="$(echo "$preserved" | sed '/./,$!d' | sed -e :a -e '/^\n*$/{$d;N;ba' -e '}')"
     NON_VBW_CONTENT+="## ${section_label} (Archived Notes)"$'\n\n'"${preserved}"$'\n\n'
+    export FOUND_NON_VBW
     FOUND_NON_VBW=true
   fi
 

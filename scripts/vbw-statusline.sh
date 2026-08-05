@@ -414,7 +414,7 @@ if ! cache_fresh "$FAST_CF" 5 || lifecycle_artifacts_newer_than_cache "$FAST_CF"
     GH_URL=$(git remote get-url origin 2>/dev/null | sed 's|git@github.com:|https://github.com/|' | sed 's|\.git$||' | sed 's|https://[^@]*@|https://|')
     GIT_STAGED=$(git diff --cached --numstat 2>/dev/null | wc -l | tr -d ' ')
     GIT_MODIFIED=$(git diff --numstat 2>/dev/null | wc -l | tr -d ' ')
-    GIT_AHEAD=$(git rev-list --count @{u}..HEAD 2>/dev/null || echo 0)
+    GIT_AHEAD=$(git rev-list --count '@{u}..HEAD' 2>/dev/null || echo 0)
   fi
   if [ -d "$VBW_PLANNING_DIR/phases" ]; then
     PT=0
@@ -558,7 +558,7 @@ fi
 if [ -O "$FAST_CF" ]; then
   IFS='|' read -r PH TT EF MP BR PD PT PPD QA GH_URL GIT_STAGED GIT_MODIFIED GIT_AHEAD \
                   EXEC_STATUS EXEC_WAVE EXEC_TWAVES EXEC_DONE EXEC_TOTAL EXEC_CURRENT \
-                  AGENT_N PPT QA_COLOR HIDE_AGENT_TMUX COLLAPSE_AGENT_TMUX \
+                  _AGENT_N PPT QA_COLOR HIDE_AGENT_TMUX COLLAPSE_AGENT_TMUX \
                   PP_LABEL REM_ACTIVE < "$FAST_CF"
   PP_LABEL="${PP_LABEL:-this phase}"
   REM_ACTIVE="${REM_ACTIVE:-false}"
