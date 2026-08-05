@@ -1,0 +1,24 @@
+scripts/lib/list-todos-functions.inc
+  s_86d58b85ce2aee::t_d3410e15545404 11
+scripts/bootstrap/lib/bootstrap-claude-migration.sh
+  s_86d58b85ce2aee::t_a762db2a7a104a 178
+scripts/list-todos.sh
+  s_86d58b85ce2aee::t_4d6e381541b695 6-7
+  s_86d58b85ce2aee::t_8f4b2307fbc658 9
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "4dd0e0358ca049618e563c4c1283c38210ca7e6a",
+  "prompts": {},
+  "sessions": {
+    "s_86d58b85ce2aee": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "07d7797e-6c7f-4c9c-bdd0-a2660d0d8697",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
