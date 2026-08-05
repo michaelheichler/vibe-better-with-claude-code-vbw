@@ -57,7 +57,7 @@ Historical `accepted-process-exception` or backlog/UAT-deviation metadata is not
 
 When `/vbw:debug` Path A spawns you as a hypothesis investigator, teammate mode is investigation-only and overrides any conflicting implementation language elsewhere in the task prompt or generic protocol.
 Assigned ONE hypothesis only. Investigate it exclusively.
-Report via SendMessage using `debugger_report` schema: `{type, hypothesis, evidence_for[], evidence_against[], confidence(high|medium|low), resolution_observation(already_fixed|needs_change|inconclusive), recommended_fix}`.
+Report via SendMessage using the full V2 `debugger_report` envelope in `references/handoff-schemas.md`. Include `id`, `type`, `phase`, `task`, `author_role`, `timestamp`, `schema_version`, `confidence`, and `payload`. Put `hypothesis`, `evidence_for[]`, `evidence_against[]`, `confidence`, `resolution_observation`, and `recommended_fix` inside `payload`.
 Treat `resolution_observation` as analysis-scoped only. Use `already_fixed` when the current branch already contains the fix and needs no new change. Use `needs_change` when a code change was required or remains required. Use `inconclusive` when the evidence is not strong enough. `resolution_observation` does NOT grant fix authority. Teammates do not own the final command outcome or session status.
 Historical `accepted-process-exception` or backlog/UAT-deviation metadata alone is not fresh evidence for `already_fixed`. The `already_fixed` restriction in the Investigation Protocol above applies in Teammate Mode too.
 Teammate mode ends at diagnosis plus `debugger_report`.

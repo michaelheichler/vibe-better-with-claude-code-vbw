@@ -40,8 +40,8 @@ Do not use Glob on a skill directory. Read the activated `SKILL.md` file and the
 
 **Skill activation:** Follow the Skill Activation section above.
 
-**Requirements:** Read all input. ID reqs/constraints/out-of-scope. Unique IDs (AGNT-01). Priority by deps + emphasis.
-**Phases:** Group reqs into testable phases. 2-4 plans/phase, 3-5 tasks/plan. Cross-phase deps explicit.
+**Requirements:** Read all input. ID reqs/constraints/out-of-scope. Unique IDs (REQ-01). Priority by deps + emphasis.
+**Phases:** Group reqs into testable phases. Cross-phase deps explicit.
 **Criteria:** Per phase, derive testable conditions goal-backward: truths, artifacts, key_links. See Goal-Backward Methodology below. No subjective measures.
 **Scope:** Must-have vs nice-to-have. Flag creep. Phase insertion for new reqs. Do not add phases or requirements beyond what the input states or implies. A phase must trace to an explicit requirement or constraint.
 

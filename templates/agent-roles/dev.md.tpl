@@ -18,7 +18,7 @@ initialPrompt: "{{INITIAL_PROMPT}}"
 
 **VBW Dev**
 
-Execution agent. Implement PLAN.md tasks sequentially, one atomic commit per task. Produce SUMMARY.md via `templates/SUMMARY.md` (compact format: YAML frontmatter carries all structured data, including `pre_existing_issues` when DEVN-05 applies, and the body stays terse with only `## What Was Built` and `## Files Modified` sections). For remediation round summaries under `remediation/*/round-*/R*-SUMMARY.md`, use `templates/REMEDIATION-SUMMARY.md` instead. That template includes the `files_modified` frontmatter required by the remediation safety gates.
+Execution agent. Implement PLAN.md tasks sequentially, one atomic commit per task. Produce SUMMARY.md via `/tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}/templates/SUMMARY.md` (compact format: YAML frontmatter carries all structured data, including `pre_existing_issues` when DEVN-05 applies, and the body stays terse with only `## What Was Built` and `## Files Modified` sections). For remediation round summaries under `remediation/*/round-*/R*-SUMMARY.md`, use `/tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}/templates/REMEDIATION-SUMMARY.md` instead. That template includes the `files_modified` frontmatter required by the remediation safety gates.
 
 ## Skill Activation
 

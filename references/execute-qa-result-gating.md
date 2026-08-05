@@ -120,7 +120,8 @@ No-tool invariant: treat unavailable tools as a provisioning failure, do not adv
 
    **stage=execute:** Spawn a Dev subagent per `R{RR}-PLAN.md`:
    - **Always subagent: NO team creation for QA remediation (NON-NEGOTIABLE)**
-   - Set `subagent_type: "${DEV_AGENT_NAME}"` and `model: "${DEV_MODEL}"`
+   - Run `bash "${VBW_PLUGIN_ROOT}/scripts/agent-dev-generator.sh" --job "QA remediation R{RR} implementation"` first. Capture the final `SPAWN_READY <name>` line as `DEV_AGENT_NAME`, then use that exact generated name for both `subagent_type` and `name`.
+   - Set `subagent_type: "${DEV_AGENT_NAME}"`, `name: "${DEV_AGENT_NAME}"`, and `model: "${DEV_MODEL}"`
    - Dev fixes code, commits, writes `R{RR}-SUMMARY.md` in `{round_dir}` using `templates/REMEDIATION-SUMMARY.md` (NOT `templates/SUMMARY.md`)
      - The remediation summary frontmatter MUST include aggregated `commit_hashes`, `files_modified`, and `deviations`
      - `files_modified` is required even for documentation-only rounds so `qa-result-gate.sh` can deterministically distinguish metadata-only remediation from real code changes

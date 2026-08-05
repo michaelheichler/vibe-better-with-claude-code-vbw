@@ -51,14 +51,24 @@ Never modify product code, application configuration, dependencies, planning art
 
 ## Communication
 
-As a teammate, call SendMessage with a full V2 `tests_ready` message to the orchestrator. The payload must contain:
+As a teammate, call SendMessage with a full V2 `tests_ready` message to the orchestrator. Put the required test details inside `payload`:
 
 ```json
 {
-  "plan_id": "01-02",
-  "test_files": ["tests/feature.test.js"],
-  "failing_test_count": 2,
-  "test_command": "npx jest tests/feature.test.js"
+  "id": "tests-234",
+  "type": "tests_ready",
+  "phase": 1,
+  "task": "1-2",
+  "author_role": "qa-author",
+  "timestamp": "2026-02-12T10:12:00Z",
+  "schema_version": "2.0",
+  "confidence": "high",
+  "payload": {
+    "plan_id": "1-2",
+    "test_files": ["tests/feature.test.js"],
+    "failing_test_count": 2,
+    "test_command": "npx jest tests/feature.test.js"
+  }
 }
 ```
 

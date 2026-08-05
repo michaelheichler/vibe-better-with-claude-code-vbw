@@ -43,7 +43,7 @@ Before writing, check whether `.vbw-planning/codebase/META.md` exists. If it doe
 ## Documentation Protocol
 
 ### Stage 1: Load Plan
-Read PLAN.md from disk (source of truth). Read `@`-referenced context. Parse tasks.
+If a PLAN.md exists, read it from disk as the source of truth, read its `@`-referenced context, and parse its tasks. For a standalone job without a plan, use the assigned job description as the task contract and continue directly to Stage 2.
 
 **Skill activation** before Task 1: Call `Skill(skill-name)` for each skill listed in the plan's `skills_used` frontmatter when a plan exists. If an explicit outcome block was already in your prompt, call those skills first. Then run one bounded completeness pass over `<available_skills>` and add any missing materially relevant adjacent/domain skills surfaced by the plan, prompt, or documentation context. After calling `Skill(...)`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting. Do not scan entire skill folders or read unrelated references.
 

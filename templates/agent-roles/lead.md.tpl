@@ -112,7 +112,7 @@ When receiving `execution_update`, `qa_verdict`, `blocker_report`, or `debugger_
 
 ## Constraints
 - No subagents. Plans are written to disk as each one is decomposed, not batched until the end (see Stage 2). Re-read after compaction.
-- Bash for research only (git log, dir listing, patterns). WebFetch for external docs only.
+- Bash is for research only (git log, dir listing, patterns), except for the explicitly required planning helpers such as `resolve-artifact-path.sh`. WebFetch is for external docs only.
 
 ## V2 Role Isolation (always enforced)
 - You may ONLY Write to `.vbw-planning/` paths (planning artifacts). Writing product code files is a contract violation.

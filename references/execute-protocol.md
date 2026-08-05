@@ -22,7 +22,7 @@ VBW_PLUGIN_ROOT=$(bash "$RESOLVER") || exit 1
 
 All runtime script invocations below assume `VBW_PLUGIN_ROOT` is set.
 
-Before spawning any subagent, read `${VBW_PLUGIN_ROOT}/references/subagent-contracts.md` for the canonical subagent contracts. Run the matching role generator once per teammate and capture each final `SPAWN_READY <name>` line before the spawn call.
+Before spawning any subagent, read `${VBW_PLUGIN_ROOT}/references/subagent-contracts.md` for the canonical subagent contracts. Run the matching role generator once per teammate and capture each final `SPAWN_READY <name>` line into the role-specific variable (`DEV_AGENT_NAME`, `QA_AGENT_NAME`, `SCOUT_AGENT_NAME`, or `QA_AUTHOR_AGENT_NAME`) before the spawn call. Use that exact generated name for both `subagent_type` and `name`.
 
 ### Step 2: Load plans and detect resume state
 
@@ -345,9 +345,11 @@ activeForm: "Executing {NN-MM}"
 
 **TaskCompleted advisory scope:** Commit verification is advisory and only applies to canonical execute-task subjects (`Execute {NN-MM}: {plan-title}`). Manual, research, setup, and other non-execute tasks are allowed to complete without commit matching.
 
+Before each Dev spawn, run `bash "${VBW_PLUGIN_ROOT}/scripts/agent-dev-generator.sh" --job "{plan title and task scope}"` and capture the final `SPAWN_READY <name>` line as `DEV_AGENT_NAME`. Use that exact generated name for both `subagent_type` and `name`.
+
 Display: `◆ Spawning Dev teammate (${DEV_MODEL})...`
 
-**CRITICAL:** Set `subagent_type: "${DEV_AGENT_NAME}"` and `model: "${DEV_MODEL}"` on the live spawn call when spawning Dev teammates. If `DEV_MAX_TURNS` is non-empty, also pass `maxTurns: ${DEV_MAX_TURNS}`. If `DEV_MAX_TURNS` is empty, do NOT include maxTurns (omitting it = unlimited). If `DEV_REASONING` is non-empty, also pass `effort: "${DEV_REASONING}"`. If `DEV_REASONING` is empty, do NOT include effort (the resolved model rejects the parameter).
+**CRITICAL:** Set `subagent_type: "${DEV_AGENT_NAME}"`, `name: "${DEV_AGENT_NAME}"`, and `model: "${DEV_MODEL}"` on the live spawn call when spawning Dev teammates. If `DEV_MAX_TURNS` is non-empty, also pass `maxTurns: ${DEV_MAX_TURNS}`. If `DEV_MAX_TURNS` is empty, do NOT include maxTurns (omitting it = unlimited). If `DEV_REASONING` is non-empty, also pass `effort: "${DEV_REASONING}"`. If `DEV_REASONING` is empty, do NOT include effort (the resolved model rejects the parameter).
 **CRITICAL:** When true team mode is active, pass `team_name: "vbw-phase-{NN}"` and the generated `SPAWN_READY` name on the live spawn call. If the live spawn tool is `Agent`, those parameters belong on `Agent(...)`. If the live spawn tool is `TaskCreate`, put the same parameters there. Team mode without `team_name` is invalid.
 **CRITICAL:** In explicit non-team mode or team-tooling-unavailable fallback, do NOT use `run_in_background: true` to imitate parallel team execution.
 
@@ -360,8 +362,8 @@ Just before spawning a runnable plan with `worktree_isolation` enabled, create o
 **Opt-in TDD wave sequence (delegate plans only):** Read `tdd_pipeline` from config with `.tdd_pipeline // false`. The key defaults to `false` when absent. Direct and turbo segments keep their existing path.
 
 When `tdd_pipeline=true`, run these stages for each runnable delegate plan:
-1. **Red:** Run the QA Author generator and use its `SPAWN_READY` name as the exact `subagent_type` and `name`. Apply the QA skill-activation prompt rules above. It reads the plan's `must_haves`, writes and commits only failing test files, then reports the `tests_ready` payload from `references/handoff-schemas.md`. Do not spawn that plan's Dev until its payload reports at least one expected failing test.
-2. **Green:** Run the Dev generator and use its `SPAWN_READY` name as the exact `subagent_type` and `name`. Include the complete `tests_ready` payload in its task description and direct it to implement the plan until `test_command` passes.
+1. **Red:** Run the QA Author generator once for the plan, capture its final `SPAWN_READY <name>` line as `QA_AUTHOR_AGENT_NAME`, and use that exact generated name as both the `subagent_type` and `name`. Apply the QA skill-activation prompt rules above. It reads the plan's `must_haves`, writes and commits only failing test files, then reports the `tests_ready` payload from `references/handoff-schemas.md`. Do not spawn that plan's Dev until its payload reports at least one expected failing test.
+2. **Green:** Run the Dev generator once for the plan, capture its final `SPAWN_READY <name>` line as `DEV_AGENT_NAME`, and use that exact generated name as both the `subagent_type` and `name`. Include the complete `tests_ready` payload in its task description and direct it to implement the plan until `test_command` passes.
 3. **Verify:** Keep the standard QA timing, spawn shape, and Step 4 verification unchanged.
 
 In true team mode, run one QA Author generator per plan and use each `SPAWN_READY` name as both `subagent_type` and `name`, with `team_name: "$TEAM_NAME"`. Launch all red teammates first, then launch each matching Dev after that plan's `tests_ready` message arrives. In explicit non-team mode and team-tooling-unavailable fallback, use plain sequential subagents for each plan. Run the QA Author generator, wait for its `tests_ready` payload, then run the Dev generator and wait for completion before starting the next plan. Give both stages the same plan worktree target. All spawn-shape and prepared-worktree rules above still apply.
