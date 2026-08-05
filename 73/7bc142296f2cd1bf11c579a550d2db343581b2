@@ -1,0 +1,41 @@
+hooks/hooks.json
+  s_58849211a94dc9::t_bb90cb651849b7 157-161
+  s_58849211a94dc9::t_f31ea2ef150949 257-263
+  s_58849211a94dc9::t_2029c2d2588ce2 211-215
+  s_58849211a94dc9::t_8247b06ee18e47 189-193
+  s_58849211a94dc9::t_cec380942212d0 255-256
+tests/agent-lifecycle.bats
+  s_58849211a94dc9::t_20a494950516b9 69
+  s_58849211a94dc9::t_30e0f4ba5c3d52 61
+  s_58849211a94dc9::t_4cb972ea69378b 49,54
+  s_58849211a94dc9::t_a5058e957e8a9b 40-43
+  s_58849211a94dc9::t_b30901889e574d 58
+  s_58849211a94dc9::t_30fd161742a53f 1-39,44-48,50-53,55-57,59,62-68,70-95
+  s_58849211a94dc9::t_f3e17f8f29826f 60
+scripts/lib/agent-manifest.sh
+  s_58849211a94dc9::t_2d19f12fdcb172 1-50
+scripts/agent-lifecycle.sh
+  s_58849211a94dc9::t_52ef86461d0962 132,135-136
+  s_58849211a94dc9::t_32c0533e3752ff 148
+  s_58849211a94dc9::t_4763d173b708c2 1-70,96,98-99,101-106,108,110-111,149-150,169,171-173,178,180,183-220
+  s_58849211a94dc9::t_d73220eb777534 71-73,75-80,82-95,100,107,109,112-131,133,137-147,151-168,170,174-177,179,181-182
+  s_58849211a94dc9::t_bfea9cbeba9ded 74,81
+  s_58849211a94dc9::t_5fe604d4b7ef55 97
+  s_58849211a94dc9::t_2282b2bc80bcda 134
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "737bc142296f2cd1bf11c579a550d2db343581b2",
+  "prompts": {},
+  "sessions": {
+    "s_58849211a94dc9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a93b1e36-c511-4112-8e32-e0fbdf710600",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
