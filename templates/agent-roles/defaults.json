@@ -1,11 +1,13 @@
 {
   "architect": {
+    "description": "Turns requirements into a phased ROADMAP.md, REQUIREMENTS.md, and PROJECT.md. Use for initial project scoping or re-planning after a milestone ships. Not for per-phase task planning. That belongs to vbw-lead.",
     "model": "claude-opus-5",
     "tools": "Read, Glob, Grep, Write, LSP, Skill, SendMessage",
     "memory": "project",
     "permissionMode": "acceptEdits"
   },
   "debugger": {
+    "description": "Diagnoses and fixes a single reported bug via reproduce, hypothesize, evidence, diagnose, fix, verify. Use for concrete bug reports, crashes, or test failures needing root-cause investigation. Not for phase planning (vbw-lead), verification of completed work (vbw-qa), or documentation (vbw-docs).",
     "model": "claude-opus-5",
     "disallowedTools": "Task, TaskCreate",
     "effort": "xhigh",
@@ -13,6 +15,7 @@
     "permissionMode": "acceptEdits"
   },
   "dev": {
+    "description": "Execution agent with full tool access (denylist-controlled) for implementing plan tasks with atomic commits per task. Use for executing PLAN.md tasks or ad-hoc fixes. Not for verification or bug diagnosis. Those belong to vbw-qa and vbw-debugger. Applies the Dijkstra correctness discipline (postcondition-first, invariant/variant-derived loops) for algorithms, loops, and tricky logic.",
     "model": "claude-sonnet-5",
     "effort": "xhigh",
     "memory": "project",
@@ -20,12 +23,14 @@
     "disallowedTools": "Task, TaskCreate, Agent, AskUserQuestion"
   },
   "docs": {
+    "description": "Documentation agent for READMEs, changelogs, inline API docs, and guides. Use for standalone documentation tasks and for doc-only plans or tasks a Lead has scoped out of a phase. Documentation changes bundled inside a feature implementation task stay with vbw-dev under its plan contract. Read access to the full codebase, write access limited to documentation files only.",
     "model": "claude-sonnet-5",
     "tools": "Read, Grep, Glob, Bash, Write, Edit, LSP, Skill, SendMessage",
     "memory": "project",
     "permissionMode": "acceptEdits"
   },
   "lead": {
+    "description": "Turns a scoped phase into executable PLAN.md task lists through research, decomposition, and self-review in one compaction-extended session. Use for per-phase task planning once a phase exists in ROADMAP.md and REQUIREMENTS.md. Not for initial project scoping or roadmap creation. That belongs to vbw-architect.",
     "model": "claude-fable-5",
     "effort": "medium",
     "memory": "project",
@@ -33,18 +38,21 @@
     "tools": "Read, Glob, Grep, Write, Bash, WebFetch, LSP, Skill, Task(vbw-dev), SendMessage"
   },
   "qa-author": {
+    "description": "Test author for the red stage of opt-in TDD execution. Writes and commits failing tests from plan must_haves without modifying product code.",
     "model": "inherit",
     "memory": "project",
     "permissionMode": "acceptEdits",
     "disallowedTools": "Task, TaskCreate, Agent, AskUserQuestion, NotebookEdit"
   },
   "qa": {
+    "description": "Validates completed plan or phase work against PLAN.md must_haves and declared deviations using goal-backward checks. Use after Dev or Docs finish a plan or phase, or for standalone debug-session verification. Not for diagnosing root causes of bugs. That belongs to vbw-debugger. Read-only derives and reports PASS, FAIL, or PARTIAL verdicts, never edits source or planning files.",
     "model": "claude-sonnet-5",
     "memory": "project",
     "permissionMode": "plan",
     "disallowedTools": "Task, Write, Edit, NotebookEdit, ExitPlanMode"
   },
   "scout": {
+    "description": "Research agent for web/doc/codebase scanning and read-only live validation. Use for pre-plan domain research, codebase mapping (/vbw:map), and standalone research (/vbw:research). Not for planning or task decomposition. That belongs to vbw-architect and vbw-lead. Writes RESEARCH.md files directly. Never edits existing files.",
     "model": "claude-sonnet-5",
     "effort": "high",
     "memory": "local",
