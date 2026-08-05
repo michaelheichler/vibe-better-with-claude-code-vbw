@@ -1,0 +1,41 @@
+commands/debug.md
+  s_58849211a94dc9::t_8c5a14634d46eb 227,472
+  s_58849211a94dc9::t_1995c71f182cb2 470
+  s_58849211a94dc9::t_32f9a73bd73170 228
+  s_58849211a94dc9::t_4e67a403c77636 225
+  s_58849211a94dc9::t_dc83de8eb77ded 250
+  s_58849211a94dc9::t_b4e58f8f9057da 256
+  s_58849211a94dc9::t_fa2a53908aaabe 229
+  s_58849211a94dc9::t_92a1a00d5545b6 247
+  s_58849211a94dc9::t_e6b513aa229f89 226
+  s_58849211a94dc9::t_1acab6408acb8d 471
+  s_58849211a94dc9::t_af011085a49ed5 233
+  s_58849211a94dc9::t_87a778d0d6c51a 245
+commands/fix.md
+  s_58849211a94dc9::t_7868fc8f6bf15d 76
+tests/discovered-issues-surfacing.bats
+  s_58849211a94dc9::t_77b57062fc96ae 114
+testing/verify-uat-remediation-orchestration.sh
+  s_58849211a94dc9::t_ef3fde123dc4dd 15-17,21-23
+  s_58849211a94dc9::t_90b9a624e4f4ac 236
+tests/agent-generator.bats
+  s_58849211a94dc9::t_703e151c85f4ea 65-69
+testing/verify-skill-activation/subagent-hook-contracts.bash
+  s_58849211a94dc9::t_922549f3a29fc3 5,8,10,13,16-17,19
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "5837906e91cb131018f566b370ac8a8731024909",
+  "prompts": {},
+  "sessions": {
+    "s_58849211a94dc9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a93b1e36-c511-4112-8e32-e0fbdf710600",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
