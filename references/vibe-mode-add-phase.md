@@ -22,7 +22,7 @@ Missing name: STOP "Usage: `/vbw:vibe --add <phase-name>`"
       SCOUT_REASONING="$RESOLVED_REASONING"
     fi
     ```
-  **Scout spawn:** Spawn Scout agent (with `subagent_type: "vbw:vbw-scout"`) to research the problem in the codebase. If `SCOUT_MODEL` is non-empty, pass `model: "$SCOUT_MODEL"` to the Task invocation. If `SCOUT_MODEL` is empty, omit model so the default applies. If `SCOUT_MAX_TURNS` is non-empty, also pass `maxTurns: ${SCOUT_MAX_TURNS}`. If `SCOUT_MAX_TURNS` is empty, omit maxTurns.
+  **Scout spawn:** Spawn Scout agent (with `subagent_type: "${SCOUT_AGENT_NAME}"`) to research the problem in the codebase. If `SCOUT_MODEL` is non-empty, pass `model: "$SCOUT_MODEL"` to the Task invocation. If `SCOUT_MODEL` is empty, omit model so the default applies. If `SCOUT_MAX_TURNS` is non-empty, also pass `maxTurns: ${SCOUT_MAX_TURNS}`. If `SCOUT_MAX_TURNS` is empty, omit maxTurns.
 
   Non-team invariant: omit `team_name`, `run_in_background`, `isolation`, and all worktree cwd fields.
 

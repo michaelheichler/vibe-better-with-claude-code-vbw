@@ -24,6 +24,8 @@ Store the plugin root path output above as `{plugin-root}` for use in script inv
 
 @${CLAUDE_PLUGIN_ROOT}/references/subagent-contracts.md
 
+Before every Scout spawn, run `bash "{plugin-root}/scripts/agent-scout-generator.sh" --job "{mapping job}"` and capture the final `SPAWN_READY <name>` line. Use each generated name for both `subagent_type` and `name`.
+
 Existing mapping:
 ```text
 !`ls .vbw-planning/codebase/ 2>/dev/null || echo "No codebase mapping found"`
@@ -167,7 +169,7 @@ Display ✓ per domain. After all 7 docs written, skip Step 3.5, go to Step 4.
 
 ---
 
-**Step 3-duo:** **Pre-spawn stale-team cleanup:** `bash "{plugin-root}/scripts/clean-stale-teams.sh" 2>/dev/null || true`. Agent teams are experimental (CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1). The team forms when the first teammate is spawned via the Agent tool. There is no TeamCreate setup step. Spawn the team (`description="Codebase Map (duo)"`) with 2 Scouts via TaskCreate. **Set `subagent_type: "vbw:vbw-scout"` on each Scout TaskCreate.** Do not pass `isolation`, `cwd`, `working_dir`, `workingDirectory`, or `workdir` on any TaskCreate.
+**Step 3-duo:** **Pre-spawn stale-team cleanup:** `bash "{plugin-root}/scripts/clean-stale-teams.sh" 2>/dev/null || true`. Agent teams are experimental (CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1). The team forms when the first teammate is spawned via the Agent tool. There is no TeamCreate setup step. Spawn the team (`description="Codebase Map (duo)"`) with 2 generated Scout agents via TaskCreate. **Set `subagent_type: "${SCOUT_AGENT_NAME}"` on each Scout TaskCreate.** Do not pass `isolation`, `cwd`, `working_dir`, `workingDirectory`, or `workdir` on any TaskCreate.
 
 Scout A (Tech + Architecture): analyze tech stack, deps, architecture, structure. Write findings directly to the output paths. Include in prompt:
 ```
@@ -215,7 +217,7 @@ Wait for all findings. Proceed to Step 3.5.
 
 ---
 
-**Step 3-quad:** **Pre-spawn stale-team cleanup:** `bash "{plugin-root}/scripts/clean-stale-teams.sh" 2>/dev/null || true`. Agent teams are experimental (CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1). The team forms when the first teammate is spawned via the Agent tool. There is no TeamCreate setup step. Spawn the team (`description="Codebase Map (quad)"`) with 4 Scouts via TaskCreate. **Set `subagent_type: "vbw:vbw-scout"` on each Scout TaskCreate.** Do not pass `isolation`, `cwd`, `working_dir`, `workingDirectory`, or `workdir` on any TaskCreate. Each Scout writes its domain files directly via `<output_paths>`, then sends a `scout_findings` message with `cross_cutting` findings only (file contents already written). Schema ref: `{plugin-root}/references/handoff-schemas.md`
+**Step 3-quad:** **Pre-spawn stale-team cleanup:** `bash "{plugin-root}/scripts/clean-stale-teams.sh" 2>/dev/null || true`. Agent teams are experimental (CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1). The team forms when the first teammate is spawned via the Agent tool. There is no TeamCreate setup step. Spawn the team (`description="Codebase Map (quad)"`) with 4 Scouts via TaskCreate. **Set `subagent_type: "${SCOUT_AGENT_NAME}"` on each Scout TaskCreate.** Do not pass `isolation`, `cwd`, `working_dir`, `workingDirectory`, or `workdir` on any TaskCreate. Each Scout writes its domain files directly via `<output_paths>`, then sends a `scout_findings` message with `cross_cutting` findings only (file contents already written). Schema ref: `{plugin-root}/references/handoff-schemas.md`
 - Scout 1 (Tech Stack): `<output_paths>` = `.vbw-planning/codebase/STACK.md`, `.vbw-planning/codebase/DEPENDENCIES.md`. Include this sentence in the payload: "Read {plugin-root}/commands/map.md and follow its Map Document Format contract for every output file."
 - Scout 2 (Architecture): `<output_paths>` = `.vbw-planning/codebase/ARCHITECTURE.md`, `.vbw-planning/codebase/STRUCTURE.md`. Include this sentence in the payload: "Read {plugin-root}/commands/map.md and follow its Map Document Format contract for every output file."
 - Scout 3 (Quality): `<output_paths>` = `.vbw-planning/codebase/CONVENTIONS.md`, `.vbw-planning/codebase/TESTING.md`. Include this sentence in the payload: "Read {plugin-root}/commands/map.md and follow its Map Document Format contract for every output file."

@@ -24,6 +24,8 @@ Store the plugin root path output above as `{plugin-root}` for use in script inv
 
 @${CLAUDE_PLUGIN_ROOT}/references/subagent-contracts.md
 
+Before every QA spawn, run `bash "{plugin-root}/scripts/agent-qa-generator.sh" --job "{verification job}"` and capture the final `SPAWN_READY <name>` line. Use that name for both `subagent_type` and `name`.
+
 Current state:
 ```text
 !`head -40 .vbw-planning/STATE.md 2>/dev/null || echo "No state found"`
@@ -153,7 +155,7 @@ When routed here, skip the standard phase-resolution Steps entirely. Instead:
   QA_REASONING="$RESOLVED_REASONING"
    ```
 
-5. Spawn vbw-qa as subagent via Task tool for debug-session verification. **Set `subagent_type: "vbw:vbw-qa"` and `model: "${QA_MODEL}"` in the Task tool invocation. If `QA_MAX_TURNS` is non-empty, also pass `maxTurns: ${QA_MAX_TURNS}`.**
+5. Spawn the generated QA as subagent via Task tool for debug-session verification. **Set `subagent_type: "${QA_AGENT_NAME}"` and `model: "${QA_MODEL}"` in the Task tool invocation. If `QA_MAX_TURNS` is non-empty, also pass `maxTurns: ${QA_MAX_TURNS}`.**
 
     Non-team invariant: omit `team_name`, `run_in_background`, `isolation`, and all worktree cwd fields.
 
@@ -306,7 +308,7 @@ Note: Continuous verification handled by hooks. This command is for deep, on-dem
 
     - Also evaluate available MCP tools in your system context. If any MCP servers provide build, test, documentation, or domain-specific capabilities relevant to verification, note them in the QA task context.
 
-    - Spawn vbw-qa as subagent via Task tool. **Set `subagent_type: "vbw:vbw-qa"` and `model: "${QA_MODEL}"` in
+    - Spawn the generated QA as subagent via Task tool. **Set `subagent_type: "${QA_AGENT_NAME}"` and `model: "${QA_MODEL}"` in
       the Task tool invocation. If `QA_MAX_TURNS` is non-empty, also pass
       `maxTurns: ${QA_MAX_TURNS}`. If `QA_MAX_TURNS` is empty, do NOT include maxTurns (omitting it = unlimited).**
 

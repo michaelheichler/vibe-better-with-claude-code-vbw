@@ -22,7 +22,7 @@ VBW_PLUGIN_ROOT=$(bash "$RESOLVER") || exit 1
 
 All runtime script invocations below assume `VBW_PLUGIN_ROOT` is set.
 
-Before spawning any subagent, read `${VBW_PLUGIN_ROOT}/references/subagent-contracts.md` for the canonical subagent contracts.
+Before spawning any subagent, read `${VBW_PLUGIN_ROOT}/references/subagent-contracts.md` for the canonical subagent contracts. Run the matching role generator once per teammate and capture each final `SPAWN_READY <name>` line before the spawn call.
 
 ### Step 2: Load plans and detect resume state
 
@@ -157,7 +157,7 @@ Branch each segment into exactly one runtime path and persist that segment's act
      ```bash
      bash "${VBW_PLUGIN_ROOT}/scripts/delegated-workflow.sh" set execute {segment_effort} team "$TEAM_NAME"
      ```
-   - All Dev and QA teammates below MUST carry `team_name: "$TEAM_NAME"` plus `name: "dev-{MM}"` (from plan number) or `name: "qa"` / `name: "qa-wave{W}"` on the live spawn call. No plain task-management `TaskCreate` may happen after the team marker is set unless it carries the selected `TEAM_NAME` and teammate `name`.
+   - All Dev and QA teammates below MUST carry `team_name: "$TEAM_NAME"` plus their generated `SPAWN_READY` name on the live spawn call. No plain task-management `TaskCreate` may happen after the team marker is set unless it carries the selected `TEAM_NAME` and generated teammate name.
 
 2. **Explicit non-team mode**
    - Use this path when `prefer_teams='never'`, `prefer_teams='auto'` with `max_parallel_width <= 1`, unknown `prefer_teams`, no delegate-eligible plans, segment route `turbo`/internal `direct`, or team-tooling-unavailable fallback.
@@ -347,8 +347,8 @@ activeForm: "Executing {NN-MM}"
 
 Display: `◆ Spawning Dev teammate (${DEV_MODEL})...`
 
-**CRITICAL:** Set `subagent_type: "vbw:vbw-dev"` and `model: "${DEV_MODEL}"` on the live spawn call when spawning Dev teammates. If `DEV_MAX_TURNS` is non-empty, also pass `maxTurns: ${DEV_MAX_TURNS}`. If `DEV_MAX_TURNS` is empty, do NOT include maxTurns (omitting it = unlimited). If `DEV_REASONING` is non-empty, also pass `effort: "${DEV_REASONING}"`. If `DEV_REASONING` is empty, do NOT include effort (the resolved model rejects the parameter).
-**CRITICAL:** When true team mode is active, pass `team_name: "vbw-phase-{NN}"` and `name: "dev-{MM}"` on the live spawn call. If the live spawn tool is `Agent`, those parameters belong on `Agent(...)`. If the live spawn tool is `TaskCreate`, put the same parameters there. Team mode without `team_name` is invalid.
+**CRITICAL:** Set `subagent_type: "${DEV_AGENT_NAME}"` and `model: "${DEV_MODEL}"` on the live spawn call when spawning Dev teammates. If `DEV_MAX_TURNS` is non-empty, also pass `maxTurns: ${DEV_MAX_TURNS}`. If `DEV_MAX_TURNS` is empty, do NOT include maxTurns (omitting it = unlimited). If `DEV_REASONING` is non-empty, also pass `effort: "${DEV_REASONING}"`. If `DEV_REASONING` is empty, do NOT include effort (the resolved model rejects the parameter).
+**CRITICAL:** When true team mode is active, pass `team_name: "vbw-phase-{NN}"` and the generated `SPAWN_READY` name on the live spawn call. If the live spawn tool is `Agent`, those parameters belong on `Agent(...)`. If the live spawn tool is `TaskCreate`, put the same parameters there. Team mode without `team_name` is invalid.
 **CRITICAL:** In explicit non-team mode or team-tooling-unavailable fallback, do NOT use `run_in_background: true` to imitate parallel team execution.
 
 Dependency ordering is enforced by the routing helper's segment plan, not by speculative background spawns. Use TaskUpdate dependency metadata only as a task-list mirror of `depends_on`. do not spawn a dependent plan until the helper recomputes it as runnable from updated execution state. If `--plan=NN`: single task, no dependencies.
@@ -360,15 +360,14 @@ Just before spawning a runnable plan with `worktree_isolation` enabled, create o
 **Opt-in TDD wave sequence (delegate plans only):** Read `tdd_pipeline` from config with `.tdd_pipeline // false`. The key defaults to `false` when absent. Direct and turbo segments keep their existing path.
 
 When `tdd_pipeline=true`, run these stages for each runnable delegate plan:
-1. **Red:** Spawn `vbw:vbw-qa-author` with `${QA_MODEL}` and `${QA_MAX_TURNS}` when set. Apply the QA skill-activation prompt rules above. It reads the plan's `must_haves`, writes and commits only failing test files, then reports the `tests_ready` payload from `references/handoff-schemas.md`. Do not spawn that plan's Dev until its payload reports at least one expected failing test.
-2. **Green:** Spawn the normal `vbw:vbw-dev` agent. Include the complete `tests_ready` payload in its task description and direct it to implement the plan until `test_command` passes.
+1. **Red:** Run the QA Author generator and use its `SPAWN_READY` name as the exact `subagent_type` and `name`. Apply the QA skill-activation prompt rules above. It reads the plan's `must_haves`, writes and commits only failing test files, then reports the `tests_ready` payload from `references/handoff-schemas.md`. Do not spawn that plan's Dev until its payload reports at least one expected failing test.
+2. **Green:** Run the Dev generator and use its `SPAWN_READY` name as the exact `subagent_type` and `name`. Include the complete `tests_ready` payload in its task description and direct it to implement the plan until `test_command` passes.
 3. **Verify:** Keep the standard QA timing, spawn shape, and Step 4 verification unchanged.
 
-In true team mode, launch the current wave's QA Author teammates with `team_name: "$TEAM_NAME"` and `name: "qa-author-{MM}"`. Launch all red teammates first, then launch each matching Dev after that plan's `tests_ready` message arrives. In explicit non-team mode and team-tooling-unavailable fallback, use plain sequential subagents for each plan: spawn QA Author and wait for its returned `tests_ready` payload, then spawn Dev and wait for completion before starting the next plan. Give both stages the same plan worktree target. All spawn-shape and prepared-worktree rules above still apply.
+In true team mode, run one QA Author generator per plan and use each `SPAWN_READY` name as both `subagent_type` and `name`, with `team_name: "$TEAM_NAME"`. Launch all red teammates first, then launch each matching Dev after that plan's `tests_ready` message arrives. In explicit non-team mode and team-tooling-unavailable fallback, use plain sequential subagents for each plan. Run the QA Author generator, wait for its `tests_ready` payload, then run the Dev generator and wait for completion before starting the next plan. Give both stages the same plan worktree target. All spawn-shape and prepared-worktree rules above still apply.
 
-**Opt-in cross-phase research pipeline (true team mode, first wave only):** After wave 1 Dev work is dispatched, read `pipeline_research` from config with `.pipeline_research // false`. The key defaults to `false` when absent. Spawn exactly one additional `vbw:vbw-scout` teammate only when the value is `true`, phase N+1 exists in ROADMAP.md, the Plan mode Step 3 research-exists check finds no phase research in that phase directory, and team capability is available. On any gate failure, skip silently with no banner.
-
-Research phase N+1's ROADMAP goal and include `<output_path>{phase-N+1-dir}/${NEXT_RESEARCH_NAME}</output_path>` in the prompt, using `resolve-artifact-path.sh phase-research` to resolve `NEXT_RESEARCH_NAME`. Spawn it in the current team with `team_name: "$TEAM_NAME"` and `name: "scout-phase-{N+1}"`. Apply the Scout model resolution and skill-outcome block rules from Plan mode research in `commands/vibe.md` Step 3 rather than duplicating them here. The Scout writes only into the phase N+1 planning directory, so it cannot conflict with wave Dev work. Plan mode consumes the resulting file through its existing research-exists check in `commands/vibe.md` Step 3 when phase N+1 is planned.
+**Opt-in cross-phase research pipeline (true team mode, first wave only):** After wave 1 Dev work is dispatched, read `pipeline_research` from config with `.pipeline_research // false`. The key defaults to `false` when absent. Run the Scout generator when the value is `true`, phase N+1 exists in ROADMAP.md, the Plan mode Step 3 research-exists check finds no phase research in that phase directory, and team capability is available. Use its `SPAWN_READY` name as the exact `subagent_type` and `name`. On any gate failure, skip silently with no banner.
+Research phase N+1's ROADMAP goal and include `<output_path>{phase-N+1-dir}/${NEXT_RESEARCH_NAME}</output_path>` in the prompt, using `resolve-artifact-path.sh phase-research` to resolve `NEXT_RESEARCH_NAME`. Spawn it in the current team with `team_name: "$TEAM_NAME"` and the generated `SPAWN_READY` name. Apply the Scout model resolution and skill-outcome block rules from Plan mode research in `commands/vibe.md` Step 3 rather than duplicating them here. The Scout writes only into the phase N+1 planning directory, so it cannot conflict with wave Dev work. Plan mode consumes the resulting file through its existing research-exists check in `commands/vibe.md` Step 3 when phase N+1 is planned.
 
 **Validation Gates (REQ-13, REQ-14):** If `validation_gates=true` in config:
 - **Per plan:** Assess risk and resolve gate policy:

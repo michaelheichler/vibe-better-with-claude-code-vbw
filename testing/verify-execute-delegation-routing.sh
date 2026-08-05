@@ -17,13 +17,15 @@ FAIL=0
 TMPDIR_BASE=""
 
 pass() {
-  echo "PASS  $1"
-  PASS=$((PASS + 1))
+  local message="$1"
+  echo "PASS  $message"
+  printf -v PASS '%d' "$((PASS + 1))"
 }
 
 fail() {
-  echo "FAIL  $1"
-  FAIL=$((FAIL + 1))
+  local message="$1"
+  echo "FAIL  $message"
+  printf -v FAIL '%d' "$((FAIL + 1))"
 }
 
 cleanup() {
@@ -68,7 +70,7 @@ title: Plan $plan
 depends_on: $depends
 files_touched: [$files_touched]
 ---
-# Plan $plan
+Plan $plan
 
 ### Task 1: Work
 - **Files:** \`src/$plan.txt\`
@@ -537,7 +539,7 @@ depends_on:
   - "03-02"
   - custom-id
 ---
-# Plan
+Plan
 
 ### Task 1: Work
 - **Files:** `src/contract.txt`
@@ -700,8 +702,8 @@ else
   pass "execute-protocol QA remediation plan stage removes orchestrator-authored wording"
 fi
 
-if grep -Fq 'spawns exactly one Lead subagent to write `{round_dir}/R{RR}-PLAN.md`' <<< "$QA_REMEDIATION_PLAN_BLOCK" \
-  && grep -Fq 'subagent_type: "vbw:vbw-lead"' <<< "$QA_REMEDIATION_PLAN_BLOCK" \
+if grep -Fq 'spawns exactly one generated Lead agent to write `{round_dir}/R{RR}-PLAN.md`' <<< "$QA_REMEDIATION_PLAN_BLOCK" \
+  && grep -Fq 'subagent_type: "${LEAD_AGENT_NAME}"' <<< "$QA_REMEDIATION_PLAN_BLOCK" \
   && grep -Fq 'resolve-agent-settings.sh" lead' <<< "$QA_REMEDIATION_PLAN_BLOCK" \
   && grep -Fq '.vbw-planning/config.json' <<< "$QA_REMEDIATION_PLAN_BLOCK" \
   && grep -Fq 'config/model-profiles.json' <<< "$QA_REMEDIATION_PLAN_BLOCK" \
@@ -757,7 +759,7 @@ fi
 
 check_literal_before_regex "execute-protocol QA no-tool breaker appears before remediation state advance" "$QA_REMEDIATION_BLOCK" '<qa_remediation_no_tool_circuit_breaker>' 'qa-remediation-state\.sh.*advance'
 check_literal_before_literal "execute-protocol QA no-tool breaker appears before deterministic gate" "$QA_REMEDIATION_BLOCK" '<qa_remediation_no_tool_circuit_breaker>' 'qa-result-gate.sh'
-check_literal_before_literal "execute-protocol QA plan Lead spawn appears before Lead return breaker" "$QA_REMEDIATION_PLAN_BLOCK" 'spawns exactly one Lead subagent to write `{round_dir}/R{RR}-PLAN.md`' 'After Lead returns, apply the no-tool circuit breaker in `references/subagent-contracts.md`'
+check_literal_before_literal "execute-protocol QA plan Lead spawn appears before Lead return breaker" "$QA_REMEDIATION_PLAN_BLOCK" 'spawns exactly one generated Lead agent to write `{round_dir}/R{RR}-PLAN.md`' 'After Lead returns, apply the no-tool circuit breaker in `references/subagent-contracts.md`'
 check_literal_before_regex "execute-protocol QA plan Lead breaker appears before plan-stage state advance" "$QA_REMEDIATION_PLAN_BLOCK" 'After Lead returns, apply the no-tool circuit breaker in `references/subagent-contracts.md`' 'qa-remediation-state\.sh.*advance'
 check_literal_before_literal "execute-protocol QA plan Lead breaker appears before plan normalization" "$QA_REMEDIATION_PLAN_BLOCK" 'After Lead returns, apply the no-tool circuit breaker in `references/subagent-contracts.md`' 'Normalize plan filenames before validation'
 check_literal_before_literal "execute-protocol QA plan normalization appears before plan validation" "$QA_REMEDIATION_PLAN_BLOCK" 'Normalize plan filenames before validation' 'Validate the exact QA remediation plan artifact before advancing'
@@ -768,8 +770,8 @@ check_literal_before_literal "execute-protocol QA verify breaker appears before 
 check_literal_before_literal "execute-protocol QA verify breaker appears before known-issue promotion" "$QA_REMEDIATION_VERIFY_BLOCK" 'After QA returns, apply the no-tool circuit breaker in `references/subagent-contracts.md`' 'track-known-issues.sh" promote-todos'
 check_literal_before_literal "execute-protocol QA verify breaker appears before deterministic gate" "$QA_REMEDIATION_VERIFY_BLOCK" 'After QA returns, apply the no-tool circuit breaker in `references/subagent-contracts.md`' 'qa-result-gate.sh'
 
-if grep -Fq 'When true team mode is active, pass `team_name: "vbw-phase-{NN}"` and `name: "dev-{MM}"`' "$EXECUTE_PROTOCOL" \
-  && grep -Fq 'When true team mode is active, pass `team_name: "vbw-phase-{NN}"` and `name: "qa"`' "$POST_BUILD_QA"; then
+if grep -Fq 'When true team mode is active, pass `team_name: "vbw-phase-{NN}"` and the generated `SPAWN_READY` name' "$EXECUTE_PROTOCOL" \
+  && grep -Fq 'When true team mode is active, pass `team_name: "vbw-phase-{NN}"` and the generated `SPAWN_READY` name' "$POST_BUILD_QA"; then
   pass "execute-protocol preserves team_name/name invariant for true team mode"
 else
   fail "execute-protocol preserves team_name/name invariant for true team mode"

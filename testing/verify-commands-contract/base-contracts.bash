@@ -89,7 +89,7 @@ debug_path_a_block="$(awk '
 ' "$DEBUG_COMMAND_FILE")"
 
 debug_path_a_investigator_block="$(awk '
-  /Spawn 3 vbw-debugger teammates/ { in_block = 1 }
+  /Run the Debugger generator once per hypothesis/ { in_block = 1 }
   in_block && /\*\*Investigation phase:\*\*/ { exit }
   in_block { print }
 ' "$DEBUG_COMMAND_FILE")"
@@ -107,17 +107,15 @@ debug_path_b_block="$(awk '
 ' "$DEBUG_COMMAND_FILE")"
 
 debug_inline_qa_spawn_block="$(awk '
-  /Spawn vbw-qa as subagent via Agent tool for debug-session verification/ { in_block = 1 }
+  /Spawn the generated QA as subagent via Agent tool for debug-session verification/ { in_block = 1 }
   in_block && /Use this payload prefix as the FIRST lines of the debug-session QA prompt/ { exit }
   in_block { print }
 ' "$DEBUG_COMMAND_FILE")"
 
-if contains_literal "$debug_path_a_block" 'there is no TeamCreate setup step' \
-  && contains_literal "$debug_path_a_investigator_block" 'True-team spawn shape' \
-  && contains_literal "$debug_path_a_investigator_block" 'accepted but ignored' \
-  && contains_literal "$debug_path_a_investigator_block" 'unique per-teammate `name`' \
-  && contains_literal "$debug_path_a_investigator_block" 'debug-hypothesis-1' \
-  && contains_literal "$debug_path_a_investigator_block" 'Do not pass `isolation`, `cwd`, `working_dir`, `workingDirectory`, or `workdir`'; then
+if contains_literal "$debug_path_a_block" 'There is no TeamCreate setup step' \
+  && contains_literal "$debug_path_a_investigator_block" 'Run the Debugger generator once per hypothesis' \
+  && contains_literal "$debug_path_a_investigator_block" 'In team mode, include the selected `team_name`' \
+  && contains_literal "$debug_path_a_investigator_block" 'Do not pass isolation or worktree cwd fields'; then
   pass "debug: Path A hypothesis investigators use true-team spawn metadata"
 else
   fail "debug: Path A hypothesis investigators must document implicit team formation and per-teammate names"
