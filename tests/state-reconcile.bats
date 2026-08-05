@@ -12,33 +12,81 @@ teardown() {
   teardown_temp_dir
 }
 
+write_qa_gate_fixture() {
+  cat > .vbw-planning/STATE.md <<'STATE'
+# State
+## Current Phase
+## Phase Status
+Phase: 1 of 1 (Setup)
+Plans: 1/1
+Progress: 100%
+Status: active
+
+- **Phase 1:** In progress
+STATE
+  cat > .vbw-planning/ROADMAP.md <<'ROADMAP'
+- [ ] Phase 1: Setup
+ROADMAP
+  mkdir -p .vbw-planning/phases/01-setup
+  echo '# Plan' > .vbw-planning/phases/01-setup/01-01-PLAN.md
+  printf '%s\n' '---' 'status: complete' '---' 'Done.' > .vbw-planning/phases/01-setup/01-01-SUMMARY.md
+  cat > .vbw-planning/.execution-state.json <<'STATE'
+{"phase":1,"status":"running","qa_required":true,"effort":"balanced","phase_effort":"balanced","plans":[{"id":"01-01","status":"complete"}]}
+STATE
+}
+
+@test "reconcile gates STATE and ROADMAP completion until required QA passes" {
+  write_qa_gate_fixture
+
+  run bash "$SCRIPTS_DIR/reconcile-state-md.sh" .vbw-planning
+  [ "$status" -eq 0 ]
+  grep -q '^- \[ \] Phase 1: Setup$' .vbw-planning/ROADMAP.md
+  grep -q '^- \*\*Phase 1 (Setup):\*\* Needs verification$' .vbw-planning/STATE.md
+  grep -q '^Status: needs_verification$' .vbw-planning/STATE.md
+}
+
+@test "reconcile marks STATE and ROADMAP complete after required QA passes" {
+  write_qa_gate_fixture
+  cat > .vbw-planning/phases/01-setup/01-VERIFICATION.md <<'VERIFICATION'
+---
+writer: write-verification.sh
+result: PASS
+plans_verified:
+  - 01-01
+---
+VERIFICATION
+
+  run bash "$SCRIPTS_DIR/reconcile-state-md.sh" .vbw-planning
+  [ "$status" -eq 0 ]
+  grep -q '^- \[x\] Phase 1: Setup$' .vbw-planning/ROADMAP.md
+  grep -q '^- \*\*Phase 1 (Setup):\*\* Complete$' .vbw-planning/STATE.md
+  grep -q '^Status: complete$' .vbw-planning/STATE.md
+}
+
 write_drift_fixture() {
   cat > .vbw-planning/STATE.md <<'STATE'
 # State
+## Current Phase
+## Phase Status
 
 **Project:** Test Project
 **Milestone:** MVP
 
-## Current Phase
 Phase: 3 of 3 (Order Backed Sync Integration)
 Plans: 2/2
 Progress: 100%
 Status: ready
 
-## Phase Status
 - **Phase 1:** Complete
 - **Phase 2:** Complete
 - **Phase 3:** Planned
 
-## Key Decisions
 | Decision | Date | Rationale |
 |----------|------|-----------|
 | Keep deterministic state shell-side | 2026-05-01 | Avoid token repair |
 
-## Todos
 None.
 
-## Blockers
 None
 STATE
 
@@ -47,15 +95,11 @@ STATE
 PROJECT
 
   cat > .vbw-planning/ROADMAP.md <<'ROADMAP'
-# Roadmap
 
 - [x] Phase 1: Foundation
 - [ ] Phase 2: Ios Orders Client Models
 - [ ] Phase 3: Order Backed Sync Integration
 
-### Phase 1: Foundation
-### Phase 2: Ios Orders Client Models
-### Phase 3: Order Backed Sync Integration
 ROADMAP
 
   mkdir -p \
@@ -106,29 +150,26 @@ PROJECT
 
   cat > .vbw-planning/STATE.md <<'STATE'
 # State
+## Current Phase
+## Phase Status
 
 **Project:** Test Project
 **Milestone:** MVP
 
-## Current Phase
 Phase: 2 of 2 (Api Contracts)
 Plans: 1/1
 Progress: 100%
 Status: ready
 
-## Phase Status
 - **Phase 1:** Complete
 - **Phase 2:** Planned
 STATE
 
   cat > .vbw-planning/ROADMAP.md <<'ROADMAP'
-# Roadmap
 
 - [x] [Phase 01: Foundation](#phase-01-foundation)
 - [ ] [Phase 03: Api Contracts](#phase-03-api-contracts)
 
-## Phase 01: Foundation
-## Phase 03: Api Contracts
 ROADMAP
 
   mkdir -p .vbw-planning/phases/01-foundation .vbw-planning/phases/03-api-contracts
@@ -159,26 +200,24 @@ PROJECT
 
   cat > .vbw-planning/STATE.md <<'STATE'
 # State
+## Current Phase
+## Phase Status
 
 **Project:** Test Project
 **Milestone:** MVP
 
-## Current Phase
 Phase: 1 of 1 (Api Contracts)
 Plans: 1/1
 Progress: 100%
 Status: complete
 
-## Phase Status
 - **Phase 1:** Complete
 STATE
 
   cat > .vbw-planning/ROADMAP.md <<'ROADMAP'
-# Roadmap
 
 - [x] [Phase 03: Api Contracts](#phase-03-api-contracts)
 
-## Phase 03: Api Contracts
 ROADMAP
 
   mkdir -p .vbw-planning/phases/03-api-contracts
@@ -189,7 +228,6 @@ ROADMAP
 phase: 03
 status: issues_found
 ---
-# UAT
 UAT
 
   run bash "$SCRIPTS_DIR/verify-state-consistency.sh" .vbw-planning --mode archive
@@ -214,29 +252,26 @@ PROJECT
 
   cat > .vbw-planning/STATE.md <<'STATE'
 # State
+## Current Phase
+## Phase Status
 
 **Project:** Test Project
 **Milestone:** MVP
 
-## Current Phase
 Phase: 2 of 2 (Api Contracts)
 Plans: 1/1
 Progress: 100%
 Status: ready
 
-## Phase Status
 - **Phase 1:** Complete
 - **Phase 2:** Planned
 STATE
 
   cat > .vbw-planning/ROADMAP.md <<'ROADMAP'
-# Roadmap
 
 - [x] Phase 01: Foundation
 - [ ] Phase 03: Api Contracts
 
-## Phase 01: Foundation
-## Phase 03: Api Contracts
 ROADMAP
 
   mkdir -p .vbw-planning/phases/01-foundation .vbw-planning/phases/03-api-contracts
@@ -267,38 +302,32 @@ PROJECT
 
   cat > .vbw-planning/STATE.md <<'STATE'
 # State
+## Current Phase
+## Phase Status
 
 **Project:** Test Project
 **Milestone:** MVP
 
-## Current Phase
 Phase: 3 of 4 (Build)
 Plans: 0/1
 Progress: 0%
 Status: ready
 
-## Phase Status
 - **Phase 1 (Setup):** Complete
 - **Phase 2 (Out Of Band):** Complete
 - **Phase 3 (Build):** Planned
 - **Phase 4 (Deploy):** Pending
 
-## Decisions
 - Preserve manual missing phase notes.
 STATE
 
   cat > .vbw-planning/ROADMAP.md <<'ROADMAP'
-# Roadmap
 
 - [x] Phase 1: Setup
 - [x] Phase 2: Out Of Band
 - [ ] Phase 3: Build
 - [ ] Phase 4: Deploy
 
-## Phase 1: Setup
-## Phase 2: Out Of Band
-## Phase 3: Build
-## Phase 4: Deploy
 ROADMAP
 
   mkdir -p .vbw-planning/phases/01-setup .vbw-planning/phases/03-build .vbw-planning/phases/04-deploy
@@ -333,28 +362,24 @@ PROJECT
 
   cat > .vbw-planning/STATE.md <<'STATE'
 # State
+## Current Phase
+## Phase Status
 
 **Project:** Test Project
 **Milestone:** MVP
 
-## Current Phase
 Phase: 2 of 3 (Build)
 Plans: 0/1
 Progress: 0%
 Status: ready
 
-## Phase Status
 - **Phase 1 (Setup):** Complete
 - **Phase 2 (Build):** Planned
 - **Phase 3 (Deploy):** Pending
 STATE
 
   cat > .vbw-planning/ROADMAP.md <<'ROADMAP'
-# Roadmap
 
-## Phase 1: Setup
-## Phase 2: Build
-## Phase 3: Deploy
 ROADMAP
 
   mkdir -p .vbw-planning/phases/01-setup .vbw-planning/phases/03-build .vbw-planning/phases/04-deploy
@@ -383,32 +408,28 @@ PROJECT
 
   cat > .vbw-planning/STATE.md <<'STATE'
 # State
+## Current Phase
+## Phase Status
 
 **Project:** Test Project
 **Milestone:** MVP
 
-## Current Phase
 Phase: 3 of 3 (Deploy)
 Plans: 0/1
 Progress: 0%
 Status: ready
 
-## Phase Status
 - **Phase 1:** Complete
 - **Phase 2:** Planned
 - **Phase 3:** Planned
 STATE
 
   cat > .vbw-planning/ROADMAP.md <<'ROADMAP'
-# Roadmap
 
 - [x] Phase 1: Setup
 - [ ] Phase 2: Build
 - [ ] Phase 3: Deploy
 
-## Phase 1: Setup
-## Phase 2: Build
-## Phase 3: Deploy
 ROADMAP
 
   mkdir -p .vbw-planning/phases/01-setup .vbw-planning/phases/03-build .vbw-planning/phases/04-deploy
@@ -443,34 +464,29 @@ PROJECT
 
   cat > .vbw-planning/STATE.md <<'STATE'
 # State
+## Current Phase
+## Phase Status
 
 **Project:** Test Project
 **Milestone:** MVP
 
-## Current Phase
 Phase: 3 of 3 (Deploy)
 Plans: 0/1
 Progress: 0%
 Status: ready
 
-## Phase Status
 - **Phase 1:** Complete
 - **Phase 2:** Planned
 - **Phase 3:** Planned
 STATE
 
   cat > .vbw-planning/ROADMAP.md <<'ROADMAP'
-# Roadmap
 
 - [x] Phase 1: Setup
 - [ ] Phase 2: Build
 - [ ] Phase 2: Duplicate Build
 - [ ] Phase 3: Deploy
 
-## Phase 1: Setup
-## Phase 2: Build
-## Phase 2: Duplicate Build
-## Phase 3: Deploy
 ROADMAP
 
   mkdir -p .vbw-planning/phases/01-setup .vbw-planning/phases/03-build .vbw-planning/phases/04-deploy
@@ -502,32 +518,28 @@ PROJECT
 
   cat > .vbw-planning/STATE.md <<'STATE'
 # State
+## Current Phase
+## Phase Status
 
 **Project:** Test Project
 **Milestone:** MVP
 
-## Current Phase
 Phase: 2 of 3 (Build)
 Plans: 1/1
 Progress: 100%
 Status: active
 
-## Phase Status
 - **Phase 1:** Complete
 - **Phase 2:** Planned
 - **Phase 3:** Planned
 STATE
 
   cat > .vbw-planning/ROADMAP.md <<'ROADMAP'
-# Roadmap
 
 - [x] Phase 1: Setup
 - [ ] Phase 2: Build
 - [ ] Phase 4: Deploy
 
-## Phase 1: Setup
-## Phase 2: Build
-## Phase 4: Deploy
 ROADMAP
 
   mkdir -p .vbw-planning/phases/01-setup .vbw-planning/phases/03-build .vbw-planning/phases/04-deploy
@@ -559,32 +571,28 @@ PROJECT
 
   cat > .vbw-planning/STATE.md <<'STATE'
 # State
+## Current Phase
+## Phase Status
 
 **Project:** Test Project
 **Milestone:** MVP
 
-## Current Phase
 Phase: 2 of 3 (Build)
 Plans: 0/1
 Progress: 0%
 Status: ready
 
-## Phase Status
 - **Phase 1 (Setup):** Complete
 - **Phase 2 (Build):** Planned
 - **Phase 3 (Deploy):** Pending
 STATE
 
   cat > .vbw-planning/ROADMAP.md <<'ROADMAP'
-# Roadmap
 
 - [x] Phase 1: Setup
 - [ ] Phase 2: Build
 - [ ] Phase 3: Deploy
 
-## Phase 1: Setup
-## Phase 2: Build
-## Phase 3: Deploy
 ROADMAP
 
   mkdir -p .vbw-planning/phases/01-setup .vbw-planning/phases/02-build-a .vbw-planning/phases/02-build-b .vbw-planning/phases/03-deploy
@@ -639,34 +647,29 @@ PROJECT
 
   cat > .vbw-planning/STATE.md <<'STATE'
 # State
+## Current Phase
+## Phase Status
 
 **Project:** Test Project
 **Milestone:** MVP
 
-## Current Phase
 Phase: 2 of 3 (Build)
 Plans: 1/1
 Progress: 100%
 Status: ready
 
-## Phase Status
 - **Phase 1:** Complete
 - **Phase 2:** Planned
 - **Phase 3:** Planned
 STATE
 
   cat > .vbw-planning/ROADMAP.md <<'ROADMAP'
-# Roadmap
 
 - [x] Phase 1: Setup
 - [ ] Phase 2: Build
 - [ ] Phase 3: Deploy
 - [ ] Phase 4: Stray
 
-## Phase 1: Setup
-## Phase 2: Build
-## Phase 3: Deploy
-## Phase 4: Stray
 ROADMAP
 
   mkdir -p .vbw-planning/phases/01-setup .vbw-planning/phases/02-build .vbw-planning/phases/03-deploy
@@ -691,17 +694,17 @@ ROADMAP
 @test "reconcile-state preserves terminal-summary display semantics" {
   cat > .vbw-planning/STATE.md <<'STATE'
 # State
+## Current Phase
+## Phase Status
 
 **Project:** Test Project
 **Milestone:** MVP
 
-## Current Phase
 Phase: 1 of 1 (Setup)
 Plans: 0/1
 Progress: 0%
 Status: ready
 
-## Phase Status
 - **Phase 1:** Planned
 STATE
 
@@ -722,17 +725,17 @@ STATE
 @test "finalize-uat-status reconciles STATE after Bash-only UAT finalization" {
   cat > .vbw-planning/STATE.md <<'STATE'
 # State
+## Current Phase
+## Phase Status
 
 **Project:** Test Project
 **Milestone:** MVP
 
-## Current Phase
 Phase: 1 of 1 (Setup)
 Plans: 1/1
 Progress: 100%
 Status: complete
 
-## Phase Status
 - **Phase 1:** Complete
 STATE
 
@@ -749,7 +752,6 @@ skipped: 0
 issues: 0
 total_tests: 1
 ---
-# UAT
 
 ### P01: Broken flow
 - **Result:** issue
@@ -768,17 +770,17 @@ UAT
 @test "round-dir current UAT affects STATE and phase-root fallback remains intact" {
   cat > .vbw-planning/STATE.md <<'STATE'
 # State
+## Current Phase
+## Phase Status
 
 **Project:** Test Project
 **Milestone:** MVP
 
-## Current Phase
 Phase: 1 of 1 (Setup)
 Plans: 1/1
 Progress: 100%
 Status: complete
 
-## Phase Status
 - **Phase 1:** Complete
 STATE
 
@@ -802,26 +804,24 @@ STATE
 @test "round-dir current in-progress UAT blocks phase completion" {
   cat > .vbw-planning/STATE.md <<'STATE'
 # State
+## Current Phase
+## Phase Status
 
 **Project:** Test Project
 **Milestone:** MVP
 
-## Current Phase
 Phase: 1 of 1 (Setup)
 Plans: 1/1
 Progress: 100%
 Status: complete
 
-## Phase Status
 - **Phase 1:** Complete
 STATE
 
   cat > .vbw-planning/ROADMAP.md <<'ROADMAP'
-# Roadmap
 
 - [x] Phase 1: Setup
 
-## Phase 1: Setup
 ROADMAP
 
   mkdir -p .vbw-planning/phases/01-setup/remediation/uat/round-06
@@ -844,26 +844,24 @@ ROADMAP
 @test "round-dir current UAT with missing status blocks phase completion" {
   cat > .vbw-planning/STATE.md <<'STATE'
 # State
+## Current Phase
+## Phase Status
 
 **Project:** Test Project
 **Milestone:** MVP
 
-## Current Phase
 Phase: 1 of 1 (Setup)
 Plans: 1/1
 Progress: 100%
 Status: complete
 
-## Phase Status
 - **Phase 1:** Complete
 STATE
 
   cat > .vbw-planning/ROADMAP.md <<'ROADMAP'
-# Roadmap
 
 - [x] Phase 1: Setup
 
-## Phase 1: Setup
 ROADMAP
 
   mkdir -p .vbw-planning/phases/01-setup/remediation/uat/round-06
@@ -886,17 +884,17 @@ ROADMAP
 @test "legacy remediation current UAT affects STATE" {
   cat > .vbw-planning/STATE.md <<'STATE'
 # State
+## Current Phase
+## Phase Status
 
 **Project:** Test Project
 **Milestone:** MVP
 
-## Current Phase
 Phase: 1 of 1 (Setup)
 Plans: 1/1
 Progress: 100%
 Status: complete
 
-## Phase Status
 - **Phase 1:** Complete
 STATE
 

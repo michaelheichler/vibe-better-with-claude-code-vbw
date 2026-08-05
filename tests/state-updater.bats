@@ -40,26 +40,24 @@ EOF
 
   cat > .vbw-planning/STATE.md <<'EOF'
 # State
+## Current Phase
+## Phase Status
 
 **Project:** Test Project
 **Milestone:** MVP
 
-## Current Phase
 Phase: 1 of 1 (Service Utility Tests)
 Plans: 0/1
 Progress: 0%
 Status: active
 
-## Phase Status
 - **Phase 1:** Planned
 EOF
 
   cat > .vbw-planning/ROADMAP.md <<EOF
-# Roadmap
 
 - [${checkbox}] [Phase 02: Service Utility Tests](#phase-02-service-utility-tests)
 
-## Phase 02: Service Utility Tests
 EOF
 
   mkdir -p .vbw-planning/phases/02-service-utility-tests
@@ -68,7 +66,6 @@ EOF
 ---
 status: complete
 ---
-# Summary
 EOF
 
   if [ -n "$uat_status" ]; then
@@ -77,7 +74,6 @@ EOF
 phase: 02
 status: ${uat_status}
 ---
-# UAT
 EOF
   fi
 }
@@ -86,6 +82,9 @@ create_completion_gate_fixture() {
   local qa_required="${1:-true}"
 
   cat > .vbw-planning/STATE.md <<"EOF"
+# State
+## Current Phase
+## Phase Status
 Phase: 1 of 1 (Setup)
 Plans: 0/1
 Progress: 0%
@@ -133,28 +132,25 @@ EOF
 
   cat > .vbw-planning/STATE.md <<'EOF'
 # State
+## Current Phase
+## Phase Status
 
 **Project:** Test Project
 **Milestone:** MVP
 
-## Current Phase
 Phase: 1 of 1 (Service Utility Tests)
 Plans: 0/1
 Progress: 0%
 Status: active
 
-## Phase Status
 - **Phase 1:** Planned
 EOF
 
   cat > .vbw-planning/ROADMAP.md <<EOF
-# Roadmap
 
 - [${first_checkbox}] [Phase 02: Service Utility Tests](#phase-02-service-utility-tests)
 - [${second_checkbox}] [Phase 02: Duplicate Service Utility Tests](#phase-02-duplicate-service-utility-tests)
 
-## Phase 02: Service Utility Tests
-## Phase 02: Duplicate Service Utility Tests
 EOF
 
   mkdir -p .vbw-planning/phases/02-service-utility-tests
@@ -163,7 +159,6 @@ EOF
 ---
 status: complete
 ---
-# Summary
 EOF
 
   if [ -n "$uat_status" ]; then
@@ -172,7 +167,6 @@ EOF
 phase: 02
 status: ${uat_status}
 ---
-# UAT
 EOF
   fi
 }
@@ -215,6 +209,37 @@ EOF
   [ "$(jq -r '.status' .vbw-planning/.execution-state.json)" = "complete" ]
 }
 
+@test "summary write keeps all completion projections gated consistently" {
+  cd "$TEST_TEMP_DIR"
+  create_completion_gate_fixture true
+
+  local summary_path input
+  summary_path="$TEST_TEMP_DIR/.vbw-planning/phases/01-setup/01-01-SUMMARY.md"
+  input=$(jq -nc --arg p "$summary_path" '{tool_input:{file_path:$p}}')
+
+  run bash -c "cd '$TEST_TEMP_DIR' && printf '%s' '$input' | bash '$SCRIPTS_DIR/state-updater.sh'"
+  [ "$status" -eq 0 ]
+  grep -q '^- \[ \] Phase 1: Setup$' .vbw-planning/ROADMAP.md
+  grep -q '^- \*\*Phase 1 (Setup):\*\* Needs verification$' .vbw-planning/STATE.md
+  grep -q '^Status: needs_verification$' .vbw-planning/STATE.md
+  [ "$(jq -r '.status' .vbw-planning/.execution-state.json)" = "running" ]
+
+  cat > .vbw-planning/phases/01-setup/01-VERIFICATION.md <<'EOF'
+---
+writer: write-verification.sh
+result: PASS
+plans_verified:
+  - 01-01
+---
+EOF
+  run bash -c "cd '$TEST_TEMP_DIR' && printf '%s' '$input' | bash '$SCRIPTS_DIR/state-updater.sh'"
+  [ "$status" -eq 0 ]
+  grep -q '^- \[x\] Phase 1: Setup$' .vbw-planning/ROADMAP.md
+  grep -q '^- \*\*Phase 1 (Setup):\*\* Complete$' .vbw-planning/STATE.md
+  grep -q '^Status: complete$' .vbw-planning/STATE.md
+  [ "$(jq -r '.status' .vbw-planning/.execution-state.json)" = "complete" ]
+}
+
 @test "completion bypasses QA gate when qa_required is false" {
   cd "$TEST_TEMP_DIR"
   create_completion_gate_fixture false
@@ -240,7 +265,6 @@ EOF
 ---
 status: complete
 ---
-# Summary
 SUMMARY
 
   local summary_path input
@@ -349,7 +373,6 @@ plan: 1
 status: complete
 ---
 
-# Summary
 EOF
 
   cat > .vbw-planning/.execution-state.json <<'EOF'
@@ -383,7 +406,6 @@ phase: 3
 plan: 1
 status: complete
 ---
-# Summary
 EOF
   cat > .vbw-planning/.execution-state.json <<"EOF"
 {"phase":3,"status":"pending","qa_required":false,"plans":[{"id":"03-01","status":"pending"}]}
@@ -405,7 +427,6 @@ phase: 3
 plan: 1
 status: complete
 ---
-# Summary
 EOF
   cat > .vbw-planning/.execution-state.json <<"EOF"
 {"phase":3,"status":"running","plans":[{"id":"03-01","status":"complete"},{"id":"03-02","status":"complete"}]}
@@ -461,8 +482,10 @@ EOF
 
   mkdir -p .vbw-planning/milestones/m1/phases/03-service-utility-tests
 
-  # Root files should remain untouched
   cat > .vbw-planning/STATE.md <<'EOF'
+# State
+## Current Phase
+## Phase Status
 Phase: 3 of 4 (Root)
 Plans: 9/9
 Progress: 100%
@@ -491,7 +514,6 @@ plan: 1
 status: complete
 ---
 
-# Summary
 EOF
 
   local summary_path input
@@ -515,6 +537,9 @@ EOF
   mkdir -p .vbw-planning/phases/02-core
 
   cat > .vbw-planning/STATE.md <<'EOF'
+# State
+## Current Phase
+## Phase Status
 Phase: 1 of 2 (Setup)
 Plans: 0/1
 Progress: 0%
@@ -536,7 +561,6 @@ EOF
 ---
 status: complete
 ---
-# summary
 SUMMARY
   echo "# plan" > .vbw-planning/phases/02-core/PLAN.md
 
@@ -575,11 +599,13 @@ SUMMARY
 @test "advance_phase sets needs_remediation when next phase has UAT issues" {
   cd "$TEST_TEMP_DIR"
 
-  # Create 2 phases: phase 1 complete, phase 2 has UAT issues
   mkdir -p .vbw-planning/phases/01-setup
   mkdir -p .vbw-planning/phases/02-core
 
   cat > .vbw-planning/STATE.md <<'EOF'
+# State
+## Current Phase
+## Phase Status
 Phase: 1 of 2 (Setup)
 Plans: 0/1
 Progress: 0%
@@ -596,29 +622,24 @@ EOF
 | 2 - Core | 0/0 | pending | - |
 EOF
 
-  # Phase 1: one plan, one summary (complete)
   echo "# plan" > .vbw-planning/phases/01-setup/01-01-PLAN.md
   cat > .vbw-planning/phases/01-setup/01-01-SUMMARY.md <<'SUMMARY'
 ---
 status: complete
 ---
-# summary
 SUMMARY
 
-  # Phase 2: one plan, one summary (complete), but has UAT issues
   echo "# plan" > .vbw-planning/phases/02-core/02-01-PLAN.md
   cat > .vbw-planning/phases/02-core/02-01-SUMMARY.md <<'SUMMARY'
 ---
 status: complete
 ---
-# summary
 SUMMARY
   cat > .vbw-planning/phases/02-core/02-01-UAT.md <<'EOF'
 ---
 status: issues_found
 ---
 
-# UAT Issues
 - Something broken
 EOF
 
@@ -636,11 +657,13 @@ EOF
 @test "advance_phase ignores indented body status lines via shared uat-utils" {
   cd "$TEST_TEMP_DIR"
 
-  # Create 2 phases: phase 1 complete, phase 2 has UAT with indented body status
   mkdir -p .vbw-planning/phases/01-setup
   mkdir -p .vbw-planning/phases/02-core
 
   cat > .vbw-planning/STATE.md <<'EOF'
+# State
+## Current Phase
+## Phase Status
 Phase: 1 of 2 (Setup)
 Plans: 0/1
 Progress: 0%
@@ -662,16 +685,13 @@ EOF
 ---
 status: complete
 ---
-# summary
 SUMMARY
 
-  # Phase 2: complete but UAT has only indented status (should NOT be detected)
   echo "# plan" > .vbw-planning/phases/02-core/02-01-PLAN.md
   cat > .vbw-planning/phases/02-core/02-01-SUMMARY.md <<'SUMMARY'
 ---
 status: complete
 ---
-# summary
 SUMMARY
   cat > .vbw-planning/phases/02-core/02-UAT.md <<'EOF'
 ---
@@ -688,7 +708,6 @@ EOF
   run bash -c "cd '$TEST_TEMP_DIR' && printf '%s' '$input' | bash '$SCRIPTS_DIR/state-updater.sh'"
   [ "$status" -eq 0 ]
 
-  # Indented body status should be ignored — all phases are complete
   grep -q '^Status: complete$' .vbw-planning/STATE.md
 }
 
@@ -699,6 +718,9 @@ EOF
   mkdir -p .vbw-planning/phases/02-core
 
   cat > .vbw-planning/STATE.md <<'EOF'
+# State
+## Current Phase
+## Phase Status
 Phase: 1 of 2 (Setup)
 Plans: 0/1
 Progress: 0%
@@ -720,7 +742,6 @@ EOF
 ---
 status: failed
 ---
-# summary
 SUMMARY
 
   local summary_path input
@@ -730,7 +751,6 @@ SUMMARY
   run bash -c "cd '$TEST_TEMP_DIR' && printf '%s' '$input' | bash '$SCRIPTS_DIR/state-updater.sh'"
   [ "$status" -eq 0 ]
 
-  # Execution happened, so progress is complete — but the phase itself is not.
   grep -q '^Plans: 1/1$' .vbw-planning/STATE.md
   grep -q '^Progress: 100%$' .vbw-planning/STATE.md
   grep -q '^Phase: 1 of 2 (Setup)$' .vbw-planning/STATE.md
@@ -747,6 +767,9 @@ SUMMARY
   mkdir -p .vbw-planning/phases/misc-notes
 
   cat > .vbw-planning/STATE.md <<'EOF'
+# State
+## Current Phase
+## Phase Status
 Phase: 1 of 2 (Setup)
 Plans: 0/1
 Progress: 0%
@@ -785,6 +808,9 @@ EOF
   mkdir -p .vbw-planning/phases/04-deploy
 
   cat > .vbw-planning/STATE.md <<'EOF'
+# State
+## Current Phase
+## Phase Status
 Phase: 2 of 3 (Build)
 Plans: 0/1
 Progress: 0%
@@ -835,16 +861,16 @@ EOF
 
   cat > .vbw-planning/STATE.md <<'EOF'
 # State
+## Current Phase
+## Phase Status
 **Project:** Test Project
 **Milestone:** MVP
 
-## Current Phase
 Phase: 3 of 4 (Build)
 Plans: 0/1
 Progress: 0%
 Status: ready
 
-## Phase Status
 - **Phase 1 (Setup):** Complete
 - **Phase 2 (Out Of Band):** Complete
 - **Phase 3 (Build):** Planned
@@ -852,7 +878,6 @@ Status: ready
 EOF
 
   cat > .vbw-planning/ROADMAP.md <<'EOF'
-# Roadmap
 - [x] Phase 1: Setup
 - [x] Phase 2: Out Of Band
 - [ ] Phase 3: Build
@@ -903,23 +928,22 @@ EOF
 
   cat > .vbw-planning/STATE.md <<'EOF'
 # State
+## Current Phase
+## Phase Status
 **Project:** Test Project
 **Milestone:** MVP
 
-## Current Phase
 Phase: 2 of 3 (Build)
 Plans: 0/1
 Progress: 0%
 Status: ready
 
-## Phase Status
 - **Phase 1 (Setup):** Complete
 - **Phase 2 (Build):** Planned
 - **Phase 3 (Deploy):** Pending
 EOF
 
   cat > .vbw-planning/ROADMAP.md <<'EOF'
-# Roadmap
 
 | Phase | Progress | Status | Completed |
 |------|----------|--------|-----------|
@@ -964,6 +988,8 @@ EOF
 
   cat > .vbw-planning/STATE.md <<'EOF'
 # State
+## Current Phase
+## Phase Status
 **Project:** Test Project
 **Milestone:** MVP
 Phase: 2 of 3 (Build)
@@ -973,13 +999,9 @@ Status: active
 EOF
 
   cat > .vbw-planning/ROADMAP.md <<'EOF'
-# Roadmap
 - [x] Phase 1: Setup
 - [ ] Phase 2: Build
 - [ ] Phase 4: Deploy
-### Phase 1: Setup
-### Phase 2: Build
-### Phase 4: Deploy
 EOF
 
   echo '# Plan' > .vbw-planning/phases/01-setup/01-01-PLAN.md
@@ -1013,23 +1035,22 @@ EOF
 
   cat > .vbw-planning/STATE.md <<'EOF'
 # State
+## Current Phase
+## Phase Status
 **Project:** Test Project
 **Milestone:** MVP
 
-## Current Phase
 Phase: 2 of 3 (Build)
 Plans: 0/1
 Progress: 0%
 Status: ready
 
-## Phase Status
 - **Phase 1 (Setup):** Complete
 - **Phase 2 (Build):** Planned
 - **Phase 3 (Deploy):** Pending
 EOF
 
   cat > .vbw-planning/ROADMAP.md <<'EOF'
-# Roadmap
 - [x] Phase 1: Setup
 - [ ] Phase 2: Build
 - [ ] Phase 3: Deploy
@@ -1077,6 +1098,8 @@ EOF
 
   cat > .vbw-planning/STATE.md <<'EOF'
 # State
+## Current Phase
+## Phase Status
 **Project:** Test Project
 **Milestone:** MVP
 Phase: 2 of 3 (Build)
@@ -1086,15 +1109,10 @@ Status: active
 EOF
 
   cat > .vbw-planning/ROADMAP.md <<'EOF'
-# Roadmap
 - [x] Phase 1: Setup
 - [ ] Phase 2: Build
 - [ ] Phase 3: Deploy
 - [ ] Phase 4: Stray
-### Phase 1: Setup
-### Phase 2: Build
-### Phase 3: Deploy
-### Phase 4: Stray
 EOF
 
   echo '# Plan' > .vbw-planning/phases/01-setup/01-01-PLAN.md
@@ -1130,6 +1148,9 @@ EOF
 
   mkdir -p .vbw-planning/phases/01-setup
   cat > .vbw-planning/STATE.md <<'EOF'
+# State
+## Current Phase
+## Phase Status
 Phase: 1 of 1 (Setup)
 Plans: 0/1
 Progress: 0%
@@ -1161,6 +1182,9 @@ EOF
   mkdir -p .vbw-planning/phases/02-core
 
   cat > .vbw-planning/STATE.md <<'EOF'
+# State
+## Current Phase
+## Phase Status
 Phase: 1 of 2 (Setup)
 Plans: 0/1
 Progress: 0%
@@ -1182,17 +1206,14 @@ EOF
 ---
 status: complete
 ---
-# summary
 SUMMARY
   echo "# plan" > .vbw-planning/phases/02-core/02-01-PLAN.md
   cat > .vbw-planning/phases/02-core/02-01-SUMMARY.md <<'SUMMARY'
 ---
 status: complete
 ---
-# summary
 SUMMARY
 
-  # Only SOURCE-UAT with issues — should be skipped by latest_non_source_uat
   cat > .vbw-planning/phases/02-core/02-SOURCE-UAT.md <<'EOF'
 ---
 phase: 02
@@ -1208,7 +1229,6 @@ EOF
   run bash -c "cd '$TEST_TEMP_DIR' && printf '%s' '$input' | bash '$SCRIPTS_DIR/state-updater.sh'"
   [ "$status" -eq 0 ]
 
-  # SOURCE-UAT should be ignored — all phases should be complete
   grep -q '^Status: complete$' .vbw-planning/STATE.md
 }
 
@@ -1228,7 +1248,6 @@ phase: 1
 plan: 1
 status: complete
 ---
-# summary
 SUMMARY
 
   cat > .vbw-planning/.execution-state.json <<'EOF'
@@ -1255,6 +1274,9 @@ EOF
   cd "$TEST_TEMP_DIR"
 
   cat > .vbw-planning/STATE.md <<'EOF'
+# State
+## Current Phase
+## Phase Status
 Phase: 1 of 1 (Setup)
 Plans: 1/1
 Progress: 100%
@@ -1282,21 +1304,20 @@ EOF
 
   cat > .vbw-planning/STATE.md <<'EOF'
 # State
+## Current Phase
+## Phase Status
 **Project:** Test Project
 **Milestone:** MVP
 
-## Current Phase
 Phase: 1 of 1 (Setup)
 Plans: 1/1
 Progress: 100%
 Status: complete
 
-## Phase Status
 - **Phase 1:** Complete
 EOF
 
   cat > .vbw-planning/ROADMAP.md <<'EOF'
-# Roadmap
 - [x] Phase 1: Setup
 
 | Phase | Progress | Status | Completed |
@@ -1326,21 +1347,20 @@ EOF
 
   cat > .vbw-planning/STATE.md <<'EOF'
 # State
+## Current Phase
+## Phase Status
 **Project:** Test Project
 **Milestone:** MVP
 
-## Current Phase
 Phase: 1 of 1 (Setup)
 Plans: 1/1
 Progress: 100%
 Status: complete
 
-## Phase Status
 - **Phase 1:** Complete
 EOF
 
   cat > .vbw-planning/ROADMAP.md <<'EOF'
-# Roadmap
 - [x] Phase 1: Setup
 
 | Phase | Progress | Status | Completed |
@@ -1369,6 +1389,9 @@ EOF
   cd "$TEST_TEMP_DIR"
 
   cat > .vbw-planning/STATE.md <<'EOF'
+# State
+## Current Phase
+## Phase Status
 Phase: 1 of 1 (Setup)
 Plans: 1/1
 Progress: 100%
@@ -1395,6 +1418,9 @@ EOF
   cd "$TEST_TEMP_DIR"
 
   cat > .vbw-planning/STATE.md <<'EOF'
+# State
+## Current Phase
+## Phase Status
 Phase: 1 of 1 (Setup)
 Plans: 0/1
 Progress: 0%

@@ -6,7 +6,7 @@ setup() {
   setup_temp_dir
   create_test_config
   mkdir -p .vbw-planning/phases/01-setup
-  sed '/^INPUT=$(cat)/,$d' "$SCRIPTS_DIR/state-updater.sh" > "$TEST_TEMP_DIR/state-functions.sh"
+  cp "$SCRIPTS_DIR/phase-state-utils.sh" "$TEST_TEMP_DIR/state-functions.sh"
 }
 
 teardown() {

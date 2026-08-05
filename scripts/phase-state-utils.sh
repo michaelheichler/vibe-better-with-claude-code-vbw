@@ -1,13 +1,10 @@
 #!/bin/bash
-# phase-state-utils.sh -- shared helpers for phase directory enumeration and
-# status derivation from plan/summary artifacts.
+set -u
 
 list_canonical_phase_dirs() {
   local parent="$1"
   [ -d "$parent" ] || return 0
 
-  # Collect phase dirs via bash glob (avoids find pipeline under parallel
-  # fd contention). Only match NN-slug pattern (canonical phase dirs).
   local dirs=() d base
   for d in "$parent"/*/; do
     [ -d "$d" ] || continue
@@ -54,6 +51,68 @@ phase_dir_position() {
   done < <(list_canonical_phase_dirs "$phases_parent")
 
   echo ""
+}
+
+planning_root_from_phase_dir() {
+  local phase_dir="$1"
+  local phases_dir root
+
+  phases_dir=$(dirname "$phase_dir")
+  root=$(dirname "$phases_dir")
+  if [ "$(basename "$phases_dir")" = "phases" ] && [ -d "$root" ]; then
+    echo "$root"
+    return 0
+  fi
+
+  echo ".vbw-planning"
+}
+
+qa_required_for_phase() {
+  local phase_dir="$1"
+  local planning_root state_file qa_required effort phase_effort
+
+  planning_root=$(planning_root_from_phase_dir "$phase_dir")
+  state_file="${planning_root}/.execution-state.json"
+  if [ ! -f "$state_file" ]; then
+    printf '%s\n' "true"
+    return 0
+  fi
+
+  qa_required=$(jq -r 'if has("qa_required") then .qa_required else "__absent__" end' "$state_file" 2>/dev/null || printf '%s\n' "__absent__")
+  if [ "$qa_required" = "true" ] || [ "$qa_required" = "false" ]; then
+    printf '%s\n' "$qa_required"
+    return 0
+  fi
+
+  effort=$(jq -r '.effort // ""' "$state_file" 2>/dev/null || printf '\n')
+  phase_effort=$(jq -r '.phase_effort // ""' "$state_file" 2>/dev/null || printf '\n')
+  if [ "$effort" = "turbo" ] || [ "$phase_effort" = "turbo" ]; then
+    printf '%s\n' "false"
+  else
+    printf '%s\n' "true"
+  fi
+}
+
+qa_gate_routing_for_phase() {
+  local phase_dir="$1"
+  local script_dir="${2:-}" planning_root state_file routing
+
+  planning_root=$(planning_root_from_phase_dir "$phase_dir")
+  state_file="${planning_root}/.execution-state.json"
+  if [ ! -f "$state_file" ] || [ "$(qa_required_for_phase "$phase_dir")" != "true" ]; then
+    printf '%s\n' "PROCEED_TO_UAT"
+    return 0
+  fi
+
+  if [ -z "$script_dir" ]; then
+    script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+  fi
+  routing=$(bash "$script_dir/qa-result-gate.sh" "$phase_dir" 2>/dev/null | awk -F= '$1 == "qa_gate_routing" { routing = $2 } END { print routing }')
+  printf '%s\n' "${routing:-QA_RERUN_REQUIRED}"
+}
+
+qa_completion_allowed_for_phase() {
+  [ "$(qa_gate_routing_for_phase "$1" "${2:-}")" = "PROCEED_TO_UAT" ]
 }
 
 normalize_roadmap_phase_num() {
@@ -400,18 +459,18 @@ roadmap_numbering_mismatch_details() {
 
 phase_state_log_warning() {
   local planning_root="$1" detail="$2"
-  local log ts lc
+  local log timestamp line_count
 
   [ -n "$planning_root" ] || return 0
   [ -d "$planning_root" ] || return 0
   [ -n "$detail" ] || return 0
 
   log="$planning_root/.hook-errors.log"
-  ts=$(date -u +"%Y-%m-%dT%H:%M:%SZ" 2>/dev/null || date +"%s")
-  printf '[%s] state-numbering-warning: %s\n' "$ts" "$detail" >> "$log" 2>/dev/null || return 0
+  timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ" 2>/dev/null || date +"%s")
+  printf '[%s] state-numbering-warning: %s\n' "$timestamp" "$detail" >> "$log" 2>/dev/null || return 0
   if [ -f "$log" ]; then
-    lc=$(wc -l < "$log" 2>/dev/null | tr -d ' ')
-    [ "${lc:-0}" -gt 50 ] && { tail -30 "$log" > "${log}.tmp" && mv "${log}.tmp" "$log"; } 2>/dev/null
+    line_count=$(wc -l < "$log" 2>/dev/null | tr -d ' ')
+    [ "${line_count:-0}" -gt 50 ] && { tail -30 "$log" > "${log}.tmp" && mv "${log}.tmp" "$log"; } 2>/dev/null
   fi
 }
 
@@ -568,9 +627,6 @@ resolve_phase_number_from_phase_dir() {
     fi
   fi
 
-  # Round-dir / active UAT fallback: when a non-canonical phase dir uses legacy
-  # root artifacts but the current UAT lives at remediation/uat/round-*/R*-UAT.md,
-  # recover the phase number from that current UAT frontmatter.
   if type current_uat &>/dev/null; then
     uat_file=$(current_uat "$dir")
   else
