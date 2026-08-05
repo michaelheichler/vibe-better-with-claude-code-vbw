@@ -1,0 +1,26 @@
+scripts/vbw-statusline.sh
+  s_86d58b85ce2aee::t_04245a52de7982 417
+  s_86d58b85ce2aee::t_0a3b510503379b 561
+scripts/bootstrap/lib/bootstrap-claude-migration.sh
+  s_86d58b85ce2aee::t_c96a0bfa982624 164
+  s_86d58b85ce2aee::t_2a713199b078a5 179
+scripts/bootstrap/bootstrap-claude.sh
+  s_86d58b85ce2aee::t_3dee9e117c264c 13
+  s_86d58b85ce2aee::t_f30b06e917f9b2 141
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "e23f404caa4fd1dcf7ded3bd17837ee5e1c87e24",
+  "prompts": {},
+  "sessions": {
+    "s_86d58b85ce2aee": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "07d7797e-6c7f-4c9c-bdd0-a2660d0d8697",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
