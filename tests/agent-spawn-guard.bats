@@ -104,8 +104,8 @@ spawn_input() {
 
   [ "$status" -eq 0 ]
   [ "$(printf '%s' "$output" | jq -r '.hookSpecificOutput.updatedInput.model')" = "sonnet" ]
-  grep -q 'agent-spawn-guard start' "$TEST_TEMP_DIR/.vbw-planning/.hook-errors.log"
-  grep -q 'agent-spawn-guard complete' "$TEST_TEMP_DIR/.vbw-planning/.hook-errors.log"
+  grep -q 'agent-spawn-guard start' "$TEST_TEMP_DIR/.vbw-planning/.agent-spawn-guard.log"
+  grep -q 'agent-spawn-guard complete' "$TEST_TEMP_DIR/.vbw-planning/.agent-spawn-guard.log"
 }
 
 @test "agent-spawn-guard leaves non-VBW spawns untouched" {
