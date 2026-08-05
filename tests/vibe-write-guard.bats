@@ -1,0 +1,95 @@
+#!/usr/bin/env bats
+
+load test_helper
+
+status=0
+
+setup() {
+  setup_temp_dir
+  create_test_config
+  mkdir -p "$TEST_TEMP_DIR/.vbw-planning/phases"
+  export CLAUDE_SESSION_ID="session-main"
+  write_execution_state running
+  cd "$TEST_TEMP_DIR" || return 1
+}
+
+teardown() {
+  teardown_temp_dir
+}
+
+write_execution_state() {
+  jq -n --arg status "$1" '{status:$status,session_id:"session-main"}' \
+    > "$TEST_TEMP_DIR/.vbw-planning/.execution-state.json"
+}
+
+run_hook() {
+  printf '%s' "$1" | bash "$SCRIPTS_DIR/vibe-write-guard.sh"
+}
+
+test_allows_markdown_writes() { # @test
+  local input
+  input=$(jq -n --arg path "$TEST_TEMP_DIR/src/notes.md" \
+    '{session_id:"session-main",tool_name:"Write",tool_input:{file_path:$path}}')
+
+  run run_hook "$input"
+
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+test_allows_planning_writes() { # @test
+  local input
+  input=$(jq -n --arg path "$TEST_TEMP_DIR/.vbw-planning/STATE.md" \
+    '{session_id:"session-main",tool_name:"Edit",tool_input:{file_path:$path}}')
+
+  run run_hook "$input"
+
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+test_allows_agent_definition_writes() { # @test
+  local input
+  input=$(jq -n --arg path "$TEST_TEMP_DIR/.claude/agents/custom-agent.md" \
+    '{session_id:"session-main",tool_name:"Write",tool_input:{file_path:$path}}')
+
+  run run_hook "$input"
+
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+test_denies_product_writes() { # @test
+  local input
+  input=$(jq -n --arg path "$TEST_TEMP_DIR/src/app.js" \
+    '{session_id:"session-main",tool_name:"Write",tool_input:{file_path:$path}}')
+
+  run run_hook "$input"
+
+  [ "$status" -eq 0 ]
+  [ "$(printf '%s' "$output" | jq -r '.hookSpecificOutput.permissionDecision')" = "deny" ]
+  [[ "$output" == *"Delegate this change to a spawned agent"* ]]
+}
+
+test_inactive_vibe_execution_is_noop() { # @test
+  local input
+  write_execution_state complete
+  input=$(jq -n --arg path "$TEST_TEMP_DIR/src/app.js" \
+    '{session_id:"session-main",tool_name:"Write",tool_input:{file_path:$path}}')
+
+  run run_hook "$input"
+
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+test_subagent_payload_is_noop() { # @test
+  local input
+  input=$(jq -n --arg path "$TEST_TEMP_DIR/src/app.js" \
+    '{session_id:"session-main",agent_type:"vbw:vbw-dev",tool_name:"Write",tool_input:{file_path:$path}}')
+
+  run run_hook "$input"
+
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
