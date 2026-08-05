@@ -1,0 +1,38 @@
+references/dijkstra/DISCIPLINE.md
+  s_e8b702480499cf::t_631c0cbb2f41f9 3
+ARCHITECTURE.md
+  s_e8b702480499cf::t_692128df3c6632 97
+  s_e8b702480499cf::t_692fa19dfc0301 23
+docs/wiki/agent-roles.md
+  s_e8b702480499cf::t_3a74dc2516587f 30
+  s_e8b702480499cf::t_696eb835da6f4f 31
+  s_e8b702480499cf::t_e3426815e495d3 122
+  s_e8b702480499cf::t_b514391b898d44 27-28,32-33
+  s_e8b702480499cf::t_a5d1619e76c5e2 35
+  s_e8b702480499cf::t_0774351796dbb9 70-72
+  s_e8b702480499cf::t_f7918d7dd7fa34 66-68
+  s_e8b702480499cf::t_ab2ee988e5e346 80
+  s_e8b702480499cf::t_ab8c423bd4a1fb 9-12,14-15,45,49,53,64,76,86
+  s_e8b702480499cf::t_d0fa4159fb6282 1,3,13,16,22
+  s_e8b702480499cf::t_cf472a803e7f5a 81-82
+  s_e8b702480499cf::t_09acbd3c4da653 69
+AGENTS.md
+  s_e8b702480499cf::t_d7e718dcdc8563 140
+  s_e8b702480499cf::t_3a0a59afb97209 334,338,346-347,353
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "85870e4ca2fa64959360b385349c1a6c2bbe97f2",
+  "prompts": {},
+  "sessions": {
+    "s_e8b702480499cf": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b86dd062-285e-44f0-9749-b1a13364f007",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
