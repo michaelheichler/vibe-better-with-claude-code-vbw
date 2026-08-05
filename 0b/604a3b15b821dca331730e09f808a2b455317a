@@ -1,0 +1,34 @@
+commands/research.md
+  s_58849211a94dc9::t_0f9498bbb083e8 109
+agents/vbw-dev.md
+  s_58849211a94dc9::t_3ce4aae199f382 13,72
+references/vibe-mode-bootstrap.md
+  s_58849211a94dc9::t_4acd0bb4a30ea9 59
+references/execute-qa-result-gating.md
+  s_58849211a94dc9::t_3ad0616c99847d 135
+  s_58849211a94dc9::t_172b7ee3a7d2e9 124-134
+templates/agent-roles/dev.md.tpl
+  s_58849211a94dc9::t_c5bed1d31904a3 80
+references/execute-protocol.md
+  s_58849211a94dc9::t_79b703fd81a10e 371
+  s_58849211a94dc9::t_e7b5ec7a54adc7 25
+  s_58849211a94dc9::t_ee31cd74bd0729 365-366
+agents/vbw-lead.md
+  s_58849211a94dc9::t_7c472f6579ba55 4
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "0b604a3b15b821dca331730e09f808a2b455317a",
+  "prompts": {},
+  "sessions": {
+    "s_58849211a94dc9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a93b1e36-c511-4112-8e32-e0fbdf710600",
+        "model": "claude-fable-5"
+      },
+      "human_author": null
+    }
+  }
+}
