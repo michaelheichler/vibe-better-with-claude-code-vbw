@@ -1,0 +1,28 @@
+commands/config.md
+  s_58849211a94dc9::t_4db38ec3269fa7 542
+  s_58849211a94dc9::t_db60ce7cedc9b8 190
+references/model-profiles.md
+  s_58849211a94dc9::t_87474732c0817e 180-191
+  s_58849211a94dc9::t_88a6fc737578e5 231
+commands/init.md
+  s_58849211a94dc9::t_6cf50bd15b179a 540-542,547-548,551-552
+  s_58849211a94dc9::t_a0b4008b8edd25 224
+  s_58849211a94dc9::t_052912d146d74c 211
+  s_58849211a94dc9::t_b5efdce5b55204 124-125,129-139
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "c6a82d219680958bc26fe7f34fb3b69199c9ffb1",
+  "prompts": {},
+  "sessions": {
+    "s_58849211a94dc9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a93b1e36-c511-4112-8e32-e0fbdf710600",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
