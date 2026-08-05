@@ -8,19 +8,22 @@ PASS=0
 FAIL=0
 
 pass() {
-  echo "PASS  $1"
-  PASS=$((PASS + 1))
+  local message="$1"
+  echo "PASS  $message"
+  printf -v PASS '%d' "$((PASS + 1))"
 }
 
 fail() {
-  echo "FAIL  $1"
-  FAIL=$((FAIL + 1))
+  local message="$1"
+  echo "FAIL  $message"
+  printf -v FAIL '%d' "$((FAIL + 1))"
 }
 
 echo "=== Dijkstra Correctness Discipline Verification ==="
 
 
 ROUTER="$ROOT/references/dijkstra/DISCIPLINE.md"
+DEFAULTS="$ROOT/templates/agent-roles/defaults.json"
 
 if [[ -f "$ROUTER" ]]; then
   pass "references/dijkstra/DISCIPLINE.md exists"
@@ -92,7 +95,7 @@ pass "brief-to-routing-table reachability scan completed"
 echo ""
 echo "--- Dev agent checks ---"
 
-DEV="$ROOT/agents/vbw-dev.md"
+DEV="$ROOT/templates/agent-roles/dev.md.tpl"
 
 if grep -q '^## Correctness Discipline (Dijkstra)' "$DEV"
 then
@@ -119,7 +122,7 @@ else
   fail "dev: missing Grounding line convention"
 fi
 
-if head -10 "$DEV" | grep -q "Dijkstra correctness discipline"; then
+if jq -e '.dev.description | contains("Dijkstra correctness discipline")' "$DEFAULTS" >/dev/null; then
   pass "dev: description advertises the Dijkstra correctness discipline"
 else
   fail "dev: description missing the Dijkstra correctness discipline clause"
@@ -129,7 +132,7 @@ fi
 echo ""
 echo "--- QA agent checks ---"
 
-QA="$ROOT/agents/vbw-qa.md"
+QA="$ROOT/templates/agent-roles/qa.md.tpl"
 
 if grep -q '^## Correctness Verification (Dijkstra)' "$QA"
 then
@@ -160,7 +163,7 @@ fi
 echo ""
 echo "--- Lead and execute-protocol checks ---"
 
-LEAD="$ROOT/agents/vbw-lead.md"
+LEAD="$ROOT/templates/agent-roles/lead.md.tpl"
 PROTO="$ROOT/references/execute-protocol.md"
 
 if grep -q "correctness: dijkstra" "$LEAD"; then
