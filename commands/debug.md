@@ -222,15 +222,15 @@ Agent teams require `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`.
 The first Agent spawn forms the team. There is no TeamCreate setup step.
 `team_name="vbw-debug-{timestamp}"` is descriptive only.
 The real team name is session-derived and not authoritative for routing.
-Before composing task descriptions, evaluate skills in two passes. Derive technical domains from the issue, metadata, logs, errors, files, and bounded enrichment. Prefer those signals over generic stack guesses. Select `swiftdata` for SwiftData markers and `core-data` only for Core Data APIs.
-Select direct and narrowly adjacent support skills. Each Debugger task prompt MUST begin with one `<skill_activation>` or `<skill_no_activation>` block. State the outcome visibly and cite bounded enrichment when it influenced the choice.
-After calling `Skill(...)`, read only relevant follow-up files named by the skill. Do not scan entire skill folders.
-Each task includes the bug report, one hypothesis, working directory, and codebase bootstrap instructions. Include research or enrichment only when its helper output has signal.
-Require `debugger_report` with an explicit `resolution_observation`. Keep the task report-only. It must not edit, mutate, commit, request implementation approval, or claim the final outcome. Include `[analysis-only]` in each subject.
+Before composing task descriptions, evaluate installed skills visible in your system context in two passes. Derive technical domains from the issue, metadata, logs, errors, files, and bounded enrichment. Prefer those signals over generic stack guesses. Select `swiftdata` for SwiftData markers and `core-data` only for Core Data APIs.
+Select all materially helpful direct skills and narrowly adjacent support skills. Do not select only the single most direct skill. Each Debugger task prompt MUST begin with exactly one explicit `<skill_activation>` or `<skill_no_activation>` block. State the skill outcome in your response. Cite bounded enrichment when it influenced the choice.
+After calling `Skill(...)`, read only relevant follow-up files named by the skill. Do not scan entire skill folders or read unrelated references.
+Each task includes the bug report, one hypothesis, working directory, and codebase bootstrap instructions. If `.vbw-planning/codebase/META.md` exists, read ARCHITECTURE.md, CONCERNS.md, PATTERNS.md, and DEPENDENCIES.md before investigating. Include research or enrichment only when its helper output has signal.
+Require `debugger_report` with an explicit `resolution_observation`. You are a hypothesis investigator, not the implementation owner. Do NOT edit files, apply fixes, run mutating Bash, commit, request implementation approval, or claim ownership of the final session outcome. Keep the task report-only. Include `[analysis-only]` in each subject. Stop after diagnosis plus evidence reporting via `debugger_report`.
 Include the accepted-exception debug semantics block before task context. Add compact source metadata only when accepted markers are present.
 Note relevant MCP tools in each task context.
 If skills were preselected, run `bash "{plugin-root}/scripts/extract-skill-follow-up-files.sh" "{all preselected skill names from the activation block}" 2>/dev/null || true` before each Path A Debugger. Include the helper's follow-up block when it prints one.
-Render the prefix from `{plugin-root}/references/skill-activation-payload.md` and prepend it to the child prompt. Do not paste template variables or unresolved includes.
+Render the prompt prefix from `{plugin-root}/references/skill-activation-payload.md` and prepend it to the child prompt. Do not paste template variables or unresolved includes.
 Paste `<accepted_exception_debug_semantics>` after the payload prefix. Keep it before the bug report and evidence instructions.
 If accepted markers are present, add one compact source-metadata sentence. Do not paste the full JSON.
 
@@ -242,18 +242,18 @@ Now create the three tasks.
         RESEARCH_CONTEXT=$(bash "{plugin-root}/scripts/compile-research-context.sh" .vbw-planning "{bug description from Step 1}" 2>/dev/null || echo "")
         ```
         Replace `{bug description from Step 1}` with the actual parsed bug description. If `RESEARCH_CONTEXT` is non-empty, include it in each Debugger task prompt below. If empty, omit the `<standalone_research_context>` block entirely.
-    - Create three TaskCreate tasks. Each task gets the bug report, one hypothesis, working directory, and codebase bootstrap instructions.
+    - Create three tasks via TaskCreate. Each task gets the bug report, one hypothesis, working directory, and codebase bootstrap instructions. If `.vbw-planning/codebase/META.md` exists, read ARCHITECTURE.md, CONCERNS.md, PATTERNS.md, and DEPENDENCIES.md before investigating.
     - Include the standalone research block only when RESEARCH_CONTEXT has content. Include todo detail or sparse enrichment only when its helper output has signal. Omit empty sections.
-    - Require the `debugger_report` schema and an explicit `resolution_observation`. Keep the analysis scoped to the investigator. Do not edit, mutate, commit, request implementation approval, or claim the final outcome.
+    - Require the `debugger_report` schema from `{plugin-root}/references/handoff-schemas.md` and an explicit `resolution_observation`. Keep the analysis scoped to the investigator. Do not edit, mutate, commit, request implementation approval, or claim the final outcome.
     - Include `[analysis-only]` in each task subject. The marker is advisory and does not replace the report-only contract.
     - Include the accepted-exception debug semantics block before the task context. Add compact source metadata only when accepted markers are present.
-    - Include the no-tool circuit breaker and the pre-existing issues reporting instruction.
+    - Include the no-tool circuit breaker. Report unrelated failures under a `Pre-existing Issues` heading.
 
     - Run the Debugger generator once per hypothesis. Capture each `SPAWN_READY` name and use it for both `subagent_type` and `name`.
     - Pass the generated model and any non-empty max-turns or reasoning values. Omit empty values.
     - In team mode, include the selected `team_name`. Do not pass isolation or worktree cwd fields.
 
-    - **Investigation phase:** Wait until ALL spawned hypothesis investigators return `debugger_report`. Synthesize the strongest evidence and highest confidence. Multiple confirmed findings are contributing factors. Choose one `RESOLUTION_OBSERVATION` value from the reports: `already_fixed`, `needs_change`, or `inconclusive`.
+    - **Investigation phase:** Wait until ALL spawned hypothesis investigators have returned `debugger_report`. Synthesize the strongest evidence and highest confidence. Multiple confirmed findings are contributing factors. Choose one `RESOLUTION_OBSERVATION` value from the reports: `already_fixed`, `needs_change`, or `inconclusive`.
     - For accepted exceptions, UAT deviations, or backlog items, accepted metadata alone cannot establish `already_fixed`. Require fresh evidence. Use `needs_change` when remediation remains and `inconclusive` when no safe fix can be applied.
     - Choose one authoritative analysis-scoped `RESOLUTION_OBSERVATION` summary for user-facing presentation. Collect pre-existing issues from all debugger responses. De-duplicate by test name and file. Keep the first error message for duplicate pairs.
     - **Teardown phase, HARD GATE before any implementation:** Follow the team-shutdown contract in `references/subagent-contracts.md`.
@@ -467,9 +467,9 @@ fi
 
     If `QA_REASONING` is non-empty, also pass `effort: "${QA_REASONING}"`. If `QA_REASONING` is empty, do NOT include effort (the resolved model rejects the parameter).
 
-    Before composing the QA task description, evaluate installed skills in two passes. First derive technical domains from session context, errors, files, and bounded enrichment. Prefer those signals over generic stack guesses. If they mention SwiftData markers, select `swiftdata`. Select `core-data` only when the evidence names Core Data APIs.
-    Select all materially helpful direct skills and narrowly adjacent support skills. The QA prompt MUST begin with exactly one `<skill_activation>` or `<skill_no_activation>` block. Silent omission is invalid. State the outcome in the visible response and cite bounded enrichment when it influenced the choice.
-    After calling `Skill(...)`, read only relevant follow-up files named by the skill. Do not scan entire skill folders.
+    Before composing the QA task description, evaluate installed skills visible in your system context in two passes. First derive technical domains from session context, errors, files, and bounded enrichment. Prefer those signals over generic stack guesses. If they mention SwiftData markers, select `swiftdata`. Select `core-data` only when the evidence names Core Data APIs.
+    Select all materially helpful direct skills and narrowly adjacent support skills. Do not select only the single most direct skill. The QA prompt MUST begin with exactly one explicit `<skill_activation>` or `<skill_no_activation>` block. Silent omission is invalid. State the skill outcome in your response. Cite bounded enrichment when it influenced the choice.
+    After calling `Skill(...)`, read only relevant follow-up files named by the skill. Do not scan entire skill folders or read unrelated references.
 
     If one or more skills were preselected, run `bash "{plugin-root}/scripts/extract-skill-follow-up-files.sh" "{all preselected skill names from the activation block}" 2>/dev/null || true` before spawning the inline debug-session QA agent. If the helper prints a `<skill_follow_up_files>` block, paste it immediately after the follow-up-read sentence in the spawned payload. Otherwise omit that block.
 

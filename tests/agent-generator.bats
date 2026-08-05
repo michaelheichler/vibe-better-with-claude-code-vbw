@@ -62,8 +62,11 @@ EOF
   run run_generator dev --job collision
 
   [ "$status" -eq 0 ]
-  [[ "$output" == *'SPAWN_READY vbw-dev-red-blue-fox'* ]]
-  [ -f "$TEST_TEMP_DIR/.claude/agents/vbw-dev-red-blue-fox.md" ]
+  name=$(sed -n 's/^SPAWN_READY //p' <<< "$output")
+  [ -n "$name" ]
+  [ "$name" != 'vbw-dev-red-red-fox' ]
+  [ "$name" != 'vbw-dev-blue-blue-fox' ]
+  [ -f "$TEST_TEMP_DIR/.claude/agents/$name.md" ]
 }
 
 @test_generator_refuses_four_live_agents() { # @test

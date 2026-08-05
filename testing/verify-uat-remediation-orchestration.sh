@@ -1,11 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# verify-uat-remediation-orchestration.sh, Contract checks for UAT remediation orchestration.
-#
-# These checks protect the host-root artifact path contract used when Scout,
-# Lead, and Dev agents run from Claude sidechain CWDs.
-
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 VIBE_FILE="$ROOT/references/vibe-uat-remediation.md"
 VALIDATOR="$ROOT/scripts/validate-uat-remediation-artifact.sh"
@@ -17,13 +12,15 @@ PASS=0
 FAIL=0
 
 pass() {
-  echo "PASS  $1"
-  PASS=$((PASS + 1))
+  local message="$1"
+  echo "PASS  $message"
+  printf -v PASS '%d' "$((PASS + 1))"
 }
 
 fail() {
-  echo "FAIL  $1"
-  FAIL=$((FAIL + 1))
+  local message="$1"
+  echo "FAIL  $message"
+  printf -v FAIL '%d' "$((FAIL + 1))"
 }
 
 contains_literal() {
@@ -236,7 +233,7 @@ check_not_contains "UAT block no longer relies on project-root workaround" "$UAT
 check_not_regex "UAT block does not include isolation argument syntax" "$UAT_BLOCK" "$SPAWN_ARG_ISOLATION_RE"
 check_not_regex "UAT block does not include background argument syntax" "$UAT_BLOCK" "$SPAWN_ARG_BACKGROUND_RE"
 check_not_regex "UAT block does not include team_name argument syntax" "$UAT_BLOCK" "$SPAWN_ARG_TEAM_NAME_RE"
-check_not_regex "UAT block does not include per-agent name argument syntax" "$UAT_BLOCK" "$SPAWN_ARG_NAME_RE"
+check_regex "UAT block uses generated per-agent names" "$UAT_BLOCK" 'subagent_type: "\$\{(SCOUT|LEAD|DEV)_AGENT_NAME\}"'
 check_not_regex "UAT block does not include worktree cwd argument syntax" "$UAT_BLOCK" "$SPAWN_ARG_CWD_RE"
 check_regex "spawn argument matcher catches isolation equals syntax" 'Agent isolation=worktree' "$SPAWN_ARG_ISOLATION_RE"
 check_regex "spawn argument matcher catches isolation JSON syntax" 'Agent "isolation": "worktree"' "$SPAWN_ARG_ISOLATION_RE"

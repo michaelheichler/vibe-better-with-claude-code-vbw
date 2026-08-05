@@ -2,21 +2,21 @@
 echo ""
 echo "=== Subagent Type Verification ==="
 
-_SAT_TOTAL=$(grep -h 'subagent_type.*vbw:' "${TRACKED_COMMAND_REFERENCE_FILES[@]}" 2>/dev/null | wc -l | tr -d ' ' || true)
+_SAT_TOTAL=$(grep -hE 'subagent_type.*\$\{[A-Z_]+_AGENT_NAME\}|SPAWN_READY.*subagent_type' "${TRACKED_COMMAND_REFERENCE_FILES[@]}" 2>/dev/null | wc -l | tr -d ' ' || true)
 
 if [ "$_SAT_TOTAL" -ge 16 ]; then
-  pass "subagent_type: ${_SAT_TOTAL} spawn points specify subagent_type (>= 16 expected)"
+  pass "subagent_type: ${_SAT_TOTAL} generated-name spawn points specify subagent_type (>= 16 expected)"
 else
-  fail "subagent_type: only ${_SAT_TOTAL} spawn points specify subagent_type (>= 16 expected)"
+  fail "subagent_type: only ${_SAT_TOTAL} generated-name spawn points specify subagent_type (>= 16 expected)"
 fi
 
-for _role_check in "vbw-scout:references/vibe-mode-bootstrap.md" "vbw-scout:commands/research.md" "vbw-scout:commands/map.md" "vbw-dev:commands/fix.md" "vbw-dev:references/execute-protocol.md" "vbw-debugger:commands/debug.md" "vbw-qa:commands/qa.md" "vbw-qa:references/execute-post-build-qa.md" "vbw-lead:references/vibe-mode-plan.md"; do
+for _role_check in "SCOUT_AGENT_NAME:references/vibe-mode-bootstrap.md" "SCOUT_AGENT_NAME:commands/research.md" "SCOUT_AGENT_NAME:commands/map.md" "DEV_AGENT_NAME:commands/fix.md" "DEV_AGENT_NAME:references/execute-protocol.md" "DEBUGGER_AGENT_NAME:commands/debug.md" "QA_AGENT_NAME:commands/qa.md" "QA_AGENT_NAME:references/execute-post-build-qa.md" "LEAD_AGENT_NAME:references/vibe-mode-plan.md"; do
   _sat_role="${_role_check%%:*}"
   _sat_file="${_role_check#*:}"
-  if grep -q "subagent_type.*${_sat_role}" "$ROOT/$_sat_file"; then
-    pass "$_sat_file: specifies subagent_type for $_sat_role"
+  if grep -q "subagent_type.*\${${_sat_role}}" "$ROOT/$_sat_file"; then
+    pass "$_sat_file: specifies generated subagent_type for $_sat_role"
   else
-    fail "$_sat_file: missing subagent_type for $_sat_role"
+    fail "$_sat_file: missing generated subagent_type for $_sat_role"
   fi
 done
 
