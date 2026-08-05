@@ -39,10 +39,10 @@ run_renderer() {
 }
 
 @test_literal_braces_in_override_are_preserved() { # @test
-  run run_renderer dev NAME=vbw-test DESCRIPTION='Uses {{literal}} text' JOB='Implement the assigned work.'
+  run run_renderer dev NAME=vbw-test DESCRIPTION='Uses {{LITERAL}} text' JOB='Implement the assigned work.'
 
   [ "$status" -eq 0 ]
-  [[ "$output" == *'description: "Uses {{literal}} text"'* ]]
+  [[ "$output" == *'description: "Uses {{LITERAL}} text"'* ]]
 }
 
 @test_literal_braces_in_job_are_preserved() { # @test
