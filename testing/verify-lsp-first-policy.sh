@@ -149,17 +149,17 @@ echo ""
 echo "--- Bootstrap & init LSP guidance checks ---"
 
 BOOTSTRAP="$ROOT/scripts/bootstrap/bootstrap-claude.sh"
-CLAUDE_LIB="$ROOT/scripts/lib/claude-md-vbw-sections.sh"
+CLAUDE_TEXT="$ROOT/scripts/lib/claude-md-code-intelligence.txt"
 INIT="$ROOT/commands/init.md"
 
 # Shared CLAUDE section helper is the source of truth for generated Code Intelligence content.
-if grep -q "Search/Grep/Glob" "$CLAUDE_LIB"; then
+if grep -q "Search/Grep/Glob" "$CLAUDE_TEXT"; then
   pass "bootstrap: Code Intelligence uses Search/Grep/Glob fallback language"
 else
   fail "bootstrap: Code Intelligence missing Search/Grep/Glob fallback language"
 fi
 
-if grep -q "Prefer LSP over Search/Grep/Glob" "$CLAUDE_LIB"; then
+if grep -q "Prefer LSP over Search/Grep/Glob" "$CLAUDE_TEXT"; then
   pass "bootstrap: Code Intelligence has LSP-first-over-Search language"
 else
   fail "bootstrap: Code Intelligence missing LSP-first-over-Search language"

@@ -8,6 +8,7 @@ FIX_CMD="$ROOT/commands/fix.md"
 VIBE_CMD="$ROOT/references/vibe-input-parsing.md"
 RESEARCH_CMD="$ROOT/commands/research.md"
 LIST_SCRIPT="$ROOT/scripts/list-todos.sh"
+LIST_FUNCTIONS="$ROOT/scripts/lib/list-todos-functions.inc"
 DEBUG_START_SCRIPT="$ROOT/scripts/debug-start-selected-todo.sh"
 RESOLVE_SCRIPT="$ROOT/scripts/resolve-todo-item.sh"
 LIFECYCLE_SCRIPT="$ROOT/scripts/todo-lifecycle.sh"
@@ -51,10 +52,9 @@ require_absent() {
 
 echo "=== Todo pickup contract verification ==="
 
-# Shared script surface
-require_grep "list-todos.sh emits section_index metadata" 'section_index' "$LIST_SCRIPT"
-require_grep "list-todos.sh emits normalized_text metadata" 'normalized_text' "$LIST_SCRIPT"
-require_grep "list-todos.sh emits command_text metadata" 'command_text' "$LIST_SCRIPT"
+require_grep "list-todos emits section_index metadata" 'section_index' "$LIST_FUNCTIONS"
+require_grep "list-todos emits normalized_text metadata" 'normalized_text' "$LIST_FUNCTIONS"
+require_grep "list-todos emits command_text metadata" 'command_text' "$LIST_FUNCTIONS"
 require_grep "resolve-todo-item.sh supports session snapshots" 'session-snapshot' "$RESOLVE_SCRIPT"
 require_grep "todo-lifecycle.sh supports pickup command" 'pickup\)' "$LIFECYCLE_SCRIPT"
 require_grep "todo-lifecycle.sh supports remove command" 'remove\)' "$LIFECYCLE_SCRIPT"
@@ -90,7 +90,6 @@ require_grep "debug-start helper knows uat_deviation object marker" 'uat_deviati
 require_grep "debug-start helper knows accepted UAT summary phrase" 'Accepted UAT summary deviation' "$DEBUG_START_SCRIPT"
 require_absent "list-todos remains state-backed and does not scan completed debug sessions" 'debugging/completed|Source Todo' "$LIST_SCRIPT"
 
-# list-todos command surface
 require_grep "list-todos uses helper-backed snapshot capture" 'todo-lifecycle\.sh" list-with-snapshot' "$LIST_CMD"
 require_absent "list-todos no longer asks markdown to pipe JSON into snapshot-save" 'todo-lifecycle\.sh" snapshot-save' "$LIST_CMD"
 require_grep "list-todos remove uses snapshot resolver" 'resolve-todo-item\.sh" <N> --session-snapshot' "$LIST_CMD"
@@ -99,7 +98,6 @@ require_grep "list-todos filtered view rerun-unfiltered hint exists" 'rerun unfi
 require_grep "list-todos advertises /vbw:research N" '/vbw:research N' "$LIST_CMD"
 require_grep "list-todos filtered guard includes /vbw:research N" 'rerun unfiltered /vbw:list-todos before using /vbw:vibe N, /vbw:fix N, /vbw:debug N, or /vbw:research N' "$LIST_CMD"
 
-# debug command surface
 require_grep "debug documents selected-todo helper contract" '<selected_todo_start_helper>' "$DEBUG_CMD"
 require_grep "debug calls selected-todo start helper" 'debug-start-selected-todo\.sh" \.vbw-planning <N>' "$DEBUG_CMD"
 require_grep "debug detects selected-todo mode after stripping supported routing flags" 'after removing only supported routing flags' "$DEBUG_CMD"
@@ -127,12 +125,10 @@ require_grep "debug requires refresh before citing remaining todo numbers" 'Neve
 require_grep "debug reruns list-todos for fresh numbering after pickup" 'Rerun /vbw:list-todos for fresh numbering' "$DEBUG_CMD"
 require_grep "debug explicitly surfaces partial pickup warnings" '\.pickup\.status` is `partial`' "$DEBUG_CMD"
 
-# fix command surface
 require_grep "fix uses snapshot-backed todo resolver" 'resolve-todo-item\.sh" <N> --session-snapshot --require-unfiltered --validate-live' "$FIX_CMD"
 require_grep "fix writes detail warning through lifecycle helper" 'todo-lifecycle\.sh" detail-warning' "$FIX_CMD"
 require_grep "fix pickup uses lifecycle helper" 'todo-lifecycle\.sh" pickup /vbw:fix' "$FIX_CMD"
 
-# vibe command surface
 require_grep "vibe inspects the todo snapshot" 'todo-lifecycle\.sh" snapshot-show' "$VIBE_CMD"
 require_grep "vibe uses snapshot-backed todo resolver" 'resolve-todo-item\.sh" <N> --session-snapshot --require-unfiltered --validate-live' "$VIBE_CMD"
 require_grep "vibe preserves filtered-view rerun-unfiltered guard" 'Current list view is filtered, rerun unfiltered /vbw:list-todos before using /vbw:vibe N as a todo pickup' "$VIBE_CMD"
@@ -140,7 +136,6 @@ require_grep "vibe eagerly loads detail during Input Parsing for selected todos"
 require_grep "vibe pickup uses lifecycle helper" 'todo-lifecycle\.sh" pickup /vbw:vibe' "$VIBE_CMD"
 require_grep "vibe writes detail warning through lifecycle helper" 'todo-lifecycle\.sh" detail-warning' "$VIBE_CMD"
 
-# research command surface
 require_grep "research uses snapshot-backed todo resolver" 'resolve-todo-item\.sh" <N> --session-snapshot --require-unfiltered --validate-live' "$RESEARCH_CMD"
 require_grep "research stores selected todo payload" 'TODO_SELECTED_JSON' "$RESEARCH_CMD"
 require_grep "research marks numbered todo selection" 'TODO_SELECTED=true' "$RESEARCH_CMD"

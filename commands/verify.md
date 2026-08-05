@@ -611,7 +611,6 @@ Issue recorded (severity: {level}). Final next-step routing shown at UAT summary
 
 When a user passes or skips a test but also mentions a separate bug, issue, or observation unrelated to the test's expected behavior, capture the separate observation as a discovered issue (see Step 7a).
 
-capture the additional text as a discovered issue (see Step 7a). Capture the post-separator observation text as a discovered issue (Step 7a). Infer severity using the same keyword table from Step 7.
 
 Assign a discovered-issue ID: `D{NN}` (D01, D02, ...), sequential across the UAT session. Before appending any discovered issue, scan the current UAT file at `{phase-dir}/{uat_path}` in both initial and resumed sessions for existing `D[0-9]+` headings. Include prefilled summary-deviation review entries and discovered issues already appended earlier in the same session. those IDs are reserved. Allocate the next zero-padded `D{NN}` from highest existing + 1, or `D01` when none exist. Example: if prefilled `D01` and `D02` already exist, the next discovered issue is `D03`. Never renumber existing `D{NN}` entries.
 
