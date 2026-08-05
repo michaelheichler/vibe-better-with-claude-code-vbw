@@ -30,7 +30,6 @@
       "cached_input": 1.00,
       "context": 1000000,
       "max_output": 128000,
-      "reasoning_param": "output_config.effort",
       "reasoning_efforts": ["low", "medium", "high", "xhigh", "max"],
       "reasoning_default": "high",
       "note": "Thinking always on. Requires 30-day data retention."
@@ -42,7 +41,6 @@
       "cached_input": 0.50,
       "context": 1000000,
       "max_output": 128000,
-      "reasoning_param": "output_config.effort",
       "reasoning_efforts": ["low", "medium", "high", "xhigh", "max"],
       "reasoning_default": "high",
       "note": "Thinking on by default. Disabling thinking is rejected above 'high' effort."
@@ -57,7 +55,6 @@
       "output_after_expiry": 15.00,
       "context": 1000000,
       "max_output": 128000,
-      "reasoning_param": "output_config.effort",
       "reasoning_efforts": ["low", "medium", "high", "xhigh", "max"],
       "reasoning_default": "high",
       "note": "2.00/10.00 is Anthropic's introductory rate through 2026-08-31, not a gateway discount."
@@ -69,7 +66,6 @@
       "cached_input": 0.10,
       "context": 200000,
       "max_output": 64000,
-      "reasoning_param": null,
       "reasoning_efforts": [],
       "reasoning_default": null,
       "note": "Rejects the effort parameter. Smallest context in the set. ARC-AGI-2 1.3 to 4.0 percent, so unsuited to planning or debugging roles."
@@ -81,7 +77,6 @@
       "cached_input": 0.50,
       "context": 1000000,
       "max_output": 128000,
-      "reasoning_param": "output_config.effort",
       "reasoning_efforts": ["low", "medium", "high", "xhigh", "max"],
       "reasoning_default": "high"
     },
@@ -93,7 +88,6 @@
       "cached_input": 0.50,
       "context": 1050000,
       "max_output": 128000,
-      "reasoning_param": "reasoning.effort",
       "reasoning_efforts": ["low", "medium", "high", "xhigh"],
       "reasoning_default": "medium",
       "note": "Effort set only partially published, with xhigh confirmed. METR measured a reward-hacking rate above any other public model, which undercuts its agentic scores."
@@ -105,7 +99,6 @@
       "cached_input": 0.20,
       "context": 1050000,
       "max_output": 128000,
-      "reasoning_param": "reasoning.effort",
       "reasoning_efforts": ["low", "medium", "high", "xhigh"],
       "reasoning_default": "medium"
     },
@@ -116,7 +109,6 @@
       "cached_input": 0.02,
       "context": 1050000,
       "max_output": 128000,
-      "reasoning_param": "reasoning.effort",
       "reasoning_efforts": ["low", "medium", "high", "xhigh"],
       "reasoning_default": "medium"
     },
@@ -127,7 +119,6 @@
       "cached_input": 0.50,
       "context": 1050000,
       "max_output": 128000,
-      "reasoning_param": "reasoning.effort",
       "reasoning_efforts": ["none", "low", "medium", "high", "xhigh"],
       "reasoning_default": "medium"
     },
@@ -138,7 +129,6 @@
       "cached_input": null,
       "context": 1050000,
       "max_output": 128000,
-      "reasoning_param": "reasoning.effort",
       "reasoning_efforts": ["medium", "high", "xhigh"],
       "reasoning_default": "high",
       "note": "No cached-input discount offered."
@@ -150,7 +140,6 @@
       "output": 15.00,
       "cached_input": 0.30,
       "context": 1048576,
-      "reasoning_param": "reasoning_effort",
       "reasoning_efforts": ["low", "high", "max"],
       "reasoning_default": "max"
     },
@@ -160,7 +149,6 @@
       "output": 4.00,
       "cached_input": 0.19,
       "context": 262144,
-      "reasoning_param": "thinking",
       "reasoning_efforts": [],
       "reasoning_default": null,
       "note": "Thinking always on and cannot be disabled. No effort ladder."
@@ -173,7 +161,6 @@
       "cached_input": 0.26,
       "context": 1000000,
       "max_output": 128000,
-      "reasoning_param": "reasoning_effort",
       "reasoning_efforts": [],
       "reasoning_default": null,
       "note": "Supports thinking enabled or disabled plus reasoning_effort, but the accepted effort enum is unpublished. Left empty so the matrix never emits a rejected value."
@@ -186,7 +173,6 @@
       "output": [{ "upto": 200000, "usd": 12.00 }, { "usd": 18.00 }],
       "context": 1000000,
       "max_output": 64000,
-      "reasoning_param": "thinking_level",
       "reasoning_efforts": ["low", "medium", "high"],
       "reasoning_default": "high"
     },
@@ -197,7 +183,6 @@
       "output": [{ "upto": 200000, "usd": 6.00 }, { "usd": 12.00 }],
       "cached_input": 0.30,
       "context": 500000,
-      "reasoning_param": "reasoning_effort",
       "reasoning_efforts": ["low", "medium", "high"],
       "reasoning_default": "high",
       "note": "Reasoning cannot be disabled. Uses roughly 4.2x fewer output tokens than Opus 4.8 on SWE-bench Pro."
@@ -208,7 +193,6 @@
       "input": [{ "upto": 512000, "usd": 0.30 }, { "usd": 0.60 }],
       "output": [{ "upto": 512000, "usd": 1.20 }, { "usd": 2.40 }],
       "context": 1000000,
-      "reasoning_param": "thinking",
       "reasoning_efforts": [],
       "reasoning_default": null,
       "note": "Thinking off by default, enabled with 'adaptive'. No effort ladder."
@@ -221,7 +205,6 @@
       "cached_input": 0.003625,
       "context": 1000000,
       "max_output": 384000,
-      "reasoning_param": "reasoning_effort",
       "reasoning_efforts": ["high", "max"],
       "reasoning_default": null,
       "note": "low and xhigh currently alias to high and max. The full three-level ladder is expected early August 2026."
@@ -232,7 +215,6 @@
       "output": 0.28,
       "cached_input": 0.0028,
       "context": 1000000,
-      "reasoning_param": "reasoning_effort",
       "reasoning_efforts": ["low", "high", "max"],
       "reasoning_default": null
     }

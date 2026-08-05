@@ -187,7 +187,7 @@ Store selection in variable `PROFILE_METHOD`.
 
 **Model matrix flow:**
 
-Run `bash "{plugin-root}/scripts/detect-models.sh" --labeled`. Detection reads the Claude Code binary model table first and merges the endpoint catalog when auth env exists. Each output line is `id<TAB>description`.
+Run `bash "{plugin-root}/scripts/detect-models.sh" --labeled`. Detection reads model aliases, picker entries, and custom-model catalog strings from the Claude Code binary, then merges aliases from `config/model-pricing.json`. It works offline with no credentials or HTTP calls. Each output line is `id<TAB>description`.
 
 - **Empty output (rare):** display `○ No model catalog detectable (static tiers apply)` and return to the Step 2.7 question. Do not stop the command.
 - **Non-empty output:** show the current `model_matrix` (if any) side by side with the detected catalog, printing each detected id together with its description. Then read `{plugin-root}/references/model-profiles.md` and follow its "Task performance" tables and "Choosing models per role" section to propose an updated matrix over agents (lead, dev, qa, scout, debugger, architect, docs) x effort levels (thorough, balanced, fast, turbo). Rank each role by its measured task performance, not by a generic capability ladder. Use the description column to judge family and strength. Never invent ids: every entry must appear verbatim in the id column. Every preference array must end in a Claude tier id. Present the proposal as a compact table plus a legend of id and description.
@@ -539,7 +539,7 @@ Note: `auto_commit` controls source-task commits during Execute mode. Planning a
 | model_profile | string | quality/balanced/budget | quality |
 | model_overrides | object | agent-to-model map (value: model id or preference array) | {} |
 | model_matrix | object | agent x effort map to model id or preference array, written by /vbw:init from the detected catalog | {} |
-| model_catalog | array | model ids detected from ${ANTHROPIC_BASE_URL}/v1/models at init | [] |
+| model_catalog | array | model ids detected from the Claude Code binary and pricing aliases at init | [] |
 | model_catalog_extra | array | trusted model ids treated as available for preference-array resolution even when absent from the detected catalog | [] |
 | reasoning_matrix | object | agent x effort map to a reasoning effort (low/medium/high/xhigh/max), reconciled against the resolved model's accepted set | {} |
 | reasoning_overrides | object | agent-to-reasoning-effort map, highest precedence | {} |

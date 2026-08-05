@@ -177,18 +177,18 @@ Families and strengths of non-Claude ids come from the labeled descriptions emit
 
 The second axis. Values, per family, verified against vendor documentation:
 
-| Family | Parameter | Accepted values | Default |
-|---|---|---|---|
-| Claude 5 (fable, opus, sonnet) | `output_config.effort` | low, medium, high, xhigh, max | high |
-| **claude-haiku-4-5** | none | **rejects the parameter** | n/a |
-| OpenAI gpt-5.5 | `reasoning.effort` | none, low, medium, high, xhigh | medium |
-| OpenAI gpt-5.5-pro | `reasoning.effort` | medium, high, xhigh | high |
-| OpenAI gpt-5.6 | `reasoning.effort` | xhigh confirmed, full set unpublished | medium |
-| kimi-k3 | `reasoning_effort` | low, high, max | max |
-| gemini-3.1-pro | `thinking_level` | low, medium, high | high |
-| grok-4.5 | `reasoning_effort` | low, medium, high (cannot disable) | high |
-| deepseek-v4-flash | `reasoning_effort` | low, high, max | n/a |
-| glm-5.2, minimax-m3, kimi-k2.7-code | varies | no usable ladder published | n/a |
+| Family | Accepted values | Default |
+|---|---|---|
+| Claude 5 (fable, opus, sonnet) | low, medium, high, xhigh, max | high |
+| **claude-haiku-4-5** | **rejects the parameter** | n/a |
+| OpenAI gpt-5.5 | none, low, medium, high, xhigh | medium |
+| OpenAI gpt-5.5-pro | medium, high, xhigh | high |
+| OpenAI gpt-5.6 | xhigh confirmed, full set unpublished | medium |
+| kimi-k3 | low, high, max | max |
+| gemini-3.1-pro | low, medium, high | high |
+| grok-4.5 | low, medium, high (cannot disable) | high |
+| deepseek-v4-flash | low, high, max | n/a |
+| glm-5.2, minimax-m3, kimi-k2.7-code | no usable ladder published | n/a |
 
 Sending an unsupported value is a hard API error, not a no-op. `scripts/resolve-agent-reasoning.sh` reconciles the configured value against `config/model-pricing.json` and emits an empty string when the model rejects the parameter, so the orchestrator omits it.
 
@@ -228,7 +228,7 @@ Budget places haiku on Docs only. Earlier revisions routed Scout and QA to haiku
 
 When Claude Code runs against an Anthropic-compatible endpoint exposing more than the Claude tiers, VBW routes agents to those models natively.
 
-`scripts/detect-models.sh` treats the model table embedded in the Claude Code binary as the sole primary source. It works offline, needs zero credentials on subscription or OAuth setups, and a patched binary advertises injected models in the same structures. `${ANTHROPIC_BASE_URL}/v1/models` is queried only as a last resort, when the binary yields nothing and `ANTHROPIC_API_KEY` or `ANTHROPIC_AUTH_TOKEN` exists. Results cache for 1h, keyed on the binary's path, mtime, and size, so a re-patched binary invalidates immediately. `--labeled` emits `id` TAB `description` for the proposal flows. Empty output means static tiers apply.
+`scripts/detect-models.sh` reads model aliases, picker entries, and custom-model catalog strings from the Claude Code binary, then merges aliases from `config/model-pricing.json`. It works offline with no credentials or HTTP calls, and patched binaries advertise injected models in the same structures. Results cache for 1h, keyed on the binary and pricing-file paths, mtimes, and sizes, so changes to either source invalidate the cache. `--labeled` emits `id` TAB `description` for the proposal flows. Empty output means static tiers apply.
 
 **Matrix shape:**
 

@@ -121,21 +121,22 @@ See `docs/migration-gsd-to-vbw.md` for full field descriptions and usage example
 **Detection:** Check for .planning/ directory: `[ -d .planning ]`
 
 - **NOT found:** skip silently to Step 1 (no display output)
-- **Found:** proceed with import flow:
+- **Found:** proceed with import flow.
+  **Prompt and choice:**
   1. Display: "◆ GSD project detected"
   2. AskUserQuestion: "GSD project detected. Import work history?\n\nThis will copy .planning/ to .vbw-planning/gsd-archive/ for reference.\nYour original .planning/ directory will remain untouched."
      - Options: "Import (Recommended)" / "Skip"
-  3. If user declines:
-     - Display: "○ GSD import skipped"
-     - Proceed to Step 1
-  4. If user approves:
-     - Create directory: `mkdir -p .vbw-planning/gsd-archive`
-     - Copy contents: `cp -r .planning/* .vbw-planning/gsd-archive/`
-     - Display: "◆ Generating index..."
-      - Run: `bash "{plugin-root}/scripts/generate-gsd-index.sh"`
-     - Display: "✓ GSD project archived to .vbw-planning/gsd-archive/ (indexed)"
-     - Set GSD_IMPORTED=true flag for later steps
-     - Proceed to Step 1
+  **Decline:**
+  - Display: "○ GSD import skipped"
+  - Proceed to Step 1
+  **Approve:**
+  - Create directory: `mkdir -p .vbw-planning/gsd-archive`
+  - Copy contents: `cp -r .planning/* .vbw-planning/gsd-archive/`
+  - Display: "◆ Generating index..."
+  - Run: `bash "{plugin-root}/scripts/generate-gsd-index.sh"`
+  - Display: "✓ GSD project archived to .vbw-planning/gsd-archive/ (indexed)"
+  - Set GSD_IMPORTED=true flag for later steps
+  - Proceed to Step 1
 
 ### Step 1: Scaffold directory
 
@@ -207,7 +208,7 @@ Set GSD_ISOLATION_ENABLED=true for Step 3.5.
 
 ### Step 1.8: Model matrix detection
 
-Discover which models this Claude Code install accepts, then let the user confirm an agent x effort routing matrix. Detection reads the Claude Code binary's own model table (primary, works on subscription setups with no credentials) and merges `${ANTHROPIC_BASE_URL}/v1/models` when endpoint auth env exists (gateways).
+Discover which models this Claude Code install accepts, then let the user confirm an agent x effort routing matrix. Detection reads model aliases, picker entries, and custom-model catalog strings from the Claude Code binary, then merges aliases from `config/model-pricing.json`. It works offline with no credentials or HTTP calls.
 
 ```bash
 DM_SCRIPT="/tmp/.vbw-plugin-root-link-${CLAUDE_SESSION_ID:-default}/scripts/detect-models.sh"
@@ -220,7 +221,7 @@ fi
 
 Each output line is `id<TAB>description`. The id column is authoritative for config writes. The description column identifies the model family and strength (native Claude ids are labeled `Claude (built-in)`).
 
-- **Empty output (rare: binary unreadable and no endpoint auth):** fall back to Claude Code's native model set. No API call is needed: the running session already knows the current Claude models (tier aliases `opus`, `sonnet`, `haiku` and their full ids such as `claude-opus-5`, `claude-sonnet-5`, `claude-haiku-4-5`), and the Task tool `model:` parameter accepts them directly. AskUserQuestion (single select): "No extended model catalog detected. Build the agent x effort matrix from Claude Code's native models?" with options `Keep profile presets (Recommended)` / `Build matrix`. On `Keep`, display `○ Model matrix skipped (profile presets apply)` and skip to Step 2. On `Build matrix`, treat the native Claude model set as the detected list, label every entry `Claude (built-in)`, and continue through the full proposal flow below including the edit loop.
+- **Empty output (rare: binary unreadable and no pricing aliases):** fall back to Claude Code's native model set. No API call is needed: the running session already knows the current Claude models (tier aliases `opus`, `sonnet`, `haiku` and their full ids such as `claude-opus-5`, `claude-sonnet-5`, `claude-haiku-4-5`), and the Task tool `model:` parameter accepts them directly. AskUserQuestion (single select): "No extended model catalog detected. Build the agent x effort matrix from Claude Code's native models?" with options `Keep profile presets (Recommended)` / `Build matrix`. On `Keep`, display `○ Model matrix skipped (profile presets apply)` and skip to Step 2. On `Build matrix`, treat the native Claude model set as the detected list, label every entry `Claude (built-in)`, and continue through the full proposal flow below including the edit loop.
 - **Non-empty output:** build the proposal.
 
 **1.8a. Propose.** Read `{plugin-root}/references/model-profiles.md`. Use its "Task performance" tables to rank the detected ids per role, and its "Choosing models per role" section for the selection rules. Build a `model_matrix` mapping each agent (lead, dev, qa, scout, debugger, architect, docs) x effort level (thorough, balanced, fast, turbo) to a model id or preference array drawn from the detected list.
@@ -536,13 +537,19 @@ VBW Initialization Complete
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
-**File checklist:** Display all created/updated files:
+**File checklist:** Display all created or updated files.
+
+**Core project artifacts:**
 - `✓ .vbw-planning/PROJECT.md`
 - `✓ .vbw-planning/REQUIREMENTS.md`
 - `✓ .vbw-planning/ROADMAP.md`
 - `✓ .vbw-planning/STATE.md`
+
+**Configuration and instructions:**
 - `✓ CLAUDE.md`
 - `✓ .vbw-planning/config.json`
+
+**Conditional artifacts:**
 - If planning_tracking=commit and changes existed: `✓ Bootstrap planning artifacts committed`
 - If GSD_IMPORTED=true: `✓ GSD project archived`
 - If BROWNFIELD=true: `✓ Codebase mapped`
