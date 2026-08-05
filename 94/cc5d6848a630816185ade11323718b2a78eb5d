@@ -1,0 +1,20 @@
+scripts/planning-git.sh
+  s_58849211a94dc9::t_c700cea41d1774 159,240
+  s_58849211a94dc9::t_28355300ecb1d1 164-171
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "94cc5d6848a630816185ade11323718b2a78eb5d",
+  "prompts": {},
+  "sessions": {
+    "s_58849211a94dc9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a93b1e36-c511-4112-8e32-e0fbdf710600",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
