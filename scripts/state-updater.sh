@@ -496,12 +496,41 @@ phase_uat_status_class() {
   fi
 }
 
-update_roadmap() {
+qa_required_for_phase() {
   local phase_dir="$1"
-  local planning_root roadmap
+  local planning_root state_file qa_required effort phase_effort
 
   planning_root=$(planning_root_from_phase_dir "$phase_dir")
+  state_file="${planning_root}/.execution-state.json"
+  if [ ! -f "$state_file" ]; then
+    printf '%s\n' "true"
+    return 0
+  fi
+
+  qa_required=$(jq -r 'if has("qa_required") then .qa_required else "__absent__" end' "$state_file" 2>/dev/null || printf '%s\n' "__absent__")
+  if [ "$qa_required" = "true" ] || [ "$qa_required" = "false" ]; then
+    printf '%s\n' "$qa_required"
+    return 0
+  fi
+
+  effort=$(jq -r '.effort // ""' "$state_file" 2>/dev/null || printf '\n')
+  phase_effort=$(jq -r '.phase_effort // ""' "$state_file" 2>/dev/null || printf '\n')
+  if [ "$effort" = "turbo" ] || [ "$phase_effort" = "turbo" ]; then
+    printf '%s\n' "false"
+  else
+    printf '%s\n' "true"
+  fi
+}
+
+update_roadmap() {
+  local phase_dir="$1"
+  local planning_root roadmap state_file
+  local qa_gate_checked=false
+
+  QA_GATE_ROUTING=""
+  planning_root=$(planning_root_from_phase_dir "$phase_dir")
   roadmap="${planning_root}/ROADMAP.md"
+  state_file="${planning_root}/.execution-state.json"
 
   [ -f "$roadmap" ] || return 0
 
@@ -525,10 +554,14 @@ update_roadmap() {
   [ "$plan_count" -eq 0 ] && return 0
 
   if [ "$complete_count" -eq "$plan_count" ]; then
+    if [ -f "$state_file" ] && [ "$(qa_required_for_phase "$phase_dir")" = "true" ]; then
+      qa_gate_checked=true
+      QA_GATE_ROUTING=$(bash "$SCRIPT_DIR/qa-result-gate.sh" "$phase_dir" 2>/dev/null | awk -F= '$1 == "qa_gate_routing" { routing = $2 } END { print routing }')
+    fi
     if [ "$uat_class" = "issues_found" ]; then
       status="uat issues"
       date_str="-"
-    elif [ "$uat_class" = "active" ]; then
+    elif [ "$uat_class" = "active" ] || { [ "$qa_gate_checked" = "true" ] && [ "$QA_GATE_ROUTING" != "PROCEED_TO_UAT" ]; }; then
       status="needs verification"
       date_str="-"
     else
@@ -723,10 +756,18 @@ if is_phase_root_artifact "$FILE_PATH" && echo "$FILE_PATH" | grep -qE 'phases/[
   esac
 
   # Update execution-state as best-effort only (never gates STATE/ROADMAP updates)
+  if [ "$RECONCILE_AFTER" = true ]; then
+    reconcile_state_md_for_changed_path "$FILE_PATH"
+    RECONCILE_AFTER=false
+  fi
+  QA_GATE_ROUTING=""
+  update_roadmap "$PHASE_DIR"
+  QA_REQUIRED_FOR_PHASE=$(qa_required_for_phase "$PHASE_DIR")
+
   if [ -f "$STATE_FILE" ] && [ -n "$PLAN" ] && [ -n "$STATUS" ]; then
     TEMP_FILE="${STATE_FILE}.tmp.$$.${RANDOM:-0}"
     terminal_summary_count=$(count_terminal_summaries "$PHASE_DIR" 2>/dev/null || echo 0)
-    jq --arg phase "$PHASE" --arg plan "$PLAN" --arg status "$STATUS" --arg summary_id "$SUMMARY_ID" --arg session_id "${CLAUDE_SESSION_ID:-}" --argjson terminal_summary_count "$terminal_summary_count" '
+    jq --arg phase "$PHASE" --arg plan "$PLAN" --arg status "$STATUS" --arg summary_id "$SUMMARY_ID" --arg session_id "${CLAUDE_SESSION_ID:-}" --arg qa_gate_routing "${QA_GATE_ROUTING:-}" --argjson qa_required "$QA_REQUIRED_FOR_PHASE" --argjson terminal_summary_count "$terminal_summary_count" '
       def as_num: (try tonumber catch null);
       (if (.plans | type) == "array" then
         .plans |= map(
@@ -747,13 +788,13 @@ if is_phase_root_artifact "$FILE_PATH" && echo "$FILE_PATH" | grep -qE 'phases/[
            and ($terminal_summary_count >= (.plans | length))
            and ([.plans[].status] | all(. == "complete" or . == "partial" or . == "failed"))
         then .status = (if ([.plans[].status] | any(. == "failed")) then "failed"
-                        elif ([.plans[].status] | all(. == "complete")) then "complete"
+                        elif ([.plans[].status] | all(. == "complete")) then
+                          if ($qa_required == false or $qa_gate_routing == "PROCEED_TO_UAT") then "complete" else .status end
                         else "partial" end)
         else . end
     ' "$STATE_FILE" > "$TEMP_FILE" 2>/dev/null && [ -s "$TEMP_FILE" ] && mv "$TEMP_FILE" "$STATE_FILE" 2>/dev/null || rm -f "$TEMP_FILE" 2>/dev/null
   fi
 
-  update_roadmap "$PHASE_DIR"
   update_model_profile "$PHASE_DIR"
 fi
 

@@ -82,6 +82,48 @@ EOF
   fi
 }
 
+create_completion_gate_fixture() {
+  local qa_required="${1:-true}"
+
+  cat > .vbw-planning/STATE.md <<"EOF"
+Phase: 1 of 1 (Setup)
+Plans: 0/1
+Progress: 0%
+Status: active
+EOF
+  cat > .vbw-planning/ROADMAP.md <<"EOF"
+- [ ] Phase 1: Setup
+
+| Phase | Progress | Status | Completed |
+|------|----------|--------|-----------|
+| 1 - Setup | 0/1 | in progress | - |
+EOF
+  mkdir -p .vbw-planning/phases/01-setup
+  cat > .vbw-planning/phases/01-setup/01-01-PLAN.md <<"EOF"
+---
+plan: 01-01
+---
+EOF
+  cat > .vbw-planning/phases/01-setup/01-01-SUMMARY.md <<"EOF"
+---
+phase: 1
+plan: 1
+status: complete
+---
+EOF
+  cat > .vbw-planning/.execution-state.json <<EOF
+{
+  "phase": 1,
+  "phase_name": "setup",
+  "status": "running",
+  "effort": "balanced",
+  "phase_effort": "balanced",
+  "qa_required": ${qa_required},
+  "plans": [{"id": "01-01", "title": "setup", "wave": 1, "status": "pending"}]
+}
+EOF
+}
+
 create_duplicate_linked_archive_fixture() {
   local first_checkbox="$1" second_checkbox="${2:-$1}" uat_status="${3:-}"
 
@@ -133,6 +175,59 @@ status: ${uat_status}
 # UAT
 EOF
   fi
+}
+
+@test "completion stays needs verification until required QA passes" {
+  cd "$TEST_TEMP_DIR"
+  create_completion_gate_fixture true
+
+  local summary_path input
+  summary_path="$TEST_TEMP_DIR/.vbw-planning/phases/01-setup/01-01-SUMMARY.md"
+  input=$(jq -nc --arg p "$summary_path" '{tool_input:{file_path:$p}}')
+
+  run bash -c "cd '$TEST_TEMP_DIR' && printf '%s' '$input' | bash '$SCRIPTS_DIR/state-updater.sh'"
+  [ "$status" -eq 0 ]
+  grep -q '^- \[ \] Phase 1: Setup$' .vbw-planning/ROADMAP.md
+  grep -q '^| 1 - Setup | 1/1 | needs verification | - |$' .vbw-planning/ROADMAP.md
+  [ "$(jq -r '.status' .vbw-planning/.execution-state.json)" = "running" ]
+}
+
+@test "completion reaches complete after required QA passes" {
+  cd "$TEST_TEMP_DIR"
+  create_completion_gate_fixture true
+  cat > .vbw-planning/phases/01-setup/01-VERIFICATION.md <<'EOF'
+---
+writer: write-verification.sh
+result: PASS
+plans_verified:
+  - 01-01
+---
+EOF
+
+  local summary_path input
+  summary_path="$TEST_TEMP_DIR/.vbw-planning/phases/01-setup/01-01-SUMMARY.md"
+  input=$(jq -nc --arg p "$summary_path" '{tool_input:{file_path:$p}}')
+
+  run bash -c "cd '$TEST_TEMP_DIR' && printf '%s' '$input' | bash '$SCRIPTS_DIR/state-updater.sh'"
+  [ "$status" -eq 0 ]
+  grep -q '^- \[x\] Phase 1: Setup$' .vbw-planning/ROADMAP.md
+  grep -q '^| 1 - Setup | 1/1 | complete | ' .vbw-planning/ROADMAP.md
+  [ "$(jq -r '.status' .vbw-planning/.execution-state.json)" = "complete" ]
+}
+
+@test "completion bypasses QA gate when qa_required is false" {
+  cd "$TEST_TEMP_DIR"
+  create_completion_gate_fixture false
+
+  local summary_path input
+  summary_path="$TEST_TEMP_DIR/.vbw-planning/phases/01-setup/01-01-SUMMARY.md"
+  input=$(jq -nc --arg p "$summary_path" '{tool_input:{file_path:$p}}')
+
+  run bash -c "cd '$TEST_TEMP_DIR' && printf '%s' '$input' | bash '$SCRIPTS_DIR/state-updater.sh'"
+  [ "$status" -eq 0 ]
+  grep -q '^- \[x\] Phase 1: Setup$' .vbw-planning/ROADMAP.md
+  grep -q '^| 1 - Setup | 1/1 | complete | ' .vbw-planning/ROADMAP.md
+  [ "$(jq -r '.status' .vbw-planning/.execution-state.json)" = "complete" ]
 }
 
 @test "summary update advances STATE/ROADMAP without execution-state file" {
@@ -291,7 +386,7 @@ status: complete
 # Summary
 EOF
   cat > .vbw-planning/.execution-state.json <<"EOF"
-{"phase":3,"status":"pending","plans":[{"id":"03-01","status":"pending"}]}
+{"phase":3,"status":"pending","qa_required":false,"plans":[{"id":"03-01","status":"pending"}]}
 EOF
   local summary_path input
   summary_path="$TEST_TEMP_DIR/.vbw-planning/phases/03-service-utility-tests/03-01-SUMMARY.md"
