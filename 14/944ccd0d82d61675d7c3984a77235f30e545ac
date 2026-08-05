@@ -1,0 +1,26 @@
+testing/verify-dijkstra-discipline.sh
+  s_e8b702480499cf::t_c3df9ee466191b 98
+  s_e8b702480499cf::t_d20de75d3a99c0 125
+  s_e8b702480499cf::t_0af8991b144459 135
+  s_e8b702480499cf::t_a5915296066039 166
+  s_e8b702480499cf::t_a5cc6379d4dae0 26
+  s_e8b702480499cf::t_680e4acd11e108 11-13,17-19
+references/execute-protocol.md
+  s_e8b702480499cf::t_c521796ec475bf 252
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "14944ccd0d82d61675d7c3984a77235f30e545ac",
+  "prompts": {},
+  "sessions": {
+    "s_e8b702480499cf": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b86dd062-285e-44f0-9749-b1a13364f007",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
