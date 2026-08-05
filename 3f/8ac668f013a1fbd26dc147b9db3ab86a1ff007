@@ -1,0 +1,60 @@
+scripts/reconcile-state-md.sh
+  s_e8b702480499cf::t_77b1bbd6b4a3d8 316
+  s_e8b702480499cf::t_76edc9383cbd8d 206
+  s_e8b702480499cf::t_ede6d7b65b450f 384
+  s_e8b702480499cf::t_daa5c15c245059 334-335,337,345,347
+  s_e8b702480499cf::t_ec6627bb7779a7 368
+  s_e8b702480499cf::t_42d803a45d4d08 216-217
+  s_e8b702480499cf::t_ad1b77964d5257 330,332-333
+  s_e8b702480499cf::t_faa07613274d61 130,136,138-139
+  s_e8b702480499cf::t_608a80cd694cc0 383
+  s_e8b702480499cf::t_f2ed841e43a1fe 336
+tests/recover-state-integration.bats
+  s_e8b702480499cf::t_1a5fd3d6c767da 163-166
+  s_e8b702480499cf::t_e28d6b2a6a6eb4 146
+  s_e8b702480499cf::t_7ebbc65669556d 172,302,372,527
+  s_e8b702480499cf::t_cf5094082241de 16-18,294-296,328-330,361-363,596-598,622-624
+tests/state-updater.bats
+  s_e8b702480499cf::t_dec6bd6f4e4b14 223
+  s_e8b702480499cf::t_8cac5cdc37fac0 43-44,85-87,135-136,486-488,540-542,606-608,664-666,721-723,770-772,811-813,864-865,931-932,991-992,1038-1039,1101-1102,1151-1153,1185-1187,1277-1279,1307-1308,1350-1351,1392-1394,1421-1423
+  s_e8b702480499cf::t_3dc90593b8b137 238
+  s_e8b702480499cf::t_1334dbcacc7e8e 212-222,224-237,239-242
+scripts/state-updater.sh
+  s_e8b702480499cf::t_4a14103cccc1e3 525
+  s_e8b702480499cf::t_31413888dd5ea7 44-56
+tests/state-reconcile.bats
+  s_e8b702480499cf::t_d25f9485779bfa 15-16,20-37
+  s_e8b702480499cf::t_fc92ad09e3e232 38-43,45-61,63-65
+  s_e8b702480499cf::t_cf5094082241de 17-19,69-70,153-154,203-204,255-256,305-306,365-366,411-412,467-468,521-522,574-575,650-651,697-698,728-729,773-774,807-808,847-848,887-888
+  s_e8b702480499cf::t_b1fed64ceba125 44
+  s_e8b702480499cf::t_0749e4a006c9ef 62
+scripts/phase-state-utils.sh
+  s_e8b702480499cf::t_b82310d06fb11c 462,469-470,472-473
+  s_e8b702480499cf::t_56b4cf071181b8 657
+  s_e8b702480499cf::t_b39450f367ee20 2
+  s_e8b702480499cf::t_ee13f5cc532cc4 56-117
+tests/qa-required-completion-gate.bats
+  s_e8b702480499cf::t_49db0611c243b0 9
+scripts/recover-state.sh
+  s_e8b702480499cf::t_14efdac8c94d70 113
+  s_e8b702480499cf::t_d231f2022ea0fb 5-7
+  s_e8b702480499cf::t_ebc5f3bbc34ece 62-67
+  s_e8b702480499cf::t_e4e098e11ad8f5 141-143
+  s_e8b702480499cf::t_7c2ee3a16eca4e 118-122
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "3f8ac668f013a1fbd26dc147b9db3ab86a1ff007",
+  "prompts": {},
+  "sessions": {
+    "s_e8b702480499cf": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b86dd062-285e-44f0-9749-b1a13364f007",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
