@@ -13,7 +13,7 @@ load test_helper
 }
 
 @test "no nested template expressions in agent files" {
-  run bash -c "grep -rn '!\`bash \`!\`' \"$PROJECT_ROOT/agents/\" 2>/dev/null"
+  run bash -c "grep -rn '!\`bash \`!\`' \"$PROJECT_ROOT/templates/agent-roles/\" 2>/dev/null"
   [ "$status" -eq 1 ]
 }
 
