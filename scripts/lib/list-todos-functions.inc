@@ -8,8 +8,7 @@ extract_todos() {
   lines=$(awk '
     /^## Todos$/ { in_todos=1; next }
     in_todos && /^## / { exit }
-    in_todos && /^### Pending Todos$/ { in_pending=1; next }
-    in_todos && /^### / { in_pending=0; next }
+    in_todos && /^### / { exit }
     in_todos && /^- / { print }
   ' "$file")
 

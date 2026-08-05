@@ -175,7 +175,7 @@ flush_deprecated_buffer() {
   if [[ -n "${preserved//[[:space:]]/}" ]]; then
     preserved="$(echo "$preserved" | sed '/./,$!d' | sed -e :a -e '/^\n*$/{$d;N;ba' -e '}')"
     NON_VBW_CONTENT+="## ${section_label} (Archived Notes)"$'\n\n'"${preserved}"$'\n\n'
-    FOUND_NON_VBW=true
+    export FOUND_NON_VBW=true
   fi
 
   IN_DEPRECATED_SECTION=false
