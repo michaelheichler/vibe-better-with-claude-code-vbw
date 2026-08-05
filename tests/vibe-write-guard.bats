@@ -59,8 +59,21 @@ test_allows_agent_definition_writes() { # @test
   [ -z "$output" ]
 }
 
-test_denies_product_writes() { # @test
+test_denies_exempt_symlink_to_product_file() { # @test
   local input
+  mkdir -p "$TEST_TEMP_DIR/src"
+  printf 'product\n' > "$TEST_TEMP_DIR/src/app.js"
+  ln -s ../src/app.js "$TEST_TEMP_DIR/.vbw-planning/allowed.js"
+  input=$(jq -n --arg path "$TEST_TEMP_DIR/.vbw-planning/allowed.js" \
+    '{session_id:"session-main",tool_name:"Write",tool_input:{file_path:$path}}')
+
+  run run_hook "$input"
+
+  [ "$status" -eq 0 ]
+  [ "$(printf '%s' "$output" | jq -r '.hookSpecificOutput.permissionDecision')" = "deny" ]
+}
+
+test_denies_product_writes() { # @test
   input=$(jq -n --arg path "$TEST_TEMP_DIR/src/app.js" \
     '{session_id:"session-main",tool_name:"Write",tool_input:{file_path:$path}}')
 
@@ -80,8 +93,8 @@ test_denies_product_path_traversal() { # @test
 
   [ "$status" -eq 0 ]
   [ "$(printf '%s' "$output" | jq -r '.hookSpecificOutput.permissionDecision')" = "deny" ]
+  [[ "$output" == *"Delegate this change to a spawned agent"* ]]
 }
-
 
 test_inactive_vibe_execution_is_noop() { # @test
   local input

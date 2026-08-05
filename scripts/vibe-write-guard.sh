@@ -31,7 +31,6 @@ done
 [ -z "$PAYLOAD_AGENT_TYPE" ] || exit 0
 [ -z "$PAYLOAD_AGENT_ID" ] || exit 0
 
-
 PROJECT_ROOT=$(vbw_guard_project_root "$PWD" 2>/dev/null) || exit 0
 STATE_FILE="$PROJECT_ROOT/.vbw-planning/.execution-state.json"
 [ -f "$STATE_FILE" ] || exit 0
@@ -65,12 +64,73 @@ deny_product_write() {
   exit 0
 }
 
+canonicalize_target_input() {
+  local target="$1" parent base
+  CANONICAL_SUFFIX=()
+  if [[ "$target" = /* ]]; then
+    CANONICAL_PATH="$target"
+  else
+    CANONICAL_PATH="$PWD/$target"
+  fi
+  while [ ! -e "$CANONICAL_PATH" ] && [ ! -L "$CANONICAL_PATH" ]; do
+    parent="${CANONICAL_PATH%/*}"
+    base="${CANONICAL_PATH##*/}"
+    CANONICAL_SUFFIX=("$base" "${CANONICAL_SUFFIX[@]}")
+    [ "$parent" = "$CANONICAL_PATH" ] && parent="/"
+    CANONICAL_PATH="$parent"
+  done
+}
+
+resolve_target_symlinks() {
+  local link parent base
+  while [ -L "$CANONICAL_PATH" ]; do
+    link=$(readlink "$CANONICAL_PATH" 2>/dev/null) || return 1
+    if [[ "$link" = /* ]]; then
+      CANONICAL_PATH="$link"
+    else
+      CANONICAL_PATH="$(dirname "$CANONICAL_PATH")/$link"
+    fi
+    while [ ! -e "$CANONICAL_PATH" ] && [ ! -L "$CANONICAL_PATH" ]; do
+      parent="${CANONICAL_PATH%/*}"
+      base="${CANONICAL_PATH##*/}"
+      CANONICAL_SUFFIX=("$base" "${CANONICAL_SUFFIX[@]}")
+      [ "$parent" = "$CANONICAL_PATH" ] && parent="/"
+      CANONICAL_PATH="$parent"
+    done
+  done
+}
+
+canonicalize_target_base() {
+  local parent
+  if [ -d "$CANONICAL_PATH" ]; then
+    CANONICAL_PATH=$(cd "$CANONICAL_PATH" 2>/dev/null && pwd -P) || return 1
+  else
+    parent=$(cd "$(dirname "$CANONICAL_PATH")" 2>/dev/null && pwd -P) || return 1
+    CANONICAL_PATH="$parent/$(basename "$CANONICAL_PATH")"
+  fi
+}
+
+canonicalize_target_path() {
+  local base
+  canonicalize_target_input "$1" || return 1
+  resolve_target_symlinks || return 1
+  canonicalize_target_base || return 1
+  for base in "${CANONICAL_SUFFIX[@]}"; do
+    CANONICAL_PATH="$CANONICAL_PATH/$base"
+  done
+  printf '%s\n' "$CANONICAL_PATH"
+}
+
+CANONICAL_PATH=""
+CANONICAL_SUFFIX=()
+
 case "$TARGET_PATH" in
   ..|../*|*/..|*/../*)
     deny_product_write
     ;;
 esac
-case "$TARGET_PATH" in
+CANONICAL_TARGET_PATH=$(canonicalize_target_path "$TARGET_PATH" 2>/dev/null) || deny_product_write
+case "$CANONICAL_TARGET_PATH" in
   *.md|.vbw-planning|.vbw-planning/*|*/.vbw-planning|*/.vbw-planning/*|.claude/agents|.claude/agents/*|*/.claude/agents|*/.claude/agents/*)
     exit 0
     ;;

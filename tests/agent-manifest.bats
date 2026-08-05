@@ -50,6 +50,19 @@ teardown() {
   [ "$status" -eq 1 ]
 }
 
+@test "manifest lock does not reclaim a stale lock held by a live process" {
+  mkdir "$PLANNING_DIR/.agent-manifest.lock"
+  printf '%s\n' "$$" > "$PLANNING_DIR/.agent-manifest.lock/pid"
+  touch -t 200001010000 "$PLANNING_DIR/.agent-manifest.lock"
+
+  run bash -c 'source "$1"; VBW_AGENT_MANIFEST_LOCK_TIMEOUT=1 VBW_AGENT_MANIFEST_LOCK_STALE_SECONDS=1; noop() { :; }; agent_manifest_with_lock "$2" noop' _ \
+    "$SCRIPTS_DIR/lib/agent-manifest.sh" "$PLANNING_DIR"
+
+  [ "$status" -eq 1 ]
+  [ -d "$PLANNING_DIR/.agent-manifest.lock" ]
+  [ -f "$PLANNING_DIR/.agent-manifest.lock/pid" ]
+}
+
 @test "manifest lock preserves concurrent read-modify-write updates" {
   local writer="$TEST_TEMP_DIR/writer.sh" pids=() pid i failures=0
   cat > "$writer" <<'EOF'

@@ -9,8 +9,54 @@ agent_manifest_lock_path() {
   printf '%s/.agent-manifest.lock\n' "${1:-.vbw-planning}"
 }
 
+agent_manifest_lock_mtime() {
+  local lock_dir="$1" mtime
+  mtime=$(stat -c %Y "$lock_dir" 2>/dev/null) || mtime=$(stat -f %m "$lock_dir" 2>/dev/null) || return 1
+  case "$mtime" in
+    ''|*[!0-9]*) return 1 ;;
+  esac
+  printf '%s\n' "$mtime"
+}
+
+agent_manifest_lock_owner_alive() {
+  local lock_dir="$1" owner
+  owner=$(cat "$lock_dir/pid" 2>/dev/null || true)
+  case "$owner" in
+    ''|*[!0-9]*) return 1 ;;
+  esac
+  kill -0 "$owner" 2>/dev/null
+}
+
+agent_manifest_reclaim_stale_lock() {
+  local lock_dir="$1" stale_dir="${1}.stale.${BASHPID:-$$}"
+  agent_manifest_lock_owner_alive "$lock_dir" && return 0
+  if mv "$lock_dir" "$stale_dir" 2>/dev/null; then
+    rm -f "$stale_dir/pid" 2>/dev/null || true
+    rmdir "$stale_dir" 2>/dev/null || true
+  fi
+}
+
+agent_manifest_lock_is_stale() {
+  local lock_dir="$1" now="$2" stale_seconds="$3" mtime age
+  mtime=$(agent_manifest_lock_mtime "$lock_dir" 2>/dev/null || printf '0')
+  case "$mtime" in
+    ''|*[!0-9]*|0) return 0 ;;
+  esac
+  age=$((now - mtime))
+  [ "$age" -gt "$stale_seconds" ] && agent_manifest_reclaim_stale_lock "$lock_dir"
+}
+
+agent_manifest_record_lock_owner() {
+  local lock_dir="$1"
+  if printf '%s\n' "${BASHPID:-$$}" > "$lock_dir/pid" 2>/dev/null; then
+    return 0
+  fi
+  rmdir "$lock_dir" 2>/dev/null || true
+  return 1
+}
+
 agent_manifest_acquire_lock() {
-  local planning_dir="${1:-.vbw-planning}" lock_dir started now elapsed stale_seconds timeout mtime age
+  local planning_dir="${1:-.vbw-planning}" lock_dir started now elapsed stale_seconds timeout
   lock_dir=$(agent_manifest_lock_path "$planning_dir")
   timeout="${VBW_AGENT_MANIFEST_LOCK_TIMEOUT:-10}"
   stale_seconds="${VBW_AGENT_MANIFEST_LOCK_STALE_SECONDS:-30}"
@@ -21,26 +67,17 @@ agent_manifest_acquire_lock() {
   while ! mkdir "$lock_dir" 2>/dev/null; do
     now=$(date +%s 2>/dev/null || printf '0')
     elapsed=$((now - started))
-    if [ "$elapsed" -ge "$timeout" ]; then
-      return 1
-    fi
-    mtime=$(stat -f %m "$lock_dir" 2>/dev/null || stat -c %Y "$lock_dir" 2>/dev/null || printf '0')
-    case "$mtime" in
-      ''|*[!0-9]*|0) ;;
-      *)
-        age=$((now - mtime))
-        if [ "$age" -gt "$stale_seconds" ]; then
-          rmdir "$lock_dir" 2>/dev/null || true
-        fi
-        ;;
-    esac
+    [ "$elapsed" -lt "$timeout" ] || return 1
+    agent_manifest_lock_is_stale "$lock_dir" "$now" "$stale_seconds"
     sleep 0.01
   done
-  return 0
+  agent_manifest_record_lock_owner "$lock_dir"
 }
-
 agent_manifest_release_lock() {
-  rmdir "$(agent_manifest_lock_path "${1:-.vbw-planning}")" 2>/dev/null || true
+  local lock_dir
+  lock_dir=$(agent_manifest_lock_path "${1:-.vbw-planning}")
+  rm -f "$lock_dir/pid" 2>/dev/null || true
+  rmdir "$lock_dir" 2>/dev/null || true
 }
 
 agent_manifest_with_lock() {

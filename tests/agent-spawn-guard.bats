@@ -75,8 +75,20 @@ write_manifest() {
   [ "$(printf '%s' "$output" | jq -r '.hookSpecificOutput.updatedInput.effort')" = "manifest-effort" ]
   [ "$(printf '%s' "$output" | jq -r '.hookSpecificOutput.updatedInput.description')" = "manifest description" ]
   [ "$(printf '%s' "$output" | jq -r '.hookSpecificOutput.updatedInput.maxTurns')" = "17" ]
+  [ "$(printf '%s' "$output" | jq -r '.hookSpecificOutput.updatedInput.maxTurns | type')" = "number" ]
   [ "$(printf '%s' "$output" | jq -r '.hookSpecificOutput.updatedInput | has("max_turns")')" = "false" ]
   [ "$(jq -r '.agents.generated.state' "$TEST_TEMP_DIR/.vbw-planning/.agent-manifest.json")" = "running" ]
+}
+
+@test "agent-spawn-guard omits unlimited max turns" {
+  write_manifest '{"agents":{"generated":{"state":"registered","model":"manifest-model","max_turns":""}}}'
+  local input
+  input=$(spawn_input | jq '.tool_input.subagent_type = "generated"')
+
+  run_spawn_guard "$input"
+
+  [ "$status" -eq 0 ]
+  [ "$(printf '%s' "$output" | jq -r '.hookSpecificOutput.updatedInput | has("maxTurns")')" = "false" ]
 }
 
 @test "agent-spawn-guard keeps legacy behavior when vibe is inactive" {
@@ -97,7 +109,7 @@ write_manifest() {
 @test "agent-spawn-guard does not trust a live marker from another input session" {
   write_manifest '{"agents":{"generated":{"state":"registered","model":"manifest-model"}}}'
   local input
-  input=$(spawn_input | jq '.tool_input.subagent_type = "unregistered" | .session_id = "session-B"')
+  input=$(spawn_input | jq '.tool_input.subagent_type = "generated" | .session_id = "session-B"')
 
   run_spawn_guard "$input"
 

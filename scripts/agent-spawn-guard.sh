@@ -142,6 +142,10 @@ manifest_spawn_fields() {
     | with_entries(select(.value != null))
     | if has("max_turns") then .maxTurns = .max_turns else . end
     | del(.max_turns)
+    | if has("maxTurns") then
+        .maxTurns = (try (.maxTurns | tonumber) catch null)
+        | if (.maxTurns | type) == "number" and .maxTurns > 0 then . else del(.maxTurns) end
+      else . end
   ' <<< "$manifest" 2>/dev/null
 }
 
