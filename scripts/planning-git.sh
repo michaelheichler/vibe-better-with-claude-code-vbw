@@ -107,8 +107,10 @@ ensure_transient_ignore() {
 
 
 ensure_generated_agent_ignore() {
-  local root_ignore=".gitignore"
-  local pattern=".claude/agents/vbw-*-*-*-*.md"
+  local repo_root root_ignore pattern
+  repo_root=$(git rev-parse --show-toplevel 2>/dev/null) || return 1
+  root_ignore="$repo_root/.gitignore"
+  pattern=".claude/agents/vbw-*-*-*-*.md"
 
   if [ ! -f "$root_ignore" ]; then
     printf '%s\n' "$pattern" > "$root_ignore"

@@ -145,6 +145,8 @@ validate_reasoning_override() {
   local value="$1" canonical
   [ -n "$value" ] || return 0
   canonical=$(jq -r --arg model "$MODEL" '.aliases[$model] // $model' "$SCRIPT_DIR/../config/model-pricing.json" 2>/dev/null) || fail "could not inspect model reasoning support"
+  jq -e --arg model "$canonical" '.models | has($model)' \
+    "$SCRIPT_DIR/../config/model-pricing.json" >/dev/null 2>&1 || return 0
   jq -e --arg model "$canonical" --arg value "$value" \
     '.models[$model].reasoning_efforts // [] | index($value) != null' \
     "$SCRIPT_DIR/../config/model-pricing.json" >/dev/null 2>&1 \
@@ -254,6 +256,13 @@ if [ "${OVERRIDES[REASONING]+set}" = set ]; then
   FRONTMATTER_EFFORT="${OVERRIDES[REASONING]}"
 else
   FRONTMATTER_EFFORT="$RESOLVED_REASONING"
+  if [ "${OVERRIDES[MODEL]+set}" = set ]; then
+    REASONING_PROFILES_PATH="$PLUGIN_ROOT/config/reasoning-profiles.json"
+    FRONTMATTER_EFFORT=$(bash "$SCRIPT_DIR/resolve-agent-reasoning.sh" \
+      "$ROLE" "$CONFIG_PATH" "$REASONING_PROFILES_PATH" "$MODEL" \
+      "$SCRIPT_DIR/../config/model-pricing.json") \
+      || fail "could not reconcile reasoning for model '$MODEL'"
+  fi
 fi
 [ -n "$MODEL" ] || fail "resolved model is empty"
 validate_reasoning_override "$FRONTMATTER_EFFORT"

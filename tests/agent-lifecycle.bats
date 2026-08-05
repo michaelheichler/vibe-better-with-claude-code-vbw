@@ -46,6 +46,35 @@ write_manifest() {
   [ ! -e "$TEST_TEMP_DIR/.claude/agents/alpha.md" ]
 }
 
+@test "definition cleanup runs before the manifest lock is released" {
+  local fake_bin="$TEST_TEMP_DIR/fake-bin" old_path="$PATH"
+  mkdir -p "$fake_bin"
+  cat > "$fake_bin/rm" <<'EOF'
+#!/usr/bin/env bash
+for argument in "$@"; do
+  if [[ "$argument" == */alpha.md ]] && [ -d "$VBW_PLANNING_DIR/.agent-manifest.lock" ]; then
+    : > "$VBW_RM_LOCK_SEEN"
+  fi
+done
+exec /bin/rm "$@"
+EOF
+  chmod +x "$fake_bin/rm"
+  export VBW_RM_LOCK_SEEN="$TEST_TEMP_DIR/rm-lock-seen"
+  printf 'generated\n' > "$TEST_TEMP_DIR/.claude/agents/alpha.md"
+  write_manifest '{"agents":{"alpha":{"name":"alpha","role":"dev","state":"running"}}}'
+
+  PATH="$fake_bin:$PATH"
+  export PATH
+  run run_lifecycle '{"name":"alpha"}' touch stop
+  PATH="$old_path"
+  export PATH
+  unset VBW_RM_LOCK_SEEN
+
+  [ "$status" -eq 0 ]
+  [ -f "$TEST_TEMP_DIR/rm-lock-seen" ]
+  [ ! -e "$TEST_TEMP_DIR/.claude/agents/alpha.md" ]
+}
+
 @test "canonical agent type identifies generated entries before labels" {
   run run_lifecycle '{"agent_type":"generated","name":"display-label","agent_id":"agent-1"}' touch start
   [ "$status" -eq 0 ]

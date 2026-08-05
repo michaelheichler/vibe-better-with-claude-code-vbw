@@ -104,7 +104,7 @@ stop_manifest_entry() {
 }
 
 touch_manifest_locked() {
-  local action="$1" name="$2" role="$3" now_iso="$4" manifest updated
+  local action="$1" name="$2" role="$3" now_iso="$4" manifest updated path
   manifest=$(agent_manifest_read "$PLANNING_DIR" 2>/dev/null) || return 1
   if [ "$action" = "stop" ]; then
     updated=$(stop_manifest_entry "$manifest" "$name" "$role" "$now_iso") || return 1
@@ -112,11 +112,14 @@ touch_manifest_locked() {
     updated=$(start_manifest_entry "$manifest" "$name" "$role" "$now_iso") || return 1
   fi
   agent_manifest_write "$PLANNING_DIR" "$updated" >/dev/null 2>&1 || return 1
-  TOUCH_TRANSITIONED=1
+  if [ "$action" = "stop" ]; then
+    path=$(agent_manifest_definition_path "$PLANNING_DIR" "$name" 2>/dev/null) || return 1
+    rm -f "$path" 2>/dev/null || return 1
+  fi
 }
 
 touch_agent() {
-  local action="${1:-start}" name role now_iso path
+  local action="${1:-start}" name role now_iso
   INPUT=$(cat 2>/dev/null) || INPUT=""
   [ -n "$INPUT" ] || exit 0
   name=$(extract_agent_name)
@@ -124,12 +127,7 @@ touch_agent() {
   role=$(extract_agent_role)
   now_iso=$(lifecycle_epoch_iso "$(lifecycle_now_epoch)") || exit 0
   [ -n "$now_iso" ] || exit 0
-  TOUCH_TRANSITIONED=0
   agent_manifest_with_lock "$PLANNING_DIR" touch_manifest_locked "$action" "$name" "$role" "$now_iso" || exit 0
-  if [ "$action" = "stop" ] && [ "$TOUCH_TRANSITIONED" -eq 1 ]; then
-    path=$(agent_manifest_definition_path "$PLANNING_DIR" "$name" 2>/dev/null || true)
-    [ -n "$path" ] && rm -f "$path" 2>/dev/null || true
-  fi
 } # activity signals: SubagentStart and SubagentStop refresh last_activity_at.
 
 append_check_notice() {
