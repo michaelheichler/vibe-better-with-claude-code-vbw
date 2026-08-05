@@ -38,7 +38,17 @@ transcript_path_field() {
 }
 
 agent_name() {
-  printf '%s' "$INPUT" | jq -r '.agent_type // .agentType // .subagent_type // .name // .agent_name // .agentName // .tool_input.subagent_type // .tool_input.name // .agent_id // .agentId // ""' 2>/dev/null || printf ''
+  printf '%s' "$INPUT" | jq -r '
+    first(
+      .agent_type, .agentType, .subagent_type, .subagentType,
+      .name, .agent_name, .agentName,
+      .tool_input.agent_type, .tool_input.agentType,
+      .tool_input.subagent_type, .tool_input.subagentType,
+      .tool_input.name, .tool_input.agent_name,
+      .agent_id, .agentId
+      | select(type == "string" and length > 0)
+    ) // ""
+  ' 2>/dev/null || printf ''
 }
 
 manifest_entry() {
@@ -74,8 +84,15 @@ requested_max_turns() {
   printf '%s' "$INPUT" | jq -c --argjson fallback "$(jq -c '.max_turns // .maxTurns // .spawn.max_turns // .spawn.maxTurns // null' <<< "$entry" 2>/dev/null)" '.max_turns // .maxTurns // .tool_input.max_turns // .tool_input.maxTurns // $fallback' 2>/dev/null || printf 'null'
 }
 
+start_evidence_locked() {
+  local name="$1" start="$2" manifest updated
+  manifest=$(agent_manifest_read "$PLANNING_DIR" 2>/dev/null) || return 1
+  updated=$(jq -c --arg name "$name" --argjson start "$start" '.agents[$name].routing_evidence.start = $start' <<< "$manifest" 2>/dev/null) || return 1
+  agent_manifest_write "$PLANNING_DIR" "$updated" >/dev/null 2>&1 || return 1
+}
+
 start_evidence() {
-  local name entry model effort max_turns model_override effort_override started manifest updated start
+  local name entry model effort max_turns model_override effort_override started start
   model_override=false
   effort_override=false
   [ "${CLAUDE_CODE_SUBAGENT_MODEL+x}" = x ] && model_override=true
@@ -98,10 +115,8 @@ start_evidence() {
     --argjson model_override "$model_override" \
     --argjson effort_override "$effort_override" \
     '{requested_model:($model | if length > 0 then . else null end), requested_effort:($effort | if length > 0 then . else null end), requested_max_turns:$max_turns, config_hash:$hash, env_override_model:$model_override, env_override_effort:$effort_override, started_at:$started}') || return 0
-  manifest=$(agent_manifest_read "$PLANNING_DIR" 2>/dev/null) || return 0
-  updated=$(jq -c --arg name "$name" --argjson start "$start" '.agents[$name].routing_evidence.start = $start' <<< "$manifest" 2>/dev/null) || return 0
-  agent_manifest_write "$PLANNING_DIR" "$updated" >/dev/null 2>&1 || true
-}
+  agent_manifest_with_lock "$PLANNING_DIR" start_evidence_locked "$name" "$start" >/dev/null 2>&1 || true
+} # start evidence serializes manifest read-modify-write.
 
 canonical_model() {
   local model="$1" alias
@@ -134,7 +149,7 @@ read_transcript_evidence() {
   local transcript="$1" models='[]' efforts='[]'
   if [ -n "$transcript" ] && [ -f "$transcript" ]; then
     models=$(jq -s '[.[] | select(.type == "assistant") | .message.model? | strings] | unique' "$transcript" 2>/dev/null || printf '[]')
-    efforts=$(jq -s '[.[] | paths(scalars) as $path | select($path[-1] == "effort") | getpath($path) | select(type == "string" or type == "number") | tostring] | unique' "$transcript" 2>/dev/null || printf '[]')
+    efforts=$(jq -s '[.[] | [.effort?, .message.effort?][] | select((type == "string" and length > 0) or type == "number") | tostring] | unique' "$transcript" 2>/dev/null || printf '[]')
   fi
   jq -cn --argjson models "$models" --argjson efforts "$efforts" '{models:$models,efforts:$efforts}'
 }

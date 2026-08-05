@@ -72,6 +72,45 @@ stop_input() {
   [ "$(jq -r '.verdict.model' <<< "$record")" = "mismatch" ]
 }
 
+@test "blank canonical identity falls back to a non-empty generated name" {
+  local transcript record input
+  write_manifest '{"agents":{"generated":{"state":"running","model":"claude-sonnet-5"}}}'
+  transcript="$TEST_TEMP_DIR/subagent.jsonl"
+  printf '%s\n' '{"type":"assistant","message":{"model":"claude-sonnet-5","content":[]}}' > "$transcript"
+  input=$(start_input | jq '.agent_type = "" | .name = "generated"')
+
+  run_evidence start "$input"
+  run_evidence stop "$(stop_input "$transcript" | jq '.agent_type = "" | .name = "generated"')"
+  [ "$status" -eq 0 ]
+  record=$(jq -s '.[0]' "$VBW_PLANNING_DIR/.agent-routing-evidence.jsonl")
+  [ "$(jq -r '.name' <<< "$record")" = "generated" ]
+}
+
+@test "effort evidence ignores nested child routing fields" {
+  local transcript record
+  write_manifest '{"agents":{"generated":{"state":"running","model":"claude-sonnet-5","effort":"high"}}}'
+  transcript="$TEST_TEMP_DIR/subagent.jsonl"
+  printf '%s\n' \
+    '{"type":"assistant","effort":"high","message":{"model":"claude-sonnet-5","content":[]},"tool_input":{"effort":"low"}}' \
+    > "$transcript"
+
+  run_evidence start "$(start_input)"
+  run_evidence stop "$(stop_input "$transcript")"
+  [ "$status" -eq 0 ]
+  record=$(jq -s '.[0]' "$VBW_PLANNING_DIR/.agent-routing-evidence.jsonl")
+  [ "$(jq -r '.verdict.effort' <<< "$record")" = "pass" ]
+  [ "$(jq -c '.observed.efforts' <<< "$record")" = '["high"]' ]
+}
+
+@test "evidence start does not bypass the manifest lock" {
+  write_manifest '{"agents":{"generated":{"state":"running","model":"claude-sonnet-5"}}}'
+  mkdir "$VBW_PLANNING_DIR/.agent-manifest.lock"
+
+  run bash -c 'printf "%s\n" "$1" | env -u CLAUDE_CODE_SUBAGENT_MODEL -u CLAUDE_CODE_EFFORT_LEVEL VBW_AGENT_MANIFEST_LOCK_TIMEOUT=0 VBW_PLANNING_DIR="$2" bash "$3" start' _ "$(start_input)" "$VBW_PLANNING_DIR" "$EVIDENCE_SCRIPT"
+  [ "$status" -eq 0 ]
+  [ "$(jq -r '.agents.generated.routing_evidence.start // "missing"' "$VBW_PLANNING_DIR/.agent-manifest.json")" = "missing" ]
+}
+
 @test "evidence classifies environment overrides at start" {
   local transcript record
   write_manifest '{"agents":{"generated":{"state":"running","model":"claude-sonnet-5","effort":"high"}}}'
