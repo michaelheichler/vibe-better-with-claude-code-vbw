@@ -1,0 +1,24 @@
+tests/prompt-preflight-orchestrator-contract.bats
+  s_e8b702480499cf::t_14eebfd8fba990 1-68,70,74-108
+  s_e8b702480499cf::t_599949cbb80997 69,71-73
+scripts/prompt-preflight.sh
+  s_e8b702480499cf::t_d4262dfb2c0936 24-25,28-33,37-39,41,43-44
+  s_e8b702480499cf::t_dd59094699af17 115-124
+  s_e8b702480499cf::t_33e00d9624853c 9-17
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "0a66feb8680cdb56e25e9c7196801d41eb4f64bd",
+  "prompts": {},
+  "sessions": {
+    "s_e8b702480499cf": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b86dd062-285e-44f0-9749-b1a13364f007",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
