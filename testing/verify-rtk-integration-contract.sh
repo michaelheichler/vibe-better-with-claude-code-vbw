@@ -592,7 +592,7 @@ fi
 
 if contains "$DOCTOR_CMD" '### 18. RTK integration' \
   && contains "$DOCTOR_CMD" 'bash "{plugin-root}/scripts/rtk-manager.sh" doctor-json' \
-  && contains "$DOCTOR_CMD" 'Result: {N}/18 passed' \
+  && contains "$DOCTOR_CMD" 'Result: {N}/19 passed' \
   && contains "$DOCTOR_CMD" 'PASS when `compatibility` is `"verified"` with a concrete `proof_source`, even if `updated_input_risk=true`' \
   && contains "$DOCTOR_CMD" 'When invoked with `--verbose`, include `diagnostic_caveat`/`upstream_issue`' \
   && contains "$DOCTOR_CMD" 'Doctor must not query the network, run RTK history/stats, or run runtime smoke'; then
