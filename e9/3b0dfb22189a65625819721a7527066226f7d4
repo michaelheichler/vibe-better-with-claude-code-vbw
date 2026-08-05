@@ -1,0 +1,37 @@
+tests/qa-required-completion-gate.bats
+  s_e8b702480499cf::t_6c43902853df42 1-54
+testing/verify-execution-state-schema-contract.sh
+  s_e8b702480499cf::t_621be6c0eb725c 1-19
+scripts/state-updater.sh
+  s_e8b702480499cf::t_4f67325f06df73 499-524
+  s_e8b702480499cf::t_6d2f93498aed23 791-792
+  s_e8b702480499cf::t_43a331c0534f58 557-560,564
+  s_e8b702480499cf::t_f14d145fafebd1 527-528,530,533
+  s_e8b702480499cf::t_dc507086b7b875 763-766,770
+  s_e8b702480499cf::t_a5091360ae1196 759-762
+tests/state-updater.bats
+  s_e8b702480499cf::t_73423a56f65f2d 180-184,186-189,191-197,199-202,204-207,209-212,214-222,224-227,229-232,1429
+  s_e8b702480499cf::t_c697f68d15d7e5 190
+  s_e8b702480499cf::t_8219ee7f91c617 213,228
+  s_e8b702480499cf::t_8ef616aa5cf452 85-126
+  s_e8b702480499cf::t_457985051f9cd6 389
+  s_e8b702480499cf::t_4311db22145426 185,198,203,208,223
+references/execute-protocol.md
+  s_e8b702480499cf::t_a93e24108c01fc 64,68
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "e93b0dfb22189a65625819721a7527066226f7d4",
+  "prompts": {},
+  "sessions": {
+    "s_e8b702480499cf": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b86dd062-285e-44f0-9749-b1a13364f007",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
