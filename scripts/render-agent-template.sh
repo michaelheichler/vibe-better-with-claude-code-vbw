@@ -44,10 +44,15 @@ DEFAULTS="$TEMPLATE_DIR/defaults.json"
 [ -f "$DEFAULTS" ] || fail "defaults not found"
 
 declare -A VALUES=()
+declare -A EMPTY_TOKENS=()
 for field in name description tools disallowedTools model permissionMode maxTurns skills mcpServers memory background effort isolation color initialPrompt; do
   token=$(token_for_key "$field")
   value=$(jq -r --arg role "$ROLE" --arg field "$field" '.[$role][$field] // empty' "$DEFAULTS")
-  [ -n "$value" ] && VALUES["$token"]="$value"
+  if [ -n "$value" ]; then
+    VALUES["$token"]="$value"
+  else
+    EMPTY_TOKENS["$token"]=1
+  fi
 done
 
 for assignment in "$@"; do
@@ -55,50 +60,90 @@ for assignment in "$@"; do
   [ "$key" != "$assignment" ] || fail "expected KEY=VALUE, got '$assignment'"
   value=${assignment#*=}
   token=$(token_for_key "$key") || fail "unknown field '$key'"
-  VALUES["$token"]="$value"
+  if [ -n "$value" ]; then
+    VALUES["$token"]="$value"
+    unset "EMPTY_TOKENS[$token]"
+  else
+    unset "VALUES[$token]"
+    EMPTY_TOKENS["$token"]=1
+  fi
 done
+
+if [ "$ROLE" = "lead" ] && [ "${VALUES[TOOLS]+set}" = set ]; then
+  VALUES[TOOLS]="${VALUES[TOOLS]//Task(vbw-dev)/Task}"
+fi
+if [ "$ROLE" = "docs" ] && [ "${VALUES[TOOLS]+set}" = set ] && [[ ",${VALUES[TOOLS]}," != *,TaskGet,* ]]; then
+  VALUES[TOOLS]="${VALUES[TOOLS]}, TaskGet"
+fi
 
 for required in NAME MODEL DESCRIPTION JOB; do
   [ "${VALUES[$required]+set}" = set ] && [ -n "${VALUES[$required]}" ] || fail "missing required field $required"
 done
 
 rendered=$(cat "$TEMPLATE")
+check_rendered="$rendered"
+all_tokens=(NAME DESCRIPTION TOOLS DISALLOWED_TOOLS MODEL PERMISSION_MODE MAX_TURNS SKILLS MCP_SERVERS MEMORY BACKGROUND EFFORT ISOLATION COLOR INITIAL_PROMPT JOB)
+for token in "${all_tokens[@]}"; do
+  marker="{{$token}}"
+  sentinel="__VBW_TEMPLATE_SLOT_${token}__"
+  rendered=${rendered//"$marker"/"$sentinel"}
+  check_rendered=${check_rendered//"$marker"/"$sentinel"}
+done
+
 for token in "${!VALUES[@]}"; do
   value=${VALUES[$token]}
-  [ -n "$value" ] || continue
   if [ "$token" = "JOB" ]; then
     escaped="$value"
   else
     escaped=$(jq -Rn --arg value "$value" '$value')
     escaped=${escaped:1:${#escaped}-2}
   fi
-  marker="{{$token}}"
-  rendered=${rendered//"$marker"/"$escaped"}
+  sentinel="__VBW_TEMPLATE_SLOT_${token}__"
+  rendered=${rendered//"$sentinel"/"$escaped"}
+  check_rendered=${check_rendered//"$sentinel"/__VBW_USER_CONTENT__}
 done
 
-filtered=""
-in_front=0
-first_line=1
-while IFS= read -r line || [ -n "$line" ]; do
-  if [ "$first_line" -eq 1 ] && [ "$line" = "---" ]; then
-    in_front=1
-    first_line=0
-    filtered+="$line"$'\n'
-    continue
-  fi
-  first_line=0
-  if [ "$in_front" -eq 1 ] && [ "$line" = "---" ]; then
-    in_front=0
-    filtered+="$line"$'\n'
-    continue
-  fi
-  if [ "$in_front" -eq 1 ] && [[ "$line" == *"{{"* ]]; then
-    continue
-  fi
-  filtered+="$line"$'\n'
-done <<< "$rendered"
+for token in "${!EMPTY_TOKENS[@]}"; do
+  marker="{{$token}}"
+  sentinel="__VBW_TEMPLATE_SLOT_${token}__"
+  rendered=${rendered//"$sentinel"/"$marker"}
+  check_rendered=${check_rendered//"$sentinel"/"$marker"}
+done
 
-if grep -qE '\{\{[A-Z_][A-Z0-9_]*\}\}' <<< "$filtered"; then
+filter_optional_frontmatter() {
+  local source=$1
+  local filtered=""
+  local in_front=0
+  local first_line=1
+  local field_name field_token
+  while IFS= read -r line || [ -n "$line" ]; do
+    if [ "$first_line" -eq 1 ] && [ "$line" = "---" ]; then
+      in_front=1
+      first_line=0
+      filtered+="$line"$'\n'
+      continue
+    fi
+    first_line=0
+    if [ "$in_front" -eq 1 ] && [ "$line" = "---" ]; then
+      in_front=0
+      filtered+="$line"$'\n'
+      continue
+    fi
+    if [ "$in_front" -eq 1 ] && [[ "$line" == *:* ]]; then
+      field_name=${line%%:*}
+      field_token=$(token_for_key "$field_name" 2>/dev/null || true)
+      if [ -n "$field_token" ] && [ "${EMPTY_TOKENS[$field_token]+set}" = set ] && [ "$line" = "$field_name: \"{{$field_token}}\"" ]; then
+        continue
+      fi
+    fi
+    filtered+="$line"$'\n'
+  done <<< "$source"
+  printf '%s' "$filtered"
+}
+
+filtered=$(filter_optional_frontmatter "$rendered")
+filtered_check=$(filter_optional_frontmatter "$check_rendered")
+if grep -qE '\{\{[A-Z_][A-Z0-9_]*\}\}' <<< "$filtered_check"; then
   fail "unresolved template token"
 fi
 printf '%s' "$filtered"
