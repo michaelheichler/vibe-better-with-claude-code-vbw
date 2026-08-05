@@ -22,6 +22,16 @@ write_execution_state() {
     > "$TEST_TEMP_DIR/.vbw-planning/.execution-state.json"
 }
 
+write_active_plan() {
+  mkdir -p "$TEST_TEMP_DIR/.vbw-planning/phases/01-test"
+  cat > "$TEST_TEMP_DIR/.vbw-planning/phases/01-test/01-01-PLAN.md" <<'EOF'
+---
+files_modified:
+  - src/app.js
+---
+EOF
+}
+
 run_hook() {
   printf '%s' "$1" | bash "$SCRIPTS_DIR/vibe-write-guard.sh"
 }
@@ -51,6 +61,17 @@ test_allows_planning_writes() { # @test
 test_allows_agent_definition_writes() { # @test
   local input
   input=$(jq -n --arg path "$TEST_TEMP_DIR/.claude/agents/custom-agent.md" \
+    '{session_id:"session-main",tool_name:"Write",tool_input:{file_path:$path}}')
+
+  run run_hook "$input"
+
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+test_allows_agent_role_template_writes() { # @test
+  local input
+  input=$(jq -n --arg path "$TEST_TEMP_DIR/templates/agent-roles/dev.md.tpl" \
     '{session_id:"session-main",tool_name:"Write",tool_input:{file_path:$path}}')
 
   run run_hook "$input"
@@ -106,6 +127,24 @@ test_inactive_vibe_execution_is_noop() { # @test
 
   [ "$status" -eq 0 ]
   [ -z "$output" ]
+}
+
+test_active_plan_blocks_product_writes_without_live_execution_state() { # @test
+  local input state
+  write_active_plan
+  input=$(jq -n --arg path "$TEST_TEMP_DIR/src/app.js" \
+    '{session_id:"session-main",tool_name:"Write",tool_input:{file_path:$path}}')
+
+  for state in missing complete; do
+    rm -f "$TEST_TEMP_DIR/.vbw-planning/.execution-state.json"
+    if [ "$state" = complete ]; then
+      write_execution_state complete
+    fi
+    run run_hook "$input"
+
+    [ "$status" -eq 0 ]
+    [ "$(printf '%s' "$output" | jq -r '.hookSpecificOutput.permissionDecision')" = "deny" ]
+  done
 }
 
 test_subagent_payload_is_noop() { # @test

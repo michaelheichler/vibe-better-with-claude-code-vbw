@@ -13,7 +13,23 @@ setup() {
 }
 
 teardown() {
+  rm -f /tmp/.vbw-orchestrator-instance-session-A
   teardown_temp_dir
+}
+
+write_active_plan() {
+  mkdir -p "$TEST_TEMP_DIR/.vbw-planning/phases/01-test"
+  cat > "$TEST_TEMP_DIR/.vbw-planning/phases/01-test/01-01-PLAN.md" <<'EOF'
+---
+files_modified:
+  - src/product.js
+---
+EOF
+}
+
+mark_orchestrator() {
+  bash -c 'source "$1"; vbw_orchestrator_write_marker "$2"' _ \
+    "$SCRIPTS_DIR/lib/orchestrator-identity.sh" session-A
 }
 
 @test "file-guard treats payload without agent fields as orchestrator" {
@@ -175,4 +191,59 @@ teardown() {
     "$input" "$SCRIPTS_DIR/file-guard.sh"
 
   [ "$status" -eq 0 ]
+}
+
+@test "file-guard blocks orchestrator writes while a plan is unfinished" {
+  local input state
+  write_active_plan
+  mark_orchestrator
+  input=$(jq -n '{session_id:"session-A",tool_name:"Write",tool_input:{file_path:"src/product.js",content:"blocked"}}')
+
+  for state in missing complete; do
+    rm -f "$TEST_TEMP_DIR/.vbw-planning/.execution-state.json"
+    if [ "$state" = complete ]; then
+      jq -n '{status:"complete"}' > "$TEST_TEMP_DIR/.vbw-planning/.execution-state.json"
+    fi
+    run bash -c 'unset CLAUDE_CODE_CHILD_SESSION VBW_AGENT_ROLE VBW_ACTIVE_AGENT; printf "%s\n" "$1" | bash "$2"' _ \
+      "$input" "$SCRIPTS_DIR/file-guard.sh"
+
+    [ "$status" -eq 2 ]
+    [[ "$output" == *"orchestrator cannot write product files"* ]]
+  done
+}
+
+@test "file-guard allows orchestrator writes when every plan is terminal" {
+  local input
+  write_active_plan
+  cat > "$TEST_TEMP_DIR/.vbw-planning/phases/01-test/01-01-SUMMARY.md" <<'EOF'
+---
+status: complete
+---
+EOF
+  jq -n '{status:"complete"}' > "$TEST_TEMP_DIR/.vbw-planning/.execution-state.json"
+  mark_orchestrator
+  input=$(jq -n '{session_id:"session-A",tool_name:"Write",tool_input:{file_path:"src/product.js",content:"ok"}}')
+
+  run bash -c 'unset CLAUDE_CODE_CHILD_SESSION VBW_AGENT_ROLE VBW_ACTIVE_AGENT; printf "%s\n" "$1" | bash "$2"' _ \
+    "$input" "$SCRIPTS_DIR/file-guard.sh"
+
+  [ "$status" -eq 0 ]
+}
+
+@test "file-guard allows turbo and direct effort with an active plan" {
+  local input effort
+  write_active_plan
+  mark_orchestrator
+  input=$(jq -n '{session_id:"session-A",tool_name:"Write",tool_input:{file_path:"src/product.js",content:"ok"}}')
+
+  for effort in turbo direct; do
+    jq --arg effort "$effort" '.effort = $effort' \
+      "$TEST_TEMP_DIR/.vbw-planning/config.json" > "$TEST_TEMP_DIR/.vbw-planning/config.tmp"
+    mv "$TEST_TEMP_DIR/.vbw-planning/config.tmp" "$TEST_TEMP_DIR/.vbw-planning/config.json"
+    run bash -c 'unset CLAUDE_CODE_CHILD_SESSION VBW_AGENT_ROLE VBW_ACTIVE_AGENT; printf "%s\n" "$1" | bash "$2"' _ \
+      "$input" "$SCRIPTS_DIR/file-guard.sh"
+
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"VBW guard: orchestrator edit permitted (effort=$effort)."* ]]
+  done
 }

@@ -264,6 +264,20 @@ else
   is_plan_finalized() { return 1; }
 fi
 
+phase_has_active_plan() {
+  local plan_file summary_file
+  ACTIVE_PLAN=""
+  for plan_file in "$PHASES_DIR"/*/*-PLAN.md; do
+    [ ! -f "$plan_file" ] && continue
+    summary_file="${plan_file%-PLAN.md}-SUMMARY.md"
+    if ! is_plan_finalized "$summary_file"; then
+      ACTIVE_PLAN="$plan_file"
+      return 0
+    fi
+  done
+  return 1
+}
+
 normalize_path() {
   local input_path="$1"
   local absolute_path absolute_root
@@ -552,13 +566,19 @@ if [ "$_DG_TARGET_IN_PROJECT" = true ] && [ -z "${VBW_AGENT_ROLE:-}" ] && [ -z "
     fi
   fi
 
+  if phase_has_active_plan; then
+    _DG_BLOCK=true
+  fi
+
   if [ "$_DG_BLOCK" = true ]; then
     if [ -z "$_DG_EFFORT" ] || [ "$_DG_EFFORT" = "null" ]; then
       _DG_EFFORT=$(jq -r '.effort // "balanced"' "$PROJECT_ROOT/.vbw-planning/config.json" 2>/dev/null) || _DG_EFFORT="balanced"
     fi
     case "$_DG_EFFORT" in
       turbo|direct)
-        :
+        _DG_ADVISORY="VBW guard: orchestrator edit permitted (effort=$_DG_EFFORT). This is the expected fast path, not a self-QA workaround."
+        guard_log_event "$_DG_ADVISORY"
+        printf '%s\n' "$_DG_ADVISORY" >&2
         ;;
       *)
         guard_block "Blocked: orchestrator cannot write product files during delegated workflow (effort=$_DG_EFFORT). Delegate via Task tool to Dev/Debugger subagent."
@@ -585,15 +605,7 @@ fi
 
 vbw_guard_execution_is_live "$PROJECT_ROOT" || exit 0
 
-ACTIVE_PLAN=""
-for PLAN_FILE in "$PHASES_DIR"/*/*-PLAN.md; do
-  [ ! -f "$PLAN_FILE" ] && continue
-  SUMMARY_FILE="${PLAN_FILE%-PLAN.md}-SUMMARY.md"
-  if ! is_plan_finalized "$SUMMARY_FILE"; then
-    ACTIVE_PLAN="$PLAN_FILE"
-    break
-  fi
-done
+phase_has_active_plan || exit 0
 
 [ -z "$ACTIVE_PLAN" ] && exit 0
 

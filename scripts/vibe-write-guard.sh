@@ -10,6 +10,8 @@ SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
 [ -f "$SCRIPT_DIR/lib/guard-enforcement.sh" ] || exit 0
 . "$SCRIPT_DIR/lib/active-agent-state.sh" || exit 0
 . "$SCRIPT_DIR/lib/guard-enforcement.sh" || exit 0
+[ -f "$SCRIPT_DIR/summary-utils.sh" ] || exit 0
+. "$SCRIPT_DIR/summary-utils.sh" || exit 0
 
 TOOL_NAME=$(printf '%s' "$INPUT" | jq -r '.tool_name // ""' 2>/dev/null) || exit 0
 case "$TOOL_NAME" in
@@ -32,28 +34,59 @@ done
 [ -z "$PAYLOAD_AGENT_ID" ] || exit 0
 
 PROJECT_ROOT=$(vbw_guard_project_root "$PWD" 2>/dev/null) || exit 0
+PHASES_DIR="$PROJECT_ROOT/.vbw-planning/phases"
+
+is_plan_finalized() {
+  is_summary_terminal "$1"
+}
+
+phase_has_active_plan() {
+  local plan_file summary_file
+  ACTIVE_PLAN=""
+  for plan_file in "$PHASES_DIR"/*/*-PLAN.md; do
+    [ ! -f "$plan_file" ] && continue
+    summary_file="${plan_file%-PLAN.md}-SUMMARY.md"
+    if ! is_plan_finalized "$summary_file"; then
+      ACTIVE_PLAN="$plan_file"
+      return 0
+    fi
+  done
+  return 1
+}
+
+_ACTIVE_PLAN=false
+if phase_has_active_plan && [ -n "$ACTIVE_PLAN" ]; then
+  _ACTIVE_PLAN=true
+fi
+_STATE_ACTIVE=false
 STATE_FILE="$PROJECT_ROOT/.vbw-planning/.execution-state.json"
-[ -f "$STATE_FILE" ] || exit 0
-
-EXEC_STATUS=$(jq -r '.status // ""' "$STATE_FILE" 2>/dev/null) || exit 0
-[ "$EXEC_STATUS" = "running" ] || exit 0
-
-CURRENT_SESSION=$(vbw_active_agent_session_id "$INPUT" 2>/dev/null) || CURRENT_SESSION="${CLAUDE_SESSION_ID:-}"
-STATE_SESSION=$(jq -r '.session_id // ""' "$STATE_FILE" 2>/dev/null) || STATE_SESSION=""
-if [ -n "$STATE_SESSION" ] && [ -n "$CURRENT_SESSION" ] && [ "$STATE_SESSION" != "$CURRENT_SESSION" ]; then
-  exit 0
+if [ -f "$STATE_FILE" ]; then
+  EXEC_STATUS=$(jq -r '.status // ""' "$STATE_FILE" 2>/dev/null) || EXEC_STATUS=""
+  if [ "$EXEC_STATUS" = "running" ]; then
+    CURRENT_SESSION=$(vbw_active_agent_session_id "$INPUT" 2>/dev/null) || CURRENT_SESSION="${CLAUDE_SESSION_ID:-}"
+    STATE_SESSION=$(jq -r '.session_id // ""' "$STATE_FILE" 2>/dev/null) || STATE_SESSION=""
+    if [ -n "$STATE_SESSION" ] && [ -n "$CURRENT_SESSION" ] && [ "$STATE_SESSION" != "$CURRENT_SESSION" ]; then
+      [ "$_ACTIVE_PLAN" = true ] || exit 0
+    else
+      NOW=$(date +%s 2>/dev/null || true)
+      if [ "$(uname)" = "Darwin" ]; then
+        MTIME=$(stat -f %m "$STATE_FILE" 2>/dev/null || true)
+      else
+        MTIME=$(stat -c %Y "$STATE_FILE" 2>/dev/null || true)
+      fi
+      case "$NOW" in ''|*[!0-9]*) NOW="" ;; esac
+      case "$MTIME" in ''|*[!0-9]*) MTIME="" ;; esac
+      if [ -n "$NOW" ] && [ -n "$MTIME" ]; then
+        AGE=$((NOW - MTIME))
+        if [ "$AGE" -ge 0 ] && [ "$AGE" -lt 14400 ]; then
+          _STATE_ACTIVE=true
+        fi
+      fi
+    fi
+  fi
 fi
 
-NOW=$(date +%s 2>/dev/null || true)
-if [ "$(uname)" = "Darwin" ]; then
-  MTIME=$(stat -f %m "$STATE_FILE" 2>/dev/null || true)
-else
-  MTIME=$(stat -c %Y "$STATE_FILE" 2>/dev/null || true)
-fi
-case "$NOW" in ''|*[!0-9]*) exit 0 ;; esac
-case "$MTIME" in ''|*[!0-9]*) exit 0 ;; esac
-AGE=$((NOW - MTIME))
-[ "$AGE" -ge 0 ] && [ "$AGE" -lt 14400 ] || exit 0
+[ "$_ACTIVE_PLAN" = true ] || [ "$_STATE_ACTIVE" = true ] || exit 0
 
 TARGET_PATH=$(printf '%s' "$INPUT" | jq -r '.tool_input.file_path // .tool_input.notebook_path // ""' 2>/dev/null) || exit 0
 [ -n "$TARGET_PATH" ] || exit 0
@@ -133,7 +166,7 @@ case "$TARGET_PATH" in
 esac
 CANONICAL_TARGET_PATH=$(canonicalize_target_path "$TARGET_PATH" 2>/dev/null) || deny_product_write
 case "$CANONICAL_TARGET_PATH" in
-  *.md|.vbw-planning|.vbw-planning/*|*/.vbw-planning|*/.vbw-planning/*|.claude/agents|.claude/agents/*|*/.claude/agents|*/.claude/agents/*)
+  *.md|.vbw-planning|.vbw-planning/*|*/.vbw-planning|*/.vbw-planning/*|.claude/agents|.claude/agents/*|*/.claude/agents|*/.claude/agents/*|templates/agent-roles/*.tpl|*/templates/agent-roles/*.tpl)
     exit 0
     ;;
 esac
