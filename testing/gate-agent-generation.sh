@@ -86,9 +86,9 @@ invoke_claude() {
   local -a args
 
   if [ "$REAL_CONFIG" = true ]; then
-    args=(-p "$prompt" --output-format json --model haiku --dangerously-skip-permissions)
+    args=(-p "$prompt" --output-format json --model sonnet --dangerously-skip-permissions)
   else
-    args=(-p "$prompt" --output-format json --model claude-haiku-4-5-20251001 --dangerously-skip-permissions)
+    args=(-p "$prompt" --output-format json --model sonnet --dangerously-skip-permissions)
   fi
   if [ -n "$plugin_root" ]; then
     args+=(--plugin-dir "$plugin_root")
@@ -199,7 +199,7 @@ transcript_has_marker() {
   fi
   mapfile -t files < "$files_file"
   [ "${#files[@]}" -gt 0 ] || return 1
-  jq -s --arg marker "$marker" '[.[] | select(any(.. | strings; contains($marker)))] | length > 0' "${files[@]}" >/dev/null 2>/dev/null
+  jq -s -e --arg marker "$marker" '[.[] | select(.type == "assistant") | select(any(.. | strings; contains($marker)))] | length > 0' "${files[@]}" >/dev/null 2>/dev/null
 }
 
 marker_models() {

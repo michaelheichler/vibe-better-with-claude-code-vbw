@@ -233,7 +233,9 @@ check_not_contains "UAT block no longer relies on project-root workaround" "$UAT
 check_not_regex "UAT block does not include isolation argument syntax" "$UAT_BLOCK" "$SPAWN_ARG_ISOLATION_RE"
 check_not_regex "UAT block does not include background argument syntax" "$UAT_BLOCK" "$SPAWN_ARG_BACKGROUND_RE"
 check_not_regex "UAT block does not include team_name argument syntax" "$UAT_BLOCK" "$SPAWN_ARG_TEAM_NAME_RE"
-check_regex "UAT block uses generated per-agent names" "$UAT_BLOCK" 'subagent_type: "\$\{(SCOUT|LEAD|DEV)_AGENT_NAME\}"'
+check_regex "UAT block uses generated Scout name" "$UAT_BLOCK" 'subagent_type: "\$\{SCOUT_AGENT_NAME\}"'
+check_regex "UAT block uses generated Lead name" "$UAT_BLOCK" 'subagent_type: "\$\{LEAD_AGENT_NAME\}"'
+check_regex "UAT block uses generated Dev name" "$UAT_BLOCK" 'subagent_type: "\$\{DEV_AGENT_NAME\}"'
 check_not_regex "UAT block does not include worktree cwd argument syntax" "$UAT_BLOCK" "$SPAWN_ARG_CWD_RE"
 check_regex "spawn argument matcher catches isolation equals syntax" 'Agent isolation=worktree' "$SPAWN_ARG_ISOLATION_RE"
 check_regex "spawn argument matcher catches isolation JSON syntax" 'Agent "isolation": "worktree"' "$SPAWN_ARG_ISOLATION_RE"

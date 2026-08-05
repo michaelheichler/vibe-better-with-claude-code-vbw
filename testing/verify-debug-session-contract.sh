@@ -324,14 +324,14 @@ else
 fi
 
 if grep -Fq 'Keep the task report-only.' <<< "$DEBUG_PATH_A_BLOCK" \
-  && grep -Fq 'It must not edit, mutate, commit, request implementation approval, or claim the final outcome.' <<< "$DEBUG_PATH_A_BLOCK" \
+  && grep -Fq 'Do not edit, mutate, commit, request implementation approval, or claim the final outcome.' <<< "$DEBUG_PATH_A_BLOCK" \
   && grep -Fq 'debugger_report' <<< "$DEBUG_PATH_A_BLOCK"; then
   pass "debug.md Path A investigator prompts are explicitly report-only"
 else
   fail "debug.md Path A investigator prompts missing explicit report-only contract"
 fi
 
-if grep -Fq 'Wait until ALL spawned hypothesis investigators return `debugger_report`.' <<< "$DEBUG_PATH_A_BLOCK"; then
+if grep -Fq 'Wait until ALL spawned hypothesis investigators have returned `debugger_report`.' <<< "$DEBUG_PATH_A_BLOCK"; then
   pass "debug.md Path A waits for all spawned hypothesis investigators before synthesis"
 else
   fail "debug.md Path A missing all-spawned-investigators synthesis barrier"
