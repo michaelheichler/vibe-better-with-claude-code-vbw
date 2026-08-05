@@ -6,7 +6,8 @@ if [ -f "$SCRIPT_DIR/uat-utils.sh" ]; then
   source "$SCRIPT_DIR/uat-utils.sh"
 fi
 if [ -f "$SCRIPT_DIR/summary-utils.sh" ]; then
-  # WHY: helper definitions are required. shellcheck source=summary-utils.sh
+  # WHY: helper definitions are required.
+  # shellcheck source=summary-utils.sh
   source "$SCRIPT_DIR/summary-utils.sh"
 else
   count_complete_summaries() { echo "0"; }
@@ -14,7 +15,8 @@ else
   extract_summary_status() { printf ''; return 1; }
 fi
 if [ -f "$SCRIPT_DIR/phase-state-utils.sh" ]; then
-  # WHY: shared state helpers are required. shellcheck source=phase-state-utils.sh
+  # WHY: shared state helpers are required.
+  # shellcheck source=phase-state-utils.sh
   source "$SCRIPT_DIR/phase-state-utils.sh"
 else
   list_canonical_phase_dirs() {
