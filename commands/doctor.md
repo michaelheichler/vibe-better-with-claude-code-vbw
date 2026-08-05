@@ -44,8 +44,8 @@ Check `${CLAUDE_CONFIG_DIR:-~/.claude}/plugins/cache/vbw-marketplace/vbw/` exist
 ### 5. hooks.json valid
 Parse `{plugin-root}/hooks/hooks.json` with `jq empty`. FAIL if parse error.
 
-### 6. Agent files present
-Glob `{plugin-root}/agents/vbw-*.md`. Expect 7 files (lead, dev, qa, scout, debugger, architect, docs). FAIL if any missing.
+### 6. Agent role templates present
+Glob `{plugin-root}/templates/agent-roles/*.md.tpl`. Expect 8 files (lead, dev, qa, qa-author, scout, debugger, architect, docs). FAIL if any missing.
 
 ### 7. Config valid (project only)
 If `.vbw-planning/config.json` exists, parse with `jq empty`. FAIL if parse error. SKIP if no project initialized.

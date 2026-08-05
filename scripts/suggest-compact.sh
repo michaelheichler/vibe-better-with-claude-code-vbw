@@ -97,8 +97,8 @@ case "$MODE" in
       "$PLUGIN_ROOT/references/handoff-schemas.md" \
       "$PLUGIN_ROOT/references/vbw-brand-essentials.md" \
       "$(effort_file)" \
-      "$PLUGIN_ROOT/agents/vbw-dev.md" \
-      "$PLUGIN_ROOT/agents/vbw-qa.md" \
+      "$PLUGIN_ROOT/templates/agent-roles/dev.md.tpl" \
+      "$PLUGIN_ROOT/templates/agent-roles/qa.md.tpl" \
       "$PLUGIN_ROOT/references/verification-protocol.md" \
       "$PLUGIN_ROOT/templates/SUMMARY.md" \
     )
@@ -124,7 +124,7 @@ case "$MODE" in
 
   plan)
     FIXED_BYTES=$(sum_bytes \
-      "$PLUGIN_ROOT/agents/vbw-lead.md" \
+      "$PLUGIN_ROOT/templates/agent-roles/lead.md.tpl" \
       "$PLUGIN_ROOT/templates/PLAN.md" \
     )
     VARIABLE_BYTES=$(sum_bytes \
@@ -159,7 +159,7 @@ case "$MODE" in
 
   qa)
     FIXED_BYTES=$(sum_bytes \
-      "$PLUGIN_ROOT/agents/vbw-qa.md" \
+      "$PLUGIN_ROOT/templates/agent-roles/qa.md.tpl" \
       "$PLUGIN_ROOT/references/verification-protocol.md" \
       "$PLUGIN_ROOT/references/handoff-schemas.md" \
       "$PLUGIN_ROOT/references/vbw-brand-essentials.md" \
