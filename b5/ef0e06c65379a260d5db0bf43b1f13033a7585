@@ -1,0 +1,19 @@
+tests/vibe-write-guard.bats
+  s_58849211a94dc9::t_984feabc2ad8cb 129
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "b5ef0e06c65379a260d5db0bf43b1f13033a7585",
+  "prompts": {},
+  "sessions": {
+    "s_58849211a94dc9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a93b1e36-c511-4112-8e32-e0fbdf710600",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
