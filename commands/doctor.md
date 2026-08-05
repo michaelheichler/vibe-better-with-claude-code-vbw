@@ -110,6 +110,9 @@ Run `bash "{plugin-root}/scripts/rtk-manager.sh" doctor-json 2>/dev/null`.
 - In normal output, do not warn solely because anthropics/claude-code#15897 still exists after proof. When invoked with `--verbose`, include `diagnostic_caveat`/`upstream_issue` as detail so the upstream caveat remains visible without downgrading health.
 - Doctor must not query the network, run RTK history/stats, or run runtime smoke, runtime smoke requires explicit Claude Code Bash-tool orchestration and belongs in `/vbw:rtk verify`. Update availability may only come from cached explicit `/vbw:rtk status --check-updates` or `/vbw:rtk update` data.
 
+### 19. Agent routing evidence
+If `.vbw-planning/.agent-routing-evidence.jsonl` exists, run `bash "{plugin-root}/scripts/agent-routing-evidence.sh" check` and report its compact summary. PASS when no model mismatches are recorded. WARN when any model mismatch or stale running entry is reported. SKIP when the evidence file is absent.
+
 ## Output Format
 
 ```
@@ -133,8 +136,9 @@ VBW Doctor v{version}
  16. CLAUDE.md sections   {PASS|WARN|SKIP}
  17. State consistency    {PASS|WARN|SKIP}
  18. RTK integration      {PASS|WARN|SKIP} {detail}
+ 19. Routing evidence     {PASS|WARN|SKIP} {detail}
 
-Result: {N}/18 passed, {W} warnings, {F} failures
+Result: {N}/19 passed, {W} warnings, {F} failures
 ```
 
 Use checkmark for PASS, warning triangle for WARN, X for FAIL.
