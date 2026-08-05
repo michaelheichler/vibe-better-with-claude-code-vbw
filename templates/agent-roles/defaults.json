@@ -1,0 +1,54 @@
+{
+  "architect": {
+    "model": "claude-opus-5",
+    "tools": "Read, Glob, Grep, Write, LSP, Skill, SendMessage",
+    "memory": "project",
+    "permissionMode": "acceptEdits"
+  },
+  "debugger": {
+    "model": "claude-opus-5",
+    "disallowedTools": "Task, TaskCreate",
+    "effort": "xhigh",
+    "memory": "project",
+    "permissionMode": "acceptEdits"
+  },
+  "dev": {
+    "model": "claude-sonnet-5",
+    "effort": "xhigh",
+    "memory": "project",
+    "permissionMode": "acceptEdits",
+    "disallowedTools": "Task, TaskCreate, Agent, AskUserQuestion"
+  },
+  "docs": {
+    "model": "claude-sonnet-5",
+    "tools": "Read, Grep, Glob, Bash, Write, Edit, LSP, Skill, SendMessage",
+    "memory": "project",
+    "permissionMode": "acceptEdits"
+  },
+  "lead": {
+    "model": "claude-fable-5",
+    "effort": "medium",
+    "memory": "project",
+    "permissionMode": "acceptEdits",
+    "tools": "Read, Glob, Grep, Write, Bash, WebFetch, LSP, Skill, Task(vbw-dev), SendMessage"
+  },
+  "qa-author": {
+    "model": "inherit",
+    "memory": "project",
+    "permissionMode": "acceptEdits",
+    "disallowedTools": "Task, TaskCreate, Agent, AskUserQuestion, NotebookEdit"
+  },
+  "qa": {
+    "model": "claude-sonnet-5",
+    "memory": "project",
+    "permissionMode": "plan",
+    "disallowedTools": "Task, Write, Edit, NotebookEdit, ExitPlanMode"
+  },
+  "scout": {
+    "model": "claude-sonnet-5",
+    "effort": "high",
+    "memory": "local",
+    "permissionMode": "plan",
+    "disallowedTools": "Edit, NotebookEdit, Task, TaskCreate, Agent"
+  }
+}
