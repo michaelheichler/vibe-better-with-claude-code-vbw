@@ -1,0 +1,25 @@
+testing/verify-uat-remediation-orchestration.sh
+  s_58849211a94dc9::t_f7f96d4894298d 236-238
+testing/gate-agent-generation.sh
+  s_58849211a94dc9::t_231d14cf6ee296 202
+  s_58849211a94dc9::t_510b2ca806aeb4 89,91
+testing/verify-debug-session-contract.sh
+  s_58849211a94dc9::t_788fb0d2424ee0 327
+  s_58849211a94dc9::t_c7b77c61c55a86 334
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "107a13d2ed43746176a9ab2d380b9080a0fb2afe",
+  "prompts": {},
+  "sessions": {
+    "s_58849211a94dc9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a93b1e36-c511-4112-8e32-e0fbdf710600",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
