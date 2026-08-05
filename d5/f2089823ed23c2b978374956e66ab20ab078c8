@@ -1,0 +1,32 @@
+tests/agent-routing-evidence.bats
+  s_58849211a94dc9::t_41f136e8fd8648 112-114
+  s_58849211a94dc9::t_b5465fc9dea571 1-111,115-116
+commands/doctor.md
+  s_58849211a94dc9::t_a31581c94b2236 113-115
+  s_58849211a94dc9::t_b23ff688b582ac 139,141
+scripts/agent-routing-evidence.sh
+  s_58849211a94dc9::t_53c82e8cc8cb3d 79-91
+  s_58849211a94dc9::t_e196a9367cfc67 133-134,139-144,147,155-173
+  s_58849211a94dc9::t_635414f07ca69c 1-78,92-132,135-138,145-146,148-154,174-225
+hooks/hooks.json
+  s_58849211a94dc9::t_dcc1c76f3d90af 164-167,169-171
+  s_58849211a94dc9::t_2222ecfc866e97 168
+  s_58849211a94dc9::t_303bbc467bed3f 204-213
+  s_58849211a94dc9::t_9afdd4430f945b 172-173
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "d5f2089823ed23c2b978374956e66ab20ab078c8",
+  "prompts": {},
+  "sessions": {
+    "s_58849211a94dc9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a93b1e36-c511-4112-8e32-e0fbdf710600",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
