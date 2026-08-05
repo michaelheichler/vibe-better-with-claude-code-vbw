@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.40.2] - 2026-08-05
+
+### Added
+
+- **`ephemeral-agents`** -- zero-trust spawn pipeline: every subagent in a vibe session is a temporary, uniquely named definition (`vbw-{role}-{word}-{word}-{word}`) generated from role templates via `agent-{role}-generator.sh`, registered in a locked manifest (max 4 live agents, one-time-use names), and allowlisted by the PreToolUse spawn guard, which force-rewrites model, effort, and maxTurns from the manifest. (PR #25)
+- **`write-lock`** -- during vibe execution the main session is locked to orchestration: markdown, planning files, and generated agent definitions stay writable, product writes are denied with a delegation message, with symlink- and traversal-proof path canonicalization. (PR #25)
+- **`lifecycle`** -- generated agents are reaped after idle: activity tracking via SubagentStart/Stop, warnings to the main session before expiry, definition cleanup inside the locked stop transition, and a SessionStart sweep for stale entries. (PR #25)
+- **`evidence`** -- routing verification from transcripts instead of trust: per-spawn JSONL records classify model and effort as pass, mismatch, env-override, or unknown, surfaced through doctor check 19. (PR #25)
+- **`gate`** -- opt-in `testing/gate-agent-generation.sh` empirically probes the installed Claude Code build (mid-session agent-definition loading, frontmatter model/effort honoring, updatedInput rewrite ordering) so routing claims rest on evidence. (PR #25)
+
+### Fixed
+
+- **`execute`** -- `execute-protocol.md` now resolves Dev and QA settings through `resolve-agent-settings.sh`, binding the previously unbound `DEV_REASONING`/`QA_REASONING` used in spawn instructions, and all spawn prose binds generated names from captured `SPAWN_READY` output. (PR #25)
+- **`contracts`** -- canonical Effort Routing Contract added to `subagent-contracts.md`: reasoning effort is enforced at the hook/frontmatter layer, is not a documented Task parameter, and must never be claimed from tool-schema visibility or agent self-report. (PR #25)
+- **`docs`** -- removed the false `detect-models.sh` HTTP fallback claim and dead `reasoning_param` pricing metadata. (PR #25)
+
 ## [1.40.1] - 2026-08-05
 
 ### Fixed
