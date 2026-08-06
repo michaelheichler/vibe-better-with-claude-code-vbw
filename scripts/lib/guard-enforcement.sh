@@ -12,6 +12,7 @@ is_plan_finalized() {
 is_template_exempt_path() {
   local project_root="${1:-}" target_path="${2:-}"
   [ -n "$project_root" ] || return 1
+  project_root="${project_root%/}"
   case "$target_path" in
     "$project_root/templates/agent-roles/"*.tpl) return 0 ;;
   esac

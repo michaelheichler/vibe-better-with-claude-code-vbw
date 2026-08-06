@@ -241,6 +241,13 @@ EOF
     "$input" "$SCRIPTS_DIR/file-guard.sh"
 
   [ "$status" -eq 0 ]
+
+  run bash -c '
+    . "$1"
+    is_template_exempt_path "$2/" "$2/templates/agent-roles/dev.md.tpl" &&
+    is_template_exempt_path "/" "/templates/agent-roles/dev.md.tpl"
+  ' _ "$SCRIPTS_DIR/lib/guard-enforcement.sh" "$TEST_TEMP_DIR"
+  [ "$status" -eq 0 ]
 }
 
 @test "file-guard allows turbo and direct effort with an active plan" {
