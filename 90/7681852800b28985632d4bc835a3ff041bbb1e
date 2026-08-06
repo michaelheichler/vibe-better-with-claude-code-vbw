@@ -1,0 +1,24 @@
+scripts/lib/guard-enforcement.sh
+  s_e8b702480499cf::t_525c3fdf445842 34
+  s_e8b702480499cf::t_8db8b299664e97 12-20,35
+scripts/file-guard.sh
+  s_e8b702480499cf::t_f20552769fa6dd 492-495
+scripts/vibe-write-guard.sh
+  s_e8b702480499cf::t_b0c4891484895b 146,148
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "907681852800b28985632d4bc835a3ff041bbb1e",
+  "prompts": {},
+  "sessions": {
+    "s_e8b702480499cf": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b86dd062-285e-44f0-9749-b1a13364f007",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
