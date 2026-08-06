@@ -1,0 +1,31 @@
+scripts/lib/guard-enforcement.sh
+  s_e8b702480499cf::t_9d8cba5f48b9df 19-23
+  s_e8b702480499cf::t_8c1eb93aae31fe 13,16,18
+scripts/file-guard.sh
+  s_e8b702480499cf::t_baca57c56a3449 550
+  s_e8b702480499cf::t_de9512f6665921 587-588
+  s_e8b702480499cf::t_88663e71e652e2 491-494
+tests/file-guard-orchestrator.bats
+  s_e8b702480499cf::t_60aa9d19a8aade 233-245
+tests/vibe-write-guard.bats
+  s_e8b702480499cf::t_090553d1c88866 189-198,200
+  s_e8b702480499cf::t_930e9237d75616 151,153-167
+  s_e8b702480499cf::t_dac56eb32b94dc 168,170-188
+  s_e8b702480499cf::t_dad3c953e9557c 169
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "aa420ee014c6777532ba2dc2edaba118eb86f101",
+  "prompts": {},
+  "sessions": {
+    "s_e8b702480499cf": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b86dd062-285e-44f0-9749-b1a13364f007",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
