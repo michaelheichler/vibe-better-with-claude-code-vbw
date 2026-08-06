@@ -143,8 +143,9 @@ case "$TARGET_PATH" in
     ;;
 esac
 CANONICAL_TARGET_PATH=$(canonicalize_target_path "$TARGET_PATH" 2>/dev/null) || deny_product_write
+is_template_exempt_path "$PROJECT_ROOT" "$CANONICAL_TARGET_PATH" && exit 0
 case "$CANONICAL_TARGET_PATH" in
-  *.md|.vbw-planning|.vbw-planning/*|*/.vbw-planning|*/.vbw-planning/*|.claude/agents|.claude/agents/*|*/.claude/agents|*/.claude/agents/*|templates/agent-roles/*.tpl|*/templates/agent-roles/*.tpl)
+  *.md|.vbw-planning|.vbw-planning/*|*/.vbw-planning|*/.vbw-planning/*|.claude/agents|.claude/agents/*|*/.claude/agents|*/.claude/agents/*)
     exit 0
     ;;
 esac

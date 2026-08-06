@@ -9,6 +9,15 @@ is_plan_finalized() {
   bash -c '. "$1"; is_summary_terminal "$2"' _ "$_VBW_GUARD_SUMMARY_UTILS" "$1"
 }
 
+is_template_exempt_path() {
+  local project_root="${1:-}" target_path="${2:-}"
+  [ -n "$project_root" ] || return 1
+  case "$target_path" in
+    "$project_root/templates/agent-roles/"*.tpl) return 0 ;;
+  esac
+  return 1
+}
+
 phase_has_active_plan() {
   local plan_file summary_file plan_basename phases_dir="${1:-${PHASES_DIR:-}}"
   ACTIVE_PLAN=""
@@ -22,8 +31,8 @@ phase_has_active_plan() {
       summary_file="${plan_file%-PLAN.md}-SUMMARY.md"
     fi
     if ! is_plan_finalized "$summary_file"; then
-      ACTIVE_PLAN="$plan_file"
-      [ -n "$ACTIVE_PLAN" ] && return 0
+      export ACTIVE_PLAN="$plan_file"
+      return 0
     fi
   done
   return 1

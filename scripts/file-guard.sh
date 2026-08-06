@@ -489,9 +489,10 @@ case "$_DG_TARGET_ABS" in
   "$_DG_PROJECT_ABS"|"$_DG_PROJECT_ABS""/"*) _DG_TARGET_IN_PROJECT=true ;;
 esac
 _DG_TEMPLATE_EXEMPT=false
-case "$_DG_TARGET_ABS" in
-  "$_DG_PROJECT_ABS/templates/agent-roles/"*.tpl) _DG_TEMPLATE_EXEMPT=true ;;
-esac
+if is_template_exempt_path "$_DG_PROJECT_ABS" "$_DG_TARGET_ABS"; then
+  _DG_TEMPLATE_EXEMPT=true
+fi
+
 
 if [ "$_DG_TARGET_IN_PROJECT" = true ] && [ -z "${VBW_AGENT_ROLE:-}" ] && [ -z "${VBW_ACTIVE_AGENT:-}" ] && [ "$_FG_CALLER_IS_DELEGATED" = false ]; then
   _DELEG_FILE="$PROJECT_ROOT/.vbw-planning/.delegated-workflow.json"
