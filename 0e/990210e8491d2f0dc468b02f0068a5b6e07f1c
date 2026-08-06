@@ -1,0 +1,25 @@
+testing/verify-skill-activation/execute-agent-contracts.bash
+  s_e8b702480499cf::t_d332fcc3a3f9e5 279-282
+tests/auto-uat.bats
+  s_e8b702480499cf::t_d9ea7e3198da91 1237-1238,1241
+testing/verify-permission-mode-contract.sh
+  s_e8b702480499cf::t_70520e7154802a 105-110
+testing/verify-lsp-first-policy.sh
+  s_e8b702480499cf::t_f1d6df751d3519 70
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "0e990210e8491d2f0dc468b02f0068a5b6e07f1c",
+  "prompts": {},
+  "sessions": {
+    "s_e8b702480499cf": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b86dd062-285e-44f0-9749-b1a13364f007",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
