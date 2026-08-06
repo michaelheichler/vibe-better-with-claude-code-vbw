@@ -25,6 +25,7 @@ printf '%s\t%s\n' \
   summary-status-contract      testing/verify-summary-status-contract.sh \
   summary-utils-contract       testing/verify-summary-utils-contract.sh \
   exec-state-reconciliation    testing/verify-exec-state-reconciliation.sh \
+  execution-state-schema       testing/verify-execution-state-schema-contract.sh \
   statusline-qa-lifecycle      testing/verify-statusline-qa-lifecycle.sh \
   statusline-429-backoff       testing/verify-statusline-429-backoff.sh \
   uat-recurrence               testing/verify-uat-recurrence.sh \

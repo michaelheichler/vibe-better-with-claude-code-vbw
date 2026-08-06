@@ -1,23 +1,18 @@
 #!/bin/bash
 set -u
-# PostToolUse: Auto-update STATE.md, ROADMAP.md + .execution-state.json on PLAN/SUMMARY writes
-# Non-blocking, fail-open (always exit 0)
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 if [ -f "$SCRIPT_DIR/uat-utils.sh" ]; then
   source "$SCRIPT_DIR/uat-utils.sh"
 fi
 if [ -f "$SCRIPT_DIR/summary-utils.sh" ]; then
-  # shellcheck source=summary-utils.sh
   source "$SCRIPT_DIR/summary-utils.sh"
 else
-  # Safe default: report zero completions when helpers unavailable
   count_complete_summaries() { echo "0"; }
   count_terminal_summaries() { echo "0"; }
   extract_summary_status() { printf ''; return 1; }
 fi
 if [ -f "$SCRIPT_DIR/phase-state-utils.sh" ]; then
-  # shellcheck source=phase-state-utils.sh
   source "$SCRIPT_DIR/phase-state-utils.sh"
 else
   list_canonical_phase_dirs() {
@@ -46,6 +41,20 @@ else
     local dir="$1"
     basename "$dir" | sed 's/^[0-9]*-//' | tr '-' ' ' | awk '{for(i=1;i<=NF;i++) $i=toupper(substr($i,1,1)) substr($i,2)}1'
   }
+  planning_root_from_phase_dir() {
+    local phase_dir="$1"
+    local phases_dir root
+    phases_dir=$(dirname "$phase_dir")
+    root=$(dirname "$phases_dir")
+    if [ "$(basename "$phases_dir")" = "phases" ] && [ -d "$root" ]; then
+      echo "$root"
+      return 0
+    fi
+    echo ".vbw-planning"
+  }
+  qa_required_for_phase() { printf '%s\n' "true"; }
+  qa_gate_routing_for_phase() { printf '%s\n' "QA_RERUN_REQUIRED"; }
+  qa_completion_allowed_for_phase() { return 1; }
 fi
 
 if ! type normalize_roadmap_phase_num >/dev/null 2>&1; then
@@ -352,20 +361,6 @@ if ! type roadmap_phase_num_for_dir >/dev/null 2>&1; then
   }
 fi
 
-planning_root_from_phase_dir() {
-  local phase_dir="$1"
-  local phases_dir root
-
-  phases_dir=$(dirname "$phase_dir")
-  root=$(dirname "$phases_dir")
-  if [ "$(basename "$phases_dir")" = "phases" ] && [ -d "$root" ]; then
-    echo "$root"
-    return 0
-  fi
-
-  echo ".vbw-planning"
-}
-
 reconcile_state_md_for_changed_path() {
   local changed_path="$1"
 
@@ -498,11 +493,11 @@ phase_uat_status_class() {
 
 update_roadmap() {
   local phase_dir="$1"
-  local planning_root roadmap
+  local qa_complete_allowed="${2:-}" planning_root roadmap
+  local QA_GATE_ROUTING=""
 
   planning_root=$(planning_root_from_phase_dir "$phase_dir")
   roadmap="${planning_root}/ROADMAP.md"
-
   [ -f "$roadmap" ] || return 0
 
   local dirname table_phase_num checkbox_phase_num numbering_scheme display_numbering_scheme roadmap_total prefix_phase_num plan_count summary_count complete_count status date_str uat_class
@@ -525,10 +520,17 @@ update_roadmap() {
   [ "$plan_count" -eq 0 ] && return 0
 
   if [ "$complete_count" -eq "$plan_count" ]; then
+    if [ -z "$qa_complete_allowed" ]; then
+      QA_GATE_ROUTING=$(qa_gate_routing_for_phase "$phase_dir" "$SCRIPT_DIR")
+      qa_complete_allowed=false
+      if [ "$QA_GATE_ROUTING" = "PROCEED_TO_UAT" ]; then
+        qa_complete_allowed=true
+      fi
+    fi
     if [ "$uat_class" = "issues_found" ]; then
       status="uat issues"
       date_str="-"
-    elif [ "$uat_class" = "active" ]; then
+    elif [ "$uat_class" = "active" ] || [ "$qa_complete_allowed" != "true" ]; then
       status="needs verification"
       date_str="-"
     else
@@ -543,11 +545,9 @@ update_roadmap() {
     date_str="-"
   fi
 
-  # Start with a working copy
   local tmp="${roadmap}.tmp.$$.${RANDOM:-0}"
   cp "$roadmap" "$tmp" 2>/dev/null || return 0
 
-  # Update extended progress table row (| num - name | done | status | date |)
   local existing_name
   existing_name=$(grep -E "^\| *${table_phase_num} - " "$roadmap" | head -1 | sed 's/^| *[0-9]* - //' | sed 's/ *|.*//')
   if [ -z "$existing_name" ] && [ "$display_numbering_scheme" = "prefix" ] && [ -n "$prefix_phase_num" ] && [ "$prefix_phase_num" != "$table_phase_num" ]; then
@@ -560,7 +560,6 @@ update_roadmap() {
       [ -s "$tmp_ext" ] && mv "$tmp_ext" "$tmp" 2>/dev/null || rm -f "$tmp_ext" 2>/dev/null
   fi
 
-  # Update simple progress table format (| 01 | ● Done |)
   local padded_num
   padded_num=$(printf '%02d' "$table_phase_num" 2>/dev/null || echo "$table_phase_num")
   if grep -qE "^\| *0*${table_phase_num} *\|" "$tmp" 2>/dev/null; then
@@ -580,7 +579,6 @@ update_roadmap() {
 
   checkbox_phase_num=$(roadmap_phase_num_for_dir "$display_numbering_scheme" "$phase_dir" "$(dirname "$phase_dir")")
 
-  # Check/uncheck checkbox based on status
   if [ -n "$checkbox_phase_num" ]; then
     if [ "$status" = "complete" ]; then
       rewrite_roadmap_checkboxes_for_phase "$tmp" "x" "$checkbox_phase_num"
@@ -604,23 +602,18 @@ update_model_profile() {
   config_file="${planning_root}/config.json"
   [ -f "$config_file" ] || config_file=".vbw-planning/config.json"
 
-  # Read active model profile from config
   local model_profile
   model_profile=$(jq -r '.model_profile // "quality"' "$config_file" 2>/dev/null || echo "quality")
 
-  # Check if Codebase Profile section exists
   if ! grep -q "^## Codebase Profile" "$state_md" 2>/dev/null; then
     return 0
   fi
 
-  # Check if Model Profile line already exists
   if grep -q "^- \*\*Model Profile:\*\*" "$state_md" 2>/dev/null; then
-    # Update existing line
     local tmp="${state_md}.tmp.$$.${RANDOM:-0}"
     sed "s/^- \*\*Model Profile:\*\*.*/- **Model Profile:** ${model_profile}/" "$state_md" > "$tmp" 2>/dev/null && \
       [ -s "$tmp" ] && mv "$tmp" "$state_md" 2>/dev/null || rm -f "$tmp" 2>/dev/null
   else
-    # Insert after Test Coverage line
     local tmp="${state_md}.tmp.$$.${RANDOM:-0}"
     sed "/^- \*\*Test Coverage:\*\*/a\\
 - **Model Profile:** ${model_profile}" "$state_md" > "$tmp" 2>/dev/null && \
@@ -644,21 +637,16 @@ if is_reconciliation_artifact "$FILE_PATH"; then
   fi
 fi
 
-# Phase-root PLAN.md trigger: update ROADMAP. STATE.md is reconciled below.
 if is_phase_root_artifact "$FILE_PATH" && echo "$FILE_PATH" | grep -qE 'phases/[^/]+/([0-9]+(-[0-9]+)?-PLAN|PLAN)\.md$'; then
   update_roadmap "$(dirname "$FILE_PATH")"
 fi
 
-# Phase-root UAT.md trigger: update ROADMAP. STATE.md is reconciled below.
 if is_phase_root_artifact "$FILE_PATH" && echo "$FILE_PATH" | grep -qE 'phases/[^/]+/[0-9]+(-[0-9]+)?-UAT\.md$'; then
   if [ -f "$FILE_PATH" ]; then
     update_roadmap "$(dirname "$FILE_PATH")"
   fi
 fi
 
-# Phase-root SUMMARY.md trigger: update execution state, ROADMAP, and model profile.
-# Remediation R*-SUMMARY.md files may affect current UAT routing but must not
-# mark phase-root execution plans complete.
 if is_phase_root_artifact "$FILE_PATH" && echo "$FILE_PATH" | grep -qE 'phases/[^/]+/([0-9]+(-[0-9]+)?-SUMMARY|SUMMARY)\.md$' && [ -f "$FILE_PATH" ]; then
   PHASE_DIR="$(dirname "$FILE_PATH")"
   PLANNING_ROOT="$(planning_root_from_phase_dir "$PHASE_DIR")"
@@ -668,7 +656,6 @@ if is_phase_root_artifact "$FILE_PATH" && echo "$FILE_PATH" | grep -qE 'phases/[
     *) SUMMARY_ID="$(basename "$FILE_PATH" | sed 's/-SUMMARY\.md$//')" ;;
   esac
 
-  # Parse SUMMARY.md YAML frontmatter for phase, plan, status
   PHASE=""
   PLAN=""
   STATUS=""
@@ -694,7 +681,6 @@ if is_phase_root_artifact "$FILE_PATH" && echo "$FILE_PATH" | grep -qE 'phases/[
     fi
   done < "$FILE_PATH"
 
-  # Best-effort fallback for non-frontmatter summaries
   if [ -z "$PHASE" ]; then
     PHASE=$(basename "$PHASE_DIR" | sed 's/^\([0-9]*\).*/\1/' | sed 's/^0*//')
   fi
@@ -704,9 +690,7 @@ if is_phase_root_artifact "$FILE_PATH" && echo "$FILE_PATH" | grep -qE 'phases/[
     [ "$PLAN" = "$SUMMARY_ID" ] && PLAN="$SUMMARY_ID"
   fi
 
-  # Normalize status: only verified terminal SUMMARY statuses update execution-state.
-  # Missing, unknown, and nonterminal statuses are intentionally ignored so a
-  # partial product write cannot preemptively unlock dependent plans.
+  # WHY: nonterminal statuses stay ignored so partial writes cannot unlock dependent plans.
   STATUS_RAW="$STATUS"
   if type extract_summary_status >/dev/null 2>&1; then
     _summary_status_raw=$(extract_summary_status "$FILE_PATH" 2>/dev/null || true)
@@ -722,12 +706,27 @@ if is_phase_root_artifact "$FILE_PATH" && echo "$FILE_PATH" | grep -qE 'phases/[
     failed) STATUS="failed" ;;
   esac
 
-  # Update execution-state as best-effort only (never gates STATE/ROADMAP updates)
+  if [ "$RECONCILE_AFTER" = true ]; then
+    reconcile_state_md_for_changed_path "$FILE_PATH"
+    RECONCILE_AFTER=false
+  fi
+  qa_complete_allowed=false
+  if qa_completion_allowed_for_phase "$PHASE_DIR" "$SCRIPT_DIR"; then
+    qa_complete_allowed=true
+  fi
+  update_roadmap "$PHASE_DIR" "$qa_complete_allowed"
+  phase_key=$(printf '%s' "$PHASE" | sed 's/^0*//')
+  phase_key="${phase_key:-0}"
+
   if [ -f "$STATE_FILE" ] && [ -n "$PLAN" ] && [ -n "$STATUS" ]; then
     TEMP_FILE="${STATE_FILE}.tmp.$$.${RANDOM:-0}"
     terminal_summary_count=$(count_terminal_summaries "$PHASE_DIR" 2>/dev/null || echo 0)
-    jq --arg phase "$PHASE" --arg plan "$PLAN" --arg status "$STATUS" --arg summary_id "$SUMMARY_ID" --arg session_id "${CLAUDE_SESSION_ID:-}" --argjson terminal_summary_count "$terminal_summary_count" '
+    jq --arg phase "$PHASE" --arg phase_key "$phase_key" --arg plan "$PLAN" --arg status "$STATUS" --arg summary_id "$SUMMARY_ID" --arg session_id "${CLAUDE_SESSION_ID:-}" --argjson qa_complete_allowed "$qa_complete_allowed" --argjson terminal_summary_count "$terminal_summary_count" '
       def as_num: (try tonumber catch null);
+      if ((.phase? | tostring | as_num) == ($phase_key | as_num)) then
+        .phase_qa_required = ((.phase_qa_required // {}) + {($phase_key): (if .phase_qa_required[$phase_key] != null then .phase_qa_required[$phase_key] elif (.qa_required | type) == "boolean" then .qa_required else true end)})
+      else . end
+      |
       (if (.plans | type) == "array" then
         .plans |= map(
           if (.id == $summary_id)
@@ -747,13 +746,13 @@ if is_phase_root_artifact "$FILE_PATH" && echo "$FILE_PATH" | grep -qE 'phases/[
            and ($terminal_summary_count >= (.plans | length))
            and ([.plans[].status] | all(. == "complete" or . == "partial" or . == "failed"))
         then .status = (if ([.plans[].status] | any(. == "failed")) then "failed"
-                        elif ([.plans[].status] | all(. == "complete")) then "complete"
+                        elif ([.plans[].status] | all(. == "complete")) then
+                          if $qa_complete_allowed then "complete" else .status end
                         else "partial" end)
         else . end
     ' "$STATE_FILE" > "$TEMP_FILE" 2>/dev/null && [ -s "$TEMP_FILE" ] && mv "$TEMP_FILE" "$STATE_FILE" 2>/dev/null || rm -f "$TEMP_FILE" 2>/dev/null
   fi
 
-  update_roadmap "$PHASE_DIR"
   update_model_profile "$PHASE_DIR"
 fi
 

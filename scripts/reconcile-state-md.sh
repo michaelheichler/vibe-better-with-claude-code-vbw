@@ -49,6 +49,8 @@ REQUIRED_FUNCTIONS=(
   count_terminal_summaries
   current_uat_status_class
   phase_dir_display_name
+  qa_required_for_phase
+  qa_completion_allowed_for_phase
   normalize_roadmap_phase_num
   roadmap_checklist_phase_num_from_line
   roadmap_phase_dir_prefix_num
@@ -127,14 +129,16 @@ phase_uat_status_class() {
 }
 
 status_label_for_phase() {
-  local idx="$1" plan_count="$2" terminal_count="$3" complete_count="$4" uat_class="$5"
+  local idx="$1" plan_count="$2" terminal_count="$3" complete_count="$4" uat_class="$5" qa_allowed="$6"
 
   if [ "$uat_class" = "issues_found" ]; then
     printf '%s\n' "Needs remediation"
   elif [ "$uat_class" = "active" ]; then
     printf '%s\n' "Needs verification"
-  elif [ "$plan_count" -gt 0 ] && [ "$complete_count" -ge "$plan_count" ]; then
+  elif [ "$plan_count" -gt 0 ] && [ "$complete_count" -ge "$plan_count" ] && [ "$qa_allowed" = true ]; then
     printf '%s\n' "Complete"
+  elif [ "$plan_count" -gt 0 ] && [ "$complete_count" -ge "$plan_count" ]; then
+    printf '%s\n' "Needs verification"
   elif [ "$terminal_count" -gt 0 ]; then
     printf '%s\n' "In progress"
   elif [ "$plan_count" -gt 0 ]; then
@@ -201,7 +205,7 @@ rewrite_phase_status_section() {
 }
 
 desired_roadmap_marker_for_phase_num() {
-  local scheme="$1" wanted_num="$2" idx phase_dir candidate_phase_dir plan_count complete_count unresolved
+  local scheme="$1" wanted_num="$2" idx phase_dir candidate_phase_dir plan_count complete_count unresolved qa_allowed
   phase_dir=$(roadmap_phase_dir_for_num "$scheme" "$PHASES_DIR" "$wanted_num") || return 1
   [ -n "$phase_dir" ] || return 1
 
@@ -211,7 +215,8 @@ desired_roadmap_marker_for_phase_num() {
       plan_count=${plan_counts[$idx]}
       complete_count=${complete_counts[$idx]}
       unresolved=${unresolved_flags[$idx]}
-      if [ "$plan_count" -gt 0 ] && [ "$complete_count" -ge "$plan_count" ] && [ "$unresolved" != true ]; then
+      qa_allowed=${qa_allowed_flags[$idx]}
+      if [ "$plan_count" -gt 0 ] && [ "$complete_count" -ge "$plan_count" ] && [ "$unresolved" != true ] && [ "$qa_allowed" = true ]; then
         printf '%s\n' "x"
       else
         printf '%s\n' " "
@@ -310,6 +315,7 @@ plan_counts=()
 terminal_counts=()
 complete_counts=()
 unresolved_flags=()
+qa_allowed_flags=()
 names=()
 labels=()
 
@@ -323,8 +329,15 @@ for phase_dir in "${phase_dirs[@]}"; do
   terminal_count=$(count_terminal_summaries "$phase_dir")
   complete_count=$(count_complete_summaries "$phase_dir")
   unresolved=false
+  qa_allowed=true
+  qa_required=$(qa_required_for_phase "$phase_dir")
   uat_class=$(phase_uat_status_class "$phase_dir")
-  if [ "$uat_class" = "issues_found" ] || [ "$uat_class" = "active" ]; then
+  if [ "$plan_count" -gt 0 ] && [ "$complete_count" -ge "$plan_count" ] && [ "$qa_required" = true ] && ! qa_completion_allowed_for_phase "$phase_dir" "$SCRIPT_DIR"; then
+    qa_allowed=false
+  fi
+  if [ "$uat_class" = "issues_found" ] || [ "$uat_class" = "active" ] || {
+    [ "$plan_count" -gt 0 ] && [ "$complete_count" -ge "$plan_count" ] && [ "$qa_allowed" != true ]
+  }; then
     unresolved=true
   fi
 
@@ -332,8 +345,9 @@ for phase_dir in "${phase_dirs[@]}"; do
   terminal_counts+=("$terminal_count")
   complete_counts+=("$complete_count")
   unresolved_flags+=("$unresolved")
+  qa_allowed_flags+=("$qa_allowed")
   names+=("$(phase_dir_display_name "$phase_dir")")
-  labels+=("$(status_label_for_phase "$idx" "$plan_count" "$terminal_count" "$complete_count" "$uat_class")")
+  labels+=("$(status_label_for_phase "$idx" "$plan_count" "$terminal_count" "$complete_count" "$uat_class" "$qa_allowed")")
 
   if [ "$active_idx" -eq 0 ]; then
     if [ "$plan_count" -eq 0 ] || [ "$complete_count" -lt "$plan_count" ] || [ "$unresolved" = true ]; then
@@ -354,6 +368,7 @@ array_idx=$((active_idx - 1))
 active_plan_count=${plan_counts[$array_idx]}
 active_terminal_count=${terminal_counts[$array_idx]}
 active_complete_count=${complete_counts[$array_idx]}
+active_qa_allowed=${qa_allowed_flags[$array_idx]}
 active_name=${names[$array_idx]}
 
 if [ "$active_plan_count" -gt 0 ]; then
@@ -367,6 +382,8 @@ if [ "$all_done" = true ]; then
 elif [ "$active_uat_class" = "issues_found" ]; then
   active_status="needs_remediation"
 elif [ "$active_uat_class" = "active" ]; then
+  active_status="needs_verification"
+elif [ "$active_plan_count" -gt 0 ] && [ "$active_complete_count" -ge "$active_plan_count" ] && [ "$active_qa_allowed" != true ]; then
   active_status="needs_verification"
 elif [ "$active_plan_count" -eq 0 ]; then
   active_status="ready"

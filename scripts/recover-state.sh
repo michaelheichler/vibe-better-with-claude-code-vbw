@@ -2,11 +2,13 @@
 set -u
 
 _RS_SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+if [ -f "$_RS_SCRIPT_DIR/phase-state-utils.sh" ]; then
+  . "$_RS_SCRIPT_DIR/phase-state-utils.sh"
+fi
 if [ -f "$_RS_SCRIPT_DIR/summary-utils.sh" ]; then
   . "$_RS_SCRIPT_DIR/summary-utils.sh"
   is_plan_finalized() { is_summary_terminal "$1"; }
 else
-  # Safe default: treat plans as not finalized when helpers unavailable
   is_plan_finalized() { return 1; }
   extract_summary_status() { echo ""; return 1; }
 fi
@@ -22,7 +24,6 @@ PLANNING_DIR="${VBW_PLANNING_DIR:-.vbw-planning}"
 CONFIG_PATH="${PLANNING_DIR}/config.json"
 EVENTS_FILE="${PLANNING_DIR}/.events/event-log.jsonl"
 
-# Legacy fallback: honor v3_event_recovery if unprefixed key missing (pre-migration brownfield)
 if [ -f "$CONFIG_PATH" ] && command -v jq &>/dev/null; then
   EVENT_RECOVERY=$(jq -r 'if .event_recovery != null then .event_recovery elif .v3_event_recovery != null then .v3_event_recovery else false end' "$CONFIG_PATH" 2>/dev/null || echo "false")
   if [ "$EVENT_RECOVERY" != "true" ]; then
@@ -33,7 +34,6 @@ fi
 
 command -v jq &>/dev/null || { echo "{}"; exit 0; }
 
-# fromjson? because a crash-truncated trailing line must not mask earlier valid events
 latest_plan_event_status() {
   local _events_file="$1"
   local _phase="$2"
@@ -59,6 +59,12 @@ done
 [ -z "$PHASE_DIR" ] && { echo "{}"; exit 0; }
 
 PHASE_SLUG=$(basename "$PHASE_DIR" | sed "s/^$(printf '%02d' "$PHASE")-//")
+PLANNING_ROOT=$(planning_root_from_phase_dir "$PHASE_DIR")
+STATE_FILE="${PLANNING_ROOT}/.execution-state.json"
+PREVIOUS_STATE="{}"
+if [ -f "$STATE_FILE" ]; then
+  PREVIOUS_STATE=$(jq -c '.' "$STATE_FILE" 2>/dev/null || printf '%s' "{}")
+fi
 
 PLANS_JSON="[]"
 for plan_file in "$PHASE_DIR"/*-PLAN.md; do
@@ -80,9 +86,8 @@ for plan_file in "$PHASE_DIR"/*-PLAN.md; do
     PLAN_STATUS="pending"
   fi
 
-  # Policy: latest valid event is authoritative over SUMMARY.md, which may be stale.
   if [ -f "$EVENTS_FILE" ]; then
-    # zero-stripped because log-event.sh records bare integers, never "plan":01
+    # WHY: the latest valid event overrides stale SUMMARY.md state.
     PLAN_NUM=$(echo "$PLAN_ID" | sed 's/^[0-9]*-//' | sed 's/^0*//')
     [ -z "$PLAN_NUM" ] && PLAN_NUM="0"
     EVENT_STATUS=$(latest_plan_event_status "$EVENTS_FILE" "$PHASE" "$PLAN_NUM") || EVENT_STATUS=""
@@ -106,12 +111,16 @@ TOTAL=$(echo "$PLANS_JSON" | jq 'length' 2>/dev/null) || TOTAL=0
 COMPLETE=$(echo "$PLANS_JSON" | jq '[.[] | select(.status == "complete")] | length' 2>/dev/null) || COMPLETE=0
 FAILED=$(echo "$PLANS_JSON" | jq '[.[] | select(.status == "failed")] | length' 2>/dev/null) || FAILED=0
 TERMINAL=$(echo "$PLANS_JSON" | jq '[.[] | select(.status == "complete" or .status == "failed" or .status == "partial")] | length' 2>/dev/null) || TERMINAL=0
-
+QA_GATE_ROUTING=$(qa_gate_routing_for_phase "$PHASE_DIR" "$_RS_SCRIPT_DIR")
 
 if [ "$FAILED" -gt 0 ]; then
   STATUS="failed"
 elif [ "$COMPLETE" -eq "$TOTAL" ] && [ "$TOTAL" -gt 0 ]; then
-  STATUS="complete"
+  if [ "$QA_GATE_ROUTING" = "PROCEED_TO_UAT" ]; then
+    STATUS="complete"
+  else
+    STATUS="running"
+  fi
 elif [ "$TERMINAL" -eq "$TOTAL" ] && [ "$TOTAL" -gt 0 ]; then
   STATUS="partial"
 elif [ "$COMPLETE" -gt 0 ] || [ "$TERMINAL" -gt 0 ]; then
@@ -130,7 +139,9 @@ jq -n \
   --argjson wave "$CURRENT_WAVE" \
   --argjson total_waves "$MAX_WAVE" \
   --argjson plans "$PLANS_JSON" \
-  '{phase: $phase, phase_name: $phase_name, status: $status, wave: $wave, total_waves: $total_waves, plans: $plans}' \
+  --argjson previous "$PREVIOUS_STATE" \
+  '({phase: $phase, phase_name: $phase_name, status: $status, wave: $wave, total_waves: $total_waves, plans: $plans})
+   + ($previous | with_entries(select(.key == "qa_required" or .key == "effort" or .key == "phase_effort" or .key == "phase_qa_required")))' \
   2>/dev/null || echo "{}"
 
 exit 0
