@@ -65,6 +65,8 @@ run_preflight() {
 }
 
 @test "prompt-preflight fails open when jq is unavailable" {
+  printf '%s\n' '{"status":"running"}' > .vbw-planning/.execution-state.json
+
   local fake_bin="$TEST_TEMP_DIR/no-jq-bin"
   local command_name command_path
   mkdir -p "$fake_bin"
