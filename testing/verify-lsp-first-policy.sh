@@ -53,7 +53,7 @@ fi
 echo ""
 echo "--- Agent LSP-first guidance checks ---"
 
-LSP_AGENTS=("vbw-scout" "vbw-architect" "vbw-lead" "vbw-dev" "vbw-qa" "vbw-debugger" "vbw-docs")
+LSP_AGENTS=("vbw-scout" "vbw-architect" "vbw-lead" "vbw-dev" "vbw-qa-author" "vbw-qa" "vbw-debugger" "vbw-docs")
 
 for agent in "${LSP_AGENTS[@]}"; do
   role="${agent#vbw-}"

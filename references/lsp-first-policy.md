@@ -1,6 +1,6 @@
 # LSP-First Code Navigation Policy
 
-Repo-wide rule for all LSP-capable agents (Scout, Architect, Lead, Dev, QA, Debugger, Docs).
+Repo-wide rule for all LSP-capable agents (Scout, Architect, Lead, Dev, QA Author, QA, Debugger, Docs).
 
 ## When to use LSP
 
