@@ -365,7 +365,7 @@ phase_verification_assessment() {
   qa_result=$(printf '%s' "$qa_result" | tr '[:lower:]' '[:upper:]')
   case "$qa_result" in
     PASS)
-      qa_gate_routing=$(qa_gate_routing_for_phase "$phase_dir")
+      qa_gate_routing=$(bash "$_SCRIPT_DIR_PD/qa-result-gate.sh" "$phase_dir" 2>/dev/null | awk -F= '$1 == "qa_gate_routing" { print $2; exit }')
       case "${qa_gate_routing:-}" in
         REMEDIATION_REQUIRED)
           printf '%s\t%s\n' "failed" "none"

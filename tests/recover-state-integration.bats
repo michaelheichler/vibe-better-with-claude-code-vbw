@@ -74,7 +74,7 @@ SUMMARY
   run bash "$SCRIPTS_DIR/recover-state.sh" 1 ".vbw-planning/phases"
   [ "$status" -eq 0 ]
   echo "$output" | jq -e '.phase == 1' >/dev/null
-  echo "$output" | jq -e '.status == "complete"' >/dev/null
+  echo "$output" | jq -e '.status == "running"' >/dev/null
   echo "$output" | jq -e '.plans[0].status == "complete"' >/dev/null
 }
 
@@ -130,7 +130,7 @@ EVENTS
 
   run bash "$SCRIPTS_DIR/recover-state.sh" 1 ".vbw-planning/phases"
   [ "$status" -eq 0 ]
-  echo "$output" | jq -e '.status == "complete"' >/dev/null
+  echo "$output" | jq -e '.status == "running"' >/dev/null
   echo "$output" | jq -e '.plans[0].status == "complete"' >/dev/null
   echo "$output" | jq -e '.plans[1].status == "complete"' >/dev/null
 }
@@ -246,7 +246,8 @@ SUMMARY
 
   [ -f .vbw-planning/.execution-state.json ]
   recovered_status=$(jq -r '.status' .vbw-planning/.execution-state.json 2>/dev/null)
-  [ "$recovered_status" = "complete" ]
+  [ "$recovered_status" = "running" ]
+  [ "$(jq -r '.plans[0].status' .vbw-planning/.execution-state.json)" = "complete" ]
 }
 
 @test "session-start: does not recover when event log does not exist" {
@@ -369,7 +370,7 @@ SUMMARY
   recovered_phase=$(jq -r '.phase' .vbw-planning/.execution-state.json 2>/dev/null)
   [ "$recovered_phase" = "1" ]
   recovered_status=$(jq -r '.status' .vbw-planning/.execution-state.json 2>/dev/null)
-  [ "$recovered_status" = "complete" ]
+  [ "$recovered_status" = "running" ]
 }
 
 @test "session-start: rejects recovery when recovered phase differs from requested phase" {
@@ -580,7 +581,7 @@ SUMMARY
   run bash "$SCRIPTS_DIR/recover-state.sh" 1 ".vbw-planning/phases"
   [ "$status" -eq 0 ]
   echo "$output" | jq -e '.plans[0].status == "complete"' >/dev/null
-  echo "$output" | jq -e '.status == "complete"' >/dev/null
+  echo "$output" | jq -e '.status == "running"' >/dev/null
 }
 
 @test "recover-state: treats quoted SUMMARY status 'completed' as complete" {
@@ -599,7 +600,7 @@ SUMMARY
   run bash "$SCRIPTS_DIR/recover-state.sh" 1 ".vbw-planning/phases"
   [ "$status" -eq 0 ]
   echo "$output" | jq -e '.plans[0].status == "complete"' >/dev/null
-  echo "$output" | jq -e '.status == "complete"' >/dev/null
+  echo "$output" | jq -e '.status == "running"' >/dev/null
 }
 
 @test "session-start: reconcile resolves phase 3 to 03-* dir via find_phase_dir_by_num" {

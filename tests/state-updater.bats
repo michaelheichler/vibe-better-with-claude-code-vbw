@@ -5,6 +5,9 @@ load test_helper
 setup() {
   setup_temp_dir
   create_test_config
+  cd "$TEST_TEMP_DIR" || exit 1
+  printf '{"phase":1,"status":"running","phase_qa_required":{"1":false,"2":false,"3":false,"4":false}}
+' > .vbw-planning/.execution-state.json
 }
 
 teardown() {
@@ -66,6 +69,9 @@ EOF
 ---
 status: complete
 ---
+EOF
+  cat > .vbw-planning/.execution-state.json <<'EOF'
+{"phase":2,"status":"complete","qa_required":false,"phase_qa_required":{"2":false},"plans":[{"id":"02-01","status":"complete"}]}
 EOF
 
   if [ -n "$uat_status" ]; then
@@ -160,6 +166,9 @@ EOF
 status: complete
 ---
 EOF
+  cat > .vbw-planning/.execution-state.json <<'EOF'
+{"phase":2,"status":"complete","qa_required":false,"phase_qa_required":{"2":false},"plans":[{"id":"02-01","status":"complete"}]}
+EOF
 
   if [ -n "$uat_status" ]; then
     cat > .vbw-planning/phases/02-service-utility-tests/02-UAT.md <<EOF
@@ -238,6 +247,7 @@ EOF
   grep -q '^- \*\*Phase 1 (Setup):\*\* Complete$' .vbw-planning/STATE.md
   grep -q '^Status: complete$' .vbw-planning/STATE.md
   [ "$(jq -r '.status' .vbw-planning/.execution-state.json)" = "complete" ]
+  [ "$(jq -r '.phase_qa_required["1"]' .vbw-planning/.execution-state.json)" = "true" ]
 }
 
 @test "completion bypasses QA gate when qa_required is false" {
@@ -253,11 +263,13 @@ EOF
   grep -q '^- \[x\] Phase 1: Setup$' .vbw-planning/ROADMAP.md
   grep -q '^| 1 - Setup | 1/1 | complete | ' .vbw-planning/ROADMAP.md
   [ "$(jq -r '.status' .vbw-planning/.execution-state.json)" = "complete" ]
+  [ "$(jq -r '.phase_qa_required["1"]' .vbw-planning/.execution-state.json)" = "false" ]
 }
 
 @test "summary update advances STATE/ROADMAP without execution-state file" {
   cd "$TEST_TEMP_DIR"
   create_state_and_roadmap "$TEST_TEMP_DIR/.vbw-planning" 3
+  rm -f .vbw-planning/.execution-state.json
 
   mkdir -p .vbw-planning/phases/03-service-utility-tests
   echo "# plan" > .vbw-planning/phases/03-service-utility-tests/03-01-PLAN.md
@@ -276,8 +288,8 @@ SUMMARY
 
   grep -q '^Plans: 1/1$' .vbw-planning/STATE.md
   grep -q '^Progress: 100%$' .vbw-planning/STATE.md
-  grep -q '^- \[x\] Phase 3: Service Utility Tests$' .vbw-planning/ROADMAP.md
-  grep -Eq '^\| 3 - Service Utility Tests \| 1/1 \| complete \| [0-9]{4}-[0-9]{2}-[0-9]{2} \|$' .vbw-planning/ROADMAP.md
+  grep -q '^- \[ \] Phase 3: Service Utility Tests$' .vbw-planning/ROADMAP.md
+  grep -Eq '^\| 3 - Service Utility Tests \| 1/1 \| needs verification \| - \|$' .vbw-planning/ROADMAP.md
 }
 
 @test "summary update checks linked ROADMAP entry and preserves anchor" {
@@ -1172,7 +1184,7 @@ EOF
   run bash -c "cd '$TEST_TEMP_DIR' && printf '%s' '$input' | bash '$helperless_scripts/state-updater.sh'"
   [ "$status" -eq 0 ]
   [[ "$output" != *"command not found"* ]]
-  grep -q '^- \[x\] Phase 1: Setup$' .vbw-planning/ROADMAP.md
+  grep -q '^- \[ \] Phase 1: Setup$' .vbw-planning/ROADMAP.md
 }
 
 @test "advance_phase skips SOURCE-UAT files via shared uat-utils" {

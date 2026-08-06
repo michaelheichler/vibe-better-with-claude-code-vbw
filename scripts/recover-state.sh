@@ -141,7 +141,7 @@ jq -n \
   --argjson plans "$PLANS_JSON" \
   --argjson previous "$PREVIOUS_STATE" \
   '({phase: $phase, phase_name: $phase_name, status: $status, wave: $wave, total_waves: $total_waves, plans: $plans})
-   + ($previous | with_entries(select(.key == "qa_required" or .key == "effort" or .key == "phase_effort")))' \
+   + ($previous | with_entries(select(.key == "qa_required" or .key == "effort" or .key == "phase_effort" or .key == "phase_qa_required")))' \
   2>/dev/null || echo "{}"
 
 exit 0

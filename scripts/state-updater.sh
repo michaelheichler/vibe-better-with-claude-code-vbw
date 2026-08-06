@@ -6,8 +6,6 @@ if [ -f "$SCRIPT_DIR/uat-utils.sh" ]; then
   source "$SCRIPT_DIR/uat-utils.sh"
 fi
 if [ -f "$SCRIPT_DIR/summary-utils.sh" ]; then
-  # WHY: helper definitions are required.
-  # shellcheck source=summary-utils.sh
   source "$SCRIPT_DIR/summary-utils.sh"
 else
   count_complete_summaries() { echo "0"; }
@@ -15,8 +13,6 @@ else
   extract_summary_status() { printf ''; return 1; }
 fi
 if [ -f "$SCRIPT_DIR/phase-state-utils.sh" ]; then
-  # WHY: shared state helpers are required.
-  # shellcheck source=phase-state-utils.sh
   source "$SCRIPT_DIR/phase-state-utils.sh"
 else
   list_canonical_phase_dirs() {
@@ -57,7 +53,8 @@ else
     echo ".vbw-planning"
   }
   qa_required_for_phase() { printf '%s\n' "true"; }
-  qa_gate_routing_for_phase() { printf '%s\n' "PROCEED_TO_UAT"; }
+  qa_gate_routing_for_phase() { printf '%s\n' "QA_RERUN_REQUIRED"; }
+  qa_completion_allowed_for_phase() { return 1; }
 fi
 
 if ! type normalize_roadmap_phase_num >/dev/null 2>&1; then
@@ -496,14 +493,11 @@ phase_uat_status_class() {
 
 update_roadmap() {
   local phase_dir="$1"
-  local planning_root roadmap state_file
-  local qa_gate_checked=false
+  local qa_complete_allowed="${2:-}" planning_root roadmap
+  local QA_GATE_ROUTING=""
 
-  QA_GATE_ROUTING=""
   planning_root=$(planning_root_from_phase_dir "$phase_dir")
   roadmap="${planning_root}/ROADMAP.md"
-  state_file="${planning_root}/.execution-state.json"
-
   [ -f "$roadmap" ] || return 0
 
   local dirname table_phase_num checkbox_phase_num numbering_scheme display_numbering_scheme roadmap_total prefix_phase_num plan_count summary_count complete_count status date_str uat_class
@@ -526,14 +520,17 @@ update_roadmap() {
   [ "$plan_count" -eq 0 ] && return 0
 
   if [ "$complete_count" -eq "$plan_count" ]; then
-    QA_GATE_ROUTING=$(qa_gate_routing_for_phase "$phase_dir" "$SCRIPT_DIR")
-    if [ -f "$state_file" ] && [ "$(qa_required_for_phase "$phase_dir")" = "true" ]; then
-      qa_gate_checked=true
+    if [ -z "$qa_complete_allowed" ]; then
+      QA_GATE_ROUTING=$(qa_gate_routing_for_phase "$phase_dir" "$SCRIPT_DIR")
+      qa_complete_allowed=false
+      if [ "$QA_GATE_ROUTING" = "PROCEED_TO_UAT" ]; then
+        qa_complete_allowed=true
+      fi
     fi
     if [ "$uat_class" = "issues_found" ]; then
       status="uat issues"
       date_str="-"
-    elif [ "$uat_class" = "active" ] || { [ "$qa_gate_checked" = "true" ] && [ "$QA_GATE_ROUTING" != "PROCEED_TO_UAT" ]; }; then
+    elif [ "$uat_class" = "active" ] || [ "$qa_complete_allowed" != "true" ]; then
       status="needs verification"
       date_str="-"
     else
@@ -713,16 +710,23 @@ if is_phase_root_artifact "$FILE_PATH" && echo "$FILE_PATH" | grep -qE 'phases/[
     reconcile_state_md_for_changed_path "$FILE_PATH"
     RECONCILE_AFTER=false
   fi
-  QA_GATE_ROUTING=""
-  update_roadmap "$PHASE_DIR"
-  QA_GATE_ROUTING=$(qa_gate_routing_for_phase "$PHASE_DIR" "$SCRIPT_DIR")
-  QA_REQUIRED_FOR_PHASE=$(qa_required_for_phase "$PHASE_DIR")
+  qa_complete_allowed=false
+  if qa_completion_allowed_for_phase "$PHASE_DIR" "$SCRIPT_DIR"; then
+    qa_complete_allowed=true
+  fi
+  update_roadmap "$PHASE_DIR" "$qa_complete_allowed"
+  phase_key=$(printf '%s' "$PHASE" | sed 's/^0*//')
+  phase_key="${phase_key:-0}"
 
   if [ -f "$STATE_FILE" ] && [ -n "$PLAN" ] && [ -n "$STATUS" ]; then
     TEMP_FILE="${STATE_FILE}.tmp.$$.${RANDOM:-0}"
     terminal_summary_count=$(count_terminal_summaries "$PHASE_DIR" 2>/dev/null || echo 0)
-    jq --arg phase "$PHASE" --arg plan "$PLAN" --arg status "$STATUS" --arg summary_id "$SUMMARY_ID" --arg session_id "${CLAUDE_SESSION_ID:-}" --arg qa_gate_routing "${QA_GATE_ROUTING:-}" --argjson qa_required "$QA_REQUIRED_FOR_PHASE" --argjson terminal_summary_count "$terminal_summary_count" '
+    jq --arg phase "$PHASE" --arg phase_key "$phase_key" --arg plan "$PLAN" --arg status "$STATUS" --arg summary_id "$SUMMARY_ID" --arg session_id "${CLAUDE_SESSION_ID:-}" --argjson qa_complete_allowed "$qa_complete_allowed" --argjson terminal_summary_count "$terminal_summary_count" '
       def as_num: (try tonumber catch null);
+      if ((.phase? | tostring | as_num) == ($phase_key | as_num)) then
+        .phase_qa_required = ((.phase_qa_required // {}) + {($phase_key): (((.phase_qa_required[$phase_key] | type) == "boolean" and .phase_qa_required[$phase_key]) or (if (.qa_required | type) == "boolean" then .qa_required else true end))})
+      else . end
+      |
       (if (.plans | type) == "array" then
         .plans |= map(
           if (.id == $summary_id)
@@ -743,7 +747,7 @@ if is_phase_root_artifact "$FILE_PATH" && echo "$FILE_PATH" | grep -qE 'phases/[
            and ([.plans[].status] | all(. == "complete" or . == "partial" or . == "failed"))
         then .status = (if ([.plans[].status] | any(. == "failed")) then "failed"
                         elif ([.plans[].status] | all(. == "complete")) then
-                          if ($qa_required == false or $qa_gate_routing == "PROCEED_TO_UAT") then "complete" else .status end
+                          if $qa_complete_allowed then "complete" else .status end
                         else "partial" end)
         else . end
     ' "$STATE_FILE" > "$TEMP_FILE" 2>/dev/null && [ -s "$TEMP_FILE" ] && mv "$TEMP_FILE" "$STATE_FILE" 2>/dev/null || rm -f "$TEMP_FILE" 2>/dev/null

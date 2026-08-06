@@ -69,11 +69,25 @@ planning_root_from_phase_dir() {
 
 qa_required_for_phase() {
   local phase_dir="$1"
-  local planning_root state_file qa_required effort phase_effort
+  local planning_root state_file phase_num state_phase phase_qa_required qa_required effort phase_effort
 
   planning_root=$(planning_root_from_phase_dir "$phase_dir")
   state_file="${planning_root}/.execution-state.json"
   if [ ! -f "$state_file" ]; then
+    printf '%s\n' "true"
+    return 0
+  fi
+
+  phase_num=$(basename "${phase_dir%/}" | sed 's/^\([0-9]*\).*/\1/' | sed 's/^0*//')
+  phase_num="${phase_num:-0}"
+  phase_qa_required=$(jq -r --arg phase "$phase_num" 'if (.phase_qa_required | type) == "object" and (.phase_qa_required | has($phase)) then .phase_qa_required[$phase] else "__absent__" end' "$state_file" 2>/dev/null || printf '%s\n' "__absent__")
+  if [ "$phase_qa_required" = "true" ] || [ "$phase_qa_required" = "false" ]; then
+    printf '%s\n' "$phase_qa_required"
+    return 0
+  fi
+
+  state_phase=$(jq -r '.phase // "__absent__"' "$state_file" 2>/dev/null || printf '%s\n' "__absent__")
+  if [ "$state_phase" != "__absent__" ] && [ "$state_phase" != "$phase_num" ] && [ "$(printf '%s' "$state_phase" | sed 's/^0*//')" != "$phase_num" ]; then
     printf '%s\n' "true"
     return 0
   fi
@@ -99,23 +113,30 @@ qa_gate_routing_for_phase() {
 
   planning_root=$(planning_root_from_phase_dir "$phase_dir")
   state_file="${planning_root}/.execution-state.json"
-  if [ -z "$script_dir" ]; then
-    script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-  fi
-  if [ -f "$state_file" ] && [ "$(qa_required_for_phase "$phase_dir")" != "true" ]; then
+  if [ "$(qa_required_for_phase "$phase_dir")" != "true" ]; then
     printf '%s\n' "PROCEED_TO_UAT"
     return 0
   fi
+  if [ -z "$script_dir" ]; then
+    script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+  fi
   if [ ! -f "$state_file" ]; then
-    verification_file=$(bash "$script_dir/resolve-verification-path.sh" phase "$phase_dir" 2>/dev/null || true)
-    if [ ! -f "$verification_file" ]; then
-      printf '%s\n' "PROCEED_TO_UAT"
+    if ! verification_file=$(bash "$script_dir/resolve-verification-path.sh" phase "$phase_dir" 2>/dev/null); then
+      printf '%s\n' "QA_RERUN_REQUIRED"
+      return 0
+    fi
+    if [ -z "$verification_file" ] || [ ! -f "$verification_file" ]; then
+      printf '%s\n' "QA_RERUN_REQUIRED"
       return 0
     fi
   fi
 
   routing=$(bash "$script_dir/qa-result-gate.sh" "$phase_dir" 2>/dev/null | awk -F= '$1 == "qa_gate_routing" { routing = $2 } END { print routing }')
   printf '%s\n' "${routing:-QA_RERUN_REQUIRED}"
+}
+
+qa_completion_allowed_for_phase() {
+  [ "$(qa_gate_routing_for_phase "$1" "${2:-}")" = "PROCEED_TO_UAT" ]
 }
 
 qa_completion_allowed_for_phase() {
