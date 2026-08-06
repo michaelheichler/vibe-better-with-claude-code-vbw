@@ -1,0 +1,56 @@
+tests/recover-state-integration.bats
+  s_e8b702480499cf::t_88f8f774c7b767 77
+  s_e8b702480499cf::t_d8627265275378 249-250
+  s_e8b702480499cf::t_6fdd2fb614e472 584
+  s_e8b702480499cf::t_17bf0620ec5d5f 603
+  s_e8b702480499cf::t_df11b1d9c9f0e5 373
+  s_e8b702480499cf::t_0b9bdafde07b6d 133
+tests/qa-required-completion-gate.bats
+  s_e8b702480499cf::t_b7287afccb3cba 19-21,24,27,29-30,32-34,39,44-45,47-73,75
+scripts/recover-state.sh
+  s_e8b702480499cf::t_e52285970971eb 144
+scripts/phase-state-utils.sh
+  s_e8b702480499cf::t_a9f87a4060f3c9 116,120-122,124-129,137-139
+  s_e8b702480499cf::t_9eff98657dc59d 83
+  s_e8b702480499cf::t_51bdabc083625c 72,81-82,84-90,92-93
+  s_e8b702480499cf::t_ec0a8832095918 91
+  s_e8b702480499cf::t_bde464b53ec7af 94
+  s_e8b702480499cf::t_0519126647c2cd 140
+scripts/qa-gate.sh
+  s_e8b702480499cf::t_ab09d46b6391d7 36
+scripts/state-updater.sh
+  s_e8b702480499cf::t_c7fe75c04a4b52 726,728-729
+  s_e8b702480499cf::t_acfa87e12b5a72 727
+  s_e8b702480499cf::t_de505b53535366 750
+  s_e8b702480499cf::t_e87b96f6d9d060 713-719,724
+  s_e8b702480499cf::t_e9e3b9e2195f8e 496
+  s_e8b702480499cf::t_023f5794395860 56-57
+  s_e8b702480499cf::t_0f0955061b3513 497
+  s_e8b702480499cf::t_f24f95e7316f1f 523-528,533
+tests/state-updater.bats
+  s_e8b702480499cf::t_c950f00fec1919 72-74,168-170
+  s_e8b702480499cf::t_eef77003ec806e 250
+  s_e8b702480499cf::t_418396a0ae2156 291-292
+  s_e8b702480499cf::t_df8b316d5ea771 8-10
+  s_e8b702480499cf::t_ccf68aa14814f5 266
+  s_e8b702480499cf::t_c667496fdd65f7 272
+  s_e8b702480499cf::t_d7f7e854e0cd9d 1187
+scripts/lib/phase-detect-support.sh
+  s_e8b702480499cf::t_7a2eb1bed396f4 368
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "fd2a991f92142373cd2d1367679e7fc2e19d3d4a",
+  "prompts": {},
+  "sessions": {
+    "s_e8b702480499cf": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b86dd062-285e-44f0-9749-b1a13364f007",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
