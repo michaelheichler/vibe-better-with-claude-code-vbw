@@ -3,6 +3,7 @@ set -euo pipefail
 
 
 PLANNING_DIR="${1:-.vbw-planning}"
+STATE="$PLANNING_DIR/STATE.md"
 ROADMAP="$PLANNING_DIR/ROADMAP.md"
 
 if [[ ! -f "$ROADMAP" ]]; then
@@ -21,6 +22,24 @@ normalize_slug() {
 
 derive_slug() {
   local slug=""
+  local milestone_name=""
+
+  if [[ -f "$STATE" ]]; then
+    milestone_name=$(awk '
+      /^\*\*Milestone:\*\*/ {
+        sub(/^\*\*Milestone:\*\*[[:space:]]*/, "")
+        sub(/[[:space:]]*$/, "")
+        if (length > 0) {
+          print
+          exit
+        }
+      }
+    ' "$STATE")
+    if [[ -n "$milestone_name" ]]; then
+      normalize_slug "$milestone_name"
+      return
+    fi
+  fi
 
   local roadmap_content
   roadmap_content=$(cat "$ROADMAP")
@@ -67,8 +86,8 @@ derive_slug() {
   fi
 
   phase_names=$(printf '%s\n' "$roadmap_content" | awk '
-    /^[-*] +(Phase [0-9]+: )?/ {
-      sub(/^[-*] +(Phase [0-9]+: )?/, "")
+    /^[-*][[:space:]]+(\[[ xX]\][[:space:]]+)?(Phase [0-9]+:[[:space:]]+)?/ {
+      sub(/^[-*][[:space:]]+(\[[ xX]\][[:space:]]+)?(Phase [0-9]+:[[:space:]]+)?/, "")
       sub(/ - .*/, "")
       sub(/[[:space:]]*$/, "")
       if (length > 0) print
