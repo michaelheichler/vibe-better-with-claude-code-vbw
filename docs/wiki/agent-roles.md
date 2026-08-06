@@ -36,7 +36,7 @@ Model values come from `templates/agent-roles/defaults.json` and may differ by r
 
 ### LSP-First Navigation
 
-`references/lsp-first-policy.md` is a repo-wide rule that applies to all 7 LSP-capable agents (Scout, Architect, Lead, Dev, QA, Debugger, Docs). All of them use LSP first for semantic navigation (go-to-definition, find-references, workspace/document symbols, call hierarchy, diagnostics) and fall back immediately to Grep/Glob for literal strings, filenames, non-code assets, or when LSP is unavailable or errors. There is no retry of a failing LSP call. The Lead has an extra nuance: when a plan already has `RESEARCH.md`, it must avoid broad exploratory scans, but targeted LSP validation of specific known symbols is still preferred over Grep for that case.
+`references/lsp-first-policy.md` is a repo-wide rule that applies to all 8 LSP-capable agents (Scout, Architect, Lead, Dev, QA Author, QA, Debugger, Docs). All of them use LSP first for semantic navigation (go-to-definition, find-references, workspace/document symbols, call hierarchy, diagnostics) and fall back immediately to Grep/Glob for literal strings, filenames, non-code assets, or when LSP is unavailable or errors. There is no retry of a failing LSP call. The Lead has an extra nuance: when a plan already has `RESEARCH.md`, it must avoid broad exploratory scans, but targeted LSP validation of specific known symbols is still preferred over Grep for that case.
 
 ## Role Responsibilities
 

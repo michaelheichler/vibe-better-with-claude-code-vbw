@@ -11,7 +11,7 @@
 VBW is a Claude Code plugin that adds a structured plan to execute to verify to UAT workflow on
 top of Claude Code's slash-command and subagent primitives. It has no runtime process of its
 own. Every "flow" is a markdown command file expanding into an LLM turn, which then spawns
-specialized subagents (Scout, Architect, Lead, Dev, QA, Debugger, Docs) via the `Agent` tool.
+specialized subagents (Scout, Architect, Lead, Dev, QA Author, QA, Debugger, Docs) via the `Agent` tool.
 State is persisted as files under `.vbw-planning/`, and 30 hook handlers (11 event types) wrap
 every session/tool boundary to keep that state consistent.
 
@@ -99,6 +99,7 @@ flowchart TB
         ARCH["Architect (roadmap)"]
         LEAD["Lead (per-phase plan)"]
         DEV["Dev (execute, full tools)"]
+        QA_AUTHOR["QA Author (red-stage tests)"]
         QA["QA (read-only verify)"]
         DEBUG["Debugger"]
         DOCS["Docs"]
@@ -125,6 +126,7 @@ flowchart TB
     GATE -->|PROCEED_TO_UAT| VIBE
     OTHER --> SCOUT
     OTHER --> ARCH
+    OTHER --> QA_AUTHOR
     OTHER --> DEBUG
     OTHER --> DOCS
     LEAD -.model.-> MODELRES

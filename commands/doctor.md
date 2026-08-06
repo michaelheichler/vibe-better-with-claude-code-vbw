@@ -123,7 +123,7 @@ VBW Doctor v{version}
   3. Version sync          {PASS|FAIL} {detail}
   4. Plugin cache          {PASS|FAIL} {detail}
   5. hooks.json valid      {PASS|FAIL}
-  6. Agent files           {PASS|FAIL} {count}/7
+  6. Agent role templates {PASS|FAIL} {count}/8
   7. Config valid          {PASS|FAIL|SKIP}
   8. Scripts executable    {PASS|WARN} {detail}
   9. gh CLI                {PASS|WARN}

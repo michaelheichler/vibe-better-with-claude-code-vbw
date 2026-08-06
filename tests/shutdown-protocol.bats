@@ -82,7 +82,7 @@ teardown() {
   for agent in dev qa scout lead debugger docs; do
     # Each handler must contain a STOP instruction
     sed -n '/^## Shutdown Handling$/,/^## /p' "$PROJECT_ROOT/templates/agent-roles/${agent}.md.tpl" | grep -qi 'STOP' || {
-      echo "vbw-${agent}.md Shutdown Handling section missing STOP instruction"
+      echo "$PROJECT_ROOT/templates/agent-roles/${agent}.md.tpl Shutdown Handling section missing STOP instruction"
       return 1
     }
   done
