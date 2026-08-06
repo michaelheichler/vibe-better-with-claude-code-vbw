@@ -276,8 +276,10 @@ fi
 
 
 for role in dev qa docs lead scout architect debugger qa-author; do
-  if jq -e --arg role "$role" '.[$role] | has("maxTurns")' "$DEFAULTS" >/dev/null; then
-    fail "$role: maxTurns still in role defaults"
+  if ! jq -e --arg role "$role" \
+      'has($role) and (.[$role] | type == "object" and (has("maxTurns") | not))' \
+      "$DEFAULTS" >/dev/null; then
+    fail "$role: missing role or maxTurns still in role defaults"
   else
     pass "$role: no maxTurns in role defaults"
   fi

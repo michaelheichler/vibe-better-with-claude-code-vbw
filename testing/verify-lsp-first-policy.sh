@@ -67,7 +67,7 @@ for agent in "${LSP_AGENTS[@]}"; do
 
   if jq -e --arg role "$role" '((.[$role].tools // "") | contains("LSP"))' "$DEFAULTS" >/dev/null; then
     pass "${SHORT_NAME}: LSP in tools list"
-  elif jq -e --arg role "$role" '((.[$role].disallowedTools // "") | contains("LSP") | not)' "$DEFAULTS" >/dev/null; then
+  elif jq -e --arg role "$role" 'if ((.[$role].disallowedTools // "") == "") then false else ((.[$role].disallowedTools | contains("LSP")) | not) end' "$DEFAULTS" >/dev/null; then
     pass "${SHORT_NAME}: LSP inherited via disallowedTools pattern (not denied)"
   elif [[ "$agent" == "vbw-dev" ]] && grep -Eiq 'Prefer.*LSP|prefer.*LSP' "$AGENT_FILE"; then
     pass "${SHORT_NAME}: LSP inherited (tools via context), LSP guidance present"

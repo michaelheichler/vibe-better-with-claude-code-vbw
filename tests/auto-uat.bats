@@ -1234,11 +1234,11 @@ EOF
   grep -q "AskUserQuestion" "$verify"
 }
 
-@test "vbw-qa.md does NOT have AskUserQuestion in tools" {
-  local qa="$BATS_TEST_DIRNAME/../templates/agent-roles/qa.md.tpl"
+@test "qa role defaults do NOT allow AskUserQuestion" {
+  local defaults="$BATS_TEST_DIRNAME/../templates/agent-roles/defaults.json"
   # QA agent must NOT have AskUserQuestion — it cannot interact with the user
   # This is the architectural reason UAT cannot be delegated to QA
-  ! grep -q "AskUserQuestion" "$qa"
+  ! jq -e '.qa.disallowedTools | contains("AskUserQuestion")' "$defaults" >/dev/null
 }
 
 # --- Contract: UAT automated-check prohibition (issue #274) ---

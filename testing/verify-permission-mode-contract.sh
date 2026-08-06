@@ -102,6 +102,12 @@ for agent in $AGENTS; do
     continue
   fi
 
+  if grep -Fqx 'permissionMode: "{{PERMISSION_MODE}}"' "$AGENT_FILE"; then
+    pass "${SHORT_NAME}: permissionMode placeholder present"
+  else
+    fail "${SHORT_NAME}: permissionMode placeholder missing"
+  fi
+
   ACTUAL="$(jq -r --arg role "$role" '.[$role].permissionMode' "$DEFAULTS_FILE")"
   if [[ "$ACTUAL" == "$EXPECTED" ]]; then
     pass "${SHORT_NAME}: permissionMode is ${ACTUAL}"
