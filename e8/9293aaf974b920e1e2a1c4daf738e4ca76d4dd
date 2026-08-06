@@ -1,0 +1,30 @@
+testing/verify-live-validation-policy.sh
+  s_e8b702480499cf::t_b24891ed369896 75,77
+  s_e8b702480499cf::t_cc70d22335f8c6 69,71
+docs/wiki/agent-roles.md
+  s_e8b702480499cf::t_f0cd7486fa907b 39
+commands/doctor.md
+  s_e8b702480499cf::t_32cd25b9bdd184 126
+ARCHITECTURE.md
+  s_e8b702480499cf::t_d436e5a89da524 129
+  s_e8b702480499cf::t_9dccd347543519 14
+  s_e8b702480499cf::t_e2fd8af24f27bb 102
+tests/shutdown-protocol.bats
+  s_e8b702480499cf::t_b5b52a7fa0ac9a 85
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "e89293aaf974b920e1e2a1c4daf738e4ca76d4dd",
+  "prompts": {},
+  "sessions": {
+    "s_e8b702480499cf": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b86dd062-285e-44f0-9749-b1a13364f007",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
