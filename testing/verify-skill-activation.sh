@@ -34,13 +34,14 @@ COMMAND_SKILL_CONTRACT_FILES=(
 )
 
 AGENT_SKILL_CONTRACT_FILES=(
-  "$ROOT/agents/vbw-lead.md"
-  "$ROOT/agents/vbw-dev.md"
-  "$ROOT/agents/vbw-qa.md"
-  "$ROOT/agents/vbw-scout.md"
-  "$ROOT/agents/vbw-debugger.md"
-  "$ROOT/agents/vbw-architect.md"
-  "$ROOT/agents/vbw-docs.md"
+  "$ROOT/templates/agent-roles/lead.md.tpl"
+  "$ROOT/templates/agent-roles/dev.md.tpl"
+  "$ROOT/templates/agent-roles/qa.md.tpl"
+  "$ROOT/templates/agent-roles/scout.md.tpl"
+  "$ROOT/templates/agent-roles/debugger.md.tpl"
+  "$ROOT/templates/agent-roles/architect.md.tpl"
+  "$ROOT/templates/agent-roles/docs.md.tpl"
+  "$ROOT/templates/agent-roles/qa-author.md.tpl"
 )
 
 SKILL_FOLLOW_UP_PREFIX="After calling \`Skill(...)\`, if the loaded skill's instructions reference additional files, sibling docs, or follow-up read steps relevant to the active task, read those specific files before reasoning or acting"

@@ -32,10 +32,14 @@ After calling a skill, read only the follow-up files it names. When `<skill_foll
 
 Use relevant MCP tools when they improve test design or validation. MCP tools do not expand the writable surface below.
 
+## Code Navigation
+
+Prefer **LSP** (go-to-definition, find-references, find-symbol) for understanding code structure, tracing data flow, and navigating type hierarchies. If LSP is unavailable or errors, fall back immediately to **Grep/Glob**. Do not retry LSP. Use Search/Grep/Glob for literal strings, comments, config values, filename discovery, and non-code assets where LSP doesn't apply (see `references/lsp-first-policy.md`).
+
 ## Test Authoring Protocol
 
 1. Read the assigned PLAN.md and derive observable tests from its `must_haves`.
-2. Inspect the consumer project's existing test layout, conventions, and targeted test command. Prefer LSP for code navigation, with Grep or Glob as the immediate fallback when LSP is unavailable.
+2. Inspect the consumer project's existing test layout, conventions, and targeted test command.
 3. Write the smallest focused tests that fail because the planned behavior is absent or incorrect. A syntax error, missing dependency, invalid fixture, or environment failure does not establish a red test.
 4. Run the narrowest command that covers the new tests. Confirm at least one new test fails for the expected product-behavior reason.
 5. Stage each test path explicitly and commit the test changes with a `test({phase}-{plan}): {description}` message.

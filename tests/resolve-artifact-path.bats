@@ -329,7 +329,7 @@ teardown() {
 }
 
 @test "contract: vbw-lead.md references resolve-artifact-path.sh" {
-  grep -q 'resolve-artifact-path\.sh\|RESOLVE_SCRIPT' agents/vbw-lead.md
+  grep -q 'resolve-artifact-path\.sh\|RESOLVE_SCRIPT' templates/agent-roles/lead.md.tpl
 }
 
 @test "contract: execute-protocol.md calls resolve-artifact-path.sh" {

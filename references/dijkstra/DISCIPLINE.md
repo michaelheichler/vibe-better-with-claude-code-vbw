@@ -1,6 +1,6 @@
 # Dijkstra Correctness Discipline
 
-On-demand grounding for correctness-critical implementation work (Dev) and its verification (QA). Loaded when a task triggers the Correctness Discipline section in `agents/vbw-dev.md` or the Correctness Verification section in `agents/vbw-qa.md`.
+On-demand grounding for correctness-critical implementation work (Dev) and its verification (QA). Loaded when a task triggers the Correctness Discipline section in `templates/agent-roles/dev.md.tpl` or the Correctness Verification section in `templates/agent-roles/qa.md.tpl`.
 
 ## Purpose
 

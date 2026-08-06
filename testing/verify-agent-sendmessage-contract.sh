@@ -3,33 +3,31 @@ set -euo pipefail
 # Contract: an agent body referencing SendMessage must have the tool grantable.
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+DEFAULTS="$REPO_ROOT/templates/agent-roles/defaults.json"
 
 fail_agents=()
 checked=0
 
-for agent_file in "$REPO_ROOT"/agents/vbw-*.md; do
+for agent_file in "$REPO_ROOT"/templates/agent-roles/*.md.tpl; do
   [ -f "$agent_file" ] || continue
 
-  frontmatter="$(awk '/^---$/{n++; next} n==1{print} n>=2{exit}' "$agent_file")"
   body="$(awk '/^---$/{n++; next} n>=2{print}' "$agent_file")"
 
   printf '%s' "$body" | grep -q 'SendMessage' || continue
   checked=$((checked + 1))
 
-  tools_line="$(printf '%s\n' "$frontmatter" | grep -E '^tools:' || true)"
-  disallowed_line="$(printf '%s\n' "$frontmatter" | grep -E '^disallowedTools:' || true)"
+  role="$(basename "$agent_file" .md.tpl)"
+  tools_line="$(jq -r --arg role "$role" '.[$role].tools // empty' "$DEFAULTS")"
+  disallowed_line="$(jq -r --arg role "$role" '.[$role].disallowedTools // empty' "$DEFAULTS")"
 
   if [ -n "$tools_line" ]; then
-    if ! printf '%s' "$tools_line" | sed 's/^tools:[[:space:]]*//' | tr ',' '\n' \
+    if ! printf '%s' "$tools_line" | tr ',' '\n' \
         | sed 's/^[[:space:]]*//; s/[[:space:]]*$//' | grep -qx 'SendMessage'; then
       fail_agents+=("$(basename "$agent_file"): body references SendMessage but tools: allowlist omits it")
     fi
-  else
-    if [ -n "$disallowed_line" ] && printf '%s' "$disallowed_line" \
-        | sed 's/^disallowedTools:[[:space:]]*//' | tr ',' '\n' \
-        | sed 's/^[[:space:]]*//; s/[[:space:]]*$//' | grep -qx 'SendMessage'; then
-      fail_agents+=("$(basename "$agent_file"): body references SendMessage but disallowedTools denies it")
-    fi
+  elif printf '%s' "$disallowed_line" | tr ',' '\n' \
+      | sed 's/^[[:space:]]*//; s/[[:space:]]*$//' | grep -qx 'SendMessage'; then
+    fail_agents+=("$(basename "$agent_file"): body references SendMessage but disallowedTools denies it")
   fi
 done
 

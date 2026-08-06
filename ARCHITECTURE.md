@@ -11,7 +11,7 @@
 VBW is a Claude Code plugin that adds a structured plan to execute to verify to UAT workflow on
 top of Claude Code's slash-command and subagent primitives. It has no runtime process of its
 own. Every "flow" is a markdown command file expanding into an LLM turn, which then spawns
-specialized subagents (Scout, Architect, Lead, Dev, QA, Debugger, Docs) via the `Agent` tool.
+specialized subagents (Scout, Architect, Lead, Dev, QA Author, QA, Debugger, Docs) via the `Agent` tool.
 State is persisted as files under `.vbw-planning/`, and 30 hook handlers (11 event types) wrap
 every session/tool boundary to keep that state consistent.
 
@@ -20,7 +20,7 @@ every session/tool boundary to keep that state consistent.
 | Area | Path | Role |
 |---|---|---|
 | Commands | `commands/*.md` (26) | Slash-command entry points (`/vbw:vibe`, `/vbw:plan`, `/vbw:qa`, ...). Each resolves the plugin root, computes phase state, and routes to a mode. |
-| Agents | `agents/vbw-*.md` (7) | Scout, Architect, Lead, Dev, QA, Debugger, Docs, role definitions with platform-enforced tool allow/deny lists. Scout and QA are read-only (`permissionMode: plan`). |
+| Agents | `templates/agent-roles/*.md.tpl` + `templates/agent-roles/defaults.json` (8) | Scout, Architect, Lead, Dev, QA Author, QA, Debugger, Docs, role prose templates with frontmatter rendered from the role defaults. Scout and QA are read-only (`permissionMode: plan`). |
 | Hooks | `hooks/hooks.json` | 30 handlers across SessionStart, Stop, PreToolUse, PostToolUse, SubagentStart/Stop, Notification, PreCompact, TaskCompleted, TeammateIdle, UserPromptSubmit. All route through `scripts/hook-wrapper.sh`. |
 | Scripts | `scripts/*.sh` (173) | State management, plugin-root resolution, context compilation, model routing, QA-gate logic, bootstrap/diagnostics. Bash 4.4+, `set -euo pipefail` on critical paths. |
 | References | `references/*.md` | On-demand protocol docs loaded by commands (`execute-protocol.md`, `verification-protocol.md`, `subagent-contracts.md`, extracted `vibe-*` modules). |
@@ -94,11 +94,12 @@ flowchart TB
         ROOTRES["resolve-plugin-root.sh"]
     end
 
-    subgraph Agents["Agents (agents/vbw-*.md)"]
+    subgraph Agents["Agent roles (templates/agent-roles/*.md.tpl + defaults.json)"]
         SCOUT["Scout (read-only research)"]
         ARCH["Architect (roadmap)"]
         LEAD["Lead (per-phase plan)"]
         DEV["Dev (execute, full tools)"]
+        QA_AUTHOR["QA Author (red-stage tests)"]
         QA["QA (read-only verify)"]
         DEBUG["Debugger"]
         DOCS["Docs"]
@@ -125,6 +126,7 @@ flowchart TB
     GATE -->|PROCEED_TO_UAT| VIBE
     OTHER --> SCOUT
     OTHER --> ARCH
+    OTHER --> QA_AUTHOR
     OTHER --> DEBUG
     OTHER --> DOCS
     LEAD -.model.-> MODELRES

@@ -1,6 +1,6 @@
 # LSP-First Code Navigation Policy
 
-Repo-wide rule for all LSP-capable agents (Scout, Architect, Lead, Dev, QA, Debugger, Docs).
+Repo-wide rule for all LSP-capable agents (Scout, Architect, Lead, Dev, QA Author, QA, Debugger, Docs).
 
 ## When to use LSP
 
@@ -37,8 +37,8 @@ When RESEARCH.md exists, the Lead must not do broad exploratory scanning. But **
 ### Lead (no-research path)
 Full LSP-first scanning: use LSP for type hierarchies, call sites, data flow. Grep/Glob for pattern matching, string searches, file discovery.
 
-### Dev / QA / Debugger
-LSP-first for all code navigation during implementation, verification, and investigation. Grep/Glob for literal-text matches and file discovery.
+### Dev / QA Author / QA / Debugger
+LSP-first for all code navigation during implementation, test authoring, verification, and investigation. Grep/Glob for literal-text matches and file discovery.
 
 ### Scout / Architect / Docs
 LSP available for code understanding when needed. Grep/Glob remains primary for research, file discovery, and documentation tasks where semantic navigation is secondary.

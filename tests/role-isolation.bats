@@ -151,32 +151,32 @@ CONTRACT
 # --- Role isolation in agent YAML ---
 
 @test "agent: lead has V2 role isolation section" {
-  run grep -c "V2 Role Isolation" "$PROJECT_ROOT/agents/vbw-lead.md"
+  run grep -c "V2 Role Isolation" "$PROJECT_ROOT/templates/agent-roles/lead.md.tpl"
   [ "$output" -ge 1 ]
 }
 
 @test "agent: dev has V2 role isolation section" {
-  run grep -c "V2 Role Isolation" "$PROJECT_ROOT/agents/vbw-dev.md"
+  run grep -c "V2 Role Isolation" "$PROJECT_ROOT/templates/agent-roles/dev.md.tpl"
   [ "$output" -ge 1 ]
 }
 
 @test "agent: architect has V2 role isolation section" {
-  run grep -c "V2 Role Isolation" "$PROJECT_ROOT/agents/vbw-architect.md"
+  run grep -c "V2 Role Isolation" "$PROJECT_ROOT/templates/agent-roles/architect.md.tpl"
   [ "$output" -ge 1 ]
 }
 
 @test "agent: qa has V2 role isolation section" {
-  run grep -c "V2 Role Isolation" "$PROJECT_ROOT/agents/vbw-qa.md"
+  run grep -c "V2 Role Isolation" "$PROJECT_ROOT/templates/agent-roles/qa.md.tpl"
   [ "$output" -ge 1 ]
 }
 
 @test "agent: scout has V2 role isolation section" {
-  run grep -c "V2 Role Isolation" "$PROJECT_ROOT/agents/vbw-scout.md"
+  run grep -c "V2 Role Isolation" "$PROJECT_ROOT/templates/agent-roles/scout.md.tpl"
   [ "$output" -ge 1 ]
 }
 
 @test "agent: debugger has V2 role isolation section" {
-  run grep -c "V2 Role Isolation" "$PROJECT_ROOT/agents/vbw-debugger.md"
+  run grep -c "V2 Role Isolation" "$PROJECT_ROOT/templates/agent-roles/debugger.md.tpl"
   [ "$output" -ge 1 ]
 }
 

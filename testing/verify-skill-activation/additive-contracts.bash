@@ -1,7 +1,7 @@
 echo "=== Additive Agent Skill Model ==="
 
-for agent_file in vbw-dev.md vbw-qa.md vbw-docs.md vbw-lead.md vbw-scout.md vbw-architect.md vbw-debugger.md; do
-  AGENT_PATH="$ROOT/agents/$agent_file"
+for agent_file in dev.md.tpl qa.md.tpl docs.md.tpl lead.md.tpl scout.md.tpl architect.md.tpl debugger.md.tpl; do
+  AGENT_PATH="$ROOT/templates/agent-roles/$agent_file"
 
   if grep -q 'starting set, not a ceiling' "$AGENT_PATH"; then
     pass "$agent_file: treats orchestrator selection as a starting set"
