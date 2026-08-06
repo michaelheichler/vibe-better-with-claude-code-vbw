@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.40.3] - 2026-08-06
+
+### Added
+
+- **`orchestrator-contract`**: `prompt-preflight.sh` injects a per-turn advisory reminder when `.execution-state.json` status is not complete, so the orchestrator role (delegate implementation to Dev, verification to QA) stays resident across turns instead of drifting after context loss. (PR #27)
+- **`qa-required-gate`**: new `.execution-state.json.qa_required` field distinguishes an intentional QA skip (turbo effort, explicit skip flag, or a listed agent) from QA silently never running. Completion writers (`state-updater.sh`, `recover-state.sh`, `reconcile-state-md.sh`) now route through the shared gate and refuse to flip a phase to complete without it, including a persisted per-phase `phase_qa_required` map so reconciliation applies each phase's own policy instead of the current phase's. (PR #29)
+
+### Fixed
+
+- **`orchestrator-guards`**: `file-guard.sh` and `vibe-write-guard.sh` widened their activation window: a phase with any unfinalized `PLAN.md` (numbered or bare) now blocks direct orchestrator product writes, not just a live `running` execution state within a staleness window. Both guards share the detection logic via `scripts/lib/guard-enforcement.sh`, including a centralized `templates/agent-roles/*.tpl` exemption so the orchestrator can still edit the real agent-generation source of truth. (PR #28)
+- **`agent-templates`**: removed the 8 unused static `agents/vbw-*.md` files, dead weight since PR #25's ephemeral generator reads only `templates/agent-roles/*.tpl` and `defaults.json`. Closes an unintended ad hoc spawn bypass in `agent-spawn-guard.sh` that could load the stale static content outside an active vibe execute manifest window. (PR #26)
+- **`milestone-slug`**: `derive-milestone-slug.sh` now prefers `STATE.md`'s `**Milestone:**` field before falling back to ROADMAP scraping, and its checkbox-list tier correctly strips `[ ]`/`[x]`/`[X]` markers instead of capturing them into the slug. (PR #30)
+
 ## [1.40.2] - 2026-08-05
 
 ### Added
