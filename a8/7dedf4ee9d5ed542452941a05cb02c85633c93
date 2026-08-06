@@ -1,0 +1,19 @@
+tests/prompt-preflight-orchestrator-contract.bats
+  s_e8b702480499cf::t_43a8e4bdaf93d9 68-69
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "a87dedf4ee9d5ed542452941a05cb02c85633c93",
+  "prompts": {},
+  "sessions": {
+    "s_e8b702480499cf": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b86dd062-285e-44f0-9749-b1a13364f007",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
