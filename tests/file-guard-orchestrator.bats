@@ -230,6 +230,19 @@ EOF
   [ "$status" -eq 0 ]
 }
 
+@test "file-guard allows orchestrator writes to agent-role templates during an active plan" {
+  local input
+  write_active_plan
+  mkdir -p "$TEST_TEMP_DIR/templates/agent-roles"
+  mark_orchestrator
+  input=$(jq -n '{session_id:"session-A",tool_name:"Write",tool_input:{file_path:"templates/agent-roles/dev.md.tpl",content:"ok"}}')
+
+  run bash -c 'unset CLAUDE_CODE_CHILD_SESSION VBW_AGENT_ROLE VBW_ACTIVE_AGENT; printf "%s\n" "$1" | bash "$2"' _ \
+    "$input" "$SCRIPTS_DIR/file-guard.sh"
+
+  [ "$status" -eq 0 ]
+}
+
 @test "file-guard allows turbo and direct effort with an active plan" {
   local input effort
   write_active_plan

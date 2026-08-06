@@ -488,6 +488,10 @@ _DG_TARGET_IN_PROJECT=false
 case "$_DG_TARGET_ABS" in
   "$_DG_PROJECT_ABS"|"$_DG_PROJECT_ABS""/"*) _DG_TARGET_IN_PROJECT=true ;;
 esac
+_DG_TEMPLATE_EXEMPT=false
+case "$_DG_TARGET_ABS" in
+  "$_DG_PROJECT_ABS/templates/agent-roles/"*.tpl) _DG_TEMPLATE_EXEMPT=true ;;
+esac
 
 if [ "$_DG_TARGET_IN_PROJECT" = true ] && [ -z "${VBW_AGENT_ROLE:-}" ] && [ -z "${VBW_ACTIVE_AGENT:-}" ] && [ "$_FG_CALLER_IS_DELEGATED" = false ]; then
   _DELEG_FILE="$PROJECT_ROOT/.vbw-planning/.delegated-workflow.json"
@@ -543,7 +547,7 @@ if [ "$_DG_TARGET_IN_PROJECT" = true ] && [ -z "${VBW_AGENT_ROLE:-}" ] && [ -z "
     fi
   fi
 
-  if phase_has_active_plan; then
+  if [ "$_DG_TEMPLATE_EXEMPT" = false ] && phase_has_active_plan; then
     _DG_BLOCK=true
   fi
 
@@ -579,6 +583,8 @@ if [ -n "$AGENT_ROLE" ]; then
       ;;
   esac
 fi
+
+[ "$_DG_TEMPLATE_EXEMPT" = true ] && exit 0
 
 vbw_guard_execution_is_live "$PROJECT_ROOT" || exit 0
 

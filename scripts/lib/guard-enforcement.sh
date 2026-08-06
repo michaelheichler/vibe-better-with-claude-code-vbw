@@ -10,12 +10,17 @@ is_plan_finalized() {
 }
 
 phase_has_active_plan() {
-  local plan_file summary_file phases_dir="${1:-${PHASES_DIR:-}}"
+  local plan_file summary_file plan_basename phases_dir="${1:-${PHASES_DIR:-}}"
   ACTIVE_PLAN=""
   [ -d "$phases_dir" ] || return 1
-  for plan_file in "$phases_dir"/*/*-PLAN.md; do
+  for plan_file in "$phases_dir"/*/PLAN.md "$phases_dir"/*/*-PLAN.md; do
     [ ! -f "$plan_file" ] && continue
-    summary_file="${plan_file%-PLAN.md}-SUMMARY.md"
+    plan_basename=$(basename "$plan_file")
+    if [ "$plan_basename" = "PLAN.md" ]; then
+      summary_file="$(dirname "$plan_file")/SUMMARY.md"
+    else
+      summary_file="${plan_file%-PLAN.md}-SUMMARY.md"
+    fi
     if ! is_plan_finalized "$summary_file"; then
       ACTIVE_PLAN="$plan_file"
       [ -n "$ACTIVE_PLAN" ] && return 0
