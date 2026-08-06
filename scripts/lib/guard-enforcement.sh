@@ -1,6 +1,44 @@
 #!/usr/bin/env bash
 set -u
 
+_VBW_GUARD_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+_VBW_GUARD_SUMMARY_UTILS="${_VBW_GUARD_SCRIPT_DIR}/../summary-utils.sh"
+
+is_plan_finalized() {
+  [ -f "$_VBW_GUARD_SUMMARY_UTILS" ] || return 1
+  bash -c '. "$1"; is_summary_terminal "$2"' _ "$_VBW_GUARD_SUMMARY_UTILS" "$1"
+}
+
+is_template_exempt_path() {
+  local project_root="${1:-}" target_path="${2:-}"
+  [ -n "$project_root" ] || return 1
+  project_root="${project_root%/}"
+  case "$target_path" in
+    "$project_root/templates/agent-roles/"*.tpl) return 0 ;;
+  esac
+  return 1
+}
+
+phase_has_active_plan() {
+  local plan_file summary_file plan_basename phases_dir="${1:-${PHASES_DIR:-}}"
+  ACTIVE_PLAN=""
+  [ -d "$phases_dir" ] || return 1
+  for plan_file in "$phases_dir"/*/PLAN.md "$phases_dir"/*/*-PLAN.md; do
+    [ ! -f "$plan_file" ] && continue
+    plan_basename=$(basename "$plan_file")
+    if [ "$plan_basename" = "PLAN.md" ]; then
+      summary_file="$(dirname "$plan_file")/SUMMARY.md"
+    else
+      summary_file="${plan_file%-PLAN.md}-SUMMARY.md"
+    fi
+    if ! is_plan_finalized "$summary_file"; then
+      export ACTIVE_PLAN="$plan_file"
+      return 0
+    fi
+  done
+  return 1
+}
+
 vbw_guard_execution_is_live() {
   local project_root="${1:-}" planning_dir state_file exec_status now mtime age marker_status marker_live
   planning_dir="$project_root/.vbw-planning"
