@@ -43,6 +43,19 @@ EOF
   [ "$output" = "01-setup-foundation-api-layer-frontend" ]
 }
 
+@test "normalizes Unicode dash separators in numbered lists" {
+  printf '%s\n' \
+    'Roadmap' \
+    '' \
+    $'1. **Setup Foundation** \xE2\x80\x94 scaffold project' \
+    $'2. **API Layer** \xE2\x80\x93 build endpoints' \
+    > .vbw-planning/ROADMAP.md
+
+  run bash "$SCRIPTS_DIR/derive-milestone-slug.sh" ".vbw-planning"
+  [ "$status" -eq 0 ]
+  [ "$output" = "01-setup-foundation-api-layer" ]
+}
+
 @test "derives slug from bulleted phase list" {
   cat > .vbw-planning/ROADMAP.md <<'EOF'
 Roadmap
