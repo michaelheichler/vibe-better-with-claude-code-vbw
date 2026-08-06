@@ -724,7 +724,7 @@ if is_phase_root_artifact "$FILE_PATH" && echo "$FILE_PATH" | grep -qE 'phases/[
     jq --arg phase "$PHASE" --arg phase_key "$phase_key" --arg plan "$PLAN" --arg status "$STATUS" --arg summary_id "$SUMMARY_ID" --arg session_id "${CLAUDE_SESSION_ID:-}" --argjson qa_complete_allowed "$qa_complete_allowed" --argjson terminal_summary_count "$terminal_summary_count" '
       def as_num: (try tonumber catch null);
       if ((.phase? | tostring | as_num) == ($phase_key | as_num)) then
-        .phase_qa_required = ((.phase_qa_required // {}) + {($phase_key): (((.phase_qa_required[$phase_key] | type) == "boolean" and .phase_qa_required[$phase_key]) or (if (.qa_required | type) == "boolean" then .qa_required else true end))})
+        .phase_qa_required = ((.phase_qa_required // {}) + {($phase_key): (if .phase_qa_required[$phase_key] != null then .phase_qa_required[$phase_key] elif (.qa_required | type) == "boolean" then .qa_required else true end)})
       else . end
       |
       (if (.plans | type) == "array" then

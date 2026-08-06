@@ -139,10 +139,6 @@ qa_completion_allowed_for_phase() {
   [ "$(qa_gate_routing_for_phase "$1" "${2:-}")" = "PROCEED_TO_UAT" ]
 }
 
-qa_completion_allowed_for_phase() {
-  [ "$(qa_gate_routing_for_phase "$1" "${2:-}")" = "PROCEED_TO_UAT" ]
-}
-
 normalize_roadmap_phase_num() {
   local num="$1"
   num=$(printf '%s' "$num" | sed 's/^0*//')

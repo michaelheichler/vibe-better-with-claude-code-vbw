@@ -266,6 +266,21 @@ EOF
   [ "$(jq -r '.phase_qa_required["1"]' .vbw-planning/.execution-state.json)" = "false" ]
 }
 
+@test "summary update preserves explicit false phase QA policy" {
+  cd "$TEST_TEMP_DIR"
+  create_completion_gate_fixture true
+  jq '.phase_qa_required = {"1": false}' .vbw-planning/.execution-state.json > .vbw-planning/.execution-state.json.tmp
+  mv .vbw-planning/.execution-state.json.tmp .vbw-planning/.execution-state.json
+
+  local summary_path input
+  summary_path="$TEST_TEMP_DIR/.vbw-planning/phases/01-setup/01-01-SUMMARY.md"
+  input=$(jq -nc --arg p "$summary_path" '{tool_input:{file_path:$p}}')
+
+  run bash -c "cd '$TEST_TEMP_DIR' && printf '%s' '$input' | bash '$SCRIPTS_DIR/state-updater.sh'"
+  [ "$status" -eq 0 ]
+  [ "$(jq -r '.phase_qa_required["1"]' .vbw-planning/.execution-state.json)" = "false" ]
+}
+
 @test "summary update advances STATE/ROADMAP without execution-state file" {
   cd "$TEST_TEMP_DIR"
   create_state_and_roadmap "$TEST_TEMP_DIR/.vbw-planning" 3

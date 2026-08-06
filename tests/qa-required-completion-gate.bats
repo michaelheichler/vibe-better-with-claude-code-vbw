@@ -64,11 +64,11 @@ assert_qa_required() {
 @test "qa_gate_routing_for_phase fails closed when verification resolver fails" {
   cd "$TEST_TEMP_DIR"
   mkdir -p .vbw-planning/phases/01-setup
-  cat > "$TEST_TEMP_DIR/failing-resolve-verification-path.sh" <<'SCRIPT'
+  cat > "$TEST_TEMP_DIR/resolve-verification-path.sh" <<'SCRIPT'
 #!/usr/bin/env bash
 exit 1
 SCRIPT
-  chmod +x "$TEST_TEMP_DIR/failing-resolve-verification-path.sh"
+  chmod +x "$TEST_TEMP_DIR/resolve-verification-path.sh"
   cp "$SCRIPTS_DIR/qa-result-gate.sh" "$TEST_TEMP_DIR/qa-result-gate.sh"
   run bash -c 'source "$1"; qa_gate_routing_for_phase "$2" "$3"' _ "$TEST_TEMP_DIR/state-functions.sh" "$TEST_TEMP_DIR/.vbw-planning/phases/01-setup" "$TEST_TEMP_DIR"
   [ "$status" -eq 0 ]
