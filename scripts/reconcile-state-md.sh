@@ -49,6 +49,8 @@ REQUIRED_FUNCTIONS=(
   count_terminal_summaries
   current_uat_status_class
   phase_dir_display_name
+  qa_required_for_phase
+  qa_completion_allowed_for_phase
   normalize_roadmap_phase_num
   roadmap_checklist_phase_num_from_line
   roadmap_phase_dir_prefix_num
@@ -328,8 +330,9 @@ for phase_dir in "${phase_dirs[@]}"; do
   complete_count=$(count_complete_summaries "$phase_dir")
   unresolved=false
   qa_allowed=true
+  qa_required=$(qa_required_for_phase "$phase_dir")
   uat_class=$(phase_uat_status_class "$phase_dir")
-  if [ "$plan_count" -gt 0 ] && [ "$complete_count" -ge "$plan_count" ] && ! qa_completion_allowed_for_phase "$phase_dir" "$SCRIPT_DIR"; then
+  if [ "$plan_count" -gt 0 ] && [ "$complete_count" -ge "$plan_count" ] && [ "$qa_required" = true ] && ! qa_completion_allowed_for_phase "$phase_dir" "$SCRIPT_DIR"; then
     qa_allowed=false
   fi
   if [ "$uat_class" = "issues_found" ] || [ "$uat_class" = "active" ] || {

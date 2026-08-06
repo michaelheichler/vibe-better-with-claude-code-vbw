@@ -62,10 +62,11 @@ Before spawning any subagent, read `${VBW_PLUGIN_ROOT}/references/subagent-contr
   "correlation_id": "{UUID}",
   "effort": "{effective effort}", "phase_effort": "{configured phase effort}",
   "qa_required": true,
+  "phase_qa_required": {"N": true},
   "plans": [{"id": "NN-MM", "title": "...", "wave": W, "status": "pending|complete|partial|failed"}]
 }
 ```
-Set plan status from verified SUMMARY.md frontmatter: `complete|completed` → `"complete"`, `partial` → `"partial"`, `failed` → `"failed"`, others → `"pending"`. `phase_effort` preserves the configured phase effort. `effort` may be temporarily changed to `turbo` or internal `direct` for segment-local guard visibility and restored before the next non-direct segment. Set `qa_required` to `false` only when the segment's effort is `turbo`, `--skip-qa` was passed, or the current agent type is in `qa_skip_agents`. Set it to `true` otherwise.
+Set plan status from verified SUMMARY.md frontmatter: `complete|completed` → `"complete"`, `partial` → `"partial"`, `failed` → `"failed"`, others → `"pending"`. `phase_effort` preserves the configured phase effort. `effort` may be temporarily changed to `turbo` or internal `direct` for segment-local guard visibility and restored before the next non-direct segment. Set `qa_required` to `false` only when the segment's effort is `turbo`, `--skip-qa` was passed, or the current agent type is in `qa_skip_agents`. Set it to `true` otherwise. `phase_qa_required` records the cumulative policy for completed phases so reconciliation does not reuse the current phase's policy.
 
 **Task list hygiene (crash-resume):** When resuming execution (`.execution-state.json` already existed), plans that are already `"complete"` were finished in a prior session. Immediately mark those plans as completed in your task list: do NOT leave them as not-started or in-progress. Only pending plans should be active in your task list.
 
