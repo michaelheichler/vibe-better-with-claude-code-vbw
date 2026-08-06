@@ -1,0 +1,24 @@
+scripts/derive-milestone-slug.sh
+  s_e8b702480499cf::t_dd931f3b3fb004 25-42
+  s_e8b702480499cf::t_73b575295736ac 89-90
+  s_e8b702480499cf::t_bf4eec64863646 6
+tests/derive-milestone-slug.bats
+  s_e8b702480499cf::t_71f89ab600f6bf 18,34,48,59-106,109,122,133,142,149,162,177,198
+  s_e8b702480499cf::t_da7bfa145fab21 36-38
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "a783233c5afe97a3da702f1a2c3e0fee5948a346",
+  "prompts": {},
+  "sessions": {
+    "s_e8b702480499cf": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b86dd062-285e-44f0-9749-b1a13364f007",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
