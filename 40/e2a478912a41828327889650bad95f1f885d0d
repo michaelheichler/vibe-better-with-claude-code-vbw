@@ -1,0 +1,21 @@
+scripts/lib/guard-enforcement.sh
+  s_e8b702480499cf::t_638beb871d8dc6 15
+tests/file-guard-orchestrator.bats
+  s_e8b702480499cf::t_6896a7b433e7c6 244-250
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "40e2a478912a41828327889650bad95f1f885d0d",
+  "prompts": {},
+  "sessions": {
+    "s_e8b702480499cf": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b86dd062-285e-44f0-9749-b1a13364f007",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
