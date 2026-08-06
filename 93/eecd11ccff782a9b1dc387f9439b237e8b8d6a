@@ -1,0 +1,23 @@
+references/lsp-first-policy.md
+  s_e8b702480499cf::t_c5787a644776d4 3
+templates/agent-roles/qa-author.md.tpl
+  s_e8b702480499cf::t_97f19eb0b42695 35-38,42
+testing/verify-lsp-first-policy.sh
+  s_e8b702480499cf::t_43622a99bc0eae 56
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "93eecd11ccff782a9b1dc387f9439b237e8b8d6a",
+  "prompts": {},
+  "sessions": {
+    "s_e8b702480499cf": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b86dd062-285e-44f0-9749-b1a13364f007",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
