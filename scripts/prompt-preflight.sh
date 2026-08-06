@@ -6,48 +6,42 @@ find_vbw_root
 PLANNING_DIR="$VBW_PLANNING_DIR"
 [ -d "$PLANNING_DIR" ] || exit 0
 
+ORCHESTRATOR_REMINDER=""
+EXECUTION_STATE="$PLANNING_DIR/.execution-state.json"
+if [ -f "$EXECUTION_STATE" ]; then
+  EXECUTION_STATUS=$(jq -r '.status // ""' "$EXECUTION_STATE" 2>/dev/null) || EXECUTION_STATUS=""
+  if [ -n "$EXECUTION_STATUS" ] && [ "$EXECUTION_STATUS" != "complete" ]; then
+    ORCHESTRATOR_REMINDER="You are the VBW orchestrator. Never implement product code yourself, delegate via Task or Agent to Dev. Never self-verify, QA verification means a VERIFICATION.md written by vbw-qa, gated through qa-result-gate.sh."
+  fi
+fi
+
 INPUT=$(cat)
 PROMPT=$(echo "$INPUT" | jq -r '.prompt // .content // ""' 2>/dev/null)
 [ -z "$PROMPT" ] && exit 0
 
 is_expanded_vbw_prompt() {
   local prompt="$1"
-  local frontmatter
-
-  if ! printf '%s\n' "$prompt" | awk '
-    BEGIN { saw = 0 }
-    /^[[:space:]]*$/ { next }
+  printf '%s\n' "$prompt" | awk '
+    BEGIN { saw = 0; in_frontmatter = 0; found_name = 0; valid = 1 }
     {
-      saw = 1
-      if ($0 ~ /^[[:space:]]*---[[:space:]]*$/) {
-        exit 0
-      }
-      exit 1
-    }
-    END {
       if (!saw) {
-        exit 1
-      }
-    }
-  '; then
-    return 1
-  fi
-
-  frontmatter=$(printf '%s\n' "$prompt" | awk '
-    BEGIN { in_frontmatter = 0 }
-    /^[[:space:]]*---[[:space:]]*$/ {
-      if (in_frontmatter == 0) {
+        if ($0 ~ /^[[:space:]]*$/) next
+        saw = 1
+        if ($0 !~ /^[[:space:]]*---[[:space:]]*$/) {
+          valid = 0
+          next
+        }
         in_frontmatter = 1
         next
       }
-      if (in_frontmatter == 1) {
-        exit
+      if (in_frontmatter && $0 ~ /^[[:space:]]*---[[:space:]]*$/) {
+        in_frontmatter = 0
+        next
       }
+      if (in_frontmatter && tolower($0) ~ /^[[:space:]]*name:[[:space:]]*vbw:/) found_name = 1
     }
-    in_frontmatter == 1 { print }
-  ')
-
-  [ -n "$frontmatter" ] && printf '%s\n' "$frontmatter" | grep -qiE '^[[:space:]]*name:[[:space:]]*vbw:'
+    END { exit !(saw && valid && found_name) }
+  '
 }
 
 is_archive_vibe_prompt() {
@@ -115,6 +109,16 @@ if is_archive_vibe_prompt "$PROMPT"; then
         WARNING="$INCOMPLETE incomplete phase(s). Review STATE.md before shipping."
       fi
     fi
+  fi
+fi
+
+if [ -n "$ORCHESTRATOR_REMINDER" ]; then
+  if [ -n "$BLOCK_MSG" ]; then
+    BLOCK_MSG="$BLOCK_MSG $ORCHESTRATOR_REMINDER"
+  elif [ -n "$WARNING" ]; then
+    WARNING="$WARNING $ORCHESTRATOR_REMINDER"
+  else
+    WARNING="$ORCHESTRATOR_REMINDER"
   fi
 fi
 
