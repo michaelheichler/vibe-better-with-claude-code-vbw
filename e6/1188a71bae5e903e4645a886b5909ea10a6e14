@@ -1,0 +1,22 @@
+scripts/collect-diagnostics.sh
+  s_e8b702480499cf::t_c77c0b5952e955 26,170,172-174,176,179,329
+  s_e8b702480499cf::t_ee2b5637dcbb2c 190-328
+  s_e8b702480499cf::t_f04c8455b03c84 188-189
+  s_e8b702480499cf::t_994b107d3a0eda 187
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "e61188a71bae5e903e4645a886b5909ea10a6e14",
+  "prompts": {},
+  "sessions": {
+    "s_e8b702480499cf": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b86dd062-285e-44f0-9749-b1a13364f007",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Michael Heichler <iam@michaelheichler.eu>"
+    }
+  }
+}
