@@ -5,14 +5,10 @@ load test_helper
 setup() {
   setup_temp_dir
   create_test_config
+  HASH="#"
   cd "$TEST_TEMP_DIR" || exit 1
   printf '{"phase":3,"status":"complete","phase_qa_required":{"1":false,"2":false,"3":false,"4":false},"plans":[{"id":"03-01","status":"complete"}]}
 ' > .vbw-planning/.execution-state.json
-  fixture_hash=$'\x23'
-  cat() {
-    command cat "$@" | sed "s/^__VBW_HASH__/${fixture_hash}/"
-    return "${PIPESTATUS[0]}"
-  }
 }
 
 teardown() {
@@ -20,20 +16,20 @@ teardown() {
 }
 
 write_qa_gate_fixture() {
-  cat > .vbw-planning/STATE.md <<'STATE'
-__VBW_HASH__ State
+  cat > .vbw-planning/STATE.md <<STATE
+${HASH} State
 
-## Current Phase
+${HASH}${HASH} Current Phase
 Phase: 1 of 1 (Setup)
 Plans: 1/1
 Progress: 100%
 Status: active
 
-## Phase Status
+${HASH}${HASH} Phase Status
 - **Phase 1:** In progress
 STATE
-  cat > .vbw-planning/ROADMAP.md <<'ROADMAP'
-__VBW_HASH__ Roadmap
+  cat > .vbw-planning/ROADMAP.md <<ROADMAP
+${HASH} Roadmap
 
 - [ ] Phase 1: Setup
 ROADMAP
@@ -74,21 +70,21 @@ VERIFICATION
 }
 
 @test "reconcile applies each persisted phase QA policy independently" {
-  cat > .vbw-planning/STATE.md <<'STATE'
-__VBW_HASH__ State
+  cat > .vbw-planning/STATE.md <<STATE
+${HASH} State
 
-## Current Phase
+${HASH}${HASH} Current Phase
 Phase: 2 of 2 (Second)
 Plans: 1/1
 Progress: 100%
 Status: active
 
-## Phase Status
+${HASH}${HASH} Phase Status
 - **Phase 1 (First):** Complete
 - **Phase 2 (Second):** Complete
 STATE
-  cat > .vbw-planning/ROADMAP.md <<'ROADMAP'
-__VBW_HASH__ Roadmap
+  cat > .vbw-planning/ROADMAP.md <<ROADMAP
+${HASH} Roadmap
 
 - [x] Phase 1: First
 - [x] Phase 2: Second
@@ -111,49 +107,49 @@ STATE
 }
 
 write_drift_fixture() {
-  cat > .vbw-planning/STATE.md <<'STATE'
-__VBW_HASH__ State
+  cat > .vbw-planning/STATE.md <<STATE
+${HASH} State
 
 **Project:** Test Project
 **Milestone:** MVP
 
-## Current Phase
+${HASH}# Current Phase
 Phase: 3 of 3 (Order Backed Sync Integration)
 Plans: 2/2
 Progress: 100%
 Status: ready
 
-## Phase Status
+${HASH}# Phase Status
 - **Phase 1:** Complete
 - **Phase 2:** Complete
 - **Phase 3:** Planned
 
-## Key Decisions
+${HASH}# Key Decisions
 | Decision | Date | Rationale |
 |----------|------|-----------|
 | Keep deterministic state shell-side | 2026-05-01 | Avoid token repair |
 
-## Todos
+${HASH}# Todos
 None.
 
-## Blockers
+${HASH}# Blockers
 None
 STATE
 
-  cat > .vbw-planning/PROJECT.md <<'PROJECT'
-__VBW_HASH__ Test Project
+  cat > .vbw-planning/PROJECT.md <<PROJECT
+${HASH} Test Project
 PROJECT
 
-  cat > .vbw-planning/ROADMAP.md <<'ROADMAP'
-__VBW_HASH__ Roadmap
+  cat > .vbw-planning/ROADMAP.md <<ROADMAP
+${HASH} Roadmap
 
 - [x] Phase 1: Foundation
 - [ ] Phase 2: Ios Orders Client Models
 - [ ] Phase 3: Order Backed Sync Integration
 
-### Phase 1: Foundation
-### Phase 2: Ios Orders Client Models
-### Phase 3: Order Backed Sync Integration
+${HASH}## Phase 1: Foundation
+${HASH}## Phase 2: Ios Orders Client Models
+${HASH}## Phase 3: Order Backed Sync Integration
 ROADMAP
 
   mkdir -p \
@@ -198,35 +194,35 @@ UAT
 }
 
 @test "reconcile-state repairs linked ROADMAP checklist drift by phase prefix" {
-  cat > .vbw-planning/PROJECT.md <<'PROJECT'
-__VBW_HASH__ Test Project
+  cat > .vbw-planning/PROJECT.md <<PROJECT
+${HASH} Test Project
 PROJECT
 
-  cat > .vbw-planning/STATE.md <<'STATE'
-__VBW_HASH__ State
+  cat > .vbw-planning/STATE.md <<STATE
+${HASH} State
 
 **Project:** Test Project
 **Milestone:** MVP
 
-## Current Phase
+${HASH}# Current Phase
 Phase: 2 of 2 (Api Contracts)
 Plans: 1/1
 Progress: 100%
 Status: ready
 
-## Phase Status
+${HASH}# Phase Status
 - **Phase 1:** Complete
 - **Phase 2:** Planned
 STATE
 
-  cat > .vbw-planning/ROADMAP.md <<'ROADMAP'
-__VBW_HASH__ Roadmap
+  cat > .vbw-planning/ROADMAP.md <<ROADMAP
+${HASH} Roadmap
 
 - [x] [Phase 01: Foundation](#phase-01-foundation)
 - [ ] [Phase 03: Api Contracts](#phase-03-api-contracts)
 
-## Phase 01: Foundation
-## Phase 03: Api Contracts
+${HASH}# Phase 01: Foundation
+${HASH}# Phase 03: Api Contracts
 ROADMAP
 
   mkdir -p .vbw-planning/phases/01-foundation .vbw-planning/phases/03-api-contracts
@@ -251,43 +247,43 @@ ROADMAP
 }
 
 @test "reconcile-state unchecks linked ROADMAP entry when current UAT has issues" {
-  cat > .vbw-planning/PROJECT.md <<'PROJECT'
-__VBW_HASH__ Test Project
+  cat > .vbw-planning/PROJECT.md <<PROJECT
+${HASH} Test Project
 PROJECT
 
-  cat > .vbw-planning/STATE.md <<'STATE'
-__VBW_HASH__ State
+  cat > .vbw-planning/STATE.md <<STATE
+${HASH} State
 
 **Project:** Test Project
 **Milestone:** MVP
 
-## Current Phase
+${HASH}# Current Phase
 Phase: 1 of 1 (Api Contracts)
 Plans: 1/1
 Progress: 100%
 Status: complete
 
-## Phase Status
+${HASH}# Phase Status
 - **Phase 1:** Complete
 STATE
 
-  cat > .vbw-planning/ROADMAP.md <<'ROADMAP'
-__VBW_HASH__ Roadmap
+  cat > .vbw-planning/ROADMAP.md <<ROADMAP
+${HASH} Roadmap
 
 - [x] [Phase 03: Api Contracts](#phase-03-api-contracts)
 
-## Phase 03: Api Contracts
+${HASH}# Phase 03: Api Contracts
 ROADMAP
 
   mkdir -p .vbw-planning/phases/03-api-contracts
   echo '# Plan' > .vbw-planning/phases/03-api-contracts/03-01-PLAN.md
   printf '%s\n' '---' 'status: complete' '---' 'Done.' > .vbw-planning/phases/03-api-contracts/03-01-SUMMARY.md
-  cat > .vbw-planning/phases/03-api-contracts/03-UAT.md <<'UAT'
+  cat > .vbw-planning/phases/03-api-contracts/03-UAT.md <<UAT
 ---
 phase: 03
 status: issues_found
 ---
-__VBW_HASH__ UAT
+${HASH} UAT
 UAT
 
   run bash "$SCRIPTS_DIR/verify-state-consistency.sh" .vbw-planning --mode archive
@@ -306,35 +302,35 @@ UAT
 }
 
 @test "reconcile-state repairs plain ROADMAP checklist drift by phase prefix" {
-  cat > .vbw-planning/PROJECT.md <<'PROJECT'
-__VBW_HASH__ Test Project
+  cat > .vbw-planning/PROJECT.md <<PROJECT
+${HASH} Test Project
 PROJECT
 
-  cat > .vbw-planning/STATE.md <<'STATE'
-__VBW_HASH__ State
+  cat > .vbw-planning/STATE.md <<STATE
+${HASH} State
 
 **Project:** Test Project
 **Milestone:** MVP
 
-## Current Phase
+${HASH}# Current Phase
 Phase: 2 of 2 (Api Contracts)
 Plans: 1/1
 Progress: 100%
 Status: ready
 
-## Phase Status
+${HASH}# Phase Status
 - **Phase 1:** Complete
 - **Phase 2:** Planned
 STATE
 
-  cat > .vbw-planning/ROADMAP.md <<'ROADMAP'
-__VBW_HASH__ Roadmap
+  cat > .vbw-planning/ROADMAP.md <<ROADMAP
+${HASH} Roadmap
 
 - [x] Phase 01: Foundation
 - [ ] Phase 03: Api Contracts
 
-## Phase 01: Foundation
-## Phase 03: Api Contracts
+${HASH}# Phase 01: Foundation
+${HASH}# Phase 03: Api Contracts
 ROADMAP
 
   mkdir -p .vbw-planning/phases/01-foundation .vbw-planning/phases/03-api-contracts
@@ -359,44 +355,44 @@ ROADMAP
 }
 
 @test "reconcile-state preserves prefix numbers when ROADMAP has a missing phase dir" {
-  cat > .vbw-planning/PROJECT.md <<'PROJECT'
-__VBW_HASH__ Test Project
+  cat > .vbw-planning/PROJECT.md <<PROJECT
+${HASH} Test Project
 PROJECT
 
-  cat > .vbw-planning/STATE.md <<'STATE'
-__VBW_HASH__ State
+  cat > .vbw-planning/STATE.md <<STATE
+${HASH} State
 
 **Project:** Test Project
 **Milestone:** MVP
 
-## Current Phase
+${HASH}# Current Phase
 Phase: 3 of 4 (Build)
 Plans: 0/1
 Progress: 0%
 Status: ready
 
-## Phase Status
+${HASH}# Phase Status
 - **Phase 1 (Setup):** Complete
 - **Phase 2 (Out Of Band):** Complete
 - **Phase 3 (Build):** Planned
 - **Phase 4 (Deploy):** Pending
 
-## Decisions
+${HASH}# Decisions
 - Preserve manual missing phase notes.
 STATE
 
-  cat > .vbw-planning/ROADMAP.md <<'ROADMAP'
-__VBW_HASH__ Roadmap
+  cat > .vbw-planning/ROADMAP.md <<ROADMAP
+${HASH} Roadmap
 
 - [x] Phase 1: Setup
 - [x] Phase 2: Out Of Band
 - [ ] Phase 3: Build
 - [ ] Phase 4: Deploy
 
-## Phase 1: Setup
-## Phase 2: Out Of Band
-## Phase 3: Build
-## Phase 4: Deploy
+${HASH}# Phase 1: Setup
+${HASH}# Phase 2: Out Of Band
+${HASH}# Phase 3: Build
+${HASH}# Phase 4: Deploy
 ROADMAP
 
   mkdir -p .vbw-planning/phases/01-setup .vbw-planning/phases/03-build .vbw-planning/phases/04-deploy
@@ -425,34 +421,34 @@ ROADMAP
 }
 
 @test "reconcile-state uses ordinal display when ROADMAP checklist is empty" {
-  cat > .vbw-planning/PROJECT.md <<'PROJECT'
-__VBW_HASH__ Test Project
+  cat > .vbw-planning/PROJECT.md <<PROJECT
+${HASH} Test Project
 PROJECT
 
-  cat > .vbw-planning/STATE.md <<'STATE'
-__VBW_HASH__ State
+  cat > .vbw-planning/STATE.md <<STATE
+${HASH} State
 
 **Project:** Test Project
 **Milestone:** MVP
 
-## Current Phase
+${HASH}# Current Phase
 Phase: 2 of 3 (Build)
 Plans: 0/1
 Progress: 0%
 Status: ready
 
-## Phase Status
+${HASH}# Phase Status
 - **Phase 1 (Setup):** Complete
 - **Phase 2 (Build):** Planned
 - **Phase 3 (Deploy):** Pending
 STATE
 
-  cat > .vbw-planning/ROADMAP.md <<'ROADMAP'
-__VBW_HASH__ Roadmap
+  cat > .vbw-planning/ROADMAP.md <<ROADMAP
+${HASH} Roadmap
 
-## Phase 1: Setup
-## Phase 2: Build
-## Phase 3: Deploy
+${HASH}# Phase 1: Setup
+${HASH}# Phase 2: Build
+${HASH}# Phase 3: Deploy
 ROADMAP
 
   mkdir -p .vbw-planning/phases/01-setup .vbw-planning/phases/03-build .vbw-planning/phases/04-deploy
@@ -475,38 +471,38 @@ ROADMAP
 }
 
 @test "reconcile-state repairs ordinal ROADMAP checklist drift by sorted phase position" {
-  cat > .vbw-planning/PROJECT.md <<'PROJECT'
-__VBW_HASH__ Test Project
+  cat > .vbw-planning/PROJECT.md <<PROJECT
+${HASH} Test Project
 PROJECT
 
-  cat > .vbw-planning/STATE.md <<'STATE'
-__VBW_HASH__ State
+  cat > .vbw-planning/STATE.md <<STATE
+${HASH} State
 
 **Project:** Test Project
 **Milestone:** MVP
 
-## Current Phase
+${HASH}# Current Phase
 Phase: 3 of 3 (Deploy)
 Plans: 0/1
 Progress: 0%
 Status: ready
 
-## Phase Status
+${HASH}# Phase Status
 - **Phase 1:** Complete
 - **Phase 2:** Planned
 - **Phase 3:** Planned
 STATE
 
-  cat > .vbw-planning/ROADMAP.md <<'ROADMAP'
-__VBW_HASH__ Roadmap
+  cat > .vbw-planning/ROADMAP.md <<ROADMAP
+${HASH} Roadmap
 
 - [x] Phase 1: Setup
 - [ ] Phase 2: Build
 - [ ] Phase 3: Deploy
 
-## Phase 1: Setup
-## Phase 2: Build
-## Phase 3: Deploy
+${HASH}# Phase 1: Setup
+${HASH}# Phase 2: Build
+${HASH}# Phase 3: Deploy
 ROADMAP
 
   mkdir -p .vbw-planning/phases/01-setup .vbw-planning/phases/03-build .vbw-planning/phases/04-deploy
@@ -535,40 +531,40 @@ ROADMAP
 }
 
 @test "reconcile-state leaves duplicate ordinal ROADMAP entries verifier-owned" {
-  cat > .vbw-planning/PROJECT.md <<'PROJECT'
-__VBW_HASH__ Test Project
+  cat > .vbw-planning/PROJECT.md <<PROJECT
+${HASH} Test Project
 PROJECT
 
-  cat > .vbw-planning/STATE.md <<'STATE'
-__VBW_HASH__ State
+  cat > .vbw-planning/STATE.md <<STATE
+${HASH} State
 
 **Project:** Test Project
 **Milestone:** MVP
 
-## Current Phase
+${HASH}# Current Phase
 Phase: 3 of 3 (Deploy)
 Plans: 0/1
 Progress: 0%
 Status: ready
 
-## Phase Status
+${HASH}# Phase Status
 - **Phase 1:** Complete
 - **Phase 2:** Planned
 - **Phase 3:** Planned
 STATE
 
-  cat > .vbw-planning/ROADMAP.md <<'ROADMAP'
-__VBW_HASH__ Roadmap
+  cat > .vbw-planning/ROADMAP.md <<ROADMAP
+${HASH} Roadmap
 
 - [x] Phase 1: Setup
 - [ ] Phase 2: Build
 - [ ] Phase 2: Duplicate Build
 - [ ] Phase 3: Deploy
 
-## Phase 1: Setup
-## Phase 2: Build
-## Phase 2: Duplicate Build
-## Phase 3: Deploy
+${HASH}# Phase 1: Setup
+${HASH}# Phase 2: Build
+${HASH}# Phase 2: Duplicate Build
+${HASH}# Phase 3: Deploy
 ROADMAP
 
   mkdir -p .vbw-planning/phases/01-setup .vbw-planning/phases/03-build .vbw-planning/phases/04-deploy
@@ -594,38 +590,38 @@ ROADMAP
 }
 
 @test "reconcile-state leaves unknown ROADMAP checklist scheme untouched" {
-  cat > .vbw-planning/PROJECT.md <<'PROJECT'
-__VBW_HASH__ Test Project
+  cat > .vbw-planning/PROJECT.md <<PROJECT
+${HASH} Test Project
 PROJECT
 
-  cat > .vbw-planning/STATE.md <<'STATE'
-__VBW_HASH__ State
+  cat > .vbw-planning/STATE.md <<STATE
+${HASH} State
 
 **Project:** Test Project
 **Milestone:** MVP
 
-## Current Phase
+${HASH}# Current Phase
 Phase: 2 of 3 (Build)
 Plans: 1/1
 Progress: 100%
 Status: active
 
-## Phase Status
+${HASH}# Phase Status
 - **Phase 1:** Complete
 - **Phase 2:** Planned
 - **Phase 3:** Planned
 STATE
 
-  cat > .vbw-planning/ROADMAP.md <<'ROADMAP'
-__VBW_HASH__ Roadmap
+  cat > .vbw-planning/ROADMAP.md <<ROADMAP
+${HASH} Roadmap
 
 - [x] Phase 1: Setup
 - [ ] Phase 2: Build
 - [ ] Phase 4: Deploy
 
-## Phase 1: Setup
-## Phase 2: Build
-## Phase 4: Deploy
+${HASH}# Phase 1: Setup
+${HASH}# Phase 2: Build
+${HASH}# Phase 4: Deploy
 ROADMAP
 
   mkdir -p .vbw-planning/phases/01-setup .vbw-planning/phases/03-build .vbw-planning/phases/04-deploy
@@ -651,38 +647,38 @@ ROADMAP
 }
 
 @test "reconcile-state treats duplicate phase directory prefixes as unknown" {
-  cat > .vbw-planning/PROJECT.md <<'PROJECT'
-__VBW_HASH__ Test Project
+  cat > .vbw-planning/PROJECT.md <<PROJECT
+${HASH} Test Project
 PROJECT
 
-  cat > .vbw-planning/STATE.md <<'STATE'
-__VBW_HASH__ State
+  cat > .vbw-planning/STATE.md <<STATE
+${HASH} State
 
 **Project:** Test Project
 **Milestone:** MVP
 
-## Current Phase
+${HASH}# Current Phase
 Phase: 2 of 3 (Build)
 Plans: 0/1
 Progress: 0%
 Status: ready
 
-## Phase Status
+${HASH}# Phase Status
 - **Phase 1 (Setup):** Complete
 - **Phase 2 (Build):** Planned
 - **Phase 3 (Deploy):** Pending
 STATE
 
-  cat > .vbw-planning/ROADMAP.md <<'ROADMAP'
-__VBW_HASH__ Roadmap
+  cat > .vbw-planning/ROADMAP.md <<ROADMAP
+${HASH} Roadmap
 
 - [x] Phase 1: Setup
 - [ ] Phase 2: Build
 - [ ] Phase 3: Deploy
 
-## Phase 1: Setup
-## Phase 2: Build
-## Phase 3: Deploy
+${HASH}# Phase 1: Setup
+${HASH}# Phase 2: Build
+${HASH}# Phase 3: Deploy
 ROADMAP
 
   mkdir -p .vbw-planning/phases/01-setup .vbw-planning/phases/02-build-a .vbw-planning/phases/02-build-b .vbw-planning/phases/03-deploy
@@ -731,40 +727,40 @@ PHASEUTILS
 }
 
 @test "reconcile-state repairs resolvable ROADMAP despite stray extra entry" {
-  cat > .vbw-planning/PROJECT.md <<'PROJECT'
-__VBW_HASH__ Test Project
+  cat > .vbw-planning/PROJECT.md <<PROJECT
+${HASH} Test Project
 PROJECT
 
-  cat > .vbw-planning/STATE.md <<'STATE'
-__VBW_HASH__ State
+  cat > .vbw-planning/STATE.md <<STATE
+${HASH} State
 
 **Project:** Test Project
 **Milestone:** MVP
 
-## Current Phase
+${HASH}# Current Phase
 Phase: 2 of 3 (Build)
 Plans: 1/1
 Progress: 100%
 Status: ready
 
-## Phase Status
+${HASH}# Phase Status
 - **Phase 1:** Complete
 - **Phase 2:** Planned
 - **Phase 3:** Planned
 STATE
 
-  cat > .vbw-planning/ROADMAP.md <<'ROADMAP'
-__VBW_HASH__ Roadmap
+  cat > .vbw-planning/ROADMAP.md <<ROADMAP
+${HASH} Roadmap
 
 - [x] Phase 1: Setup
 - [ ] Phase 2: Build
 - [ ] Phase 3: Deploy
 - [ ] Phase 4: Stray
 
-## Phase 1: Setup
-## Phase 2: Build
-## Phase 3: Deploy
-## Phase 4: Stray
+${HASH}# Phase 1: Setup
+${HASH}# Phase 2: Build
+${HASH}# Phase 3: Deploy
+${HASH}# Phase 4: Stray
 ROADMAP
 
   mkdir -p .vbw-planning/phases/01-setup .vbw-planning/phases/02-build .vbw-planning/phases/03-deploy
@@ -787,19 +783,19 @@ ROADMAP
 }
 
 @test "reconcile-state preserves terminal-summary display semantics" {
-  cat > .vbw-planning/STATE.md <<'STATE'
-__VBW_HASH__ State
+  cat > .vbw-planning/STATE.md <<STATE
+${HASH} State
 
 **Project:** Test Project
 **Milestone:** MVP
 
-## Current Phase
+${HASH}# Current Phase
 Phase: 1 of 1 (Setup)
 Plans: 0/1
 Progress: 0%
 Status: ready
 
-## Phase Status
+${HASH}# Phase Status
 - **Phase 1:** Planned
 STATE
 
@@ -818,26 +814,26 @@ STATE
 }
 
 @test "finalize-uat-status reconciles STATE after Bash-only UAT finalization" {
-  cat > .vbw-planning/STATE.md <<'STATE'
-__VBW_HASH__ State
+  cat > .vbw-planning/STATE.md <<STATE
+${HASH} State
 
 **Project:** Test Project
 **Milestone:** MVP
 
-## Current Phase
+${HASH}# Current Phase
 Phase: 1 of 1 (Setup)
 Plans: 1/1
 Progress: 100%
 Status: complete
 
-## Phase Status
+${HASH}# Phase Status
 - **Phase 1:** Complete
 STATE
 
   mkdir -p .vbw-planning/phases/01-setup
   echo '# Plan' > .vbw-planning/phases/01-setup/01-01-PLAN.md
   printf '%s\n' '---' 'status: complete' '---' 'Done.' > .vbw-planning/phases/01-setup/01-01-SUMMARY.md
-  cat > .vbw-planning/phases/01-setup/01-UAT.md <<'UAT'
+  cat > .vbw-planning/phases/01-setup/01-UAT.md <<UAT
 ---
 phase: 01
 status: in_progress
@@ -847,9 +843,9 @@ skipped: 0
 issues: 0
 total_tests: 1
 ---
-__VBW_HASH__ UAT
+${HASH} UAT
 
-### P01: Broken flow
+${HASH}## P01: Broken flow
 - **Result:** issue
 UAT
 
@@ -864,19 +860,19 @@ UAT
 }
 
 @test "round-dir current UAT affects STATE and phase-root fallback remains intact" {
-  cat > .vbw-planning/STATE.md <<'STATE'
-__VBW_HASH__ State
+  cat > .vbw-planning/STATE.md <<STATE
+${HASH} State
 
 **Project:** Test Project
 **Milestone:** MVP
 
-## Current Phase
+${HASH}# Current Phase
 Phase: 1 of 1 (Setup)
 Plans: 1/1
 Progress: 100%
 Status: complete
 
-## Phase Status
+${HASH}# Phase Status
 - **Phase 1:** Complete
 STATE
 
@@ -898,28 +894,28 @@ STATE
 }
 
 @test "round-dir current in-progress UAT blocks phase completion" {
-  cat > .vbw-planning/STATE.md <<'STATE'
-__VBW_HASH__ State
+  cat > .vbw-planning/STATE.md <<STATE
+${HASH} State
 
 **Project:** Test Project
 **Milestone:** MVP
 
-## Current Phase
+${HASH}# Current Phase
 Phase: 1 of 1 (Setup)
 Plans: 1/1
 Progress: 100%
 Status: complete
 
-## Phase Status
+${HASH}# Phase Status
 - **Phase 1:** Complete
 STATE
 
-  cat > .vbw-planning/ROADMAP.md <<'ROADMAP'
-__VBW_HASH__ Roadmap
+  cat > .vbw-planning/ROADMAP.md <<ROADMAP
+${HASH} Roadmap
 
 - [x] Phase 1: Setup
 
-## Phase 1: Setup
+${HASH}# Phase 1: Setup
 ROADMAP
 
   mkdir -p .vbw-planning/phases/01-setup/remediation/uat/round-06
@@ -940,28 +936,28 @@ ROADMAP
 }
 
 @test "round-dir current UAT with missing status blocks phase completion" {
-  cat > .vbw-planning/STATE.md <<'STATE'
-__VBW_HASH__ State
+  cat > .vbw-planning/STATE.md <<STATE
+${HASH} State
 
 **Project:** Test Project
 **Milestone:** MVP
 
-## Current Phase
+${HASH}# Current Phase
 Phase: 1 of 1 (Setup)
 Plans: 1/1
 Progress: 100%
 Status: complete
 
-## Phase Status
+${HASH}# Phase Status
 - **Phase 1:** Complete
 STATE
 
-  cat > .vbw-planning/ROADMAP.md <<'ROADMAP'
-__VBW_HASH__ Roadmap
+  cat > .vbw-planning/ROADMAP.md <<ROADMAP
+${HASH} Roadmap
 
 - [x] Phase 1: Setup
 
-## Phase 1: Setup
+${HASH}# Phase 1: Setup
 ROADMAP
 
   mkdir -p .vbw-planning/phases/01-setup/remediation/uat/round-06
@@ -982,19 +978,19 @@ ROADMAP
 }
 
 @test "legacy remediation current UAT affects STATE" {
-  cat > .vbw-planning/STATE.md <<'STATE'
-__VBW_HASH__ State
+  cat > .vbw-planning/STATE.md <<STATE
+${HASH} State
 
 **Project:** Test Project
 **Milestone:** MVP
 
-## Current Phase
+${HASH}# Current Phase
 Phase: 1 of 1 (Setup)
 Plans: 1/1
 Progress: 100%
 Status: complete
 
-## Phase Status
+${HASH}# Phase Status
 - **Phase 1:** Complete
 STATE
 
