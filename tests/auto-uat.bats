@@ -1238,7 +1238,7 @@ EOF
   local defaults="$BATS_TEST_DIRNAME/../templates/agent-roles/defaults.json"
   # QA agent must NOT have AskUserQuestion — it cannot interact with the user
   # This is the architectural reason UAT cannot be delegated to QA
-  ! jq -e '.qa.disallowedTools | contains("AskUserQuestion")' "$defaults" >/dev/null
+  jq -e '.qa.disallowedTools | type == "string" and (contains("AskUserQuestion") | not)' "$defaults" >/dev/null
 }
 
 # --- Contract: UAT automated-check prohibition (issue #274) ---
